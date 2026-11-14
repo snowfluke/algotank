@@ -73,9 +73,8 @@ async function start(): Promise<void> {
   };
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const { cell, tankScale, tankLift, turretX } = data.board;
-  const fxMs = Math.max(300, Math.min(700, data.tickMs));
   board.style.setProperty("--tick-ms", `${data.tickMs}ms`);
-  board.style.setProperty("--fx-ms", `${fxMs}ms`);
+  board.style.setProperty("--fx-ms", `${data.fxMs}ms`);
 
   const selfIndex = data.tanks.findIndex((tank) => tank.self);
   // SVG has no z-index: the demo tank is added last, so it stays on top.

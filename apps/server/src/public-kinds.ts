@@ -42,10 +42,11 @@ export type PublicRules = Readonly<Record<PublicKind, PublicKindRules>>;
 
 // The practice countdown is 30 s, not shorter, because a first-timer lands there and must have
 // time to read the lobby. A player who wants a quick restart taps "I'm ready" (3 s).
-const TICK_MS = 900;
+/** One turn of a public arena. The landing page's demo plays at this speed too. */
+export const PUBLIC_TICK_MS = 900;
 
 function settingsOf(kind: PublicKind, ticksPerRound: number): ArenaSettings {
-  return { name: "", kind, ticksPerRound, tickMs: TICK_MS, ruleSetMode: "standard", botFill: true, joinPolicy: "anyone", tankCount: null };
+  return { name: "", kind, ticksPerRound, tickMs: PUBLIC_TICK_MS, ruleSetMode: "standard", botFill: true, joinPolicy: "anyone", tankCount: null };
 }
 
 export const PUBLIC_RULES: PublicRules = {

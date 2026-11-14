@@ -7,7 +7,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { STANDARD_RULE_SET_ID, ruleSet } from "@game/engine";
 import type { BotState, ThrowEvent } from "@game/engine";
 import { BOT_NAMES } from "../../server/src/bots.ts";
+import { PUBLIC_TICK_MS } from "../../server/src/public-kinds.ts";
 import { CELL, TANK_LIFT, TANK_SCALE, directionDegrees, gridLinePath, shotShape } from "../src/board/boardHelpers.ts";
+import { FX_MAX_MS, FX_MIN_MS, WALL } from "../src/board/ArenaBoard.tsx";
 import { DryDrops, JetShape, Puff, Splash } from "../src/board/boardShapes.tsx";
 import { WaterGauge } from "../src/board/WaterGauge.tsx";
 import { tankColourByOrder } from "../src/tank/colours.ts";
@@ -16,10 +18,6 @@ import { TURRET_X, TankHatch, TankShape, hatchContent } from "../src/tank/TankSh
 import type { DemoData, DemoFrame, DemoRoundData, DemoShot, DemoTank } from "./demo-data.ts";
 import { YOU, orderKey, type DemoRecording, type DemoRound } from "./demo-round.ts";
 
-/** The board's wall in board units, as in board/ArenaBoard.tsx. */
-const WALL = 3;
-/** One turn of the demo: faster than a real round (0.9 s), so a whole round fits in about 20 seconds. */
-const TICK_MS = 320;
 /** The demo tank: blue with a star, the tank on the README banner. */
 export const YOU_LOOK: TankLook = { colour: 1, skin: "plain", second: 7, plate: null, icon: "star" };
 
@@ -139,7 +137,9 @@ export function demoData(recording: DemoRecording): DemoData {
 
   return {
     board: { width, height, cell: CELL, wall: WALL, tankScale: TANK_SCALE, tankLift: TANK_LIFT, turretX: TURRET_X },
-    tickMs: TICK_MS,
+    // The game's own speed, so the demo looks like a round a player will see.
+    tickMs: PUBLIC_TICK_MS,
+    fxMs: Math.min(FX_MAX_MS, Math.max(FX_MIN_MS, PUBLIC_TICK_MS)),
     tanks: demoTanks(ids),
     gauges: Array.from({ length: rules.waterCapacity + 1 }, (_, water) => svg(<WaterGauge water={water} rules={rules} small={false} />)),
     shots,

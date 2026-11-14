@@ -51,7 +51,10 @@ export interface DemoShot {
 
 export interface DemoData {
   readonly board: DemoBoard;
+  /** One turn, in milliseconds. */
   readonly tickMs: number;
+  /** How long a jet, splash or wobble lasts, in milliseconds. */
+  readonly fxMs: number;
   readonly tanks: readonly DemoTank[];
   /** Water gauge markup by water level, 0 to the tank's capacity. */
   readonly gauges: readonly string[];

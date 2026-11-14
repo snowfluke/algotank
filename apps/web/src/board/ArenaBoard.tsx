@@ -43,10 +43,10 @@ import { useCellPixels } from "./useCellPixels.ts";
 import { WaterGauge } from "./WaterGauge.tsx";
 
 /** Thickness of the wall around the floor, in board units (a square is 10). */
-const WALL = 3;
+export const WALL = 3;
 /** Effects last about one turn, but never so short that a fast replay shows only a flicker, nor so long that a slow one lingers. */
-const FX_MIN_MS = 260;
-const FX_MAX_MS = 900;
+export const FX_MIN_MS = 260;
+export const FX_MAX_MS = 900;
 /** Smallest on-screen size of the "+1" and the "You" marker, in CSS pixels, so they stay readable at 64 tanks. */
 const PLUS_MIN_PX = 11;
 /** Where squares are too small for labels, the viewer's own tank is drawn this much larger, so it is found at once. */

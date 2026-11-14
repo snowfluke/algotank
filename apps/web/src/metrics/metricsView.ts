@@ -21,6 +21,9 @@ export type MeasureId =
   | "chatLines"
   | "openStreamsPeak"
   | "stepRulesSaved"
+  | "tipsEncouraged"
+  | "waterTipsShown"
+  | "waterTipsApplied"
   | "languageEn"
   | "languageId";
 
@@ -51,6 +54,9 @@ const SUMS: Readonly<Record<Exclude<MeasureId, "tanksPerRound">, (counts: Counts
   chatLines: (c) => total(c, "chatLine"),
   openStreamsPeak: (c) => total(c, "openStreamsPeak"),
   stepRulesSaved: (c) => total(c, "stepRuleSaved"),
+  tipsEncouraged: (c) => c["ruleTip.encouraged"] ?? 0,
+  waterTipsShown: (c) => c["ruleTip.waterShown"] ?? 0,
+  waterTipsApplied: (c) => c["ruleTip.waterApplied"] ?? 0,
   languageEn: (c) => c["languageUsed.en"] ?? 0,
   languageId: (c) => c["languageUsed.id"] ?? 0,
 };
@@ -73,6 +79,9 @@ const MEASURES: readonly MeasureId[] = [
   "chatLines",
   "openStreamsPeak",
   "stepRulesSaved",
+  "tipsEncouraged",
+  "waterTipsShown",
+  "waterTipsApplied",
   "languageEn",
   "languageId",
 ];

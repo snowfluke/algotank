@@ -54,6 +54,8 @@ export const DAY_COUNTERS = {
   firstTimer: FIRST_TIMER_STEPS,
   /** A rule set saved that has a step sequence where the saved one before it had none. */
   stepRuleSaved: null,
+  /** The card after a practice game (apps/web/src/ruletip): the encouragement shown, the water tip shown, the water tip applied. */
+  ruleTip: ["encouraged", "waterShown", "waterApplied"],
 } as const satisfies Readonly<Record<string, readonly string[] | null>>;
 
 export type DayCounterName = keyof typeof DAY_COUNTERS;
@@ -79,7 +81,7 @@ const KEY_SET: ReadonlySet<string> = new Set(COUNTER_KEYS);
 export const isCounterKey = (value: string): value is CounterKey => KEY_SET.has(value);
 
 /** The events the page may send; the server counts every other counter itself. */
-export const PAGE_EVENTS = ["pageOpened", "languageUsed", "firstTimer"] as const satisfies readonly DayCounterName[];
+export const PAGE_EVENTS = ["pageOpened", "languageUsed", "firstTimer", "ruleTip"] as const satisfies readonly DayCounterName[];
 export type PageEventName = (typeof PAGE_EVENTS)[number];
 
 export type MetricEventRequest = { [N in PageEventName]: { readonly name: N; readonly label: LabelOf<N> } }[PageEventName];

@@ -36,7 +36,7 @@
 // `grid grid-cols-[minmax(0,1fr)_minmax(0,20rem)] gap-6` in a box with a height; the
 // own status stays in ArenaPane's row above the board.
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { PlayerId, PublicArena, PublicPlayer } from "@game/arena";
 import type { StrategyInput } from "@game/engine";
 import { ArenaView } from "../board/ArenaView.tsx";
@@ -76,6 +76,8 @@ export interface ResultPaneProps {
   readonly me: PublicPlayer;
   /** Sentences shown under the outcome at the end of a game, in this order. */
   readonly notes?: readonly string[];
+  /** A block under the notes at the end of a game: the practice arena's rule tip (ruletip/RuleTip.tsx). */
+  readonly tip?: ReactNode;
 }
 
 export interface FinalRankingPaneProps {
@@ -167,10 +169,10 @@ export function MyTankPane({ decisions, strategy }: MyTankPaneProps) {
   );
 }
 
-export function ResultPane({ arena, me, notes = [] }: ResultPaneProps) {
+export function ResultPane({ arena, me, notes = [], tip }: ResultPaneProps) {
   return (
     <div className={PANE} data-result-pane="">
-      <ResultSummary arena={arena} me={me} notes={notes} />
+      <ResultSummary arena={arena} me={me} notes={notes} tip={tip} />
     </div>
   );
 }

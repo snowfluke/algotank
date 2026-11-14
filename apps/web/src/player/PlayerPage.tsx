@@ -12,7 +12,7 @@
 
 import { ChartBar, Columns3, History, LayoutGrid, ListOrdered, MessageCircle, SlidersHorizontal, Trophy, UserPlus, Users } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { isPublicKind, type ArenaId, type PublicArena, type PublicPlayer } from "@game/arena";
+import { isPublicKind, type ArenaId, type PublicArena, type PublicPlayer, type OwnStats } from "@game/arena";
 import { joinArena } from "../api/client.ts";
 import { describeError } from "../api/errorSentences.ts";
 import { paths } from "../app/route.ts";
@@ -31,6 +31,9 @@ import { OwnStatsPane } from "../stats/OwnStatsPane.tsx";
 import { replayRoomTour, RoomTours } from "../guide/RoomTours.tsx";
 import { EndedArena, useEndedResult } from "../results/EndedArena.tsx";
 import { HistoryPane } from "../results/HistoryPane.tsx";
+import { RuleTip } from "../ruletip/RuleTip.tsx";
+import { waterTipOf } from "../ruletip/ruleTip.ts";
+import { placeOf } from "../standings/standings.ts";
 import { ConnectionBanner } from "../room/ConnectionBanner.tsx";
 import { HowItWorks, HowItWorksButton } from "../room/HowItWorks.tsx";
 import { canChangeLook, LeaveButton, LookSheet } from "../room/MyTankControls.tsx";
@@ -165,6 +168,12 @@ function focusOpener(opens: "settings" | "look"): void {
   requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-opens="${opens}"]`)?.focus());
 }
 
+/** The next lobby's status line after a practice game: the water tip while it still applies to the saved rules, else the encouragement. */
+function lobbySentence(strategy: StrategyHandle, stats: OwnStats | null, t: ReturnType<typeof useMessages>["ruleTip"]): string {
+  const saved = strategy.load.kind === "ready" ? strategy.load.saved : null;
+  return saved !== null && stats !== null && waterTipOf(saved, stats.last) !== null ? t.water : t.lobby;
+}
+
 export function JoinedRoom({ view, session, stream, chatFeed, strategy, isOwner, arenaName, autoSeconds, nextGameSeconds, firstResult, notices, onLeft }: RoomProps) {
   const m = useMessages();
   const { arena, me } = view;
@@ -219,8 +228,19 @@ export function JoinedRoom({ view, session, stream, chatFeed, strategy, isOwner,
   const otherArenas = otherArenasFrom(arena);
   // "Show me around" in the board's legend replays the first-round tour (null for a viewer without a tank in the round).
   const showAround = replayRoomTour(view);
+  // The practice arena's rule tip (ruletip/): a card on the result of a game this player played, and
+  // one sentence in the status line of the next lobby, where the rules are on screen.
+  const practice = arena.settings.kind === "practice";
+  const playedThisGame = arena.phase.kind === "finished" && placeOf(me.status) !== null;
+  // The game's statistics are kept past the result, because the stream drops them when the next game begins.
+  const [played, setPlayed] = useState<{ readonly game: number; readonly stats: OwnStats | null } | null>(null);
+  useEffect(() => {
+    if (playedThisGame) setPlayed({ game: arena.game, stats: ownStats });
+  }, [playedThisGame, arena.game, ownStats]);
+  const tip = practice && playedThisGame ? <RuleTip gameKey={`${arena.id}|${arena.game}`} strategy={strategy} stats={ownStats} onOpenRules={() => choose("tank")} /> : undefined;
+  const lobbyTip = practice && view.kind === "lobby" && played !== null && played.game === arena.game - 1 ? lobbySentence(strategy, played.stats, m.ruleTip) : null;
   // A public arena's countdown is in the clock; a sentence that changes every second would be read aloud every second.
-  const statusBody = timer !== null && arena.phase.kind !== "running" ? undefined : status?.body;
+  const statusBody = lobbyTip ?? (timer !== null && arena.phase.kind !== "running" ? undefined : status?.body);
   const action =
     isOwner && arena.phase.kind !== "running" ? (
       <StartControl arena={arena} ownId={me.id} />
@@ -301,7 +321,7 @@ export function JoinedRoom({ view, session, stream, chatFeed, strategy, isOwner,
             ),
         };
       case "result":
-        return { label: t.result, icon: <Trophy aria-hidden size={22} />, content: <ResultPane arena={arena} me={me} notes={publicResultNotes(view, m.publicplay)} /> };
+        return { label: t.result, icon: <Trophy aria-hidden size={22} />, content: <ResultPane arena={arena} me={me} notes={publicResultNotes(view, m.publicplay)} tip={tip} /> };
       case "history":
         return { label: m.results.page.tabs.history, icon: <Columns3 aria-hidden size={22} />, content: <HistoryPane arena={arena} viewerId={me.id} /> };
       case "chat":

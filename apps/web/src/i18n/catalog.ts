@@ -20,6 +20,7 @@ import * as prep from "../prep/messages.ts";
 import * as publicplay from "../publicplay/messages.ts";
 import * as results from "../results/messages.ts";
 import * as room from "../room/messages.ts";
+import * as ruleTip from "../ruletip/messages.ts";
 import * as screen from "../screen/messages.ts";
 import * as share from "../share/messages.ts";
 import * as sound from "../sound/messages.ts";
@@ -36,6 +37,7 @@ const en = {
   auth: auth.en,
   create: create.en,
   room: room.en,
+  ruleTip: ruleTip.en,
   prep: prep.en,
   vocabulary: vocabulary.en,
   live: live.en,
@@ -67,6 +69,7 @@ const id: Catalog = {
   auth: auth.id,
   create: create.id,
   room: room.id,
+  ruleTip: ruleTip.id,
   prep: prep.id,
   vocabulary: vocabulary.id,
   live: live.id,

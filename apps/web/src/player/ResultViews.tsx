@@ -6,7 +6,7 @@
 // points is a step of "How the game works" (the "?" in the status line), because a 20 s
 // break has no time to read it (73-after-first-timer-test.md, row 7).
 
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { isPublicKind, type PublicArena, type PublicPlayer } from "@game/arena";
 import { useLanguage, useMessages } from "../i18n/I18nProvider.tsx";
 import { roundKind } from "../live/roundHeading.ts";
@@ -78,8 +78,8 @@ function TopPlaces({ items, highlightId }: { items: readonly RankingItem[]; high
 }
 
 /** The result pane's content: the end of the game, or the round that just ended. `notes` show at the end of a game only. */
-export function ResultSummary({ arena, me, notes }: ResultProps & { readonly notes: readonly string[] }) {
-  if (arena.phase.kind === "finished") return <FinishedSummary arena={arena} winnerId={arena.phase.winnerId} me={me} notes={notes} />;
+export function ResultSummary({ arena, me, notes, tip }: ResultProps & { readonly notes: readonly string[]; readonly tip?: ReactNode }) {
+  if (arena.phase.kind === "finished") return <FinishedSummary arena={arena} winnerId={arena.phase.winnerId} me={me} notes={notes} tip={tip} />;
   return <BreakSummary arena={arena} me={me} />;
 }
 
@@ -126,7 +126,7 @@ function BreakSummary({ arena, me }: ResultProps) {
 /** The end of a game gives way like the break: the recap of hits first; the outcome, the notes and the top three stay. */
 const FINISHED_DETAIL_LEVELS = 2;
 
-function FinishedSummary({ arena, winnerId, me, notes }: ResultProps & { readonly winnerId: string; readonly notes: readonly string[] }) {
+function FinishedSummary({ arena, winnerId, me, notes, tip }: ResultProps & { readonly winnerId: string; readonly notes: readonly string[]; readonly tip?: ReactNode }) {
   const m = useMessages();
   const [language] = useLanguage();
   const detail = useFitDetail<HTMLDivElement>(FINISHED_DETAIL_LEVELS, `${language}|${notes.join("|")}`);
@@ -161,6 +161,7 @@ function FinishedSummary({ arena, winnerId, me, notes }: ResultProps & { readonl
           {note}
         </p>
       ))}
+      {tip}
       {final === undefined || detail.level >= 1 || onTheClock(arena) ? null : <Recap arena={arena} round={final.round} playerId={me.id} />}
       <TopPlaces items={finalRankingItems(places)} highlightId={me.id} />
     </div>

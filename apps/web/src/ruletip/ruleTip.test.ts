@@ -1,0 +1,54 @@
+import { describe, expect, test } from "bun:test";
+import { PRESETS, parseStrategy, type StatsView, type StrategyInput } from "@game/engine";
+import { waterTipOf, withWaterRule } from "./ruleTip.ts";
+
+const preset = (id: string): StrategyInput => {
+  const found = PRESETS.find((p) => p.id === id);
+  if (found === undefined) throw new Error(`no play style ${id}`);
+  return found.strategy;
+};
+
+/** Statistics that match a strategy, with the turns of each mode's first rule. */
+function statsFor(strategy: StrategyInput, firstRuleTurns: number): StatsView {
+  return {
+    turns: 60,
+    shots: 10,
+    hits: 2,
+    timesHit: 5,
+    squaresMoved: 20,
+    noRuleTurns: 0,
+    modes: strategy.modes.map((mode) => ({ name: mode.name, rules: mode.rules.map((_, i) => (i === 0 ? firstRuleTurns : 0)), fallback: 0 })),
+  };
+}
+
+describe("the water tip", () => {
+  test("a rule list that only shoots gets the tip, and the new rule goes on top and passes the engine's check", () => {
+    const charger = preset("charger");
+    const tip = waterTipOf(charger, statsFor(charger, 12));
+    expect(tip).not.toBeNull();
+    if (tip === null) return;
+    const next = withWaterRule(charger, tip);
+    expect(next).not.toBeNull();
+    const mode = next?.modes.find((m) => m.id === tip.modeId);
+    expect(mode?.rules[0]?.conditions[0]?.condition).toBe("myWater");
+    expect(mode?.rules.length).toBe((charger.modes.find((m) => m.id === tip.modeId)?.rules.length ?? 0) + 1);
+    expect(parseStrategy(next).ok).toBe(true);
+    // Once the rule is there, the tip is gone.
+    if (next !== null) expect(waterTipOf(next, statsFor(next, 12))).toBeNull();
+  });
+
+  test("the designed play styles get no tip: the default dodges first, and the others already watch their water", () => {
+    for (const id of ["evader", "leader-chaser", "dry-hunter", "ambusher", "picker", "backstabber"]) {
+      const strategy = preset(id);
+      expect([id, waterTipOf(strategy, statsFor(strategy, 12))]).toEqual([id, null]);
+    }
+  });
+
+  test("no tip when the shoot rule never ran, or when the statistics belong to another rule list", () => {
+    const charger = preset("charger");
+    expect(waterTipOf(charger, statsFor(charger, 0))).toBeNull();
+    const edited = statsFor(charger, 12);
+    const changed: StatsView = { ...edited, modes: edited.modes.map((mode) => ({ ...mode, rules: [...mode.rules, 0] })) };
+    expect(waterTipOf(charger, changed)).toBeNull();
+  });
+});

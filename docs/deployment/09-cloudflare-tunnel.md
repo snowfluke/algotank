@@ -49,12 +49,12 @@ Do sections A, C and D of `02-first-deploy.md`. Skip sections B, E and F, becaus
    sudo cloudflared tunnel route dns algotank game.example.com
    ```
 
-6. Write the tunnel's settings. Use the tunnel ID from step 4 in place of `6ff42ae2-765d-4adf-8112-31c55c1551ef`. The last rule answers 404 for any other host, and Cloudflare requires such a last rule ([Configuration file](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/configure-tunnels/local-management/configuration-file/)).
+6. Write the tunnel's settings. Use the tunnel ID from step 4 in place of `<tunnel-id>`. The last rule answers 404 for any other host, and Cloudflare requires such a last rule ([Configuration file](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/configure-tunnels/local-management/configuration-file/)).
 
    ```sh
    sudo mkdir -p /etc/cloudflared && sudo tee /etc/cloudflared/config.yml >/dev/null <<'EOF'
-   tunnel: 6ff42ae2-765d-4adf-8112-31c55c1551ef
-   credentials-file: /root/.cloudflared/6ff42ae2-765d-4adf-8112-31c55c1551ef.json
+   tunnel: <tunnel-id>
+   credentials-file: /root/.cloudflared/<tunnel-id>.json
    ingress:
      - hostname: game.example.com
        service: http://127.0.0.1:8080

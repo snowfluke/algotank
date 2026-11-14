@@ -1,7 +1,8 @@
 # The game server as a systemd service. Copy to /etc/systemd/system/algotank.service.
 # See docs/deployment/02-first-deploy.md.
 #
-# Not verified on a server yet. When the first start fails because of a hardening line,
+# Verified on Ubuntu 24.04 with Bun 1.4.2 on 14 November 2026: the server starts and runs with
+# every hardening line below. When a later start fails because of a hardening line,
 # journalctl -u algotank shows "Operation not permitted" or a similar error. Comment out
 # the newest hardening line you suspect, then run: systemctl daemon-reload && systemctl restart algotank
 

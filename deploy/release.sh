@@ -41,8 +41,9 @@ pack() {
   local root
   root="$(cd "$(dirname "$0")/.." && pwd)"
   step "Packing ${RELEASE_FILES[*]} from $root into $out"
-  # COPYFILE_DISABLE stops macOS tar from adding ._ metadata files.
-  COPYFILE_DISABLE=1 tar -C "$root" "${RELEASE_EXCLUDES[@]}" -czf "$out" "${RELEASE_FILES[@]}"
+  # COPYFILE_DISABLE stops macOS tar from adding ._ metadata files, and --no-xattrs stops it from
+  # adding extended attributes, which GNU tar on the server reports as "unknown extended header" lines.
+  COPYFILE_DISABLE=1 tar --no-xattrs -C "$root" "${RELEASE_EXCLUDES[@]}" -czf "$out" "${RELEASE_FILES[@]}"
   step "Done. Copy $out to the server and run: sudo algotank-release <archive>"
 }
 

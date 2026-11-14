@@ -10,7 +10,7 @@ Keep Caddy between `cloudflared` and the game server. Cloudflare adds to an `X-F
 
 Cloudflare Tunnel buffers a response unless its type is `text/event-stream` ([Tunnel troubleshooting](https://developers.cloudflare.com/tunnel/troubleshooting/)). The event stream has that type, so it streams.
 
-Nothing on this page was tested on a server.
+This page was tested on Ubuntu 24.04 with `cloudflared` 2026.11.0 on 14 November 2026, on a VPS that shares its public address with other customers (SSH on a forwarded port, no ports 80 and 443 of its own). A tunnel suits such a VPS, because it needs no inbound port.
 
 ## Procedure
 
@@ -35,6 +35,13 @@ Do sections A, C and D of `02-first-deploy.md`. Skip sections B, E and F, becaus
 
    ```sh
    sudo cloudflared tunnel login
+   ```
+
+   If the command still shows "Waiting for login..." after you authorize, the browser downloaded the certificate as `cert.pem` instead. Copy that file to the server, and stop the waiting command. Then delete the file on your computer, because it can make and route tunnels on your Cloudflare account.
+
+   ```sh
+   scp cert.pem root@203.0.113.10:/root/.cloudflared/cert.pem
+   sudo chmod 600 /root/.cloudflared/cert.pem
    ```
 
 4. Make the tunnel. The output shows the tunnel's ID and the path of its credentials file. Write both down.
@@ -68,7 +75,7 @@ Do sections A, C and D of `02-first-deploy.md`. Skip sections B, E and F, becaus
    sudo cloudflared tunnel --config /etc/cloudflared/config.yml ingress validate
    ```
 
-8. Write the Caddyfile for the tunnel. Caddy listens on `127.0.0.1:8080` without TLS, trusts `cloudflared` on the same server, and sets the host to the domain, because `cloudflared` can send another `Host`.
+8. Write the Caddyfile for the tunnel. Caddy listens on `127.0.0.1:8080` without TLS, trusts `cloudflared` on the same server, and sets the host to the domain, because `cloudflared` can send another `Host`. It also sends a visit over plain `http://` to `https://`, because the sign-in cookie works over HTTPS only. Cloudflare marks such a visit with `X-Forwarded-Proto: http`. This redirect works also when "Always Use HTTPS" in Cloudflare is off.
 
    ```sh
    sudo tee /etc/caddy/Caddyfile >/dev/null <<'EOF'
@@ -82,6 +89,8 @@ Do sections A, C and D of `02-first-deploy.md`. Skip sections B, E and F, becaus
    http://:8080 {
    	bind 127.0.0.1
    	log
+   	@plainhttp header X-Forwarded-Proto http
+   	redir @plainhttp https://game.example.com{uri} 308
    	reverse_proxy 127.0.0.1:3000 {
    		header_up X-Forwarded-For {client_ip}
    		header_up X-Forwarded-Host game.example.com

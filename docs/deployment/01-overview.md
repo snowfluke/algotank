@@ -1,6 +1,6 @@
 # 1. Overview
 
-This runbook puts the game on one Ubuntu LTS server behind Cloudflare. Nothing in it was tested on a real server yet. Each step that needs a check on the first deploy is in `02-first-deploy.md`, section "Checklist for the first deploy".
+This runbook puts the game on one Ubuntu LTS server behind Cloudflare. The Cloudflare Tunnel route (`09-cloudflare-tunnel.md`, with sections A, C, D, G and H of `02-first-deploy.md`) was tested on Ubuntu 24.04 with Bun 1.4.2 on 14 November 2026. The route with open ports (sections B, E and F) and the pm2 route (`08-pm2.md`) were not tested on a real server. Each step that needs a check on the first deploy is in `02-first-deploy.md`, section "Checklist for the first deploy".
 
 ## The path of a request
 

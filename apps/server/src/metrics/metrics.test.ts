@@ -1,34 +1,25 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import type { Database } from "bun:sqlite";
 import { plainTankLook, type AdminMetricsResponse, type MetricsDay } from "@game/arena";
 import { PRESETS } from "@game/engine";
 import type { OutgoingMail } from "../mail.ts";
 import { zoneCalendar } from "../monthly/calendar.ts";
-import { createTestArena, getArena, joinTestPlayer, manualScheduler, signUp, startTestServer, PASSWORD, SETTINGS, type TestServer, type TestServerOptions } from "../test-helpers.ts";
+import { insertRow, memoryDatabase } from "../db/testing.ts";
+import { createTestArena, getArena, joinTestPlayer, manualScheduler, type ManualScheduler, signUp, startTestServer, PASSWORD, SETTINGS, type TestServer, type TestServerOptions } from "../test-helpers.ts";
 import { Metrics } from "./metrics.ts";
 
 const ADMIN = "host@example.org";
 const TOKEN = "metrics-token-for-tests-0001";
 const servers: TestServer[] = [];
-const folders: string[] = [];
 
 afterEach(async () => {
   for (const t of servers.splice(0)) await t.server.stop();
-  for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true });
 });
 
 function start(options: TestServerOptions = {}): TestServer {
   const t = startTestServer({ adminEmails: [ADMIN], metricsToken: TOKEN, ...options });
   servers.push(t);
   return t;
-}
-
-function folder(): string {
-  const path = mkdtempSync(join(tmpdir(), "algotank-metrics-"));
-  folders.push(path);
-  return path;
 }
 
 async function adminView(t: TestServer, cookie: string, query = ""): Promise<AdminMetricsResponse> {
@@ -146,36 +137,44 @@ describe("the admin guard", () => {
   });
 });
 
-describe("the day file", () => {
+describe("the day's rows", () => {
   // 23:59 in Jakarta (UTC+7), one minute before the day changes.
   const LATE = Date.parse("2026-11-11T16:59:00Z");
+  const metricsOn = (db: Database, ticks: ManualScheduler) => new Metrics({ db, calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
+  /** The stored counters of each day, as the table holds them. */
+  const stored = (db: Database) => {
+    const days: Record<string, Record<string, number>> = {};
+    for (const row of db.query<{ day: string; name: string; value: number }, []>("SELECT day, name, value FROM metrics_counter ORDER BY day, name").all()) {
+      days[row.day] = { ...days[row.day], [row.name]: row.value };
+    }
+    return days;
+  };
 
-  test("the day changes at midnight in LEAGUE_TIME_ZONE; each day keeps its own file", () => {
-    const dataDir = folder();
+  test("the day changes at midnight in LEAGUE_TIME_ZONE; each day keeps its own rows", () => {
+    const db = memoryDatabase();
     const ticks = manualScheduler(LATE);
-    const metrics = new Metrics({ dataDir, calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
+    const metrics = metricsOn(db, ticks);
     metrics.start(() => 3);
     metrics.count("chatLine");
     ticks.advance(2 * 60_000);
     metrics.count("chatLine", 2);
     metrics.count("joined", "practice");
     ticks.advance(60_000);
-    const read = (day: string) => JSON.parse(readFileSync(join(dataDir, "metrics", `${day}.json`), "utf8")) as { version: number; day: string; counts: Record<string, number> };
-    expect(read("2026-11-11")).toEqual({ version: 1, day: "2026-11-11", counts: { chatLine: 1, openStreamsPeak: 3 } });
-    expect(read("2026-11-12").counts).toMatchObject({ chatLine: 2, "joined.practice": 1 });
+    expect(stored(db)["2026-11-11"]).toEqual({ chatLine: 1, openStreamsPeak: 3 });
+    expect(stored(db)["2026-11-12"]).toMatchObject({ chatLine: 2, "joined.practice": 1 });
     metrics.stop();
 
     // A restart on the same day continues its numbers.
-    const again = new Metrics({ dataDir, calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
+    const again = metricsOn(db, ticks);
     again.count("chatLine");
     expect(again.today()).toEqual({ day: "2026-11-12", counts: { chatLine: 3, "joined.practice": 1, openStreamsPeak: 3 } });
     expect(again.days("2026-11-10", "2026-11-12").map((d) => d.counts["chatLine"] ?? 0)).toEqual([0, 1, 3]);
   });
 
   test("the visitor count keeps no identifier: same browser once a day, and only the number is written", () => {
-    const dataDir = folder();
+    const db = memoryDatabase();
     const ticks = manualScheduler(LATE);
-    const metrics = new Metrics({ dataDir, calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
+    const metrics = metricsOn(db, ticks);
     metrics.seeVisitor("203.0.113.7", "Mozilla/5.0 Kid-Tablet");
     metrics.seeVisitor("203.0.113.7", "Mozilla/5.0 Kid-Tablet");
     metrics.seeVisitor("203.0.113.7", "Mozilla/5.0 Other-Phone");
@@ -185,21 +184,18 @@ describe("the day file", () => {
     metrics.seeVisitor("203.0.113.7", "Mozilla/5.0 Kid-Tablet");
     expect(metrics.today().counts["visitors"]).toBe(1);
     metrics.stop();
-    for (const name of readdirSync(join(dataDir, "metrics"))) {
-      const text = readFileSync(join(dataDir, "metrics", name), "utf8");
-      expect(text).not.toContain("203.0.113");
-      expect(text).not.toContain("Kid-Tablet");
-      expect(Object.keys((JSON.parse(text) as { counts: object }).counts)).toEqual(["visitors"]);
-    }
+    const days = stored(db);
+    expect(JSON.stringify(days)).not.toContain("203.0.113");
+    expect(JSON.stringify(days)).not.toContain("Kid-Tablet");
+    expect(Object.values(days).map((counts) => Object.keys(counts))).toEqual([["visitors"], ["visitors"]]);
   });
 
   test("a failed write is logged and tried again; a count never throws", () => {
-    const dataDir = folder();
+    const db = memoryDatabase();
     const ticks = manualScheduler(LATE);
-    const metrics = new Metrics({ dataDir, calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
+    const metrics = metricsOn(db, ticks);
     metrics.start(() => 0);
-    const directory = join(dataDir, "metrics");
-    chmodSync(directory, 0o500);
+    db.run("PRAGMA query_only = ON");
     const errors: unknown[] = [];
     const original = console.error;
     console.error = (...args: unknown[]) => void errors.push(args);
@@ -207,34 +203,33 @@ describe("the day file", () => {
       metrics.count("signedIn");
       expect(() => metrics.count("joined", "private", -1)).not.toThrow();
       ticks.advance(60_000);
-      expect(errors.length).toBe(2);
-      expect(readdirSync(directory)).toEqual([]);
+      // The refused count, the day's write and the removal of old rows.
+      expect(errors.length).toBe(3);
+      expect(stored(db)).toEqual({});
     } finally {
       console.error = original;
-      chmodSync(directory, 0o700);
+      db.run("PRAGMA query_only = OFF");
     }
     ticks.advance(60_000);
-    expect(readdirSync(directory)).toEqual(["2026-11-11.json"]);
+    expect(Object.keys(stored(db))).toEqual(["2026-11-11"]);
     metrics.stop();
   });
 
-  test("a damaged file is set aside and the day counts from 0; a retired key is dropped", () => {
-    const dataDir = folder();
+  test("a counter that a later version retired is dropped when the day is read", () => {
+    const db = memoryDatabase();
     const ticks = manualScheduler(LATE);
-    const make = () => new Metrics({ dataDir, calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
-    make().stop();
-    const path = join(dataDir, "metrics", "2026-11-11.json");
-    writeFileSync(path, JSON.stringify({ version: 1, day: "2026-11-11", counts: { chatLine: 4, retiredCounter: 9 } }));
-    expect(make().today().counts).toEqual({ chatLine: 4 });
-    writeFileSync(path, "{ damaged");
-    const original = console.error;
-    console.error = () => {};
-    try {
-      expect(make().today().counts).toEqual({});
-    } finally {
-      console.error = original;
-    }
-    expect(readdirSync(join(dataDir, "metrics")).some((name) => name.startsWith("2026-11-11.damaged-"))).toBe(true);
+    insertRow(db, "metrics_counter", { day: "2026-11-11", name: "chatLine", value: 4 });
+    insertRow(db, "metrics_counter", { day: "2026-11-11", name: "retiredCounter", value: 9 });
+    expect(metricsOn(db, ticks).today().counts).toEqual({ chatLine: 4 });
+  });
+
+  test("rows older than 400 days are removed at the first write", () => {
+    const db = memoryDatabase();
+    const ticks = manualScheduler(LATE);
+    insertRow(db, "metrics_counter", { day: "2025-01-01", name: "chatLine", value: 1 });
+    insertRow(db, "metrics_counter", { day: "2026-01-01", name: "chatLine", value: 2 });
+    metricsOn(db, ticks).flush();
+    expect(Object.keys(stored(db))).toEqual(["2026-01-01"]);
   });
 });
 

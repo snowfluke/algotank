@@ -4,7 +4,7 @@
 // owner-only email, the 180-day prune, the ended-arena link) and where an email must never go.
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -22,7 +22,6 @@ import {
 import { AuthStore } from "./auth/store.ts";
 import { openDatabase } from "./db/open.ts";
 import type { MailSender } from "./mail.ts";
-import { RESULTS_FOLDER } from "./results.ts";
 import { createTestArena, getArena, joinTestPlayer, openStream, PASSWORD, SETTINGS, startTestServer, type StreamReader, type TestServer, type TestServerOptions } from "./test-helpers.ts";
 
 const open: TestServer[] = [];
@@ -439,19 +438,22 @@ describe("stored result", () => {
     return { ...arena, people, finished, resultId: finished.phase.resultId };
   }
 
-  test("the file holds the arena, every round, the ranking and each human's account, and no email", async () => {
+  test("the row holds the arena, every round, the ranking and each human's account, and no email", async () => {
     const dataDir = temporaryDirectory();
     const t = start({ dataDir });
     const { arenaId, finished, resultId, people } = await finishedGame(t);
-    const path = join(dataDir, RESULTS_FOLDER, `${resultId}.json`);
-    const file = JSON.parse(readFileSync(path, "utf8"));
+    const db = openDatabase({ kind: "file", dataDir });
+    const row = db.query<{ document_json: string }, [string]>("SELECT document_json FROM result WHERE id = ?").get(resultId);
+    db.close();
+    if (row === null) throw new Error("no result row");
+    const file = JSON.parse(row.document_json);
     expect(file.result).toMatchObject({ id: resultId, arenaId, arenaName: SETTINGS.name, kind: "presenter", game: 1, ruleSetMode: "standard", joinPolicy: "account", ticksPerRound: SETTINGS.ticksPerRound, tickMs: SETTINGS.tickMs });
     expect(file.result.rounds).toHaveLength(2);
     expect(file.result.rounds[0].survivors).toHaveLength(8);
     expect(file.result.ranking[0].playerId).toBe(finished.phase.kind === "finished" ? finished.phase.winnerId : "");
     expect(file.result.ranking.map((r: { place: number }) => r.place)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(file.accounts).toHaveLength(9);
-    expect(readFileSync(path, "utf8")).not.toContain("@example.org");
+    expect(row.document_json).not.toContain("@example.org");
     expect(people).toHaveLength(9);
   });
 
@@ -472,7 +474,9 @@ describe("stored result", () => {
     t.ticks.advance(RESULT_KEEP_MS + 11 * 60_000);
     t.ticks.tick();
     expect((await t.api(`/api/results/${resultId}`)).status).toBe(404);
-    expect(existsSync(join(dataDir, RESULTS_FOLDER, `${resultId}.json`))).toBe(false);
+    const db = openDatabase({ kind: "file", dataDir });
+    expect(db.query<{ id: string }, [string]>("SELECT id FROM result WHERE id = ?").get(resultId)).toBeNull();
+    db.close();
   });
 
   test("a result survives a restart, and an unknown or malformed id is 404", async () => {

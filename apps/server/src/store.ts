@@ -1,6 +1,6 @@
-// The arenas of this server process and the secrets that belong to them. With a
-// data directory every change is also saved (see arena-files.ts), so a restart
-// brings the arenas back.
+// The arenas of this server process and the secrets that belong to them. Memory is the
+// live copy, because the turn loop reads it; every change is also saved to the database
+// (arena-rows.ts), so a restart brings the arenas back.
 //
 // Rules that live here:
 // - One open arena per account: an account owns at most one arena record. Closing or
@@ -14,7 +14,7 @@
 // - A scheduled start does not survive a restart: the timer lived in the old process, so the
 //   plan goes back to waiting at load (75-organiser-tournament.md, named limit).
 //
-// Every save writes the whole arena. With 512 players that is a file of about a
+// Every save writes the whole arena. With 512 players that is a row of about a
 // megabyte, and in a break hundreds of players edit their tank at once, so edits are
 // coalesced: an arena whose only changes are edits is written at most once per
 // SAVE_INTERVAL_MS. Everything else is written at once.
@@ -36,6 +36,7 @@
 // Worst loss: a crash (not a shutdown) loses up to SAVE_INTERVAL_MS, 1 second, of
 // strategy, look and bot-fill edits. Joins, leaves and phases are never lost.
 
+import type { Database } from "bun:sqlite";
 import {
   applyEvent,
   joinNeedsAccount,
@@ -49,7 +50,7 @@ import {
   STORED_ARENA_VERSION,
 } from "@game/arena";
 import type { Decision, RoundConfig } from "@game/engine";
-import { ArenaFiles } from "./arena-files.ts";
+import { ArenaOwnedError, ArenaRows } from "./arena-rows.ts";
 import { newArenaCode, safeEqual } from "./secrets.ts";
 import type { Clock, Scheduler } from "./timers.ts";
 import { NO_METRICS, type MetricsRecorder } from "./metrics/metrics.ts";
@@ -105,8 +106,8 @@ export type AddResult =
   | { readonly ok: false; readonly ownedArenaId: ArenaId };
 
 export interface StoreOptions {
-  /** DATA_DIR. Without it the arenas live in memory only. */
-  readonly dataDir?: string;
+  /** The server's database: a file under DATA_DIR, or in memory for tests. */
+  readonly db: Database;
   readonly now: Clock;
   /** Runs the coalesced save of edits. */
   readonly scheduler: Scheduler;
@@ -127,27 +128,26 @@ export class ArenaGoneError extends Error {
 
 export class Store {
   private readonly records = new Map<ArenaId, ArenaRecord>();
-  private readonly files: ArenaFiles | null;
+  private readonly rows: ArenaRows;
   private readonly metrics: MetricsRecorder;
   private readonly now: Clock;
   private readonly scheduler: Scheduler;
   private readonly listeners: ((record: ArenaRecord) => void)[] = [];
-  /** Arenas with edits that are in memory but not yet in their file. */
+  /** Arenas with edits that are in memory but not yet in their row. */
   private readonly pending = new Set<ArenaRecord>();
   private cancelFlush: (() => void) | null = null;
 
   /**
-   * With `dataDir`, every arena file in it is loaded, and this throws a PersistenceError
-   * that names the first file that fails. An arena that was running when the old
+   * Loads every arena row, and throws a PersistenceError that names the first row that
+   * fails. An arena that was running when the old
    * process stopped comes back aborted, so its round can start again.
    */
   constructor(options: StoreOptions) {
     this.metrics = options.metrics ?? NO_METRICS;
     this.now = options.now;
     this.scheduler = options.scheduler;
-    this.files = options.dataDir === undefined ? null : new ArenaFiles(options.dataDir);
-    if (this.files === null) return;
-    for (const stored of this.files.readAll()) {
+    this.rows = new ArenaRows(options.db);
+    for (const stored of this.rows.readAll()) {
       const record = recordFrom(stored);
       if (record.arena.phase.kind === "running") {
         const aborted = applyEvent(record.arena, { kind: "roundAborted" });
@@ -194,8 +194,14 @@ export class Store {
       playerAccounts: new Map(),
       replays: new Map(),
     };
-    // Saved before it is known, so a failed save leaves no arena in memory that the disk lacks.
-    this.save(record);
+    // Saved before it is known, so a failed save leaves no arena in memory that the database lacks.
+    // The UNIQUE owner index is the second guard of the check above.
+    try {
+      this.save(record);
+    } catch (error) {
+      if (error instanceof ArenaOwnedError) return { ok: false, ownedArenaId: error.ownedArenaId };
+      throw error;
+    }
     this.records.set(arena.id, record);
     this.metrics.count("arenaCreated", arena.settings.kind);
     return { ok: true, record };
@@ -258,7 +264,7 @@ export class Store {
     if (!record.playerTokens.has(playerId)) throw new Error(`Player ${playerId} has no token in arena ${record.arena.id}.`);
     const playerTokens = new Map(record.playerTokens).set(playerId, token);
     const lastActivityAt = this.now();
-    // Saved first: the new token is sent only after it is on disk.
+    // Saved first: the new token is sent only after it is in the database.
     this.save({ ...record, playerTokens, lastActivityAt });
     record.playerTokens = playerTokens;
     record.lastActivityAt = lastActivityAt;
@@ -274,7 +280,7 @@ export class Store {
       ...record,
       arena: result.arena,
       lastActivityAt: this.now(),
-      // A removed player's token goes in the same save: a file must not hold a token without a player.
+      // A removed player's token goes in the same save: a row must not hold a token without a player.
       playerTokens: without(record.playerTokens, removed),
       // An account stays while its player is in the arena (a player removed in a break stays until the reset).
       playerAccounts: onlyPlayersOf(record.playerAccounts, result.arena),
@@ -303,11 +309,11 @@ export class Store {
     this.save(record);
   }
 
-  /** Removes the arena and its file, which frees its owner to create another. */
+  /** Removes the arena and its row, which frees its owner to create another. */
   remove(record: ArenaRecord): void {
     this.assertHeld(record);
-    // The file first: when it cannot be removed, the arena stays whole and the caller gets the error.
-    this.files?.remove(record.arena.id);
+    // The row first: when it cannot be removed, the arena stays whole and the caller gets the error.
+    this.rows.remove(record.arena.id);
     this.records.delete(record.arena.id);
     // A pending edit must not write the closed arena back.
     this.pending.delete(record);
@@ -336,7 +342,7 @@ export class Store {
 
   /**
    * A request may hold a record across an await while the arena is closed. Its change
-   * must not write the file back, so a record the store no longer holds is refused.
+   * must not write the row back, so a record the store no longer holds is refused.
    */
   private assertHeld(record: ArenaRecord): void {
     if (this.records.get(record.arena.id) !== record) throw new ArenaGoneError(record.arena.id);
@@ -348,7 +354,7 @@ export class Store {
 
   /** Writes the whole arena, pending edits included. */
   private save(record: ArenaRecord): void {
-    this.files?.write(storedFrom(record));
+    this.rows.write(storedFrom(record));
     // `record` can be a copy that the caller assigns only after the save; the held record is what waits.
     const held = this.records.get(record.arena.id);
     if (held !== undefined) this.pending.delete(held);
@@ -356,7 +362,6 @@ export class Store {
 
   /** Marks an edit for the next coalesced save. */
   private saveSoon(record: ArenaRecord): void {
-    if (this.files === null) return;
     this.pending.add(record);
     this.armFlush();
   }

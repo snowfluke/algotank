@@ -22,7 +22,7 @@ import {
   type AccountTankErrorResponse,
   type AccountTankResponse,
 } from "@game/arena";
-import { PersistenceError } from "./arena-files.ts";
+import { PersistenceError } from "./db/errors.ts";
 import type { Auth } from "./auth/index.ts";
 import { httpErrorFor, isRecord, jsonResponse, noContent, readJson } from "./http.ts";
 import { checkTypedName } from "./name-filter.ts";

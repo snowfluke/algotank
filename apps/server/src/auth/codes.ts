@@ -9,7 +9,7 @@
 
 import type { Database, Statement } from "bun:sqlite";
 import type { AccountId } from "@game/arena";
-import { PersistenceError } from "../arena-files.ts";
+import { PersistenceError } from "../db/errors.ts";
 
 const CODE_LIFETIME_MS = 15 * 60 * 1000;
 /** Wrong tries one code allows; the fifth wrong try ends it. */
@@ -37,7 +37,7 @@ interface CodeRow {
 
 export class CodeStore {
   private readonly selectCode: Statement<CodeRow, [string, string]>;
-  private readonly upsertCode: Statement<unknown, [string, string, string, number, number]>;
+  private readonly upsertCode: Statement<unknown, [string, string, string, number]>;
   private readonly addAttempt: Statement<CodeRow, [string, string]>;
   private readonly deleteCode: Statement<unknown, [string, string]>;
   private readonly deleteDead: Statement<unknown, [number, number]>;
@@ -50,8 +50,8 @@ export class CodeStore {
     this.selectCode = db.prepare(`SELECT ${columns} FROM email_code WHERE account_id = ? AND purpose = ?`);
     // A new code takes the place of the old one, which stops working.
     this.upsertCode = db.prepare(
-      `INSERT INTO email_code (account_id, purpose, code_hash, attempts, expires_at, sent_at) VALUES (?1, ?2, ?3, 0, ?4, ?5)
-       ON CONFLICT (account_id, purpose) DO UPDATE SET code_hash = excluded.code_hash, attempts = 0, expires_at = excluded.expires_at, sent_at = excluded.sent_at`,
+      `INSERT INTO email_code (account_id, purpose, code_hash, attempts, expires_at) VALUES (?1, ?2, ?3, 0, ?4)
+       ON CONFLICT (account_id, purpose) DO UPDATE SET code_hash = excluded.code_hash, attempts = 0, expires_at = excluded.expires_at`,
     );
     this.addAttempt = db.prepare(`UPDATE email_code SET attempts = attempts + 1 WHERE account_id = ? AND purpose = ? RETURNING ${columns}`);
     this.deleteCode = db.prepare("DELETE FROM email_code WHERE account_id = ? AND purpose = ?");
@@ -69,8 +69,7 @@ export class CodeStore {
 
   /** Puts a new code in the place of the old one, which stops working. */
   put(accountId: AccountId, purpose: CodePurpose, codeHash: string): void {
-    const sentAt = this.now();
-    this.upsertCode.run(accountId, purpose, codeHash, sentAt + CODE_LIFETIME_MS, sentAt);
+    this.upsertCode.run(accountId, purpose, codeHash, this.now() + CODE_LIFETIME_MS);
   }
 
   /**

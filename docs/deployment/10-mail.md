@@ -42,5 +42,5 @@ Google's menus change from time to time. If a step above does not match, search 
 
 - A Gmail account sends about 500 emails a day. Each sign-up sends one email, and each "Send a new code" or password reset sends one more. Above the limit the sends fail until the next day: new players see that the email did not go out. For a larger event, use a mail service with a higher limit and put its settings in the same five variables.
 - A verified email proves that the player can read that mailbox. It does not prove one person: one person with two mailboxes can still hold two accounts.
-- The send limits are kept in memory, so a restart lets an account ask for a code again at once. The codes themselves are kept in `DATA_DIR/auth/codes.json` (only as password hashes) and survive a restart.
+- The send limits are kept in memory, so a restart lets an account ask for a code again at once. The codes themselves are kept in the table `email_code` of the database `DATA_DIR/algotank.sqlite` (only as password hashes) and survive a restart.
 - An email can land in the spam folder, mostly in the first days of a new sending account. Tell players to look there.

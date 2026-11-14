@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PRESETS, runRound, type RoundConfig } from "@game/engine";
-import { applyEvent, createArena, seatsOf } from "./arena.ts";
+import { applyEvent, createArena } from "./arena.ts";
 import { parseStoredArena, STORED_ARENA_VERSION, type StoredArena } from "./stored-arena.ts";
 import { plainTankLook, type Arena, type ArenaEvent } from "./types.ts";
 
@@ -40,46 +40,11 @@ function finishedStored(): StoredArena {
   };
 }
 
-/** Round trip through JSON text, like a file, then edit the plain data. */
+/** Round trip through JSON text, like a stored row, then edit the plain data. */
 function damaged(edit: (plain: any) => void): unknown {
   const plain = JSON.parse(JSON.stringify(finishedStored()));
   edit(plain);
   return plain;
-}
-
-/** Removes what version 8 added (arena seats), so an older file can be built from a new one. */
-function withoutVersion8(plain: any): void {
-  delete plain.arena.settings.tankCount;
-}
-
-/** What a file older than version 8 reads as: the kind's fixed numbers (tankCount null). */
-function withKindSeats(stored: StoredArena): StoredArena {
-  return { ...stored, arena: { ...stored.arena, settings: { ...stored.arena.settings, tankCount: null } } };
-}
-
-/** Removes what version 7 added (organiser tournament), so an older file can be built from a new one. */
-function withoutVersion7(plain: any): void {
-  withoutVersion8(plain);
-  delete plain.arena.settings.joinPolicy;
-  delete plain.arena.banned;
-  delete plain.arena.phase.start;
-  delete plain.arena.phase.resultId;
-}
-
-/** Turns a version 4 file's looks back into the version 3 `colour` of the same hull. */
-function toColours(plain: any): void {
-  plain.version = plain.version === 2 ? 2 : 3;
-  withoutVersion7(plain);
-  delete plain.arena.chat;
-  for (const player of plain.arena.players) {
-    player.colour = player.look.colour;
-    delete player.look;
-  }
-}
-
-/** What a version 3 file of finishedStored() reads as: every look plain in its old colour. */
-function withPlainLooks(stored: StoredArena): StoredArena {
-  return { ...stored, arena: { ...stored.arena, players: stored.arena.players.map((p) => ({ ...p, look: plainTankLook(p.look.colour) })) } };
 }
 
 describe("parseStoredArena", () => {
@@ -98,7 +63,6 @@ describe("parseStoredArena", () => {
 
   test.each<[string, (plain: any) => void, RegExp]>([
     ["a wrong version", (p) => (p.version = 9), /version/],
-    ["a version 1 file, which says it comes from an older version", (p) => (p.version = 1), /older version/],
     ["a missing owner", (p) => delete p.ownerAccountId, /ownerAccountId/],
     ["an owner on a public arena", (p) => ((p.arena.settings = { ...p.arena.settings, kind: "practice", name: "", tankCount: null }), (p.arena.chat = null)), /ownerAccountId/],
     ["a missing lastActivityAt", (p) => delete p.lastActivityAt, /lastActivityAt/],
@@ -129,91 +93,6 @@ describe("parseStoredArena", () => {
     const parsed = parseStoredArena(damaged(edit));
     if (parsed.ok) throw new Error("expected the file to be rejected");
     expect(parsed.error).toMatch(message);
-  });
-
-  describe("a version 2 file, written while arenas had an inputMode", () => {
-    const version2 = (inputMode: unknown) =>
-      damaged((p) => {
-        p.version = 2;
-        p.arena.settings.inputMode = inputMode;
-        toColours(p);
-      });
-
-    test.each(["editor", "api"])("with inputMode %p reads as version 5 without the field", (inputMode) => {
-      const parsed = parseStoredArena(version2(inputMode));
-      if (!parsed.ok) throw new Error(parsed.error);
-      expect(parsed.stored).toEqual(withKindSeats(withPlainLooks(finishedStored())));
-      expect(parsed.stored.version).toBe(8);
-      expect("inputMode" in parsed.stored.arena.settings).toBe(false);
-    });
-
-    test("leaves the file it was given unchanged", () => {
-      const file = version2("api") as any;
-      parseStoredArena(file);
-      expect(file.version).toBe(2);
-      expect(file.arena.settings.inputMode).toBe("api");
-    });
-
-    test("is still checked in full after the field is dropped", () => {
-      const parsed = parseStoredArena(
-        damaged((p) => {
-          p.version = 2;
-          p.arena.settings.inputMode = "api";
-          toColours(p);
-          delete p.arena.settings.ruleSetMode;
-        }),
-      );
-      if (parsed.ok) throw new Error("expected the file to be rejected");
-      expect(parsed.error).toMatch(/ruleSetMode/);
-    });
-
-    test("without an arena object fails on the arena, not on the version", () => {
-      const parsed = parseStoredArena({ ...(version2("api") as object), arena: "none" });
-      if (parsed.ok) throw new Error("expected the file to be rejected");
-      expect(parsed.error).toMatch(/^arena must be an object/);
-    });
-  });
-
-  describe("a version 3 file, written while players had a colour", () => {
-    test("reads as version 5 with a plain look in each player's colour", () => {
-      const parsed = parseStoredArena(damaged(toColours));
-      if (!parsed.ok) throw new Error(parsed.error);
-      expect(parsed.stored).toEqual(withKindSeats(withPlainLooks(finishedStored())));
-      expect(parsed.stored.version).toBe(8);
-      expect(parsed.stored.arena.players[0]!.look).toEqual({ colour: 1, skin: "plain", second: 2, plate: null, icon: null });
-      expect("colour" in parsed.stored.arena.players[0]!).toBe(false);
-    });
-
-    test("clamps a whole-number colour into 1 to 12", () => {
-      const parsed = parseStoredArena(
-        damaged((p) => {
-          toColours(p);
-          p.arena.players[0].colour = 0;
-          p.arena.players[1].colour = 99;
-        }),
-      );
-      if (!parsed.ok) throw new Error(parsed.error);
-      expect(parsed.stored.arena.players.map((p) => p.look.colour)).toEqual([1, 12, 2]);
-    });
-
-    test("names a colour that is not a whole number", () => {
-      const parsed = parseStoredArena(
-        damaged((p) => {
-          toColours(p);
-          p.arena.players[1].colour = "red";
-        }),
-      );
-      if (parsed.ok) throw new Error("expected the file to be rejected");
-      expect(parsed.error).toMatch(/arena\.players\[1\]\.look/);
-    });
-
-    test("leaves the file it was given unchanged", () => {
-      const file = damaged(toColours) as any;
-      parseStoredArena(file);
-      expect(file.version).toBe(3);
-      expect(file.arena.players[0].colour).toBe(1);
-      expect("look" in file.arena.players[0]).toBe(false);
-    });
   });
 
   test("keeps a stored name that the current name rule would refuse, so an older file still loads", () => {
@@ -267,41 +146,10 @@ describe("parseStoredArena", () => {
   });
 });
 
-describe("version 5: public kinds, ready and accounts", () => {
-  /** A version 4 file: no `ready`, no `playerAccounts`. */
-  const version4 = (edit: (plain: any) => void = () => {}) =>
-    damaged((p) => {
-      p.version = 4;
-      withoutVersion7(p);
-      delete p.arena.chat;
-      delete p.playerAccounts;
-      for (const player of p.arena.players) delete player.ready;
-      edit(p);
-    });
-
-  test("a version 4 file of a private arena reads as version 5 with nobody ready and no accounts", () => {
-    const parsed = parseStoredArena(version4());
-    if (!parsed.ok) throw new Error(parsed.error);
-    expect(parsed.stored).toEqual(withKindSeats(finishedStored()));
-    expect(parsed.stored.arena.players.every((p) => p.ready === false)).toBe(true);
-  });
-
-  test("a version 4 file of the old single public arena is retired, not rejected", () => {
-    const parsed = parseStoredArena(
-      version4((p) => {
-        p.arena.settings = { ...p.arena.settings, kind: "public", name: "" };
-        p.ownerAccountId = null;
-      }),
-    );
-    if (parsed.ok) throw new Error("expected the file to be retired");
-    expect(parsed.retired).toBe(true);
-    expect(parsed.error).toMatch(/public arena/);
-  });
-
-  test("a damaged version 5 file is rejected, not retired", () => {
+describe("public kinds, ready and accounts", () => {
+  test("a player without ready is rejected", () => {
     const parsed = parseStoredArena(damaged((p) => delete p.arena.players[0].ready));
     if (parsed.ok) throw new Error("expected the file to be rejected");
-    expect(parsed.retired).toBe(false);
     expect(parsed.error).toMatch(/ready/);
   });
 
@@ -347,7 +195,7 @@ describe("version 5: public kinds, ready and accounts", () => {
       edit(p);
     });
 
-  test("a file of the old monthly kind is refused: the server sets such a file aside before it parses (77-monthly-league.md)", () => {
+  test("an arena of the old monthly kind is refused (77-monthly-league.md)", () => {
     const parsed = parseStoredArena(monthlyLobby());
     if (parsed.ok) throw new Error("expected the file to be refused");
     expect(parsed.error).toMatch(/kind/);
@@ -360,41 +208,7 @@ describe("version 5: public kinds, ready and accounts", () => {
   });
 });
 
-describe("version 6: arena chat", () => {
-  /** A version 5 file: no `arena.chat`. */
-  const version5 = (edit: (plain: any) => void = () => {}) =>
-    damaged((p) => {
-      p.version = 5;
-      withoutVersion7(p);
-      delete p.arena.chat;
-      edit(p);
-    });
-
-  test("a version 5 file of a private arena reads as version 6 with the chat on", () => {
-    const parsed = parseStoredArena(version5());
-    if (!parsed.ok) throw new Error(parsed.error);
-    expect(parsed.stored).toEqual(withKindSeats(finishedStored()));
-    expect(parsed.stored.version).toBe(8);
-    expect(parsed.stored.arena.chat).toBe("on");
-  });
-
-  test("a version 5 file of a presenter arena reads with the chat on", () => {
-    const parsed = parseStoredArena(version5((p) => (p.arena.settings.kind = "presenter")));
-    if (!parsed.ok) throw new Error(parsed.error);
-    expect(parsed.stored.arena.chat).toBe("on");
-  });
-
-  test("a version 5 file of a public arena reads with no chat", () => {
-    const parsed = parseStoredArena(
-      version5((p) => {
-        p.arena.settings = { ...p.arena.settings, kind: "tournament", name: "", tankCount: null };
-        p.ownerAccountId = null;
-      }),
-    );
-    if (!parsed.ok) throw new Error(parsed.error);
-    expect(parsed.stored.arena.chat).toBeNull();
-  });
-
+describe("arena chat", () => {
   test("a stored arena keeps the chat off", () => {
     const parsed = parseStoredArena(damaged((p) => (p.arena.chat = "off")));
     if (!parsed.ok) throw new Error(parsed.error);
@@ -406,31 +220,14 @@ describe("version 6: arena chat", () => {
     ["an unknown chat value", (p) => (p.arena.chat = "maybe")],
     ["no chat in a private arena", (p) => (p.arena.chat = null)],
     ["a chat in a public arena", (p) => ((p.arena.settings = { ...p.arena.settings, kind: "practice", name: "", tankCount: null }), (p.ownerAccountId = null))],
-  ])("a version 6 file with %s is rejected", (_label, edit) => {
+  ])("an arena with %s is rejected", (_label, edit) => {
     const parsed = parseStoredArena(damaged(edit));
     if (parsed.ok) throw new Error("expected the file to be rejected");
     expect(parsed.error).toMatch(/arena\.chat/);
   });
 });
 
-describe("version 7: organiser tournament", () => {
-  /** A version 6 file: no joinPolicy, start plan, resultId or ban list. */
-  const version6 = () =>
-    damaged((p) => {
-      p.version = 6;
-      withoutVersion7(p);
-    });
-
-  test("a version 6 file reads as version 7 with the defaults of an arena that took any visitor", () => {
-    const parsed = parseStoredArena(version6());
-    if (!parsed.ok) throw new Error(parsed.error);
-    expect(parsed.stored).toEqual(withKindSeats(finishedStored()));
-    expect(parsed.stored.version).toBe(8);
-    expect(parsed.stored.arena.settings.joinPolicy).toBe("anyone");
-    expect(parsed.stored.arena.banned).toEqual([]);
-    expect(parsed.stored.arena.phase).toMatchObject({ kind: "finished", resultId: null });
-  });
-
+describe("organiser tournament", () => {
   test.each<[string, (plain: any) => void, RegExp]>([
     ["a ban that anyone may join", (p) => (p.arena.banned = [{ accountId: "x", name: "Ann" }]), /empty outside a signed-in-only arena/],
     ["a result id of the wrong shape", (p) => (p.arena.phase.resultId = "../../etc"), /resultId/],
@@ -448,20 +245,7 @@ describe("version 7: organiser tournament", () => {
   });
 });
 
-describe("version 8: arena seats (78-arena-seats.md)", () => {
-  test("a version 7 file reads as version 8 with tankCount null, so it keeps 64 people and bots to 8", () => {
-    const parsed = parseStoredArena(
-      damaged((p) => {
-        p.version = 7;
-        withoutVersion8(p);
-      }),
-    );
-    if (!parsed.ok) throw new Error(parsed.error);
-    expect(parsed.stored).toEqual(withKindSeats(finishedStored()));
-    expect(parsed.stored.version).toBe(8);
-    expect(seatsOf(parsed.stored.arena.settings)).toEqual({ people: 64, botsFillTo: 8 });
-  });
-
+describe("arena seats (78-arena-seats.md)", () => {
   test("a lobby of 48 tanks with 40 bots reads back unchanged", () => {
     let arena: Arena = createArena(
       "SEAT48",

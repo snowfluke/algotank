@@ -83,7 +83,7 @@ Do this when a release starts but does not work correctly.
    curl -fsS http://127.0.0.1:3000/api/health
    ```
 
-> **CAUTION:** A newer release can write data files that an older release cannot read. If the older release stops at start with a message about a data file, restore the backup from before the update (`05-backup-and-restore.md`).
+> **CAUTION:** A newer release can add tables to the database. An older release then refuses to start, and the log says that the database has a schema version that this version of AlgoTank does not know. Restore the backup from before the update (`05-backup-and-restore.md`). Make a backup before each update ("Make a backup now" in that file).
 
 ## What `release.sh` does
 

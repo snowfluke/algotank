@@ -15,8 +15,7 @@ Replace each placeholder in this runbook and in `deploy/` with your own value.
 | `player@example.com` | The email address of a player account. |
 | `play.your-domain.org` | Your real domain, in the command that replaces `game.example.com` in the Caddyfile. |
 | `ABC123` | The 6-letter code of an arena. |
-| `algotank-data-20261112T030000Z.tar.gz` | The name of a backup archive in `/var/backups/algotank/`. |
-| `/var/lib/algotank/arenas/ABC123.json` | The path of a damaged data file, as the log names it. |
+| `algotank-20261112T030000Z.sqlite.gz` | The name of a backup copy in `/var/backups/algotank/`. |
 | `198.51.100.0/24` | A new Cloudflare address range. |
 | `6ff42ae2-765d-4adf-8112-31c55c1551ef` | The ID of a Cloudflare Tunnel (`09-cloudflare-tunnel.md`). |
 
@@ -126,10 +125,10 @@ The firewall lets SSH in from everywhere, and ports 80 and 443 only from Cloudfl
    ```sh
    sudo install -d -m 0755 /opt/algotank /opt/algotank/releases
    sudo install -d -m 0750 -o root -g algotank /etc/algotank
-   sudo install -d -m 0700 /var/backups/algotank
+   sudo install -d -m 0700 -o algotank -g algotank /var/backups/algotank
    ```
 
-   systemd makes the data folder `/var/lib/algotank` at the first start (`StateDirectory=algotank`).
+   systemd makes the data folder `/var/lib/algotank` at the first start (`StateDirectory=algotank`). The backup runs as the user `algotank`, so that user owns the backup folder.
 
 ## D. Copy the release to the server
 
@@ -371,6 +370,6 @@ Nothing in this runbook was tested on a real server. Tick each item when it work
 - [ ] Cloudflare replaces a `CF-Connecting-IP` header that the visitor sends (step H9).
 - [ ] The sign-in limit triggers on the 11th attempt with false addresses (step H10).
 - [ ] `sudo systemctl stop algotank` ends within a few seconds, and `journalctl -u algotank` shows no SIGKILL.
-- [ ] `sudo systemctl start algotank-backup.service` writes an archive into `/var/backups/algotank` (`05-backup-and-restore.md`).
+- [ ] `sudo systemctl start algotank-backup.service` writes a copy into `/var/backups/algotank` (`05-backup-and-restore.md`).
 - [ ] A second release with `sudo algotank-release` switches and keeps the old folder (`04-update-and-rollback.md`).
 - [ ] The sign-in cookie has `Secure` in the browser's developer tools after a sign-in.

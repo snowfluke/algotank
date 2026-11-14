@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { openDatabase } from "./db/open.ts";
 import type { ArenaSettings, PublicArena, ReplayResponse, StreamMessage } from "@game/arena";
 import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, type Decision } from "@game/engine";
 import { ARENA_CODE_LENGTH, expandTick, plainTankLook } from "@game/arena";
@@ -712,16 +713,17 @@ describe("saving to a data directory", () => {
     expect(roundTimers(second)).toBe(1);
   });
 
-  test("a damaged file stops the start with an error that names the file", async () => {
+  test("a damaged arena row stops the start with an error that names the table and the arena", async () => {
     const dataDir = temporaryDirectory();
     const first = start({ dataDir });
     const { arenaId } = await createTestArena(first);
     await first.server.stop();
     open.splice(open.indexOf(first), 1);
 
-    const path = join(dataDir, "arenas", `${arenaId}.json`);
-    await Bun.write(path, "{ damaged");
-    expect(() => startTestServer({ dataDir })).toThrow(path);
+    const db = openDatabase({ kind: "file", dataDir });
+    db.run("UPDATE arena SET snapshot_json = '{ damaged' WHERE id = ?", [arenaId]);
+    db.close();
+    expect(() => startTestServer({ dataDir })).toThrow(`The row ${arenaId} of the table arena is not valid`);
   });
 });
 

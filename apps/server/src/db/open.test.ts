@@ -5,7 +5,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PersistenceError } from "../arena-files.ts";
+import { PersistenceError } from "./errors.ts";
 import { reportOldJsonFolders } from "./old-folders.ts";
 import { DATABASE_FILE, isSupportedSqlite, openDatabase } from "./open.ts";
 import { SCHEMA_VERSION } from "./schema.ts";
@@ -78,7 +78,7 @@ describe("deleting an account", () => {
     const db = memoryDatabase();
     insertAccount(db, ACCOUNT);
     insertRow(db, "session", { token_hash: "a".repeat(64), account_id: ACCOUNT, expires_at: 1 });
-    insertRow(db, "email_code", { account_id: ACCOUNT, purpose: "verify", code_hash: "h", attempts: 0, expires_at: 1, sent_at: 0 });
+    insertRow(db, "email_code", { account_id: ACCOUNT, purpose: "verify", code_hash: "h", attempts: 0, expires_at: 1 });
     insertRow(db, "account_tank", { account_id: ACCOUNT, name: "Rara", colour: 1, skin: "plain", second: 2, plate: null, icon: null, updated_at: 1 });
     insertRow(db, "account_strategy", { account_id: ACCOUNT, id: "style-0001", name: "Kept", updated_at: 1, strategy_json: "{}" });
     const numbers = { games: 1, rounds: 1, wins: 0, shots: 2, hits: 1 };

@@ -5,20 +5,18 @@
 // - When a game of a private or presenter arena finishes, the result is written once, then the
 //   arena learns its id (resultStored), so the finished view can link to it. A failed write is
 //   logged and tried again on the arena's next change; the arena keeps resultId null meanwhile.
-// - One file per result: DATA_DIR/results/<resultId>.json, 0600, written atomically. The id is
-//   128 random bits, so the link is the only way in.
+// - One row per result in the table `result` (db/schema.ts), read on each call: the owner, the
+//   arena code and the time as columns, the result and its accounts as one JSON document. The
+//   id is 128 random bits, so the link is the only way in.
 // - A result is kept RESULT_KEEP_DAYS (180) after the game finished. The 10-minute sweep
-//   (arena-lifetime.ts) removes older ones from memory and disk.
-// - The file holds account ids, never an email. The email is read from the auth store when
+//   (arena-lifetime.ts) removes older rows.
+// - The row holds account ids, never an email. The email is read from the auth store when
 //   the arena's owner asks, so it is the account's current one and leaves only to the owner.
-// - A damaged file stops the start with its name, as the other stores do.
+// - A damaged row is reported with its id (PersistenceError), as the other stores do.
 //
-// Named limits: every kept result is held in memory (a 512-player, 7-round result is about
-// 150 KB as JSON); an index on disk would clear it. An arena code can be drawn again after its
-// arena ended, and then the ended-arena link answers the newer arena.
+// Named limit: an arena code can be drawn again after its arena ended, and then the ended-arena
+// link answers the newer arena.
 
-import { readdirSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
 import {
   finalPlaceOf,
   isPublicKind,
@@ -35,7 +33,8 @@ import {
   type TournamentResult,
 } from "@game/arena";
 import { randomBytes } from "node:crypto";
-import { createPrivateDirectory, PersistenceError, writePrivateFileAtomically } from "./arena-files.ts";
+import type { Database, Statement } from "bun:sqlite";
+import { invalidRow, jsonColumn } from "./db/rows.ts";
 import type { Auth } from "./auth/index.ts";
 import { HttpError, jsonResponse } from "./http.ts";
 import type { Router } from "./router.ts";
@@ -44,17 +43,18 @@ import type { AutoSteps } from "./auto-steps.ts";
 import type { StreamHub } from "./stream.ts";
 import type { Clock } from "./timers.ts";
 
-export const RESULTS_FOLDER = "results";
-const FILE_VERSION = 1;
-const RESULT_FILE = /^(.+)\.json$/;
-
-/** What a result file holds: the result, and the private parts that never leave in it. */
+/** A stored result: the result, and the private parts that never leave in it. */
 export interface StoredResult {
-  readonly version: typeof FILE_VERSION;
   readonly ownerAccountId: AccountId;
   /** The account behind each human of a signed-in-only arena; empty for an arena anyone could join. */
   readonly accounts: readonly { readonly playerId: PlayerId; readonly accountId: AccountId }[];
   readonly result: TournamentResult;
+}
+
+interface ResultRow {
+  readonly id: string;
+  readonly owner_account_id: string;
+  readonly document_json: string;
 }
 
 /** 128 random bits, base64url: 22 characters (isResultId). */
@@ -62,20 +62,16 @@ function newResultId(): ResultId {
   return randomBytes(16).toString("base64url");
 }
 
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function parseStoredResult(raw: unknown, path: string): StoredResult {
-  const invalid = (reason: string) => new PersistenceError(`The result file ${path} is not valid: ${reason}`);
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw invalid("it must be an object.");
-  const file = raw as Readonly<Record<string, unknown>>;
-  if (file["version"] !== FILE_VERSION) throw invalid(`version must be ${FILE_VERSION}.`);
-  const owner = file["ownerAccountId"];
-  if (typeof owner !== "string" || owner === "") throw invalid("ownerAccountId must be the id of an account.");
-  const parsed = parseTournamentResult(file["result"]);
+/** The checked row. The columns beside the document must agree with it. */
+function toStoredResult(row: ResultRow): StoredResult {
+  const invalid = (reason: string) => invalidRow("result", row.id, reason);
+  const raw = jsonColumn("result", row.id, "document_json", row.document_json);
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw invalid("the document must be an object.");
+  const document = raw as Readonly<Record<string, unknown>>;
+  const parsed = parseTournamentResult(document["result"]);
   if (!parsed.ok) throw invalid(parsed.error);
-  const rawAccounts = file["accounts"];
+  if (parsed.result.id !== row.id) throw invalid(`the document holds the result ${parsed.result.id}.`);
+  const rawAccounts = document["accounts"];
   if (!Array.isArray(rawAccounts)) throw invalid("accounts must be a list.");
   const accounts = rawAccounts.map((entry: unknown, i) => {
     const e = typeof entry === "object" && entry !== null ? (entry as Readonly<Record<string, unknown>>) : {};
@@ -86,7 +82,7 @@ function parseStoredResult(raw: unknown, path: string): StoredResult {
     }
     return { playerId, accountId };
   });
-  return { version: FILE_VERSION, ownerAccountId: owner, accounts, result: parsed.result };
+  return { ownerAccountId: row.owner_account_id, accounts, result: parsed.result };
 }
 
 /** The result of a finished game, from the arena as it is now. `accounts`: the record's players' accounts. */
@@ -127,83 +123,57 @@ function buildResult(record: ArenaRecord, id: ResultId, finishedAt: number): Sto
   const accounts = [...record.playerAccounts]
     .filter(([playerId]) => played.has(playerId))
     .map(([playerId, accountId]) => ({ playerId, accountId }));
-  return { version: FILE_VERSION, ownerAccountId, accounts, result };
+  return { ownerAccountId, accounts, result };
 }
 
 export class ResultStore {
-  private readonly results = new Map<ResultId, StoredResult>();
-  private readonly directory: string | null;
+  private readonly now: Clock;
+  private readonly insertResult: Statement<unknown, [string, string, string, number, string, string]>;
+  private readonly byId: Statement<ResultRow, [string]>;
+  private readonly byOwner: Statement<ResultRow, [string]>;
+  private readonly latestByArena: Statement<ResultRow, [string]>;
+  private readonly deleteOlder: Statement<unknown, [number]>;
 
-  /** With `dataDir`, every result file is loaded; a damaged one throws a PersistenceError that names it. */
-  constructor(options: { readonly dataDir?: string | undefined; readonly now: Clock }) {
+  /** Removes the results older than RESULT_KEEP_MS at once, as the sweep does later. */
+  constructor(options: { readonly db: Database; readonly now: Clock }) {
     this.now = options.now;
-    this.directory = options.dataDir === undefined ? null : join(options.dataDir, RESULTS_FOLDER);
-    if (this.directory === null) return;
-    createPrivateDirectory(this.directory);
-    for (const name of readdirSync(this.directory).sort()) {
-      const match = RESULT_FILE.exec(name);
-      if (match === null) continue;
-      const path = join(this.directory, name);
-      let raw: unknown;
-      try {
-        raw = JSON.parse(readFileSync(path, "utf8"));
-      } catch (error) {
-        throw new PersistenceError(`The result file ${path} cannot be read: ${describe(error)}`);
-      }
-      const stored = parseStoredResult(raw, path);
-      if (stored.result.id !== match[1]) throw new PersistenceError(`The result file ${path} is not valid: its name must be ${stored.result.id}.json.`);
-      this.results.set(stored.result.id, stored);
-    }
+    const { db } = options;
+    const columns = "id, owner_account_id, document_json";
+    this.insertResult = db.prepare("INSERT INTO result (id, arena_id, owner_account_id, finished_at, kind, document_json) VALUES (?, ?, ?, ?, ?, ?)");
+    this.byId = db.prepare(`SELECT ${columns} FROM result WHERE id = ?`);
+    this.byOwner = db.prepare(`SELECT ${columns} FROM result WHERE owner_account_id = ? ORDER BY finished_at DESC`);
+    this.latestByArena = db.prepare(`SELECT ${columns} FROM result WHERE arena_id = ? ORDER BY finished_at DESC LIMIT 1`);
+    this.deleteOlder = db.prepare("DELETE FROM result WHERE finished_at < ?");
     this.prune();
   }
 
-  private readonly now: Clock;
-
-  /** Writes the file first, so memory never holds a result the disk lacks. */
+  /** Throws when the write fails; the caller keeps the arena's resultId null and tries again. */
   add(stored: StoredResult): void {
-    if (!isResultId(stored.result.id)) throw new Error(`"${stored.result.id}" is not a result id.`);
-    if (this.directory !== null) {
-      try {
-        writePrivateFileAtomically(this.directory, `${stored.result.id}.json`, JSON.stringify(stored));
-      } catch (error) {
-        throw new PersistenceError(`The result ${stored.result.id} could not be saved in ${this.directory}: ${describe(error)}`);
-      }
-    }
-    this.results.set(stored.result.id, stored);
+    const { result } = stored;
+    if (!isResultId(result.id)) throw new Error(`"${result.id}" is not a result id.`);
+    this.insertResult.run(result.id, result.arenaId, stored.ownerAccountId, result.finishedAt, result.kind, JSON.stringify({ accounts: stored.accounts, result }));
   }
 
   get(id: string): StoredResult | undefined {
-    return isResultId(id) ? this.results.get(id) : undefined;
+    if (!isResultId(id)) return undefined;
+    const row = this.byId.get(id);
+    return row === null ? undefined : toStoredResult(row);
   }
 
+  /** Newest first. */
   ofOwner(accountId: AccountId): readonly StoredResult[] {
-    return [...this.results.values()].filter((s) => s.ownerAccountId === accountId).sort((a, b) => b.result.finishedAt - a.result.finishedAt);
+    return this.byOwner.all(accountId).map(toStoredResult);
   }
 
   /** The newest result of an arena code, for the page of an arena that has ended. */
   latestOfArena(arenaId: ArenaId): StoredResult | undefined {
-    let latest: StoredResult | undefined;
-    for (const stored of this.results.values()) {
-      if (stored.result.arenaId === arenaId && (latest === undefined || stored.result.finishedAt > latest.result.finishedAt)) latest = stored;
-    }
-    return latest;
+    const row = this.latestByArena.get(arenaId);
+    return row === null ? undefined : toStoredResult(row);
   }
 
-  /** Removes every result older than RESULT_KEEP_MS. A file that cannot be removed stays and is tried again at the next sweep. */
+  /** Removes every result older than RESULT_KEEP_MS. */
   prune(): void {
-    const oldest = this.now() - RESULT_KEEP_MS;
-    for (const [id, stored] of this.results) {
-      if (stored.result.finishedAt >= oldest) continue;
-      if (this.directory !== null) {
-        try {
-          rmSync(join(this.directory, `${id}.json`), { force: true });
-        } catch (error) {
-          console.error(`The expired result ${id} could not be removed; the next sweep tries again:`, error);
-          continue;
-        }
-      }
-      this.results.delete(id);
-    }
+    this.deleteOlder.run(this.now() - RESULT_KEEP_MS);
   }
 }
 

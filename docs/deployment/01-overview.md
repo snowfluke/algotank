@@ -28,8 +28,8 @@ disk: /var/lib/algotank  ---- accounts, arenas, league, chat, tournament winners
 | `/opt/algotank/releases/<UTC timestamp>/` | One release: the code, `node_modules` and the built client. `deploy/release.sh` keeps the newest 5. |
 | `/opt/algotank/current` | A symlink to the release that runs. |
 | `/etc/algotank/env` | The server's settings (`deploy/env.example`). |
-| `/var/lib/algotank/` | The data. Mode 0700, owner `algotank`. |
-| `/var/backups/algotank/` | Daily archives of the data, 14 kept. Mode 0700, owner root. |
+| `/var/lib/algotank/` | The data: the database `algotank.sqlite` and its `-wal` and `-shm` files, each mode 0600. Folder mode 0700, owner `algotank`. |
+| `/var/backups/algotank/` | Daily copies of the database, 14 kept. Mode 0700, owner `algotank`. |
 | `/etc/caddy/Caddyfile` | The proxy (`deploy/Caddyfile`). |
 | `/etc/caddy/origin-cert.pem`, `/etc/caddy/origin-key.pem` | The Cloudflare Origin CA certificate and its key. |
 | `/etc/systemd/system/algotank.service` | The service (`deploy/algotank.service`). |
@@ -43,7 +43,7 @@ disk: /var/lib/algotank  ---- accounts, arenas, league, chat, tournament winners
 | `env.example` | Every setting the server reads, with the production value. |
 | `Caddyfile` | The site, the client address behind Cloudflare, and the proxy to the server. |
 | `release.sh` | Packs a release on your computer, and installs, starts and checks a release on the server. A failed health check switches back. |
-| `backup.sh`, `algotank-backup.service`, `algotank-backup.timer` | A daily archive of the data folder. |
+| `backup.sh`, `algotank-backup.service`, `algotank-backup.timer` | A daily copy of the database, made while the game runs. |
 | `ecosystem.config.cjs` | The pm2 alternative to the systemd unit (`08-pm2.md`). |
 
 ## The sections of this runbook
@@ -61,7 +61,7 @@ disk: /var/lib/algotank  ---- accounts, arenas, league, chat, tournament winners
 ## Limits
 
 - One process runs the game. A restart interrupts play: a running round counts for nothing and starts again, and lobby countdowns start again. There is no second instance to take over.
-- Two servers must not use one data folder.
+- Two servers must not use one data folder. Each holds the arenas and the league in memory and overwrites the changes of the other.
 - Without mail settings, email addresses are not verified and there is no password recovery by email. Then the person who runs the server resets a password with a script (`07-troubleshooting.md`, "A player forgot the password"). With mail settings, the server sends a code that verifies an email address and a code that sets a new password (`10-mail.md`).
 - The rate-limit counters (sign-in, registration, seats, joins, email codes) are in memory, so a restart sets them to zero.
 - A private or presenter arena without activity for `ARENA_TTL_HOURS` (default 24) is removed with its chat.

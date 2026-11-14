@@ -3,11 +3,12 @@
 // block list, and removing a player.
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CHAT_LIMITS, plainTankLook, type ChatHistoryResponse, type ChatMessage, type ErrorResponse, type JoinResponse, type StreamMessage } from "@game/arena";
-import { CHAT_FOLDER } from "./chat.ts";
+import { openDatabase } from "./db/open.ts";
+import { insertRow } from "./db/testing.ts";
 import {
   createTestArena,
   getArena,
@@ -280,8 +281,21 @@ describe("rate limits", () => {
   });
 });
 
+/** The rows of the arena's chat in the database file, oldest first, read through a second connection. */
+function storedLines(dataDir: string, arenaId: string): { readonly text: string; readonly row: string }[] {
+  const db = openDatabase({ kind: "file", dataDir });
+  try {
+    return db
+      .query<Record<string, unknown>, [string]>("SELECT * FROM chat_line WHERE arena_id = ? ORDER BY sequence")
+      .all(arenaId)
+      .map((row) => ({ text: String(row["text"]), row: JSON.stringify(row) }));
+  } finally {
+    db.close();
+  }
+}
+
 describe("retention", () => {
-  test("a message older than 24 hours is gone from the history and, after the sweep, from the file", async () => {
+  test("a message older than 24 hours is gone from the history and, after the sweep, from the table", async () => {
     const dataDir = temporaryDirectory();
     // The arena itself must outlive the test's two days, so the sweep prunes the chat instead of closing the arena.
     const t = start({ dataDir, arenaTtlHours: 100 });
@@ -289,15 +303,14 @@ describe("retention", () => {
     await post(t, arena.arenaId, { token: ana.playerToken }, "old");
     t.ticks.advance(12 * HOUR_MS);
     await post(t, arena.arenaId, { token: ana.playerToken }, "new");
-    const file = join(dataDir, CHAT_FOLDER, `${arena.arenaId}.json`);
-    const inFile = () => (JSON.parse(readFileSync(file, "utf8")) as { messages: ChatMessage[] }).messages.map((m) => m.text);
-    expect(inFile()).toEqual(["old", "new"]);
+    const inTable = () => storedLines(dataDir, arena.arenaId).map((line) => line.text);
+    expect(inTable()).toEqual(["old", "new"]);
 
     t.ticks.advance(12 * HOUR_MS);
     expect(await texts(t, arena.arenaId, { token: ana.playerToken })).toEqual(["old", "new"]);
     t.ticks.advance(1000);
     t.ticks.tick(); // the 10-minute sweep
-    expect(inFile()).toEqual(["new"]);
+    expect(inTable()).toEqual(["new"]);
     expect(await texts(t, arena.arenaId, { token: ana.playerToken })).toEqual(["new"]);
   });
 
@@ -324,59 +337,48 @@ describe("retention", () => {
     expect(shown[0]).toBe(`line ${CHAT_LIMITS.keepCount + 1 - CHAT_LIMITS.pageSize + 1}`);
     expect(shown.at(-1)).toBe(`line ${CHAT_LIMITS.keepCount + 1}`);
     await stopServer(t);
-    const saved = (JSON.parse(readFileSync(join(dataDir, CHAT_FOLDER, `${arena.arenaId}.json`), "utf8")) as { messages: ChatMessage[] }).messages;
+    const saved = storedLines(dataDir, arena.arenaId);
     expect(saved.length).toBe(CHAT_LIMITS.keepCount);
     expect(saved[0]!.text).toBe("line 2");
   });
 
-  test("closing the arena removes its chat file", async () => {
+  test("closing the arena removes its chat lines", async () => {
     const dataDir = temporaryDirectory();
     const t = start({ dataDir });
     const { arena, ana } = await privateLobby(t);
     await post(t, arena.arenaId, { token: ana.playerToken }, "bye");
-    const file = join(dataDir, CHAT_FOLDER, `${arena.arenaId}.json`);
-    expect(existsSync(file)).toBe(true);
+    expect(storedLines(dataDir, arena.arenaId)).toHaveLength(1);
     expect((await t.api(`/api/arenas/${arena.arenaId}`, { method: "DELETE", cookie: arena.cookie })).status).toBe(204);
-    expect(existsSync(file)).toBe(false);
+    expect(storedLines(dataDir, arena.arenaId)).toEqual([]);
   });
 });
 
-describe("the file", () => {
-  test("a restart keeps the chat, the last second included, and the file holds no player token", async () => {
+describe("the table", () => {
+  test("a restart keeps the chat, and the rows hold no player token", async () => {
     const dataDir = temporaryDirectory();
     const first = start({ dataDir });
     const { arena, ana } = await privateLobby(first);
     await post(first, arena.arenaId, { token: ana.playerToken }, "one");
-    // Within the second after the first write, so only the shutdown's flush writes it.
     await post(first, arena.arenaId, { cookie: arena.cookie }, "two");
+    // Written before the answer: the rows are there while the server still runs.
+    const rows = storedLines(dataDir, arena.arenaId);
+    expect(rows.map((line) => line.text)).toEqual(["one", "two"]);
+    for (const line of rows) expect(line.row).not.toContain(ana.playerToken);
     await stopServer(first);
-    const text = readFileSync(join(dataDir, CHAT_FOLDER, `${arena.arenaId}.json`), "utf8");
-    expect(text).not.toContain(ana.playerToken);
 
     const second = start({ dataDir });
     expect(await texts(second, arena.arenaId, { token: ana.playerToken })).toEqual(["one", "two"]);
   });
 
-  test("a damaged chat file stops the start with its name", async () => {
+  test("a damaged row fails the read with its table and key in the log, and no line the server would refuse goes out", async () => {
     const dataDir = temporaryDirectory();
-    const first = start({ dataDir });
-    const { arena, ana } = await privateLobby(first);
-    await post(first, arena.arenaId, { token: ana.playerToken }, "hi");
-    await stopServer(first);
-    const file = join(dataDir, CHAT_FOLDER, `${arena.arenaId}.json`);
-    writeFileSync(file, JSON.stringify({ version: 1, messages: [{ id: "m1", at: 1, sender: { kind: "host" }, text: "a\nb" }] }));
-    expect(() => startTestServer({ dataDir })).toThrow(file);
-  });
-
-  test("a chat file whose arena is gone is removed at start", async () => {
-    const dataDir = temporaryDirectory();
-    const first = start({ dataDir });
-    const { arena, ana } = await privateLobby(first);
-    await post(first, arena.arenaId, { token: ana.playerToken }, "hi");
-    await stopServer(first);
-    rmSync(join(dataDir, "arenas", `${arena.arenaId}.json`));
-    start({ dataDir });
-    expect(existsSync(join(dataDir, CHAT_FOLDER, `${arena.arenaId}.json`))).toBe(false);
+    const t = start({ dataDir });
+    const { arena, ana } = await privateLobby(t);
+    const db = openDatabase({ kind: "file", dataDir });
+    insertRow(db, "chat_line", { arena_id: arena.arenaId, id: "m1", at: t.ticks.now(), sender_kind: "host", text: "a\nb" });
+    db.close();
+    expect((await t.api(`/api/arenas/${arena.arenaId}/chat`, { token: ana.playerToken })).status).toBe(500);
+    expect(errors.mock.calls.flat().map(String).join(" ")).toContain("of the table chat_line is not valid");
   });
 });
 

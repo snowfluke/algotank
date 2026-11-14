@@ -6,7 +6,7 @@ The server reads these environment variables once at start (`apps/server/src/con
 |----------|---------|---------|
 | `PORT` | The port of the server. | 8787 |
 | `HOST` | The address the server listens on, for example `127.0.0.1` behind a proxy on the same machine. | every interface |
-| `DATA_DIR` | The folder for everything the server keeps. `PRIVACY.md` lists what each subfolder holds and for how long. | `./data`, from the folder the server starts in |
+| `DATA_DIR` | The folder of the database `algotank.sqlite`, which holds everything the server keeps. `PRIVACY.md` lists what each table holds and for how long. Back it up with `bun run backup <target file>` (`docs/deployment/05-backup-and-restore.md`), not with a copy of the folder. | `./data`, from the folder the server starts in |
 | `STATIC_DIR` | The folder with the built web client. Set it to serve another build, for example one made with `vite build --outDir`. | `apps/web/dist` |
 | `COOKIE_SECURE` | `1` sends the sign-in cookie over HTTPS only. Turn it on in production. | off |
 | `TRUST_PROXY` | `1` reads the client address from the first `X-Forwarded-For` entry and the host from `X-Forwarded-Host`. Turn it on only behind a proxy that replaces `X-Forwarded-For` with the visitor's address and sets `X-Forwarded-Host` (`deploy/Caddyfile`), because otherwise a client can choose its address and pass the per-address limits. | off |
@@ -23,4 +23,4 @@ The server reads these environment variables once at start (`apps/server/src/con
 | `METRICS_TOKEN` | The bearer token of `GET /metrics`, the server health in the Prometheus text format (`docs/deployment/06-monitoring.md`). At least 16 characters, no spaces. | not set: the route does not exist |
 | `LEAGUE_SHORT_DAYS` | For scripted runs only. `<ISO time>/<seconds per day>/<days per month>`, for example `2026-11-14T10:00:00Z/120/3`: from that moment the league's days last that many seconds and a month has that many days, so a day close and a month close happen within minutes. | not set |
 
-Two server processes must not share one `DATA_DIR`. Each holds the files in memory and overwrites the other's changes.
+Two server processes must not share one `DATA_DIR`. Each holds the arenas and the league in memory and overwrites the other's changes. The reset-password tool and the backup command may run while the server runs.

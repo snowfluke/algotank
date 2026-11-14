@@ -2,7 +2,7 @@
 // no session; taking a seat, quitting and renaming need the account (auth.requireAccount checks
 // the session and the Origin). Each body is checked in monthly.ts, where it enters.
 //
-// Seat, quit and rename write the league files and send every viewer a new state, so they share
+// Seat, quit and rename write the league's tables and send every viewer a new state, so they share
 // one limit per account (not per address: a classroom shares one address). The limit counts
 // tries, also refused ones, because a refused seat still parses a strategy.
 

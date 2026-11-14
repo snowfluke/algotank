@@ -3,8 +3,8 @@
 // PORT              Port to listen on (default 8787).
 // HOST              The address to listen on, for example 127.0.0.1 behind a proxy on the same
 //                   machine (default: every interface).
-// DATA_DIR          Where arenas (DATA_DIR/arenas/) and accounts (DATA_DIR/auth/) are
-//                   saved (default ./data).
+// DATA_DIR          The folder of the database DATA_DIR/algotank.sqlite, which holds
+//                   everything the server keeps (default ./data).
 // COOKIE_SECURE     "1" adds Secure to the sign-in cookie, so the browser sends it only
 //                   over HTTPS. Turn it on in production; off by default for local http.
 // TRUST_PROXY       "1" reads the client address from X-Forwarded-For and the host from

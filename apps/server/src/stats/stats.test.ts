@@ -1,6 +1,7 @@
 // Statistics for players (docs/specs/revamp/81-metrics.md, K2) through the public interfaces:
 // the event stream, the arena's answers, GET /api/account/stats and the monthly league.
 
+import type { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,7 +15,7 @@ import { manualScheduler } from "../test-helpers.ts";
 import { createTestArena, joinTestPlayer, openStream, SETTINGS, signUp, startTestServer, type StreamReader, type TestServer } from "../test-helpers.ts";
 import { zoneCalendar } from "../monthly/calendar.ts";
 import { Champions } from "../monthly/champions.ts";
-import { LeagueFiles } from "../monthly/league-files.ts";
+import { LeagueStore } from "../monthly/league-store.ts";
 import { MonthlyLeagues } from "../monthly/monthly.ts";
 import { LeagueStreams } from "../monthly/streams.ts";
 
@@ -173,12 +174,12 @@ describe("the engine's count matches a hand-checked round", () => {
 
 const NOV_14_10H = Date.parse("2026-11-14T03:00:00Z");
 
-function league(dataDir: string | undefined, at = NOV_14_10H) {
+function league(db: Database, at = NOV_14_10H) {
   const ticks = manualScheduler(at);
   const streams = new LeagueStreams({ heartbeatMs: 60_000, maxStreamsPerLeague: 10 });
   const monthly = new MonthlyLeagues({
-    files: new LeagueFiles(dataDir),
-    champions: new Champions(dataDir),
+    store: new LeagueStore(db, ticks.now),
+    champions: new Champions(db),
     streams,
     calendar: zoneCalendar("Asia/Jakarta"),
     now: ticks.now,
@@ -203,9 +204,8 @@ describe("a seat's statistics in the monthly league", () => {
   };
 
   test("count every turn from the seat, start again at zero after a quit and a new seat, and survive a restart", () => {
-    const dataDir = mkdtempSync(join(tmpdir(), "algotank-monthly-stats-"));
-    directories.push(dataDir);
-    const l = league(dataDir);
+    const db = memoryDatabase();
+    const l = league(db);
     l.monthly.takeSeat("account-a", { look: plainTankLook(1), strategy: strategy("picker") });
     expect(seatStats(l, "account-a").turns).toBe(0);
     for (let i = 0; i < 10; i++) l.ticks.tick();
@@ -221,7 +221,7 @@ describe("a seat's statistics in the monthly league", () => {
 
     // A restart resumes from the checkpoint the clean stop wrote.
     l.monthly.stop();
-    const resumed = league(dataDir, l.ticks.now());
+    const resumed = league(db, l.ticks.now());
     expect(seatStats(resumed, "account-a")).toEqual(seatStats(l, "account-a"));
     expect(seatStats(resumed, "account-b").turns).toBe(5);
     for (let i = 0; i < 3; i++) resumed.ticks.tick();
@@ -235,25 +235,8 @@ describe("a seat's statistics in the monthly league", () => {
     resumed.monthly.stop();
   });
 
-  test("a checkpoint from before the statistics loads, with zeros", () => {
-    const dataDir = mkdtempSync(join(tmpdir(), "algotank-monthly-stats-"));
-    directories.push(dataDir);
-    const l = league(dataDir);
-    const me = l.monthly.takeSeat("account-a", { look: plainTankLook(1), strategy: strategy("picker") });
-    l.monthly.stop();
-    const files = new LeagueFiles(dataDir);
-    const checkpoint = files.readCheckpoint();
-    if (checkpoint === null) throw new Error("no checkpoint");
-    // Written as the file was before K2: no stats field.
-    Bun.write(join(dataDir, "monthly", "today.json"), JSON.stringify({ version: 1, ...checkpoint, tanks: checkpoint.tanks.map(({ stats: _stats, ...rest }) => rest) }));
-    const again = league(dataDir, l.ticks.now());
-    expect(seatStats(again, "account-a").turns).toBe(0);
-    expect(me.seat?.seatId).toBe(again.monthly.me("account-a").seat?.seatId ?? "");
-    again.monthly.stop();
-  });
-
   test("never go out in the league's state or turns, which another account's stream reads", async () => {
-    const l = league(undefined);
+    const l = league(memoryDatabase());
     l.monthly.takeSeat("account-a", { look: plainTankLook(1), strategy: { ...strategy("picker"), modes: strategy("picker").modes.map((mode) => ({ ...mode, name: SECRET_MODE })) } });
     l.monthly.takeSeat("account-b", { look: plainTankLook(2), strategy: strategy("charger") });
     const reader = l.streams.open(1, "account-b", l.monthly.live(1)).body?.getReader();

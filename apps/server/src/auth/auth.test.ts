@@ -9,7 +9,7 @@ import { startServer, type RunningServer, type ServerOptions } from "../server.t
 import { SETTINGS } from "../test-helpers.ts";
 import { DATABASE_FILE, openDatabase } from "../db/open.ts";
 import { countRows, insertRow, memoryDatabase } from "../db/testing.ts";
-import { PersistenceError } from "../arena-files.ts";
+import { PersistenceError } from "../db/errors.ts";
 import { AuthError, createAuth, type Auth } from "./index.ts";
 import { AuthStore } from "./store.ts";
 
@@ -490,7 +490,7 @@ describe("storage", () => {
   test("a damaged account row is a PersistenceError that names the table and the account", () => {
     const db = memoryDatabase();
     // An email that is not normalized passes the constraints but not the store's check.
-    insertRow(db, "account", { id: "acc-1", email: "ADA@example.org", password_hash: "hash", email_verified: 0, language: "en", created_at: 0 });
+    insertRow(db, "account", { id: "acc-1", email: "ADA@example.org", password_hash: "hash", email_verified: 0, created_at: 0 });
     const store = new AuthStore(db, Date.now);
     expect(() => store.accountById("acc-1")).toThrow(PersistenceError);
     expect(() => store.accountById("acc-1")).toThrow("row acc-1 of the table account");
@@ -498,13 +498,13 @@ describe("storage", () => {
 
   test("the UNIQUE email answers email_taken, whatever the case of the letters", () => {
     const store = new AuthStore(memoryDatabase(), Date.now);
-    const account = { id: "acc-1", email: "ada@example.org", passwordHash: "hash", createdAt: "2026-11-01T00:00:00.000Z", emailVerified: false, language: "en" } as const;
+    const account = { id: "acc-1", email: "ada@example.org", passwordHash: "hash", createdAt: "2026-11-01T00:00:00.000Z", emailVerified: false } as const;
     store.addAccount(account);
     expect(() => store.addAccount({ ...account, id: "acc-2", email: "Ada@Example.org" })).toThrow(new AuthError("email_taken"));
     expect(store.accountById("acc-2")).toBeUndefined();
   });
 
-  test("the database does not disturb the arena loader, and both come back after a restart", async () => {
+  test("the data folder holds only the database, and the account and its arena come back after a restart", async () => {
     const dataDir = temporaryDirectory();
     const first = start({ dataDir });
     const cookie = await signedUp(first);
@@ -512,9 +512,7 @@ describe("storage", () => {
     const { arenaId } = (await created.json()) as { arenaId: string };
     await stopServer(first);
     // macOS's SQLite keeps an empty -wal and the -shm after a clean close; Linux's removes them.
-    expect(readdirSync(dataDir).filter((name) => !name.startsWith(`${DATABASE_FILE}-`)).sort()).toEqual([DATABASE_FILE, "arenas", "metrics", "monthly", "results"]);
-    // The other file is the public arena the server keeps.
-    expect(readdirSync(join(dataDir, "arenas"))).toContain(`${arenaId}.json`);
+    expect(readdirSync(dataDir).filter((name) => !name.startsWith(`${DATABASE_FILE}-`))).toEqual([DATABASE_FILE]);
 
     const second = start({ dataDir });
     expect((await second.call(`/api/arenas/${arenaId}`)).status).toBe(200);

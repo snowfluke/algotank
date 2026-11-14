@@ -109,7 +109,7 @@
 // | scheduleStart,  | lobby, break                      | owner (startMissed: server); not a public arena   |
 // | cancelStart,    |                                   | (see Scheduled start)                             |
 // | startMissed     |                                   |                                                   |
-// | resultStored    | finished                          | server, after it wrote the result file; private   |
+// | resultStored    | finished                          | server, after it wrote the result row; private    |
 // |                 |                                   | or presenter arena                                |
 // | setLook         | lobby, break, finished            | the player exists; look valid (parseTankLook)      |
 // | submitStrategy  | any phase                         | rejected while a round runs that this player plays |

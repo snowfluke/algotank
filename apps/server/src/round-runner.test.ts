@@ -38,7 +38,7 @@ const SETTINGS: ArenaSettings = { name: "Test", kind: "presenter", ticksPerRound
 
 function setup(playerCount: number, settings: ArenaSettings = SETTINGS, startDelayMs = 0) {
   const ticks = manualScheduler();
-  const store = new Store({ now: ticks.now, scheduler: ticks });
+  const store = new Store({ db: memoryDatabase(), now: ticks.now, scheduler: ticks });
   const hub = new FlakyHub({ heartbeatMs: 60_000, maxStreamsPerArena: 10, now: ticks.now, scheduler: ticks, arenaMessageIntervalMs: 0 });
   const runner = new RoundRunner(store, hub, new AutoSteps(ticks, ticks.now, PUBLIC_RULES), { scheduler: ticks, now: ticks.now, startDelayMs });
   const added = store.add(createArena(store.newArenaId(), settings, announcementFor(settings.ruleSetMode, null)), "owner");
@@ -131,9 +131,9 @@ class FailingStats extends ArenaStats {
 describe("a statistics failure", () => {
   test("lets the round finish and is counted under its own error label, not under round", () => {
     const ticks = manualScheduler();
-    const store = new Store({ now: ticks.now, scheduler: ticks });
+    const store = new Store({ db: memoryDatabase(), now: ticks.now, scheduler: ticks });
     const hub = new StreamHub({ heartbeatMs: 60_000, maxStreamsPerArena: 10, now: ticks.now, scheduler: ticks, arenaMessageIntervalMs: 0 });
-    const metrics = new Metrics({ calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
+    const metrics = new Metrics({ db: memoryDatabase(), calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
     const stats = new FailingStats({ accounts: new AccountStatsStore(memoryDatabase()), month: () => "2026-11" });
     const runner = new RoundRunner(store, hub, new AutoSteps(ticks, ticks.now, PUBLIC_RULES), { scheduler: ticks, now: ticks.now, startDelayMs: 0, metrics, stats });
     const added = store.add(createArena(store.newArenaId(), SETTINGS, announcementFor(SETTINGS.ruleSetMode, null)), "owner");

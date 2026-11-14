@@ -2,9 +2,10 @@
 // the pause before the first tick, player look, names, leave and removal, and the stored form.
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { openDatabase } from "./db/open.ts";
 import { plainTankLook, type ErrorResponse, type OwnArenaResponse, type StreamMessage, type TankLook } from "@game/arena";
 import {
   createTestArena,
@@ -56,6 +57,16 @@ function temporaryDirectory(): string {
   const directory = mkdtempSync(join(tmpdir(), "algotank-arenas-"));
   directories.push(directory);
   return directory;
+}
+
+/** The arena's snapshot in the database file, or null when it has no row. */
+function arenaRow(dataDir: string, arenaId: string): string | null {
+  const db = openDatabase({ kind: "file", dataDir });
+  try {
+    return db.query<{ snapshot_json: string }, [string]>("SELECT snapshot_json FROM arena WHERE id = ?").get(arenaId)?.snapshot_json ?? null;
+  } finally {
+    db.close();
+  }
 }
 
 const errorOf = async (res: Response) => (await res.json()) as ErrorResponse;
@@ -127,7 +138,7 @@ describe("one open arena per account", () => {
     });
   });
 
-  test("closing frees the account: the arena is gone, its file too, and open streams get `closed`", async () => {
+  test("closing frees the account: the arena is gone, its row too, and open streams get `closed`", async () => {
     const dataDir = temporaryDirectory();
     const t = start({ dataDir });
     const { arenaId, cookie } = await createTestArena(t);
@@ -146,7 +157,7 @@ describe("one open arena per account", () => {
     }
     expect(t.server.connectionCount(arenaId)).toBe(0);
     expect((await t.api(`/api/arenas/${arenaId}`)).status).toBe(404);
-    expect(readdirSync(join(dataDir, "arenas"))).not.toContain(`${arenaId}.json`);
+    expect(arenaRow(dataDir, arenaId)).toBeNull();
     // The round stopped with the arena; the expiry sweep, the rate-limit sweep, the league's turn and its checkpoint remain.
     expect(t.ticks.activeCount()).toBe(4);
     expect((await (await t.api("/api/account/arena", { cookie })).json()) as OwnArenaResponse).toEqual({ arena: null });
@@ -177,14 +188,15 @@ describe("one open arena per account", () => {
     const { arenaId } = await createTestArena(first);
     await stopServer(first);
     // The new server's clock starts at the same time, so move the stored activity back instead.
-    const path = join(dataDir, "arenas", `${arenaId}.json`);
-    const stored = JSON.parse(readFileSync(path, "utf8"));
+    const stored = JSON.parse(arenaRow(dataDir, arenaId) ?? "null");
     stored.lastActivityAt -= 2 * HOUR_MS + 1;
-    writeFileSync(path, JSON.stringify(stored));
+    const db = openDatabase({ kind: "file", dataDir });
+    db.run("UPDATE arena SET snapshot_json = ? WHERE id = ?", [JSON.stringify(stored), arenaId]);
+    db.close();
 
     const second = start({ dataDir, arenaTtlHours: 2 });
     expect((await second.api(`/api/arenas/${arenaId}`)).status).toBe(404);
-    expect(readdirSync(join(dataDir, "arenas"))).not.toContain(`${arenaId}.json`);
+    expect(arenaRow(dataDir, arenaId)).toBeNull();
   });
 });
 
@@ -487,27 +499,6 @@ describe("stored form", () => {
     // The owner still owns it after the restart.
     expect((await t.api(`/api/arenas/${arenaId}/reset`, { method: "POST", cookie })).status).toBe(204);
     expect((await getArena(t, arenaId)).game).toBe(2);
-  });
-
-  test("a version 1 file stops the start with a message that names it and says it is from an older version", async () => {
-    for (const where of ["root", "arenas"] as const) {
-      const dataDir = temporaryDirectory();
-      const folder = where === "root" ? dataDir : join(dataDir, "arenas");
-      if (where === "arenas") {
-        const first = start({ dataDir });
-        await stopServer(first);
-      }
-      const path = join(folder, "ABC234.json");
-      writeFileSync(path, JSON.stringify({ version: 1, arena: {}, hostToken: "x", playerTokens: [], roundConfigs: [] }));
-      let message = "";
-      try {
-        startTestServer({ dataDir });
-      } catch (error) {
-        message = error instanceof Error ? error.message : String(error);
-      }
-      expect(message).toContain(path);
-      expect(message).toContain("older version");
-    }
   });
 });
 

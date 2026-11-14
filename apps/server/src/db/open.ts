@@ -6,15 +6,16 @@
 // older library stops the start instead of failing on the first CREATE TABLE.
 
 import { Database } from "bun:sqlite";
-import { chmodSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createPrivateDirectory, PersistenceError } from "../arena-files.ts";
+import { PersistenceError } from "./errors.ts";
 import { migrate } from "./schema.ts";
 
 export const DATABASE_FILE = "algotank.sqlite";
 /** STRICT tables came in SQLite 3.37.0. */
 const MINIMUM_SQLITE: readonly [number, number, number] = [3, 37, 0];
 const FILE_MODE = 0o600;
+const DIRECTORY_MODE = 0o700;
 /** A second writer (the reset-password tool) waits this long for the lock before it fails. */
 const BUSY_TIMEOUT_MS = 5000;
 const VERSION = /^(\d+)\.(\d+)\.(\d+)/;
@@ -45,6 +46,20 @@ export function openDatabase(location: DatabaseLocation): Database {
   } catch (error) {
     db.close();
     throw error;
+  }
+}
+
+/**
+ * Creates the data folder with mode 0700 when it does not exist. A folder that already existed
+ * keeps its mode: it may be a path the owner shares for other uses, and the database is 0600 either way.
+ */
+function createPrivateDirectory(directory: string): void {
+  try {
+    const existed = existsSync(directory);
+    mkdirSync(directory, { recursive: true, mode: DIRECTORY_MODE });
+    if (!existed) chmodSync(directory, DIRECTORY_MODE); // mkdir applies the umask; this does not.
+  } catch (error) {
+    throw new PersistenceError(`The data directory ${directory} cannot be created: ${describe(error)}`);
   }
 }
 

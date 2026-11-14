@@ -17,7 +17,7 @@ export function insertRow(db: Database, table: string, row: Readonly<Record<stri
 
 /** An account row for the foreign keys of a store test. */
 export function insertAccount(db: Database, id: string): void {
-  insertRow(db, "account", { id, email: `${id}@example.org`, password_hash: "not a real hash", email_verified: 0, language: "en", created_at: 0 });
+  insertRow(db, "account", { id, email: `${id}@example.org`, password_hash: "not a real hash", email_verified: 0, created_at: 0 });
 }
 
 /** How many rows `table` holds. The table name comes from the test, never from input. */

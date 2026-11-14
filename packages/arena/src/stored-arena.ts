@@ -1,5 +1,5 @@
 // The form in which a server saves an arena, and the boundary check for reading it
-// back. A file can be damaged or edited by hand, so nothing from it is trusted until
+// back. A row can be damaged or edited by hand, so nothing from it is trusted until
 // parseStoredArena has checked it. Strategies go through parseStrategy again, because
 // the Strategy type is a brand that only parseStrategy grants.
 //
@@ -14,8 +14,6 @@ import {
   isPublicKind,
   joinNeedsAccount,
   parseTankLook,
-  plainTankLook,
-  TANK_COLOUR_COUNT,
   type Arena,
   type ArenaKind,
   type ArenaPhase,
@@ -25,32 +23,13 @@ import {
   type PlayerStatus,
   type RoundSummary,
   type StartPlan,
-  type TankColour,
   type TankLook,
 } from "./types.ts";
 
-// Version 2 added arena kinds, owners, bots, colours and games, and dropped the host token.
-// A version 1 file cannot be read: it has no owner, so nobody could manage its arena.
-// Version 3 dropped arena.settings.inputMode, when the owner removed the developer mode
-// (2026-11-12). A version 2 file is read through fromVersion2 and saved as version 3.
-// Version 4 replaced each player's `colour` with a `look` (tank identity, 2026-11-12). A
-// version 3 file is read through fromVersion3 and saved as version 4; a version 2 file
-// takes both steps.
-// Version 5 replaced the kind "public" with "practice", "tournament" and "monthly", added each
-// player's `ready` and the `playerAccounts` of a monthly arena (three public arenas,
-// 2026-11-12). A version 4 file of a private or presenter arena is read through fromVersion4.
-// A version 4 file of a "public" arena is retired: public rooms hold nothing worth keeping,
-// so the loader drops it (parseStoredArena answers `retired`).
-// Version 6 added `arena.chat` (arena chat, 2026-11-12). A version 5 file is read through
-// fromVersion5: "on" in a private or presenter arena, null in a public one.
-// Version 7 added the organiser tournament (2026-11-13): `settings.joinPolicy`, the start
-// plan of a lobby or break (`phase.start`), the finished phase's `resultId`, `arena.banned`, the
-// status "removed", and `playerAccounts` in a signed-in-only arena. A version 6 file is read
-// through fromVersion6: joinPolicy "anyone", start waiting, resultId null, banned empty.
-// Version 8 added `settings.tankCount` (arena seats, docs/specs/revamp/78-arena-seats.md). A
-// version 7 file is read through fromVersion7: tankCount null, which keeps the kind's fixed numbers
-// (a private arena takes 64 people and fills bots to 8, a presenter arena 512 and 8), so a stored
-// arena plays as before until its owner sets a number in the lobby.
+// The version of the shape. Versions 1 to 7 were the arena files of earlier versions of the
+// game, which was never deployed; the database holds version 8 only (docs/specs/revamp/83-sqlite.md).
+// A later change of the shape raises the version and adds its migration here; any other version
+// is refused, so a row is never read with the wrong shape.
 export const STORED_ARENA_VERSION = 8;
 
 export interface StoredArena {
@@ -66,16 +45,12 @@ export interface StoredArena {
   readonly roundConfigs: readonly { readonly round: number; readonly config: RoundConfig }[];
   /**
    * Signed-in-only arena only (empty elsewhere): the signed-in account behind each human
-   * player. It holds one seat in that arena, and the owner reads its email. (Version 5 to 7 also
-   * kept them for the old monthly arena, which apps/server/src/monthly/set-aside.ts sets aside.)
+   * player. It holds one seat in that arena, and the owner reads its email.
    */
   readonly playerAccounts: readonly { readonly playerId: PlayerId; readonly accountId: AccountId }[];
 }
 
-export type StoredArenaParse =
-  | { readonly ok: true; readonly stored: StoredArena }
-  /** `retired`: a file of a kind this version no longer has; the loader drops it with a log line instead of stopping. */
-  | { readonly ok: false; readonly error: string; readonly retired: boolean };
+export type StoredArenaParse = { readonly ok: true; readonly stored: StoredArena } | { readonly ok: false; readonly error: string };
 
 /** Thrown by the readers below and caught once, in parseStoredArena. */
 class ShapeError extends Error {}
@@ -257,7 +232,7 @@ function phase(raw: unknown, path: string): ArenaPhase {
 }
 
 function chatSetting(value: unknown, kind: ArenaKind): Arena["chat"] {
-  // The kind decides whether the arena has a chat (createArena), so a file cannot give a public arena one.
+  // The kind decides whether the arena has a chat (createArena), so a stored arena cannot give a public arena one.
   if (isPublicKind(kind)) {
     if (value !== null) fail("arena.chat", "null in a public arena");
     return null;
@@ -279,7 +254,7 @@ function uniqueIds(ids: readonly string[], path: string): void {
   if (new Set(ids).size !== ids.length) fail(path, "a list without repeats");
 }
 
-/** Checks what ties the parts of an arena together, so a hand-edited file cannot hold an arena the reducer could never reach. */
+/** Checks what ties the parts of an arena together, so a hand-edited row cannot hold an arena the reducer could never reach. */
 function checkArena(arena: Arena): void {
   const playerIds = arena.players.map((p) => p.id);
   uniqueIds(playerIds, "arena.players");
@@ -398,122 +373,6 @@ function checkRoundConfigs(arena: Arena, configs: StoredArena["roundConfigs"]): 
   }
 }
 
-/**
- * A version 2 file is a version 3 file with `arena.settings.inputMode`, so dropping that
- * one field is the whole migration. When `arena` or its settings are not objects, the file
- * passes through unchanged apart from the version, so the readers name what is wrong.
- */
-function fromVersion2(file: Obj): Obj {
-  const arena = file["arena"];
-  if (typeof arena !== "object" || arena === null || Array.isArray(arena)) return { ...file, version: 3 };
-  const settings = (arena as Obj)["settings"];
-  if (typeof settings !== "object" || settings === null || Array.isArray(settings)) return { ...file, version: 3 };
-  const { inputMode: _dropped, ...rest } = settings as Obj;
-  return { ...file, version: 3, arena: { ...(arena as Obj), settings: rest } };
-}
-
-/** Version 3 had 8 colours and version 4 has 12, so a whole number is clamped into 1 to 12. */
-function clampedColour(value: number): TankColour {
-  return Math.min(Math.max(value, 1), TANK_COLOUR_COUNT) as TankColour;
-}
-
-/**
- * A version 3 player has `colour` where a version 4 player has `look`. A player whose
- * colour is a whole number gets a plain look in that colour. Anything else passes
- * through unchanged apart from the version, so the readers name what is wrong.
- */
-function fromVersion3(file: Obj): Obj {
-  const arena = file["arena"];
-  if (typeof arena !== "object" || arena === null || Array.isArray(arena)) return { ...file, version: 4 };
-  const players = (arena as Obj)["players"];
-  if (!Array.isArray(players)) return { ...file, version: 4 };
-  const migrated = players.map((raw: unknown) => {
-    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return raw;
-    const { colour: old, ...rest } = raw as Obj;
-    if (typeof old !== "number" || !Number.isSafeInteger(old)) return raw;
-    return { ...rest, look: plainTankLook(clampedColour(old)) };
-  });
-  return { ...file, version: 4, arena: { ...(arena as Obj), players: migrated } };
-}
-
-/** Thrown by fromVersion4 for a file of the retired kind "public". */
-class RetiredError extends Error {}
-
-/**
- * A version 4 player has no `ready`, and a version 4 file has no `playerAccounts`: every
- * player gets ready false and the file an empty list. The kind "public" no longer exists,
- * so such a file is retired. Anything else passes through apart from the version.
- */
-function fromVersion4(file: Obj): Obj {
-  const arena = file["arena"];
-  if (typeof arena !== "object" || arena === null || Array.isArray(arena)) return { ...file, version: 5, playerAccounts: [] };
-  const settings = (arena as Obj)["settings"];
-  if (typeof settings === "object" && settings !== null && (settings as Obj)["kind"] === "public") {
-    throw new RetiredError("it holds a public arena of an older version, which had one public kind. Public rooms hold nothing worth keeping");
-  }
-  const players = (arena as Obj)["players"];
-  const migrated = Array.isArray(players)
-    ? players.map((raw: unknown) => (typeof raw === "object" && raw !== null && !Array.isArray(raw) ? { ...(raw as Obj), ready: false } : raw))
-    : players;
-  return { ...file, version: 5, playerAccounts: [], arena: { ...(arena as Obj), players: migrated } };
-}
-
-/**
- * A version 5 arena has no `chat`: a private or presenter arena gets "on", the default of a new
- * one, and a public arena null. Anything else passes through apart from the version.
- */
-function fromVersion5(file: Obj): Obj {
-  const arena = file["arena"];
-  if (typeof arena !== "object" || arena === null || Array.isArray(arena)) return { ...file, version: 6 };
-  const settings = (arena as Obj)["settings"];
-  const kind = typeof settings === "object" && settings !== null ? (settings as Obj)["kind"] : undefined;
-  const chat = kind === "private" || kind === "presenter" ? "on" : null;
-  return { ...file, version: 6, arena: { ...(arena as Obj), chat } };
-}
-
-const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
-
-/**
- * A version 6 file has no joinPolicy, no start plan, no resultId and no ban list. Its arenas
- * took any visitor, waited for the owner, and were never stored as results, so the defaults say
- * exactly that. Anything else passes through apart from the version.
- */
-function fromVersion6(file: Obj): Obj {
-  const arena = file["arena"];
-  if (!isObj(arena)) return { ...file, version: 7 };
-  const settings = arena["settings"];
-  const phase = arena["phase"];
-  let nextPhase: unknown = phase;
-  if (isObj(phase) && (phase["kind"] === "lobby" || phase["kind"] === "break")) nextPhase = { ...phase, start: { kind: "waiting" } };
-  if (isObj(phase) && phase["kind"] === "finished") nextPhase = { ...phase, resultId: null };
-  return {
-    ...file,
-    version: 7,
-    arena: { ...arena, settings: isObj(settings) ? { ...settings, joinPolicy: "anyone" } : settings, phase: nextPhase, banned: [] },
-  };
-}
-
-/**
- * A version 7 file has no tankCount. null keeps the numbers its kind had then (seatsOf), so the
- * arena plays as before. Anything else passes through apart from the version.
- */
-function fromVersion7(file: Obj): Obj {
-  const arena = file["arena"];
-  if (!isObj(arena)) return { ...file, version: 8 };
-  const settings = arena["settings"];
-  return { ...file, version: 8, arena: { ...arena, settings: isObj(settings) ? { ...settings, tankCount: null } : settings } };
-}
-
-/** Takes an older file through each migration in turn, oldest first. */
-function migrate(read: Obj): Obj {
-  const v3 = read["version"] === 2 ? fromVersion2(read) : read;
-  const v4 = v3["version"] === 3 ? fromVersion3(v3) : v3;
-  const v5 = v4["version"] === 4 ? fromVersion4(v4) : v4;
-  const v6 = v5["version"] === 5 ? fromVersion5(v5) : v5;
-  const v7 = v6["version"] === 6 ? fromVersion6(v6) : v6;
-  return v7["version"] === 7 ? fromVersion7(v7) : v7;
-}
-
 function playerAccounts(raw: unknown, arena: Arena): StoredArena["playerAccounts"] {
   const entries = list(raw, "playerAccounts").map((x, i) => {
     const entry = obj(x, `playerAccounts[${i}]`);
@@ -527,7 +386,6 @@ function playerAccounts(raw: unknown, arena: Arena): StoredArena["playerAccounts
   });
   uniqueIds(entries.map((e) => e.playerId), "playerAccounts");
   uniqueIds(entries.map((e) => e.accountId), "playerAccounts accounts");
-  // Version 5 to 7 also kept the accounts of a monthly arena; the server sets such a file aside before it parses (apps/server/src/monthly/set-aside.ts).
   const withAccounts = joinNeedsAccount(arena.settings.joinPolicy);
   if (!withAccounts && entries.length > 0) fail("playerAccounts", "empty outside a signed-in-only arena");
   // Only a signed-in account joins these arenas, so every human there has one.
@@ -539,10 +397,7 @@ function playerAccounts(raw: unknown, arena: Arena): StoredArena["playerAccounts
 
 export function parseStoredArena(raw: unknown): StoredArenaParse {
   try {
-    const file = migrate(obj(raw, "The file"));
-    if (file["version"] === 1) {
-      fail("version", `${STORED_ARENA_VERSION}, but this file comes from an older version of AlgoTank that had host keys. Move it out of the data directory to start`);
-    }
+    const file = obj(raw, "The arena");
     if (file["version"] !== STORED_ARENA_VERSION) fail("version", `${STORED_ARENA_VERSION}`);
     const arena = readArena(file["arena"]);
     const playerTokens = list(file["playerTokens"], "playerTokens").map((x, i) => {
@@ -581,8 +436,7 @@ export function parseStoredArena(raw: unknown): StoredArenaParse {
       },
     };
   } catch (error) {
-    if (error instanceof ShapeError) return { ok: false, error: error.message, retired: false };
-    if (error instanceof RetiredError) return { ok: false, error: error.message, retired: true };
+    if (error instanceof ShapeError) return { ok: false, error: error.message };
     throw error;
   }
 }

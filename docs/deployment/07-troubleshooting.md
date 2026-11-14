@@ -77,32 +77,18 @@ The error codes are from [Cloudflare 5xx errors](https://developers.cloudflare.c
 
    | Message | Cause | Fix |
    |---------|-------|-----|
-   | A path in `/var/lib/algotank/` and "is not valid" or "cannot be read" | A data file is damaged. The server stops on purpose, so that it does not hide an event or lose accounts. | Do the procedure "Move a damaged data file aside". |
+   | `The row <key> of the table <table> is not valid` | A row of the database is damaged. The server stops on purpose, so that it does not hide an event or lose accounts. | Do the procedure "Repair damaged data". |
+   | `The database has schema version <n>, and this version of AlgoTank knows only up to <m>` | A newer release wrote the database, and an older release runs now. | Start the newer release again, or restore the backup from before the update (`05-backup-and-restore.md`). |
+   | `The database /var/lib/algotank/algotank.sqlite cannot be opened` | The file or its folder has the wrong owner or mode, or the disk is full. | Run `sudo ls -l /var/lib/algotank` and `df -h /var/lib/algotank`. The files must belong to `algotank` with mode 0600. |
    | `PORT must ...`, `LEAGUE_TIME_ZONE must ...` or another variable name | A value in `/etc/algotank/env` is wrong. | Correct the value, then run `sudo systemctl restart algotank`. |
    | `Operation not permitted`, `Permission denied` or `Read-only file system` | A hardening line in `algotank.service` blocks Bun. | Do the procedure "Find a blocking hardening line". |
    | `Start request repeated too quickly` | systemd stopped after 5 failed starts in 60 s. | Find the first error higher in the log, fix it, then run `sudo systemctl reset-failed algotank && sudo systemctl start algotank`. |
 
-### Move a damaged data file aside
+### Repair damaged data
 
-1. Make a folder for damaged files.
+The database is one file, so there is no single data file to move aside. Restore the last backup (`05-backup-and-restore.md`, "Restore"). The changes after that backup are lost.
 
-   ```sh
-   sudo install -d -m 0700 /var/lib/algotank-damaged
-   ```
-
-2. Move the file that the log names. Use its path in place of `/var/lib/algotank/arenas/ABC123.json`.
-
-   ```sh
-   sudo mv /var/lib/algotank/arenas/ABC123.json /var/lib/algotank-damaged/
-   ```
-
-3. Start the game.
-
-   ```sh
-   sudo systemctl reset-failed algotank && sudo systemctl start algotank
-   ```
-
-4. If the file was an account file in `auth/`, the accounts in it are gone. Restore the last backup instead (`05-backup-and-restore.md`).
+> **CAUTION:** Only a person who knows SQL should edit a row. Make a backup first (`05-backup-and-restore.md`, "The backup command"), stop the game, then open the database with `sudo -u algotank sqlite3 /var/lib/algotank/algotank.sqlite`. Correct or delete the row that the log names, by its table and key, and start the game.
 
 ### Find a blocking hardening line
 
@@ -124,23 +110,15 @@ The error codes are from [Cloudflare 5xx errors](https://developers.cloudflare.c
 
 ## A player forgot the password
 
-With mail settings, a player sets a new password with "Forgot password" and a code by email (`10-mail.md`). Without mail settings, the game has no password recovery by email, and the person who runs the server sets a new password with `apps/server/scripts/reset-password.ts`. The script ends the account's sessions. It refuses to run while the server runs, because the server would write the old password back.
+With mail settings, a player sets a new password with "Forgot password" and a code by email (`10-mail.md`). Without mail settings, the game has no password recovery by email, and the person who runs the server sets a new password with `apps/server/scripts/reset-password.ts`. The script ends the account's sessions. It works while the game runs, because the server reads the account from the database on each request.
 
-> **CAUTION:** Stopping the server interrupts play. Do it when no event runs.
-
-1. Stop the game.
-
-   ```sh
-   sudo systemctl stop algotank
-   ```
-
-2. Type the new password. The terminal does not show it.
+1. Type the new password. The terminal does not show it.
 
    ```sh
    read -rs PASSWORD
    ```
 
-3. Set the password. Use the player's email address in place of `player@example.com`.
+2. Set the password. Use the player's email address in place of `player@example.com`.
 
    ```sh
    cd /opt/algotank/current && printf '%s\n' "$PASSWORD" | sudo -u algotank env DATA_DIR=/var/lib/algotank BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 /usr/local/bin/bun apps/server/scripts/reset-password.ts player@example.com
@@ -148,16 +126,10 @@ With mail settings, a player sets a new password with "Forgot password" and a co
 
    The result is `The password of player@example.com is changed, and <n> session(s) ended.`
 
-4. Remove the password from the shell.
+3. Remove the password from the shell.
 
    ```sh
    unset PASSWORD
    ```
 
-5. Start the game.
-
-   ```sh
-   sudo systemctl start algotank
-   ```
-
-6. Give the new password to the player through a private channel.
+4. Give the new password to the player through a private channel.

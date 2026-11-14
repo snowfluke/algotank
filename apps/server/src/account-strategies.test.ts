@@ -8,7 +8,7 @@ import { join } from "node:path";
 import type { AccountStrategiesResponse, PutAccountStrategyRequest } from "@game/arena";
 import { PRESETS } from "@game/engine";
 import { AccountStrategies } from "./account-strategies.ts";
-import { PersistenceError } from "./arena-files.ts";
+import { PersistenceError } from "./db/errors.ts";
 import { insertAccount, insertRow, memoryDatabase } from "./db/testing.ts";
 import { signUp, startTestServer, type TestServer, type TestServerOptions } from "./test-helpers.ts";
 

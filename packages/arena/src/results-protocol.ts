@@ -9,7 +9,7 @@
 // |-------------------------------|----------------------|-----------------------------|
 // | names, looks, rounds, ranking | yes                  | yes                         |
 // | each player's email           | no                   | yes (ResultResponse.emails) |
-// | account ids                   | no                   | no (they stay in the file)  |
+// | account ids                   | no                   | no (they stay in the row)   |
 //
 // GET /api/results/:id      -> ResultResponse; 404 for an unknown or expired id
 // GET /api/account/results  (account) -> AccountResultsResponse
@@ -17,7 +17,7 @@
 import { isRuleSetId, type RuleSetId } from "@game/engine";
 import { isJoinPolicy, isRuleSetMode, parseTankLook, type ArenaId, type JoinPolicy, type PlayerId, type RuleSetMode, type TankLook } from "./types.ts";
 
-/** How long the server keeps a result file. The 10-minute sweep removes older ones. */
+/** How long the server keeps a result. The 10-minute sweep removes older ones. */
 export const RESULT_KEEP_DAYS = 180;
 export const RESULT_KEEP_MS = RESULT_KEEP_DAYS * 24 * 60 * 60 * 1000;
 

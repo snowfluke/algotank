@@ -133,7 +133,7 @@ const kindOf = (record: ArenaRecord): PublicKind | null => {
 
 export class PublicArenas {
   // ponytail: the deadlines live in memory, so a restart starts a lobby's countdown again in full.
-  // Store them in the arena file when a restart during a lobby must keep its time.
+  // Store them in the arena's snapshot when a restart during a lobby must keep its time.
   /** The end of the normal lobby countdown of each arena that has a human in its lobby. */
   private readonly lobbyDeadlines = new Map<ArenaId, number>();
   /** When the short countdown ends, set at the moment every human of the lobby became ready. */

@@ -17,18 +17,14 @@
 // Transition: on <-> off, actor the owner, any phase. Terminal: none; the chat ends with the arena.
 //
 // Retention. A message is kept for CHAT_LIMITS.keepMs (24 hours), at most CHAT_LIMITS.keepCount
-// (500) per arena, oldest dropped first. Pruning runs on every read and in the 10-minute sweep
-// of arena-lifetime.ts. Closing or expiring the arena removes its chat (closeArena). The owner
-// removing a player removes that player's messages (removePlayerChat); a player who leaves keeps
-// them, because each message carries its own name and look.
+// (500) per arena, oldest dropped first. Pruning runs on every read and post and in the 10-minute
+// sweep of arena-lifetime.ts. Closing or expiring the arena removes its chat: the arena row's
+// delete takes its lines with it (ON DELETE CASCADE). The owner removing a player removes that
+// player's messages (removePlayerChat); a player who leaves keeps them, because each message
+// carries its own name and look.
 //
-// Files. DATA_DIR/chat/<ARENA CODE>.json, 0600 in a 0700 folder, written atomically, at most once
-// per second per arena: a change more than WRITE_INTERVAL_MS after the last write is written at
-// once, a change sooner waits for the rest of the second. A failed write is logged and tried
-// again a second later; the message is already in memory and on the streams. Loaded at start; a
-// damaged file stops the start with its name. A file whose arena is gone (a crash between
-// removing the arena and its chat) is removed at start with one log line. Player tokens are
-// never in the file.
+// Storage. The table `chat_line` (db/schema.ts), read on each call. A post is written before the
+// answer, so a line that reached the streams is not lost in a crash. Player tokens are never in it.
 //
 // Rate limits (token buckets, rate-limit.ts). Per sender: 5 at once, then 1 every 3 seconds.
 // Per arena: 20 at once, then 5 per second. Both are checked before either is spent, so a
@@ -39,14 +35,11 @@
 // Named limits:
 // - A block list never catches everything (name-filter.ts); the owner can turn the chat off and
 //   remove a player.
-// - A message lost in the second before a crash is not recovered.
 // - A player who rejoins under a new seat gets a fresh sender limit.
 
-import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import type { Database, Statement } from "bun:sqlite";
 import {
   CHAT_LIMITS,
-  isArenaCode,
   parseChatText,
   parseTankLook,
   type Arena,
@@ -55,18 +48,11 @@ import {
   type ChatSender,
   type PlayerId,
 } from "@game/arena";
-import { createPrivateDirectory, PersistenceError, writePrivateFileAtomically } from "./arena-files.ts";
-import { isRecord } from "./http.ts";
+import { invalidRow, jsonColumn } from "./db/rows.ts";
 import { TokenBucket } from "./rate-limit.ts";
 import type { ArenaRecord } from "./store.ts";
 import type { StreamHub } from "./stream.ts";
-import type { Clock, Scheduler } from "./timers.ts";
-
-export const CHAT_FOLDER = "chat";
-/** The shortest time between two writes of one arena's chat file. */
-const WRITE_INTERVAL_MS = 1000;
-const STORED_VERSION = 1;
-const CHAT_FILE = /^(.+)\.json$/;
+import type { Clock } from "./timers.ts";
 
 const SENDER_BURST = 5;
 const SENDER_REFILL_MS = 3000;
@@ -98,214 +84,102 @@ export function chatMembers(arena: Arena): ReadonlySet<PlayerId> {
 }
 
 // ---------------------------------------------------------------------------
-// Messages and their files
+// Messages
 // ---------------------------------------------------------------------------
 
-interface ChatFile {
-  readonly version: typeof STORED_VERSION;
-  /** Oldest first. */
-  readonly messages: readonly ChatMessage[];
+interface LineRow {
+  readonly sequence: number;
+  readonly id: string;
+  readonly at: number;
+  readonly sender_kind: string;
+  readonly player_id: string | null;
+  readonly name: string | null;
+  readonly look_json: string | null;
+  readonly text: string;
 }
 
-export interface ChatStoreOptions {
-  /** DATA_DIR. Without it the chat lives in memory only (tests). */
-  readonly dataDir?: string;
-  readonly now: Clock;
-  /** Runs the delayed write. */
-  readonly scheduler: Scheduler;
-}
+const LINE_COLUMNS = "sequence, id, at, sender_kind, player_id, name, look_json, text";
 
 export class ChatStore {
-  /** Oldest first, per arena. Replaced, never changed in place. */
-  private readonly messages = new Map<ArenaId, readonly ChatMessage[]>();
-  private readonly directory: string | null;
-  private readonly now: Clock;
-  private readonly scheduler: Scheduler;
-  private readonly lastWriteAt = new Map<ArenaId, number>();
-  private readonly waitingWrites = new Map<ArenaId, () => void>();
+  private readonly insertLine: Statement<unknown, [string, string, number, string, string | null, string | null, string | null, string]>;
+  private readonly newest: Statement<LineRow, [string, number]>;
+  private readonly trimArena: Statement<unknown, [string, string, number]>;
+  private readonly deleteOlderIn: Statement<unknown, [string, number]>;
+  private readonly deleteOlder: Statement<unknown, [number]>;
+  private readonly deletePlayer: Statement<unknown, [string, string]>;
 
-  /** With `dataDir`, loads every chat file, and throws a PersistenceError that names the first damaged one. */
-  constructor(options: ChatStoreOptions) {
-    this.now = options.now;
-    this.scheduler = options.scheduler;
-    this.directory = options.dataDir === undefined ? null : join(options.dataDir, CHAT_FOLDER);
-    // Made at the first write, so a server without a chat has no empty folder.
-    if (this.directory === null || !existsSync(this.directory)) return;
-    for (const name of readdirSync(this.directory).sort()) {
-      const match = CHAT_FILE.exec(name);
-      if (match === null) continue;
-      const arenaId = match[1] ?? "";
-      this.messages.set(arenaId, readChatFile(join(this.directory, name), arenaId));
-    }
+  constructor(
+    private readonly db: Database,
+    private readonly now: Clock,
+  ) {
+    this.insertLine = db.prepare("INSERT INTO chat_line (arena_id, id, at, sender_kind, player_id, name, look_json, text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    this.newest = db.prepare(`SELECT ${LINE_COLUMNS} FROM (SELECT ${LINE_COLUMNS} FROM chat_line WHERE arena_id = ? ORDER BY sequence DESC LIMIT ?) ORDER BY sequence`);
+    this.trimArena = db.prepare("DELETE FROM chat_line WHERE arena_id = ? AND sequence NOT IN (SELECT sequence FROM chat_line WHERE arena_id = ? ORDER BY sequence DESC LIMIT ?)");
+    this.deleteOlderIn = db.prepare("DELETE FROM chat_line WHERE arena_id = ? AND at < ?");
+    this.deleteOlder = db.prepare("DELETE FROM chat_line WHERE at < ?");
+    this.deletePlayer = db.prepare("DELETE FROM chat_line WHERE arena_id = ? AND sender_kind = 'player' AND player_id = ?");
   }
 
   /**
-   * Removes the chat of every arena not in `arenaIds` (the arenas with a chat), memory and file.
-   * At start, a file can outlive its arena when the server stopped between removing the two.
+   * The newest CHAT_LIMITS.pageSize messages younger than CHAT_LIMITS.keepMs, oldest first. Prunes
+   * first. Throws a PersistenceError that names a damaged row.
    */
-  keepOnly(arenaIds: ReadonlySet<ArenaId>): void {
-    for (const arenaId of [...this.messages.keys()]) {
-      if (arenaIds.has(arenaId)) continue;
-      console.log(`Removed the chat of arena ${arenaId}, because the arena is gone.`);
-      this.removeArena(arenaId);
-    }
-  }
-
-  /** The newest CHAT_LIMITS.pageSize messages younger than CHAT_LIMITS.keepMs, oldest first. Prunes first. */
   history(arenaId: ArenaId): readonly ChatMessage[] {
-    this.prune(arenaId);
-    return (this.messages.get(arenaId) ?? []).slice(-CHAT_LIMITS.pageSize);
+    this.deleteOlderIn.run(arenaId, this.oldestKept());
+    return this.newest.all(arenaId, CHAT_LIMITS.pageSize).map(toMessage);
   }
 
-  /** Adds a message and drops the oldest beyond CHAT_LIMITS.keepCount. */
+  /** Adds a message and drops the old ones and the oldest beyond CHAT_LIMITS.keepCount, in one transaction. */
   append(arenaId: ArenaId, message: ChatMessage): void {
-    const kept = this.younger(this.messages.get(arenaId) ?? []);
-    this.replace(arenaId, [...kept, message].slice(-CHAT_LIMITS.keepCount));
+    const { sender } = message;
+    this.db.transaction(() => {
+      this.deleteOlderIn.run(arenaId, this.oldestKept());
+      this.insertLine.run(
+        arenaId,
+        message.id,
+        message.at,
+        sender.kind,
+        sender.kind === "player" ? sender.playerId : null,
+        sender.kind === "player" ? sender.name : null,
+        sender.kind === "player" ? JSON.stringify(sender.look) : null,
+        message.text,
+      );
+      this.trimArena.run(arenaId, arenaId, CHAT_LIMITS.keepCount);
+    }).immediate();
   }
 
   /** Removes every message of the player. True when there was one. */
   removePlayer(arenaId: ArenaId, playerId: PlayerId): boolean {
-    const all = this.messages.get(arenaId) ?? [];
-    const kept = all.filter((m) => m.sender.kind !== "player" || m.sender.playerId !== playerId);
-    if (kept.length === all.length) return false;
-    this.replace(arenaId, kept);
-    return true;
-  }
-
-  /** Removes the arena's chat from memory, then its file. Throws a PersistenceError when the file stays. */
-  removeArena(arenaId: ArenaId): void {
-    this.messages.delete(arenaId);
-    this.lastWriteAt.delete(arenaId);
-    this.waitingWrites.get(arenaId)?.();
-    this.waitingWrites.delete(arenaId);
-    if (this.directory === null) return;
-    const path = this.pathOf(arenaId);
-    try {
-      rmSync(path, { force: true });
-    } catch (error) {
-      throw new PersistenceError(`The chat of arena ${arenaId} could not be removed from ${path}: ${describe(error)}`);
-    }
+    return this.deletePlayer.run(arenaId, playerId).changes > 0;
   }
 
   /** Drops the messages older than CHAT_LIMITS.keepMs in every arena. The 10-minute sweep calls it. */
   pruneAll(): void {
-    for (const arenaId of [...this.messages.keys()]) this.prune(arenaId);
+    this.deleteOlder.run(this.oldestKept());
   }
 
-  /** Writes every waiting change now. The server calls it when it stops. */
-  flush(): void {
-    for (const [arenaId, cancel] of [...this.waitingWrites]) {
-      cancel();
-      this.waitingWrites.delete(arenaId);
-      this.write(arenaId);
-    }
-  }
-
-  private prune(arenaId: ArenaId): void {
-    const all = this.messages.get(arenaId);
-    if (all === undefined) return;
-    const kept = this.younger(all);
-    if (kept.length !== all.length) this.replace(arenaId, kept);
-  }
-
-  private younger(messages: readonly ChatMessage[]): readonly ChatMessage[] {
-    const oldest = this.now() - CHAT_LIMITS.keepMs;
-    return messages.filter((m) => m.at >= oldest);
-  }
-
-  private replace(arenaId: ArenaId, messages: readonly ChatMessage[]): void {
-    this.messages.set(arenaId, messages);
-    this.persist(arenaId);
-  }
-
-  /** Writes now when the last write is a second old, otherwise once the second is over. */
-  private persist(arenaId: ArenaId): void {
-    if (this.directory === null || this.waitingWrites.has(arenaId)) return;
-    const sinceLast = this.now() - (this.lastWriteAt.get(arenaId) ?? Number.NEGATIVE_INFINITY);
-    if (sinceLast >= WRITE_INTERVAL_MS) {
-      this.write(arenaId);
-      return;
-    }
-    this.waitLater(arenaId, WRITE_INTERVAL_MS - sinceLast);
-  }
-
-  private waitLater(arenaId: ArenaId, afterMs: number): void {
-    this.waitingWrites.set(
-      arenaId,
-      this.scheduler.after(() => {
-        this.waitingWrites.delete(arenaId);
-        this.write(arenaId);
-      }, afterMs),
-    );
-  }
-
-  /** A failed write is logged and tried again, because the message already reached memory and the streams. */
-  private write(arenaId: ArenaId): void {
-    const messages = this.messages.get(arenaId);
-    if (this.directory === null || messages === undefined) return;
-    this.lastWriteAt.set(arenaId, this.now());
-    const file: ChatFile = { version: STORED_VERSION, messages };
-    try {
-      createPrivateDirectory(this.directory);
-      writePrivateFileAtomically(this.directory, `${arenaId}.json`, JSON.stringify(file));
-    } catch (error) {
-      console.error(`The chat of arena ${arenaId} could not be saved to ${this.pathOf(arenaId)}; trying again in ${WRITE_INTERVAL_MS} ms:`, error);
-      this.waitLater(arenaId, WRITE_INTERVAL_MS);
-    }
-  }
-
-  private pathOf(arenaId: ArenaId): string {
-    // The id reaches a file path, so only a code the server could have made may pass.
-    if (this.directory === null || !isArenaCode(arenaId)) throw new PersistenceError(`"${arenaId}" cannot name a chat file.`);
-    return join(this.directory, `${arenaId}.json`);
+  private oldestKept(): number {
+    return this.now() - CHAT_LIMITS.keepMs;
   }
 }
 
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+/** The stored text must be what the validator gives, so an edited row cannot hold a line the server would refuse. */
+function toMessage(row: LineRow): ChatMessage {
+  const key = String(row.sequence);
+  const invalid = (reason: string) => invalidRow("chat_line", key, reason);
+  if (parseChatText(row.text) !== row.text) throw invalid("the text is not a chat line the server accepts.");
+  return { id: row.id, at: row.at, sender: toSender(row, key), text: row.text };
 }
 
-function readChatFile(path: string, arenaId: string): readonly ChatMessage[] {
-  const invalid = (what: string) => new PersistenceError(`The chat file ${path} is not valid: ${what}.`);
-  if (!isArenaCode(arenaId)) throw invalid("its name must be an arena code");
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    throw new PersistenceError(`The chat file ${path} cannot be read: ${describe(error)}`);
+function toSender(row: LineRow, key: string): ChatSender {
+  if (row.sender_kind === "host") return { kind: "host" };
+  // Any stored name: the line carries the name the seat had, which an older name rule may have allowed.
+  if (row.sender_kind !== "player" || row.player_id === null || row.name === null || row.name === "" || row.look_json === null) {
+    throw invalidRow("chat_line", key, "the sender must be the host or a player with a name and a look.");
   }
-  if (!isRecord(raw) || raw["version"] !== STORED_VERSION) throw invalid(`it must hold version ${STORED_VERSION}`);
-  const list = raw["messages"];
-  if (!Array.isArray(list) || list.length > CHAT_LIMITS.keepCount) throw invalid(`messages must be a list of at most ${CHAT_LIMITS.keepCount}`);
-  const messages = list.map((value: unknown, i): ChatMessage => {
-    const message = readMessage(value);
-    if (message === null) throw invalid(`messages[${i}] must be a chat message (id, at, sender, text)`);
-    return message;
-  });
-  if (new Set(messages.map((m) => m.id)).size !== messages.length) throw invalid("two messages have one id");
-  return messages;
-}
-
-function readMessage(value: unknown): ChatMessage | null {
-  if (!isRecord(value)) return null;
-  const { id, at, sender, text } = value;
-  if (typeof id !== "string" || id === "") return null;
-  if (typeof at !== "number" || !Number.isSafeInteger(at) || at < 0) return null;
-  // The stored text must be what the validator gives, so a hand-edited file cannot hold a line the server would refuse.
-  if (typeof text !== "string" || parseChatText(text) !== text) return null;
-  const parsedSender = readSender(sender);
-  return parsedSender === null ? null : { id, at, sender: parsedSender, text };
-}
-
-function readSender(value: unknown): ChatSender | null {
-  if (!isRecord(value)) return null;
-  if (value["kind"] === "host") return { kind: "host" };
-  if (value["kind"] !== "player") return null;
-  const { playerId, name } = value;
-  const look = parseTankLook(value["look"]);
-  // Any stored name: the arena file keeps older names too (stored-arena.ts), and the line carries the name the seat had.
-  if (typeof playerId !== "string" || playerId === "" || typeof name !== "string" || name === "" || look === null) return null;
-  return { kind: "player", playerId, name, look };
+  const look = parseTankLook(jsonColumn("chat_line", key, "look_json", row.look_json));
+  if (look === null) throw invalidRow("chat_line", key, "look_json is not a tank look.");
+  return { kind: "player", playerId: row.player_id, name: row.name, look };
 }
 
 // ---------------------------------------------------------------------------

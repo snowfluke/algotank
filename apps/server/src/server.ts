@@ -19,10 +19,9 @@ import { registerChatRoutes } from "./chat-routes.ts";
 import { errorResponse, HttpError, jsonResponse } from "./http.ts";
 import { DEFAULT_LEAGUE_TIME_ZONE, shortDayCalendar, zoneCalendar, type ShortDays } from "./monthly/calendar.ts";
 import { Champions } from "./monthly/champions.ts";
-import { LeagueFiles } from "./monthly/league-files.ts";
+import { LeagueStore } from "./monthly/league-store.ts";
 import { MONTHLY_TICK_MS, MonthlyLeagues } from "./monthly/monthly.ts";
 import { MONTHLY_CHANGES_PER_MINUTE, registerMonthlyRoutes } from "./monthly/routes.ts";
-import { setAsideOldMonthlyData } from "./monthly/set-aside.ts";
 import { LeagueStreams } from "./monthly/streams.ts";
 import { DEFAULT_PUBLIC_ARENA_MAX, PublicArenas } from "./public-arenas.ts";
 import { scaledPublicRules, scaledTickMs } from "./public-kinds.ts";
@@ -65,9 +64,9 @@ export interface ServerOptions {
   /** Where the built web app lives. */
   readonly staticDir?: string;
   /**
-   * DATA_DIR: accounts go in its database algotank.sqlite (db/open.ts) and arenas in its arenas/
-   * folder. Without it everything lives in memory only, as in the tests. The server throws at
-   * start when a file in it is damaged.
+   * DATA_DIR: everything the server keeps goes in its database algotank.sqlite (db/open.ts).
+   * Without it the database is in memory, as in the tests. The server throws at start when a
+   * row in it is damaged.
    */
   readonly dataDir?: string;
   /** Replaces the timers (ticks, the pause before a round, public arena steps, sweeps). Tests use it to skip the waiting. */
@@ -119,7 +118,7 @@ export function startServer(options: ServerOptions): RunningServer {
   try {
     return startWithDatabase(options, db);
   } catch (error) {
-    // A damaged arena file stops the start; the database must not stay open behind it.
+    // A damaged row stops the start; the database must not stay open behind it.
     db.close();
     throw error;
   }
@@ -128,13 +127,11 @@ export function startServer(options: ServerOptions): RunningServer {
 function startWithDatabase(options: ServerOptions, db: Database): RunningServer {
   const now = options.now ?? Date.now;
   const scheduler = options.schedule ?? realTimeScheduler;
-  // Before the Store reads the arenas: it no longer knows the old monthly kind.
-  if (options.dataDir !== undefined) setAsideOldMonthlyData(options.dataDir, now());
   if (options.dataDir !== undefined) reportOldJsonFolders(options.dataDir);
   const leagueTimeZone = options.leagueTimeZone ?? DEFAULT_LEAGUE_TIME_ZONE;
   // The real calendar days of the zone, also when LEAGUE_SHORT_DAYS shortens the league's days.
-  const metrics = new Metrics({ ...(options.dataDir === undefined ? {} : { dataDir: options.dataDir }), calendar: zoneCalendar(leagueTimeZone), now, scheduler });
-  const store = new Store({ ...(options.dataDir === undefined ? {} : { dataDir: options.dataDir }), now, scheduler, metrics });
+  const metrics = new Metrics({ db, calendar: zoneCalendar(leagueTimeZone), now, scheduler });
+  const store = new Store({ db, now, scheduler, metrics });
   const auth = createAuth({
     db,
     secureCookies: options.secureCookies ?? false,
@@ -162,15 +159,13 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
     metrics,
     stats,
   });
-  const chat = new ChatStore({ ...(options.dataDir === undefined ? {} : { dataDir: options.dataDir }), now, scheduler });
-  // The arenas are loaded, so a chat file whose arena is gone can be told apart.
-  chat.keepOnly(new Set(store.all().filter((record) => record.arena.chat !== null).map((record) => record.arena.id)));
+  const chat = new ChatStore(db, now);
   const chatLimits = new ChatLimits(now);
-  const results = new ResultStore({ dataDir: options.dataDir, now });
+  const results = new ResultStore({ db, now });
   const parts: ArenaParts = { store, runner, hub, autoSteps, chat, chatLimits, results };
   watchScheduledStarts({ store, runner, hub, autoSteps, now });
   watchFinishedGames({ store, results, hub, autoSteps, now });
-  const winners = new TournamentWinners(options.dataDir);
+  const winners = new TournamentWinners(db);
   const publicArenas = new PublicArenas(parts, {
     now,
     scheduler,
@@ -180,10 +175,11 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
     winners,
   });
   publicArenas.start();
-  const champions = new Champions(options.dataDir);
+  const champions = new Champions(db);
+  const league = new LeagueStore(db, now);
   const leagueStreams = new LeagueStreams({ heartbeatMs: options.heartbeatMs ?? DEFAULT_HEARTBEAT_MS, maxStreamsPerLeague: options.maxStreamsPerArena ?? DEFAULT_MAX_STREAMS_PER_ARENA });
   const monthly = new MonthlyLeagues({
-    files: new LeagueFiles(options.dataDir),
+    store: league,
     champions,
     streams: leagueStreams,
     calendar: options.leagueShortDays === undefined ? zoneCalendar(leagueTimeZone) : shortDayCalendar(options.leagueShortDays),
@@ -229,8 +225,8 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   });
   const openStreams = () =>
     store.all().reduce((n, record) => n + hub.connectionCount(record.arena.id), 0) +
-    Array.from({ length: monthly.publicStatus().leagues }, (_, i) => leagueStreams.count(i + 1)).reduce((a, b) => a + b, 0);
-  const gauges = (): HealthGauges => healthGauges({ store, monthly, dataDir: options.dataDir, openStreams: openStreams(), now: now() });
+    Array.from({ length: monthly.leagueCount() }, (_, i) => leagueStreams.count(i + 1)).reduce((a, b) => a + b, 0);
+  const gauges = (): HealthGauges => healthGauges({ store, monthly, leagueStore: league, openStreams: openStreams(), now: now() });
   metrics.start(openStreams);
   const startedAt = new Date(now()).toISOString();
   // For a reverse proxy's or a monitor's check: memory only, so a slow disk does not fail it.
@@ -311,7 +307,6 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
       // Writes the edits of the last second, so a shutdown loses nothing.
       store.flush();
       metrics.stop();
-      chat.flush();
       hub.closeAll();
       leagueStreams.closeAll();
       auth.stop();

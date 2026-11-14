@@ -21,7 +21,7 @@ import {
   type AccountStrategyErrorCode,
 } from "@game/arena";
 import { parseStrategy } from "@game/engine";
-import { PersistenceError } from "./arena-files.ts";
+import { PersistenceError } from "./db/errors.ts";
 import type { Auth } from "./auth/index.ts";
 import { HttpError, isRecord, jsonResponse, noContent, readJson } from "./http.ts";
 import type { Router } from "./router.ts";

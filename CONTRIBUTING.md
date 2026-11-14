@@ -16,7 +16,7 @@ You need Bun 1.4 or later. The no-scroll audit also needs Node 23.6 or later.
 3. Start the API in one terminal:
 
    ```sh
-   bun run dev:server   # port 8787, data in apps/server/data
+   bun run dev:server   # port 8787, database in apps/server/data/algotank.sqlite
    ```
 
 4. Start the client in a second terminal:
@@ -61,6 +61,7 @@ The design record of each part is in `docs/specs/revamp/`, starting at `00-overv
 | A condition | Add an entry to `packages/engine/src/strategy/conditions.ts`. Then add its words in both languages in `apps/web/src/vocabulary/messages.ts`. The type check fails until the words exist. |
 | An action | Add an entry to `packages/engine/src/strategy/actions.ts`, and its words to `apps/web/src/vocabulary/messages.ts`. |
 | A rule set | Add one row to `RULE_SETS` in `packages/engine/src/combat/rule-sets.ts`, then run `bun run simulate` and `bun packages/engine/scripts/probes.ts`. The rows are tuned together. |
+| A table, or a column of a table | Add one migration at the end of `MIGRATIONS` in `apps/server/src/db/schema.ts`. Never edit a migration that a released version applied. Put the SQL in the store's own file in its feature folder: the store gets the `Database` in its constructor and prepares its statements there. `apps/server/src/db/README.md` has the conventions. Test the store on `memoryDatabase()` from `db/testing.ts`. |
 
 Write interface text in full, plain sentences of about 15 words or fewer. Do not write a run of short fragments ("Fast. Simple. Fun."), a denial followed by the real point ("Not a race. A puzzle."), or a list of three words for rhythm. `copyRules.test.ts` checks these rules.
 

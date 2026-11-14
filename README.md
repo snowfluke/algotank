@@ -64,7 +64,7 @@ These settings matter most. `docs/settings.md` lists all of them.
 | Variable | Meaning | Default |
 |----------|---------|---------|
 | `PORT`, `HOST` | Where the server listens | 8787, every interface |
-| `DATA_DIR` | The folder for accounts, arenas, results, chat and the league | `./data` |
+| `DATA_DIR` | The folder of the SQLite database, which holds accounts, arenas, results, chat and the league | `./data` |
 | `COOKIE_SECURE` | `1` sends the sign-in cookie over HTTPS only | off |
 | `TRUST_PROXY` | `1` reads the client address from `X-Forwarded-For`, behind a proxy that sets it | off |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | The mail server for the email codes. Without `SMTP_HOST` the server sends no email. | not set |
@@ -77,7 +77,7 @@ The repository is a Bun workspace with TypeScript in strict mode.
 |--------|-------|
 | `packages/engine` | The rules of play, pure and deterministic. `combat/rule-sets.ts` has every number of every rule set, `round/` resolves turns, and `strategy/` has the vocabulary tables, the validator and the play styles. |
 | `packages/arena` | The arena state machine, the arena kinds, bots and tank looks, and the messages between server and browser. `src/types.ts` is the contract and lists every route. |
-| `apps/server` | The Bun HTTP server: routes, accounts (`auth/`), the turn timer, the event stream, replays, the arena files, public arenas, the monthly league (`monthly/`), chat, stored results, statistics (`stats/`) and usage numbers (`metrics/`). |
+| `apps/server` | The Bun HTTP server: routes, accounts (`auth/`), the turn timer, the event stream, replays, the database (`db/`), public arenas, the monthly league (`monthly/`), chat, stored results, statistics (`stats/`) and usage numbers (`metrics/`). |
 | `apps/web` | The React 19 client, built with Vite 8 and Tailwind 4, with one folder per feature under `src/`. |
 | `deploy` | The production files for an Ubuntu server. `docs/deployment/` explains them. |
 
@@ -106,6 +106,7 @@ Each feature folder keeps its own interface text in `messages.ts`, in English an
 | `bun run type-check` | Type-checks the four packages, which also checks that the Indonesian catalog has every English message |
 | `bun run complete-check` | Runs the type check, the tests and the build, as CI does |
 | `bun run simulate` | Plays 1000 finals of 8 and prints how often each play style wins |
+| `bun run backup <target file>` | Writes a copy of the database in `DATA_DIR` to a new file, also while the server runs |
 | `bun run audit -- <server> <folder> [screens]`, in `apps/web` | Runs the no-scroll audit (`CONTRIBUTING.md`) |
 
 `docs/tools.md` explains the balance, large-round and load-test scripts.
@@ -121,10 +122,10 @@ The game runs as one Bun process. `docs/deployment/` is the runbook for one Ubun
 On any other host, keep these rules:
 
 1. Build the client with `bun run build` on the machine or in the image.
-2. Start exactly one server process with `bun apps/server/src/index.ts`, and give it its own `DATA_DIR`. Start Bun directly, not through `bun run start`, so that `SIGTERM` reaches the server, which then writes its files and closes the streams.
+2. Start exactly one server process with `bun apps/server/src/index.ts`, and give it its own `DATA_DIR`. Start Bun directly, not through `bun run start`, so that `SIGTERM` reaches the server, which then writes the arenas and the league's checkpoint, closes the streams and closes the database.
 3. Put an HTTPS proxy in front of it. Set `HOST=127.0.0.1` when the proxy runs on the same machine, and set `COOKIE_SECURE=1`. Set `TRUST_PROXY=1` only when the proxy replaces `X-Forwarded-For` with the visitor's address and sets `X-Forwarded-Host`.
 4. Point the health check of the proxy or the monitor at `GET /api/health`.
-5. Keep `DATA_DIR` private and back it up. It holds player tokens, password hashes and sessions.
+5. Keep `DATA_DIR` private and back it up with `bun run backup <target file>`. A copy of the folder while the server runs is not a safe backup, because the newest writes can be only in the `-wal` file. The database holds player tokens, password hashes and session hashes.
 
 ## Documentation
 

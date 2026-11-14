@@ -36,7 +36,7 @@ module.exports = {
       instances: 1,
       autorestart: true,
       restart_delay: 2000,
-      // pm2 sends SIGINT and then SIGKILL after this time. The server needs it to write its files.
+      // pm2 sends SIGINT and then SIGKILL after this time. The server needs it to write its last changes to the database.
       kill_timeout: 30000,
       env: {
         ...readEnvFile(ENV_FILE),

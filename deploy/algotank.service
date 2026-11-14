@@ -9,8 +9,8 @@
 Description=AlgoTank game server
 After=network-online.target
 Wants=network-online.target
-# A damaged data file stops every start. After 5 failed starts in 60 s, systemd stops
-# trying, so the journal shows the file's name instead of an endless loop.
+# A damaged row in the database stops every start. After 5 failed starts in 60 s, systemd
+# stops trying, so the journal shows the table and the key instead of an endless loop.
 StartLimitIntervalSec=60
 StartLimitBurst=5
 
@@ -35,7 +35,7 @@ Environment=BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
 # Stops crash-report uploads to bun.report.
 Environment=DO_NOT_TRACK=1
 
-# /var/lib/algotank, owned by the service user. The data holds password hashes and tokens.
+# /var/lib/algotank, owned by the service user, holds the database algotank.sqlite. The data holds password hashes and tokens.
 StateDirectory=algotank
 StateDirectoryMode=0700
 # New files are readable by the service user only.

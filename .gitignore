@@ -6,6 +6,9 @@ dist/
 # `bun run dev:server` starts in apps/server). It holds password hashes, sessions and player tokens.
 /data/
 /apps/server/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 
 # Settings with secrets. deploy/env.example is the template and stays.
 .env

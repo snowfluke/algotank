@@ -113,7 +113,6 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps): void {
       passwordHash,
       createdAt: new Date(deps.now()).toISOString(),
       emailVerified: false,
-      language,
     };
     // The UNIQUE email is the second guard: a race the check above missed still answers email_taken.
     const token = deps.inTransaction(() => {

@@ -1,63 +1,63 @@
 #!/usr/bin/env bash
-# Archives the game's data folder and keeps the newest 14 archives.
-# algotank-backup.timer runs it once a day. See docs/deployment/05-backup-and-restore.md.
+# Copies the game's database with the release's backup command, compresses the copy and
+# keeps the newest 14 copies. algotank-backup.timer runs it once a day as the user algotank.
+# See docs/deployment/05-backup-and-restore.md.
 #
-# The server writes each file to a temporary name and renames it, so every file in the
-# archive is whole. Files can still disagree with each other, because tar reads them one
-# after another while the game runs: for example an arena file and its chat file, or a
-# month's league file and champions.json. The server also keeps up to one second of
-# play-style, look and bot-fill edits, and of chat lines, in memory before it writes them.
+# The backup command (bun run backup, apps/server/src/db/backup.ts) uses SQLite's VACUUM INTO,
+# which writes one consistent moment of the database while the game runs. A tar or cp of the
+# data folder is not a safe backup: in WAL mode the last writes can be only in the -wal file,
+# and a copy taken during a write can hold half of it. The server keeps up to one second of
+# play-style, look and bot-fill edits, and up to one minute of league points, in memory
+# before it writes them, so a copy does not have them.
 set -euo pipefail
 
 DATA_DIR="${DATA_DIR:-/var/lib/algotank}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/algotank}"
+APP_DIR="${APP_DIR:-/opt/algotank/current}"
+BUN="${BUN:-/usr/local/bin/bun}"
 KEEP_BACKUPS=14
-ARCHIVE_PATTERN='^algotank-data-[0-9]{8}T[0-9]{6}Z\.tar\.gz$'
+COPY_PATTERN='^algotank-[0-9]{8}T[0-9]{6}Z\.sqlite\.gz$'
 
 step() { printf '==> %s\n' "$*"; }
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-[[ -d "$DATA_DIR" ]] || fail "$DATA_DIR does not exist."
-[[ -d "$BACKUP_DIR" ]] || fail "$BACKUP_DIR does not exist. Make it with: install -d -m 0700 $BACKUP_DIR"
+[[ -f "$DATA_DIR/algotank.sqlite" ]] || fail "$DATA_DIR/algotank.sqlite does not exist."
+[[ -d "$BACKUP_DIR" ]] || fail "$BACKUP_DIR does not exist. Make it with: install -d -m 0700 -o algotank -g algotank $BACKUP_DIR"
+[[ -f "$APP_DIR/package.json" ]] || fail "$APP_DIR has no release."
+[[ -x "$BUN" ]] || fail "$BUN is not an executable Bun."
 
-# The archive holds password hashes, sessions and player tokens.
+# The copy holds password hashes, sessions and player tokens.
 umask 077
 
-name="algotank-data-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+name="algotank-$(date -u +%Y%m%dT%H%M%SZ).sqlite"
 partial="$BACKUP_DIR/.$name.partial"
-step "Archiving $DATA_DIR into $BACKUP_DIR/$name"
+step "Copying $DATA_DIR/algotank.sqlite to $BACKUP_DIR/$name.gz"
 
-status=0
-# The server's temporary files (.<name>.tmp) can vanish while tar reads the folder.
-tar -C "$(dirname "$DATA_DIR")" --exclude='.*.tmp' -czf "$partial" "$(basename "$DATA_DIR")" || status=$?
-# GNU tar exits with 1 when a file changed while it was read. The archive is still usable,
-# and the next run takes a new copy of that file.
-if [[ $status -ne 0 && $status -ne 1 ]]; then
+# The backup command refuses a target that exists, so a partial copy of an earlier failed run goes first.
+rm -f -- "$partial" "$partial.gz"
+if ! (cd "$APP_DIR" && DATA_DIR="$DATA_DIR" "$BUN" run --silent backup "$partial"); then
   rm -f -- "$partial"
-  fail "tar failed with status $status. No archive was written."
-fi
-if [[ $status -eq 1 ]]; then
-  step "WARNING: a file changed while tar read it. The archive keeps the version tar read."
+  fail "The backup command failed. No copy was written."
 fi
 
-step "Checking that the archive can be read"
-if ! tar -tzf "$partial" >/dev/null; then
-  rm -f -- "$partial"
-  fail "The archive cannot be read. No archive was written."
+step "Compressing the copy"
+if ! gzip -9 -- "$partial" || ! gzip -t -- "$partial.gz"; then
+  rm -f -- "$partial" "$partial.gz"
+  fail "The copy could not be compressed. No copy was written."
 fi
-mv -- "$partial" "$BACKUP_DIR/$name"
+mv -- "$partial.gz" "$BACKUP_DIR/$name.gz"
 
-archives=()
-for path in "$BACKUP_DIR"/algotank-data-*.tar.gz; do
+copies=()
+for path in "$BACKUP_DIR"/algotank-*.sqlite.gz; do
   [[ -f "$path" ]] || continue
   file="$(basename "$path")"
-  [[ "$file" =~ $ARCHIVE_PATTERN ]] && archives+=("$file")
+  [[ "$file" =~ $COPY_PATTERN ]] && copies+=("$file")
 done
-count=${#archives[@]}
-step "Keeping the newest $KEEP_BACKUPS of $count archive(s)"
+count=${#copies[@]}
+step "Keeping the newest $KEEP_BACKUPS of $count copy(ies)"
 # A glob sorts by name, and the names hold UTC timestamps, so the oldest come first.
 for ((i = 0; i < count - KEEP_BACKUPS; i++)); do
-  step "Removing old archive ${archives[$i]}"
-  rm -f -- "${BACKUP_DIR:?}/${archives[$i]:?}"
+  step "Removing old copy ${copies[$i]}"
+  rm -f -- "${BACKUP_DIR:?}/${copies[$i]:?}"
 done
-step "Backup $name is done ($(du -h "$BACKUP_DIR/$name" | cut -f1))."
+step "Backup $name.gz is done ($(du -h "$BACKUP_DIR/$name.gz" | cut -f1))."

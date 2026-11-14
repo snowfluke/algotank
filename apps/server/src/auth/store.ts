@@ -6,8 +6,8 @@
 
 import { createHash } from "node:crypto";
 import { SQLiteError, type Database, type Statement } from "bun:sqlite";
-import { MAIL_LANGUAGES, type AccountId, type MailLanguage } from "@game/arena";
-import { PersistenceError } from "../arena-files.ts";
+import type { AccountId } from "@game/arena";
+import { invalidRow } from "../db/rows.ts";
 import { emailProblem, normalizeEmail } from "./credentials.ts";
 import { AuthError } from "./errors.ts";
 
@@ -24,8 +24,6 @@ export interface StoredAccount {
   readonly createdAt: string;
   /** The owner of the email showed they read it. Set only by markEmailVerified (the email-verification package sends the codes). */
   readonly emailVerified: boolean;
-  /** The language of the page the account signed up on. Stored for later emails; nothing reads it yet. */
-  readonly language: MailLanguage;
 }
 
 export interface StoredSession {
@@ -40,7 +38,6 @@ interface AccountRow {
   readonly email: string;
   readonly password_hash: string;
   readonly email_verified: number;
-  readonly language: string;
   readonly created_at: number;
 }
 
@@ -50,7 +47,7 @@ interface SessionRow {
   readonly expires_at: number;
 }
 
-const ACCOUNT_COLUMNS = "id, email, password_hash, email_verified, language, created_at";
+const ACCOUNT_COLUMNS = "id, email, password_hash, email_verified, created_at";
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -59,7 +56,7 @@ function hashToken(token: string): string {
 export class AuthStore {
   private readonly byId: Statement<AccountRow, [string]>;
   private readonly byEmail: Statement<AccountRow, [string]>;
-  private readonly insertAccount: Statement<unknown, [string, string, string, number, string, number]>;
+  private readonly insertAccount: Statement<unknown, [string, string, string, number, number]>;
   private readonly setVerified: Statement<unknown, [string]>;
   private readonly setPasswordHash: Statement<unknown, [string, string]>;
   private readonly liveSession: Statement<SessionRow, [string, number]>;
@@ -75,7 +72,7 @@ export class AuthStore {
   ) {
     this.byId = db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM account WHERE id = ?`);
     this.byEmail = db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM account WHERE email = ?`);
-    this.insertAccount = db.prepare(`INSERT INTO account (${ACCOUNT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?)`);
+    this.insertAccount = db.prepare(`INSERT INTO account (${ACCOUNT_COLUMNS}) VALUES (?, ?, ?, ?, ?)`);
     this.setVerified = db.prepare("UPDATE account SET email_verified = 1 WHERE id = ?");
     this.setPasswordHash = db.prepare("UPDATE account SET password_hash = ? WHERE id = ?");
     // A session is live while now < expires_at; deleteExpired removes the rest.
@@ -103,7 +100,7 @@ export class AuthStore {
   /** Throws AuthError("email_taken") when another account has the email, which the UNIQUE constraint guards. */
   addAccount(account: StoredAccount): void {
     try {
-      this.insertAccount.run(account.id, account.email, account.passwordHash, account.emailVerified ? 1 : 0, account.language, Date.parse(account.createdAt));
+      this.insertAccount.run(account.id, account.email, account.passwordHash, account.emailVerified ? 1 : 0, Date.parse(account.createdAt));
     } catch (error) {
       if (error instanceof SQLiteError && error.code === "SQLITE_CONSTRAINT_UNIQUE") throw new AuthError("email_taken");
       throw error;
@@ -147,16 +144,10 @@ export class AuthStore {
   }
 }
 
-function invalid(table: string, key: string, reason: string): PersistenceError {
-  return new PersistenceError(`The row ${key} of the table ${table} is not valid: ${reason}`);
-}
-
 /** The CHECK constraints guard the types; this checks what they cannot (db/schema.ts). */
 function toAccount(row: AccountRow): StoredAccount {
-  if (normalizeEmail(row.email) !== row.email || emailProblem(row.email) !== null) throw invalid("account", row.id, "the email is not valid.");
-  const language = MAIL_LANGUAGES.find((l) => l === row.language);
-  if (language === undefined) throw invalid("account", row.id, `the language "${row.language}" is not en or id.`);
+  if (normalizeEmail(row.email) !== row.email || emailProblem(row.email) !== null) throw invalidRow("account", row.id, "the email is not valid.");
   const createdAt = new Date(row.created_at);
-  if (Number.isNaN(createdAt.getTime())) throw invalid("account", row.id, "created_at is not a time.");
-  return { id: row.id, email: row.email, passwordHash: row.password_hash, createdAt: createdAt.toISOString(), emailVerified: row.email_verified === 1, language };
+  if (Number.isNaN(createdAt.getTime())) throw invalidRow("account", row.id, "created_at is not a time.");
+  return { id: row.id, email: row.email, passwordHash: row.password_hash, createdAt: createdAt.toISOString(), emailVerified: row.email_verified === 1 };
 }

@@ -6,12 +6,13 @@ import { toCompactTick, toPublicSnapshot } from "./public-tick.ts";
 import { replayJson } from "./replay.ts";
 import { Store, type ArenaRecord } from "./store.ts";
 import { realTimeScheduler } from "./timers.ts";
+import { memoryDatabase } from "./db/testing.ts";
 
 const strategy = PRESETS[0]!.strategy;
 
 /** A record whose round 1 completed with 3 players. */
 function completedRecord(): { store: Store; record: ArenaRecord; config: RoundConfig } {
-  const store = new Store({ now: Date.now, scheduler: realTimeScheduler });
+  const store = new Store({ db: memoryDatabase(), now: Date.now, scheduler: realTimeScheduler });
   let arena: Arena = createArena(
     "R1",
     { name: "Replay", kind: "private", ticksPerRound: 20, tickMs: 100, ruleSetMode: "announced", botFill: false, joinPolicy: "anyone", tankCount: 8 },

@@ -5,22 +5,24 @@
 // Rules that keep counting from hurting play:
 // - Every recording method catches its own error and logs it. A hook never throws into a route
 //   or a turn.
-// - A count changes memory only. The day file is written once a minute when it changed, and at a
-//   clean stop; a failed write is logged and tried again the next minute, never fatal.
+// - A count changes memory only, so a turn never runs SQL. The day's rows (day-counters.ts) are
+//   written once a minute when they changed, and at a clean stop; a failed write is logged and
+//   tried again the next minute, never fatal.
 // - The day is a calendar day in LEAGUE_TIME_ZONE. A count after the day's end closes the day:
-//   the closed day stays in memory until its file is written, and today starts at 0.
+//   the closed day stays in memory until its rows are written, and today starts at 0.
 //
 // Visitors: the server keeps, for today only and in memory only, a set of hashes of the client
 // address, the browser's User-Agent and a random salt. The salt is new each day and is never
-// written, and neither is any hash: the file holds only the number. A restart forgets the set, so
+// written, and neither is any hash: the database holds only the number. A restart forgets the set, so
 // a visitor who comes back after a restart on the same day counts twice (a named limit).
 
+import type { Database } from "bun:sqlite";
 import { createHash, randomBytes } from "node:crypto";
 import { DAY_COUNTERS, METRICS_KEEP_DAYS, PEAK_COUNTERS, type CounterKey, type DayCounterName, type LabelOf, type MetricsDay } from "@game/arena";
 import type { MailSender } from "../mail.ts";
 import type { LeagueCalendar, CalendarDay } from "../monthly/calendar.ts";
 import type { Clock, Scheduler } from "../timers.ts";
-import { DayFiles, shiftDay, toMetricsDay, type DayCounts } from "./day-files.ts";
+import { DayCounterStore, shiftDay, toMetricsDay, type DayCounts } from "./day-counters.ts";
 
 const FLUSH_EVERY_MS = 60_000;
 /** How often the open streams are sampled for today's peak. */
@@ -114,8 +116,8 @@ interface DayState {
 }
 
 export interface MetricsOptions {
-  /** DATA_DIR; without it the numbers live in memory only. */
-  readonly dataDir?: string;
+  /** The server's database; the day's numbers are written to it once a minute. */
+  readonly db: Database;
   /** The day of a count: zoneCalendar(LEAGUE_TIME_ZONE). */
   readonly calendar: LeagueCalendar;
   readonly now: Clock;
@@ -125,9 +127,9 @@ export interface MetricsOptions {
 const PEAKS: ReadonlySet<DayCounterName> = new Set(PEAK_COUNTERS);
 
 export class Metrics implements MetricsRecorder {
-  private readonly files: DayFiles | null;
+  private readonly counters: DayCounterStore;
   private current: DayState;
-  /** Closed days whose file is not written yet. */
+  /** Closed days whose rows are not written yet. */
   private closed: DayState[] = [];
   private salt = randomBytes(16);
   private seen = new Set<string>();
@@ -146,18 +148,10 @@ export class Metrics implements MetricsRecorder {
 
   constructor(private readonly options: MetricsOptions) {
     this.startedAt = options.now();
-    let files: DayFiles | null = null;
-    if (options.dataDir !== undefined) {
-      try {
-        files = new DayFiles(options.dataDir);
-      } catch (error) {
-        console.error("The usage numbers are kept in memory only:", error);
-      }
-    }
-    this.files = files;
+    this.counters = new DayCounterStore(options.db);
     const day = options.calendar.dayAt(options.now());
     // A restart on the same day continues its numbers (but not its visitor set, see the header).
-    this.current = { day, counts: this.readDay(day.day), dirty: false };
+    this.current = { day, counts: this.counters.read(day.day), dirty: false };
   }
 
   /** Arms the minute's write and the stream sampling. `openStreams` counts every open event stream now. */
@@ -228,13 +222,14 @@ export class Metrics implements MetricsRecorder {
     return toMetricsDay(this.current.day.day, this.current.counts);
   }
 
-  /** Every day from `from` to `to` (YYYY-MM-DD, inclusive), oldest first; today and unwritten days from memory. */
+  /** Every day from `from` to `to` (YYYY-MM-DD, inclusive), oldest first; today and unwritten days from memory, the rest in one query. */
   days(from: string, to: string): MetricsDay[] {
     this.rollDay();
+    const stored = this.counters.range(from, to);
     const days: MetricsDay[] = [];
     for (let day = from, n = 0; day <= to && n <= METRICS_KEEP_DAYS; day = shiftDay(day, 1), n++) {
       const held = [this.current, ...this.closed].find((state) => state.day.day === day);
-      days.push(toMetricsDay(day, held?.counts ?? this.readDay(day)));
+      days.push(toMetricsDay(day, held?.counts ?? stored.get(day) ?? new Map()));
     }
     return days;
   }
@@ -254,15 +249,10 @@ export class Metrics implements MetricsRecorder {
   /** Writes every changed day. A failure is logged and the day stays changed, so the next minute tries again. */
   flush(): void {
     this.rollDay();
-    const files = this.files;
-    if (files === null) {
-      this.closed = [];
-      return;
-    }
     for (const state of [...this.closed, this.current]) {
       if (!state.dirty) continue;
       try {
-        files.write(state.day.day, state.counts);
+        this.counters.write(state.day.day, state.counts);
         state.dirty = false;
       } catch (error) {
         console.error(`The usage numbers of ${state.day.day} could not be saved; the next minute tries again:`, error);
@@ -271,10 +261,10 @@ export class Metrics implements MetricsRecorder {
     this.closed = this.closed.filter((state) => state.dirty);
     if (this.pruneDue) {
       try {
-        files.prune(this.current.day.day);
+        this.counters.prune(this.current.day.day);
         this.pruneDue = false;
       } catch (error) {
-        console.error("Old usage files could not be removed; the next minute tries again:", error);
+        console.error("Old usage numbers could not be removed; the next minute tries again:", error);
       }
     }
   }
@@ -300,21 +290,11 @@ export class Metrics implements MetricsRecorder {
     const now = this.options.now();
     if (now < this.current.day.endsAt) return;
     if (this.current.dirty) this.closed.push(this.current);
-    const day = this.options.calendar.dayAt(now);
-    this.current = { day, counts: this.readDay(day.day), dirty: false };
+    // A day that begins while this process runs has no rows yet, so no read: a count never runs SQL.
+    this.current = { day: this.options.calendar.dayAt(now), counts: new Map(), dirty: false };
     this.salt = randomBytes(16);
     this.seen = new Set();
     this.pruneDue = true;
-  }
-
-  private readDay(day: string): DayCounts {
-    if (this.files === null) return new Map();
-    try {
-      return this.files.read(day);
-    } catch (error) {
-      console.error(`The usage numbers of ${day} could not be read:`, error);
-      return new Map();
-    }
   }
 
   private safely(run: () => void): void {

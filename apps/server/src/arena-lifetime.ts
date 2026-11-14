@@ -29,17 +29,18 @@ export interface ArenaParts {
   readonly results: ResultStore;
 }
 
-/** Removes the record and its file, stops its round and timers, sends `closed`, ends its streams, and removes its chat. */
+/**
+ * Removes the record and its row, stops its round and timers, sends `closed` and ends its streams.
+ * The row's delete removes the arena's chat lines in the same statement (ON DELETE CASCADE).
+ */
 export function closeArena(parts: ArenaParts, record: ArenaRecord): void {
-  // First: when the file cannot be removed, nothing else has changed and the caller gets the error.
+  // First: when the row cannot be removed, nothing else has changed and the caller gets the error.
   parts.store.remove(record);
   const arenaId = record.arena.id;
   parts.runner.stop(arenaId);
   parts.autoSteps.cancel(arenaId);
   parts.hub.closeArena(arenaId);
   parts.chatLimits.removeArena(arenaId);
-  // Last: when the chat file cannot be removed, the arena is already gone, and the next start removes the file (ChatStore.keepOnly).
-  parts.chat.removeArena(arenaId);
 }
 
 function isExpired(record: ArenaRecord, now: number, ttlMs: number): boolean {
@@ -58,8 +59,13 @@ export function startExpirySweep(parts: ArenaParts, scheduler: Scheduler, now: C
         console.error(`Arena ${record.arena.id} expired but could not be removed:`, error);
       }
     }
-    parts.chat.pruneAll();
-    parts.results.prune();
+    try {
+      parts.chat.pruneAll();
+      parts.results.prune();
+    } catch (error) {
+      // Runs on the timer, which has no caller to answer; the next sweep tries again.
+      console.error("Old chat lines or results could not be removed; the next sweep tries again:", error);
+    }
   };
   sweep();
   return scheduler.every(sweep, EXPIRY_SWEEP_MS);

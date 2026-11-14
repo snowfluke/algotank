@@ -1,7 +1,7 @@
 // Entry point: bun apps/server/src/index.ts
 // Reads the settings in config.ts once and starts the server.
 
-import { PersistenceError } from "./arena-files.ts";
+import { PersistenceError } from "./db/errors.ts";
 import { ConfigError, loadConfig } from "./config.ts";
 import { smtpSender } from "./mail.ts";
 import { startServer } from "./server.ts";
@@ -34,7 +34,7 @@ try {
     ...(config.metricsToken === null ? {} : { metricsToken: config.metricsToken }),
   });
 } catch (error) {
-  // A damaged arena file or database stops the start on purpose: serving without it would hide an event or lose accounts.
+  // A damaged row or database stops the start on purpose: serving without it would hide an event or lose accounts.
   if (!(error instanceof PersistenceError)) throw error;
   console.error(error.message);
   process.exit(1);

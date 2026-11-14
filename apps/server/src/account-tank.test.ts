@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AccountTank, AccountTankErrorResponse, AccountTankResponse } from "@game/arena";
 import { AccountTanks } from "./account-tank.ts";
-import { PersistenceError } from "./arena-files.ts";
+import { PersistenceError } from "./db/errors.ts";
 import { insertAccount, insertRow, memoryDatabase } from "./db/testing.ts";
 import { signUp, startTestServer, type TestServer, type TestServerOptions } from "./test-helpers.ts";
 

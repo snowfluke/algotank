@@ -27,7 +27,7 @@ export type MetricLanguage = (typeof METRIC_LANGUAGES)[number];
 
 /**
  * Every day counter, and the labels it is split by (null: one number). This is the one list: the
- * server's hooks, the day file's check and the admin page's labels are all keyed by it.
+ * server's hooks, the check of the day's rows and the admin page's labels are all keyed by it.
  */
 export const DAY_COUNTERS = {
   /** Browsers seen today, counted once each (see apps/server/src/metrics/day-counts.ts). */

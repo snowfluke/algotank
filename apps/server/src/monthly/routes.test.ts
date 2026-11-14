@@ -1,7 +1,7 @@
 // The league's routes through HTTP, and the old monthly room's data set aside at the first start.
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -15,7 +15,9 @@ import {
   type PublicStatusResponse,
 } from "@game/arena";
 import { PRESETS } from "@game/engine";
+import { openDatabase } from "../db/open.ts";
 import { signUp, startTestServer, type TestServer, type TestServerOptions } from "../test-helpers.ts";
+import { Champions } from "./champions.ts";
 
 const open: TestServer[] = [];
 const directories: string[] = [];
@@ -114,24 +116,16 @@ describe("the monthly routes' limit", () => {
   });
 });
 
-describe("old data of the monthly room", () => {
-  test("is set aside in a dated folder at the first start, and the champions of past months stay", async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), "algotank-set-aside-"));
+describe("the champions of past months", () => {
+  test("come from the database, also after a restart", async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "algotank-champions-"));
     directories.push(dataDir);
-    mkdirSync(join(dataDir, "arenas"), { recursive: true });
-    mkdirSync(join(dataDir, "league"), { recursive: true });
-    // Only the kind is read, so the rest of an old monthly arena may be anything.
-    writeFileSync(join(dataDir, "arenas", "MNTHLY.json"), JSON.stringify({ version: 7, arena: { id: "MNTHLY", settings: { kind: "monthly" } } }));
-    writeFileSync(join(dataDir, "league", "2026-10.json"), JSON.stringify({ version: 1, month: "2026-10", settledGames: [], entries: [] }));
     const row = { rank: 1, name: "Ada", look: plainTankLook(2), score: 120, games: 25, wins: 4 };
-    writeFileSync(join(dataDir, "league", "champions.json"), JSON.stringify({ version: 1, closedMonths: ["2026-10"], records: [{ month: "2026-10", champion: row, top: [row] }] }));
+    const db = openDatabase({ kind: "file", dataDir });
+    new Champions(db).close("2026-10", { month: "2026-10", champion: row, top: [row] });
+    db.close();
 
     const t = start({ dataDir });
-    const aside = join(dataDir, "set-aside", "2026-11-11");
-    expect(readdirSync(join(aside, "arenas"))).toEqual(["MNTHLY.json"]);
-    expect(readdirSync(join(aside, "league"))).toEqual(["2026-10.json"]);
-    expect(existsSync(join(dataDir, "arenas", "MNTHLY.json"))).toBe(false);
-    expect(readdirSync(join(dataDir, "league"))).toEqual(["champions.json"]);
     expect((await json<ChampionsResponse>(await t.api("/api/champions"))).months).toEqual([{ month: "2026-10", champion: row, top: [row] }]);
   });
 });

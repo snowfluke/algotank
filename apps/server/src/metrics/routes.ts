@@ -16,7 +16,7 @@ import { clientAddress } from "../auth/request.ts";
 import { bearerToken, HttpError, jsonResponse, noContent, readJson } from "../http.ts";
 import type { SlidingWindowLimit } from "../rate-limit.ts";
 import type { Router } from "../router.ts";
-import { shiftDay } from "./day-files.ts";
+import { shiftDay } from "./day-counters.ts";
 import type { Metrics } from "./metrics.ts";
 import { prometheusText, type HealthGauges } from "./prometheus.ts";
 

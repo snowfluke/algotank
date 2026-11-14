@@ -2,18 +2,27 @@
 # Copy to /etc/systemd/system/algotank-backup.service. See docs/deployment/05-backup-and-restore.md.
 
 [Unit]
-Description=AlgoTank data backup
+Description=AlgoTank database backup
 
 [Service]
 Type=oneshot
-# root, because the data folder is mode 0700 and owned by the user algotank.
+# The user of the game, because the database is mode 0600 and owned by algotank. Not root:
+# a reader of a WAL database can make the -shm file, and a -shm file owned by root would stop
+# the game from opening its database.
+User=algotank
+Group=algotank
 ExecStart=/usr/local/sbin/algotank-backup
-# The archives hold password hashes and tokens.
+# Bun writes transpiler cache files to the user's cache folder, which this user does not have.
+Environment=BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
+# Stops crash-report uploads to bun.report.
+Environment=DO_NOT_TRACK=1
+# The copies hold password hashes and tokens.
 UMask=0077
 NoNewPrivileges=yes
-# The whole file system is read-only for the backup, except the backup folder.
+# The whole file system is read-only for the backup, except two folders: the backup folder,
+# and the data folder, because a reader of a WAL database writes to its -shm file.
 ProtectSystem=strict
-ReadWritePaths=/var/backups/algotank
+ReadWritePaths=/var/backups/algotank /var/lib/algotank
 ProtectHome=yes
 PrivateTmp=yes
 PrivateDevices=yes

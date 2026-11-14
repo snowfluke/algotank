@@ -4,8 +4,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-/** The folders whose stores moved into the database. D2 adds the folders of the stores it moves. */
-const OLD_JSON_FOLDERS: readonly string[] = ["auth", "tanks", "strategies", "stats"];
+/** The folders of the stores that moved into the database, and set-aside/ of the monthly room before the league. */
+const OLD_JSON_FOLDERS: readonly string[] = ["auth", "tanks", "strategies", "stats", "arenas", "chat", "results", "public", "league", "monthly", "metrics", "set-aside"];
 
 /** Logs one line when `dataDir` holds a folder of an earlier version. */
 export function reportOldJsonFolders(dataDir: string): void {

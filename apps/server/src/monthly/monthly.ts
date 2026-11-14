@@ -6,6 +6,8 @@
 // One timer, every turn (tickMs), steps each league that has tanks and closes the day when the
 // clock passes its end; a second timer writes the checkpoint every minute. Nothing grows per
 // turn: a turn changes the engine's snapshot and goes to the streams, and nothing keeps it.
+// A turn runs no SQL: the seats and the day round are in memory, and the store (league-store.ts)
+// is written at a seat change, at the minute's checkpoint and at the day's close, once a day.
 //
 // The day (league-day.ts has the per-league table and the bot rule):
 // | From       | To         | Actor          | Guard / effect                                               |
@@ -35,7 +37,7 @@
 // uses it in any league or another account fixed it this month, so a month close that moves
 // tanks between leagues cannot bring two tanks of one name together.
 //
-// Restart: the checkpoint (league-files.ts) holds the day and per seat today's points, whether
+// Restart: the checkpoint (league-store.ts) holds the day and per seat today's points, whether
 // the day counts and today's statistics (K2). Lost and named: positions, water, running step
 // sequences, and after a crash up to one minute of points and statistics. A quit and a day close
 // are saved at once. Statistics: a quit drops the seat's, a new seat starts at zero, a new day
@@ -71,7 +73,7 @@ import type { Clock, Scheduler } from "../timers.ts";
 import type { CalendarDay, LeagueCalendar } from "./calendar.ts";
 import { RECORD_TOP, type Champions } from "./champions.ts";
 import { LeagueDay, type DayTank } from "./league-day.ts";
-import { EMPTY_SEATS, type Checkpoint, type DayScore, type LeagueFiles, type MonthState, type Seat, type SeatsState } from "./league-files.ts";
+import { EMPTY_SEATS, type Checkpoint, type DayScore, type LeagueStore, type MonthState, type Seat, type SeatsState } from "./league-store.ts";
 import { closeMonth } from "./month-close.ts";
 import { rankMonth, type MonthPlace } from "./score.ts";
 import type { LeagueStreams } from "./streams.ts";
@@ -82,7 +84,7 @@ export const MONTHLY_TICK_MS = 900;
 const CHECKPOINT_MS = 60_000;
 
 export interface MonthlyOptions {
-  readonly files: LeagueFiles;
+  readonly store: LeagueStore;
   readonly champions: Champions;
   readonly streams: LeagueStreams;
   readonly calendar: LeagueCalendar;
@@ -110,26 +112,26 @@ export class MonthlyLeagues {
 
   constructor(private readonly options: MonthlyOptions) {}
 
-  /** Reads the files, resumes or closes the checkpoint's day, and starts the timers. Throws a PersistenceError for a damaged file. */
+  /** Reads the tables, resumes or closes the checkpoint's day, and starts the timers. Throws a PersistenceError for a damaged row. */
   start(): void {
-    const { files, calendar, scheduler, tickMs } = this.options;
-    this.seats = files.readSeats();
+    const { store, calendar, scheduler, tickMs } = this.options;
+    this.seats = store.readSeats();
     const now = this.options.now();
     const current = calendar.dayAt(now);
-    const checkpoint = files.readCheckpoint();
+    const checkpoint = store.readCheckpoint();
     if (checkpoint !== null && checkpoint.day === current.day) {
       this.today = current;
-      this.month = files.readMonth(current.month);
+      this.month = store.readMonth(current.month);
       this.openDay(checkpoint);
     } else if (checkpoint !== null && checkpoint.endsAt <= now) {
       this.today = { day: checkpoint.day, month: checkpoint.month, startsAt: checkpoint.startsAt, endsAt: checkpoint.endsAt };
-      this.month = files.readMonth(checkpoint.month);
+      this.month = store.readMonth(checkpoint.month);
       this.openDay(checkpoint);
       this.closeDay();
     } else {
       if (checkpoint !== null) console.error(`The league checkpoint is for ${checkpoint.day}, after the clock's day ${current.day}; today starts without it.`);
       this.today = current;
-      this.month = files.readMonth(current.month);
+      this.month = store.readMonth(current.month);
       this.openDay(null);
       this.checkpoint();
     }
@@ -183,7 +185,7 @@ export class MonthlyLeagues {
   private checkpoint(): void {
     if (this.closing) return;
     try {
-      this.options.files.writeCheckpoint(this.checkpointOf());
+      this.options.store.writeCheckpoint(this.checkpointOf());
     } catch (error) {
       console.error("The league checkpoint could not be saved:", error);
     }
@@ -219,16 +221,16 @@ export class MonthlyLeagues {
       const ended = this.today;
       const next = this.options.calendar.dayAt(this.options.now());
       const month = this.withDayClosed(this.month, ended.day);
-      this.options.files.writeMonth(month);
+      this.options.store.writeMonth(month);
       this.month = month;
       const leaguesBefore = this.seats.leagues;
       if (next.month !== ended.month) {
         this.closeMonthOf(month);
-        this.month = this.options.files.readMonth(next.month);
+        this.month = this.options.store.readMonth(next.month);
       }
       this.today = next;
       this.openDay(null);
-      this.options.files.writeCheckpoint(this.checkpointOf());
+      this.options.store.writeCheckpoint(this.checkpointOf());
       this.closing = false;
       for (const league of this.days.keys()) this.sendState(league);
       // A league the month close emptied: its open pages learn which leagues exist instead of waiting.
@@ -287,7 +289,7 @@ export class MonthlyLeagues {
       moves.set(accountId, { month: month.month, ...move });
     }
     const next: SeatsState = { ...this.seats, leagues: Math.max(1, result.leagues.length), closedMonth: month.month, seats, moves };
-    this.options.files.writeSeats(next);
+    this.options.store.writeSeats(next);
     this.seats = next;
   }
 
@@ -323,7 +325,7 @@ export class MonthlyLeagues {
       seats: new Map(this.seats.seats).set(accountId, seat),
       names: new Map(this.seats.names).set(accountId, { month: this.today.month, name }),
     };
-    this.options.files.writeSeats(next);
+    this.options.store.writeSeats(next);
     this.seats = next;
     if (!this.days.has(league)) this.days.set(league, new LeagueDay(league));
     // A tank that arrives during the day plays at once; the day does not count for it.
@@ -342,13 +344,13 @@ export class MonthlyLeagues {
     if (day.countsToday(seat.seatId) && !this.month.days.some((d) => d.accountId === accountId && d.day === this.today.day)) {
       const score: DayScore = { accountId, seatId: seat.seatId, name: seat.name, look: seat.look, order: seat.order, day: this.today.day, league: seat.league, points, place: null };
       const month: MonthState = { ...this.month, days: [...this.month.days, score] };
-      this.options.files.writeMonth(month);
+      this.options.store.writeMonth(month);
       this.month = month;
     }
     const seats = new Map(this.seats.seats);
     seats.delete(accountId);
     const next: SeatsState = { ...this.seats, seats };
-    this.options.files.writeSeats(next);
+    this.options.store.writeSeats(next);
     this.seats = next;
     day.unseat(seat.seatId);
     this.sendState(seat.league);
@@ -367,7 +369,7 @@ export class MonthlyLeagues {
       seats: seat === undefined ? this.seats.seats : new Map(this.seats.seats).set(accountId, { ...seat, name }),
       names: new Map(this.seats.names).set(accountId, { month: this.today.month, name }),
     };
-    this.options.files.writeSeats(next);
+    this.options.store.writeSeats(next);
     this.seats = next;
     if (seat !== undefined) {
       this.dayOf(seat.league).rename(seat.seatId, name);
@@ -381,7 +383,7 @@ export class MonthlyLeagues {
     const moves = new Map(this.seats.moves);
     moves.delete(accountId);
     const next: SeatsState = { ...this.seats, moves };
-    this.options.files.writeSeats(next);
+    this.options.store.writeSeats(next);
     this.seats = next;
   }
 
@@ -451,12 +453,17 @@ export class MonthlyLeagues {
       day: this.today.day,
       dayEndsInMs: Math.max(0, this.today.endsAt - this.options.now()),
       leagues: Array.from({ length: this.seats.leagues }, (_, i) => ({ league: i + 1, tanks: this.seatsIn(i + 1).length, phase: this.closing ? "closing" : this.dayOf(i + 1).phase() })),
-      lastChampion: this.options.champions.records()[0] ?? null,
+      lastChampion: this.options.champions.latest(),
     };
   }
 
+  /** The number of open leagues, from memory: the stream sampling timer reads it, so it runs no SQL. */
+  leagueCount(): number {
+    return this.seats.leagues;
+  }
+
   publicStatus(): PublicStatusResponse["monthly"] {
-    return { month: this.today.month, tanks: this.seats.seats.size, leagues: this.seats.leagues, lastChampion: this.options.champions.records()[0] ?? null };
+    return { month: this.today.month, tanks: this.seats.seats.size, leagues: this.seats.leagues, lastChampion: this.options.champions.latest() };
   }
 
   ranking(league: number): LeagueRankingResponse {

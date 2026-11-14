@@ -10,7 +10,7 @@
 
 import type { Database, Statement } from "bun:sqlite";
 import { ACCOUNT_STATS_MONTHS, parseAccountStats, type AccountId, type AccountMonth, type AccountNumbers, type AccountStats, type AccountStatsResponse } from "@game/arena";
-import { PersistenceError } from "../arena-files.ts";
+import { PersistenceError } from "../db/errors.ts";
 import type { Auth } from "../auth/index.ts";
 import { jsonResponse } from "../http.ts";
 import type { Router } from "../router.ts";

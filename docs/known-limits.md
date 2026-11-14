@@ -5,17 +5,19 @@
 - A scheduled start lives in the server process. A restart drops it back to waiting.
 - The rate-limit counters (sign-in, registration, seats, joins, email codes) are in memory, so a restart sets them to zero.
 - When an account takes its seat on a second device, the first device is not told at once. Its open event stream stays open, and the page notices only when a request with the old token is refused.
-- Stored results are all held in memory. A 512-player result of 7 rounds is about 150 KB. An arena code can be drawn again after its arena ended, and then the old link leads to the new arena.
+- An arena code can be drawn again after its arena ended, and then the old link leads to the new arena.
 - Names from the game (for example "Brave Otter") are English in both languages.
 - The name block list and the chat block list never catch everything. The owner of a private or presenter arena can remove a player and turn the chat off. A public arena has no owner, so the list is its only check.
 - The server's validation messages are in English only.
-- A chat line sent in the second before a crash is lost, and a player who joins again gets a fresh chat limit.
+- A player who joins again gets a fresh chat limit.
 - A strategy can hold one branch per rule set (the condition "This round's rules are ..."). Such a document keeps most of its strength when the rules change. The decision log in `docs/decisions/` has the numbers.
 - Every balance number is from finals of 8. Rounds of 512 players were measured for speed, data and sanity (hits, scores), not for balance.
 - A presenter arena of 512 players was load-tested on one laptop, with the clients on the same machine (`docs/tools.md`, "Load test"). Real phones and a venue's Wi-Fi were not measured.
 - The big screen keeps text at 26px or more for up to 24 tanks at 1920 x 1080. With more tanks the text goes down to 20px, and a list that still does not fit shows the top places and the places around the cut line, with one line that counts the rest.
 - A monthly tank whose owner never returns stays seated. A restart loses positions, water, running step sequences and, after a crash, up to one minute of points. The monthly record carries no prize.
 - Two servers must not share one `DATA_DIR`.
+- A crash loses up to one second of tank and strategy edits in an arena, because the server writes such edits at most once a second. Joins, leaves and phase changes are written at once.
+- The game has no route that deletes an account. The arena and league rows have no foreign key to the account, because the server holds them in memory, so a delete in the database alone would leave the arena and the seat in the running server.
 - Player statistics of an arena live in memory. After a restart the card of the running game is gone, and the rest of that game does not count for the accounts. Statistics of the monthly league resume from the checkpoint, so a crash loses up to one minute of them. The monthly league does not add to an account's totals.
 - At the end of a game the card's numbers cover the whole game, and its rule rows cover the last round only, because rules may change between rounds.
 - Usage numbers: phones behind one network address with the same browser version count as one visitor, and a restart forgets the day's visitor set, so a visitor who comes back after it counts twice. After a crash, up to one minute of counts is lost. The first-visit path counts devices, so a cleared browser starts it again.

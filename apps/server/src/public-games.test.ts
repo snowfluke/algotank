@@ -4,7 +4,7 @@
 // public arena of version 4. The monthly league has its own tests in monthly/.
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -322,47 +322,6 @@ describe("the tournament", () => {
   });
 });
 
-describe("stored arenas of version 4", () => {
-  test("the old single public arena is dropped at load with one log line, and other arenas load", async () => {
-    const dataDir = temporaryDirectory();
-    const first = start({ dataDir });
-    const { arenaId: privateId } = await createTestArena(first, { kind: "private" });
-    await stop(first);
-
-    const arenas = join(dataDir, "arenas");
-    mkdirSync(arenas, { recursive: true });
-    const old = join(arenas, "PQRST2.json");
-    writeFileSync(
-      old,
-      JSON.stringify({
-        version: 4,
-        arena: {
-          id: "PQRST2",
-          settings: { name: "", kind: "public", ticksPerRound: 90, tickMs: 900, ruleSetMode: "standard", botFill: true },
-          players: [],
-          phase: { kind: "lobby", nextRuleSetId: "standard", start: { kind: "waiting" } },
-          rounds: [],
-          game: 3,
-        },
-        ownerAccountId: null,
-        lastActivityAt: 0,
-        playerTokens: [],
-        roundConfigs: [],
-      }),
-    );
-    const logs = spyOn(console, "log").mockImplementation(() => {});
-    try {
-      const second = start({ dataDir });
-      expect(logs.mock.calls.filter((call) => String(call[0]).includes(old))).toHaveLength(1);
-      expect(existsSync(old)).toBe(false);
-      expect((await second.api("/api/arenas/PQRST2")).status).toBe(404);
-      expect((await getArena(second, privateId)).settings.kind).toBe("private");
-      expect(await seat(second, "practice")).not.toBe("PQRST2");
-    } finally {
-      logs.mockRestore();
-    }
-  });
-});
 
 describe("the health route", () => {
   test("answers ok, the start time and the number of open arenas, without a session", async () => {

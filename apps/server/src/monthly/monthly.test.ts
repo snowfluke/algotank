@@ -2,16 +2,15 @@
 // Asia/Jakarta calendar (docs/specs/revamp/77-monthly-league.md, sections 1 to 3 and 5).
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import type { Database } from "bun:sqlite";
 import { plainTankLook, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
 import { PRESETS } from "@game/engine";
 import { HttpError } from "../http.ts";
 import { manualScheduler, type ManualScheduler } from "../test-helpers.ts";
 import { zoneCalendar } from "./calendar.ts";
 import { Champions } from "./champions.ts";
-import { LeagueFiles } from "./league-files.ts";
+import { memoryDatabase } from "../db/testing.ts";
+import { LeagueStore } from "./league-store.ts";
 import { MonthlyLeagues } from "./monthly.ts";
 import { LeagueStreams } from "./streams.ts";
 
@@ -20,21 +19,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const NOV_14 = Date.parse("2026-11-13T17:00:00Z");
 const strategy = (i = 0) => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
 
-const directories: string[] = [];
 let errors: ReturnType<typeof spyOn>;
 beforeEach(() => {
   errors = spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
   errors.mockRestore();
 });
-
-function temporaryDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), "algotank-monthly-"));
-  directories.push(directory);
-  return directory;
-}
 
 interface League {
   readonly ticks: ManualScheduler;
@@ -43,12 +34,14 @@ interface League {
   readonly streams: LeagueStreams;
 }
 
-function startLeague(options: { readonly at?: number; readonly dataDir?: string; readonly ticks?: ManualScheduler } = {}): League {
+/** A league on `db` (a new database in memory when not given); a second league on the same database is what a restart finds. */
+function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler } = {}): League {
   const ticks = options.ticks ?? manualScheduler(options.at ?? NOV_14 + 10 * 60 * 60 * 1000);
-  const champions = new Champions(options.dataDir);
+  const db = options.db ?? memoryDatabase();
+  const champions = new Champions(db);
   const streams = new LeagueStreams({ heartbeatMs: 60_000, maxStreamsPerLeague: 10 });
   const monthly = new MonthlyLeagues({
-    files: new LeagueFiles(options.dataDir),
+    store: new LeagueStore(db, ticks.now),
     champions,
     streams,
     calendar: zoneCalendar("Asia/Jakarta"),
@@ -392,8 +385,8 @@ describe("the streams", () => {
 
 describe("restart", () => {
   test("a clean stop writes the checkpoint; the start resumes the day with each tank's points and counts", () => {
-    const dataDir = temporaryDirectory();
-    const first = startLeague({ dataDir });
+    const db = memoryDatabase();
+    const first = startLeague({ db });
     const ada = newAccount();
     const bo = newAccount();
     take(first, ada);
@@ -407,7 +400,7 @@ describe("restart", () => {
     first.monthly.stop();
 
     first.ticks.advance(60_000);
-    const second = startLeague({ dataDir, ticks: first.ticks });
+    const second = startLeague({ db, ticks: first.ticks });
     const after = [ada, bo, cy].map((owner) => seatOf(second, owner));
     expect(after.map((s) => [s.seatId, s.points, s.countsToday])).toEqual(before.map((s) => [s.seatId, s.points, s.countsToday]));
     // A new round: the board starts from turn 0 again, with the turns left of the day.
@@ -416,8 +409,8 @@ describe("restart", () => {
   });
 
   test("a day that ended while the server was down closes at the start with the checkpoint's points", () => {
-    const dataDir = temporaryDirectory();
-    const first = startLeague({ dataDir });
+    const db = memoryDatabase();
+    const first = startLeague({ db });
     const ada = newAccount();
     take(first, ada);
     take(first, newAccount());
@@ -427,10 +420,30 @@ describe("restart", () => {
     first.monthly.stop();
 
     first.ticks.advance(DAY_MS);
-    const second = startLeague({ dataDir, ticks: first.ticks });
+    const second = startLeague({ db, ticks: first.ticks });
     expect(second.monthly.live(1).day).toBe("2026-11-16");
     expect(seatOf(second, ada)).toMatchObject({ countedDays: 1, score: points, points: 0, countsToday: true });
     second.monthly.stop();
+  });
+});
+
+describe("the league's tables", () => {
+  test("the UNIQUE seat name refuses a second tank of one name in any case with 409 name_taken, and writes nothing", () => {
+    const db = memoryDatabase();
+    const store = new LeagueStore(db, Date.now);
+    const seat = (accountId: string, seatId: string, name: string, order: number) => ({ seatId, accountId, league: 1, name, look: plainTankLook(1), strategy: strategy(), order });
+    const one = { leagues: 1, nextOrder: 2, closedMonth: null, seats: new Map([["account-a", seat("account-a", "p1", "Ada", 1)]]), names: new Map(), moves: new Map() };
+    store.writeSeats(one);
+    const two = { ...one, nextOrder: 3, seats: new Map([...one.seats, ["account-b", seat("account-b", "p2", "ADA", 2)]]) };
+    let refused: unknown;
+    try {
+      store.writeSeats(two);
+    } catch (error) {
+      refused = error;
+    }
+    expect(refused).toBeInstanceOf(HttpError);
+    expect(refused).toMatchObject({ status: 409, extra: { code: "name_taken" } });
+    expect([...store.readSeats().seats.keys()]).toEqual(["account-a"]);
   });
 });
 
@@ -443,5 +456,44 @@ describe("memory", () => {
     for (let i = 0; i < 5000; i++) l.ticks.tick();
     expect(l.monthly.holdings()).toEqual(early);
     expect(l.monthly.live(1).board.tick).toBe(5500);
+  });
+
+  test("a turn runs no SQL: only the seat changes, the minute's checkpoint and the day's close reach the database", () => {
+    const ticks = manualScheduler(NOV_14 + 10 * 60 * 60 * 1000);
+    const db = memoryDatabase();
+    // The league reaches the database only through these two stores, so counting their calls counts its SQL.
+    let storeCalls = 0;
+    const counted = <T extends object>(target: T): T =>
+      new Proxy(target, {
+        get(object, key) {
+          const value: unknown = Reflect.get(object, key);
+          return typeof value === "function" ? (...args: unknown[]) => (storeCalls++, value.apply(object, args)) : value;
+        },
+      });
+    // The league's turn timer alone, without the checkpoint timer that tick() would also run.
+    const timers: { readonly ms: number; readonly run: () => void }[] = [];
+    const scheduler: ManualScheduler = { ...ticks, every: (run, ms) => (timers.push({ ms, run }), ticks.every(run, ms)) };
+    const monthly = new MonthlyLeagues({
+      store: counted(new LeagueStore(db, ticks.now)),
+      champions: counted(new Champions(db)),
+      streams: new LeagueStreams({ heartbeatMs: 60_000, maxStreamsPerLeague: 10 }),
+      calendar: zoneCalendar("Asia/Jakarta"),
+      now: ticks.now,
+      scheduler,
+      tickMs: 900,
+    });
+    monthly.start();
+    for (let i = 0; i < 3; i++) monthly.takeSeat(newAccount(), { look: plainTankLook(1), strategy: strategy(i) });
+    const turn = timers.find((timer) => timer.ms === 900);
+    if (turn === undefined) throw new Error("no turn timer");
+    const changes = () => db.query<{ n: number }, []>("SELECT total_changes() AS n").get()?.n;
+    const before = changes();
+    storeCalls = 0;
+    for (let i = 0; i < 50; i++) turn.run();
+    expect(monthly.live(1).board.tick).toBe(50);
+    expect(storeCalls).toBe(0);
+    expect(changes()).toBe(before);
+    monthly.stop();
+    expect(storeCalls).toBeGreaterThan(0);
   });
 });

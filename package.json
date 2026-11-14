@@ -21,6 +21,7 @@
     "test": "bun test",
     "type-check": "tsc --noEmit -p packages/engine && tsc --noEmit -p packages/arena && tsc --noEmit -p apps/server && tsc --noEmit -p apps/web",
     "simulate": "bun packages/engine/scripts/simulate.ts",
+    "backup": "bun apps/server/scripts/backup.ts",
     "complete-check": "bun run type-check && bun test && bun run build"
   },
   "devDependencies": {

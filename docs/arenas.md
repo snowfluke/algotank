@@ -34,4 +34,4 @@ After each round the room's "Stats" tab shows the player what their rules did: s
 
 ## Saving and restarts
 
-The server saves every arena to `DATA_DIR/arenas/` and loads the folder at start, so a game continues after a restart. A round that was running at the restart counts for nothing and starts again. A damaged file stops the start, and the message names the file. Arena files from the version with host keys (directly in `DATA_DIR`) also stop the start: move them out of the folder.
+The server saves every arena to the table `arena` in `DATA_DIR/algotank.sqlite` and loads the table at start, so a game continues after a restart. A round that was running at the restart counts for nothing and starts again. A damaged row stops the start, and the message names the table and the arena code. The JSON folders of earlier versions are not read: the start names them in one log line and leaves them.

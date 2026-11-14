@@ -12,6 +12,8 @@
 // | withBot      | idle         | owner: quit      | the last tank leaves; the round is dropped (its points    |
 // |              |              |                  | were saved at the quit)                                   |
 // | withoutBot   | withoutBot   | owner: seat/quit | two or more tanks stay                                    |
+// | withBot or   | the same     | server (turns)   | the round played RESHUFFLE_TURNS turns: a new round with  |
+// | withoutBot   |              |                  | the same tanks, points and statistics on new squares      |
 // | any          | closing      | server (clock)   | the day's end: monthly.ts records the day; no turn runs   |
 // | closing      | idle, withBot| server           | the records are saved: a new day round with every seated  |
 // |              | or withoutBot|                  | tank at 0 points (closing stays while a save fails)       |
@@ -56,6 +58,16 @@ const botStrategy: Strategy = (() => {
   return preset.strategy;
 })();
 const BOT_NAME = "Splashy";
+
+/**
+ * Turns a day round plays before its tanks start again on new random squares with full water,
+ * keeping their points: 333 turns are 5 minutes at 900 ms a turn, the owner's choice. A day is
+ * one round of about 96,000 turns, and two or three tanks could settle into a loop that ran for
+ * the rest of it: in one measured field the same tank hit the same target 15,833 times in a row.
+ * Measured on 14 November 2026 over 3 seeds with a new start every 1,000 turns: that run was at
+ * most 70, and fields without a loop kept their result. 333 turns cut a loop shorter still.
+ */
+export const RESHUFFLE_TURNS = 333;
 
 /** The empty board of a league: sized for MONTHLY_SEATS tanks, like every day round. */
 function emptyBoard(ticksTotal: number): Snapshot {
@@ -153,9 +165,15 @@ export class LeagueDay {
     }
   }
 
+  /** True when the round has played RESHUFFLE_TURNS turns, so monthly.ts starts it again with rebuild. */
+  reshuffleDue(): boolean {
+    return this.round !== null && this.round.snapshot.tick >= RESHUFFLE_TURNS;
+  }
+
   /**
-   * A new round with the same tanks and points, for a round the engine could not step. Positions,
-   * water and running step sequences are lost, as after a restart.
+   * A new round with the same tanks, points and statistics: every RESHUFFLE_TURNS turns, and for a
+   * round the engine could not step. Positions, water and running step sequences are lost, as
+   * after a restart, and the bot comes back as a new tank with 0 points.
    */
   rebuild(ticksLeft: number): void {
     const tanks = [...this.seated.values()].map(({ tank, counts, stats }) => ({ tank, counts, stats, points: this.pointsOf(tank.id) }));

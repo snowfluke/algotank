@@ -165,6 +165,11 @@ export class MonthlyLeagues {
       try {
         const result = day.step();
         if (result !== null) this.options.streams.sendTick(league, result, this.seatIdsIn(league));
+        // The planned new start that ends a loop (RESHUFFLE_TURNS): the pages draw the new squares from the state.
+        if (day.reshuffleDue()) {
+          day.rebuild(this.ticksLeft());
+          this.sendState(league);
+        }
       } catch (error) {
         // A bug in the engine: this league's round starts again with the points kept, the others go on.
         console.error(`The day round of league ${league} failed; it starts again with the points kept:`, error);

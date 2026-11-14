@@ -11,6 +11,7 @@ import { zoneCalendar } from "./calendar.ts";
 import { Champions } from "./champions.ts";
 import { memoryDatabase } from "../db/testing.ts";
 import { LeagueStore } from "./league-store.ts";
+import { RESHUFFLE_TURNS } from "./league-day.ts";
 import { MonthlyLeagues } from "./monthly.ts";
 import { LeagueStreams } from "./streams.ts";
 
@@ -177,6 +178,30 @@ describe("the day round", () => {
     turns.push(l.monthly.live(1).tanks.map((t) => t.id));
     expect(l.monthly.live(1).board.tick).toBe(before + 1);
     expect(turns[0]).toContain(me.seatId);
+  });
+
+  test("every RESHUFFLE_TURNS turns the tanks start again on new squares with their points, and open pages get the new board", async () => {
+    const l = startLeague();
+    const ada = newAccount();
+    const bo = newAccount();
+    take(l, ada);
+    take(l, bo);
+    const page = collect(l.streams.open(1, null, l.monthly.live(1)));
+    for (let i = 0; i < RESHUFFLE_TURNS - 1; i++) l.ticks.tick();
+    expect(l.monthly.live(1).board.tick).toBe(RESHUFFLE_TURNS - 1);
+    await page.take();
+    const before = [seatOf(l, ada).points, seatOf(l, bo).points];
+    // The turn that reaches the limit is played, then the round starts again.
+    l.ticks.tick();
+    const after = l.monthly.live(1);
+    expect(after.board.tick).toBe(0);
+    expect(after.board.bots.every((bot) => bot.water === after.board.bots[0]?.water)).toBe(true);
+    const played = [seatOf(l, ada).points, seatOf(l, bo).points];
+    // The points of the last turn before the new start are kept, and the two tanks still add up to zero.
+    expect(played[0] ?? 0).toBe(-(played[1] ?? 0));
+    expect(Math.abs((played[0] ?? 0) - (before[0] ?? 0))).toBeLessThanOrEqual(1);
+    const types = (await page.take()).messages.map((message) => message.type);
+    expect(types.slice(-2)).toEqual(["tick", "state"]);
   });
 
   test("a new day respawns every seated tank with 0 points, and it counts for all of them", () => {
@@ -455,7 +480,8 @@ describe("memory", () => {
     const early = l.monthly.holdings();
     for (let i = 0; i < 5000; i++) l.ticks.tick();
     expect(l.monthly.holdings()).toEqual(early);
-    expect(l.monthly.live(1).board.tick).toBe(5500);
+    // Every turn was played: after 5,500 turns the round counter shows the turns since the last new start (RESHUFFLE_TURNS).
+    expect(l.monthly.live(1).board.tick).toBe(5500 % RESHUFFLE_TURNS);
   });
 
   test("a turn runs no SQL: only the seat changes, the minute's checkpoint and the day's close reach the database", () => {

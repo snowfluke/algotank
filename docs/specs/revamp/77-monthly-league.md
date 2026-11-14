@@ -32,6 +32,7 @@ Owner, 2026-11-14: "monthly arena is long running arena. 1 round lasted 24h. Onc
 | Join during the day | The tank appears on a free square at the next turn and plays at once. That day is not a counted day for it. |
 | Quit during the day | The tank leaves at the next turn. When it was seated at the day's first turn, the day is a counted day with the points it had when it left, so quitting cannot erase a bad day. |
 | Board | A fixed size for 16 tanks; it does not change when tanks come and go. |
+| New start | Every 333 turns (5 minutes at 900 ms a turn) the round starts again: every tank moves to a new random square with full water and keeps its points and statistics. Added 2026-11-14 after the owner saw two or three tanks lock into one loop for most of a day; the measurement is in `apps/server/src/monthly/league-day.ts` (`RESHUFFLE_TURNS`). |
 | Bot | The table below. A bot never appears in a ranking. |
 | Kept per turn | Nothing. No replay and no turn history for a day round; a viewer who opens the page gets the current state and then each turn. |
 

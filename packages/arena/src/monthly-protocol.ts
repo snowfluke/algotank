@@ -43,8 +43,9 @@ export const MONTHLY_RANKED_DAYS = 7;
 
 /**
  * A league's day (apps/server/src/monthly/league-day.ts holds the table):
- * idle: no seated tank, no turn runs; withBot: one seated tank and the bot; withoutBot: two or
- * more seated tanks; closing: the day's end is being recorded.
+ * idle: no seated tank, no turn runs; withBot: seated tanks and at least one bot; withoutBot:
+ * seated tanks and no bot; closing: the day's end is being recorded. Bots are drawn again at every
+ * new start of the round.
  */
 export type LeagueDayPhase = "idle" | "withBot" | "withoutBot" | "closing";
 

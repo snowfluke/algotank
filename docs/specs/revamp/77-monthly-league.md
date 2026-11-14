@@ -36,11 +36,13 @@ Owner, 2026-11-14: "monthly arena is long running arena. 1 round lasted 24h. Onc
 | Bot | The table below. A bot never appears in a ranking. |
 | Kept per turn | Nothing. No replay and no turn history for a day round; a viewer who opens the page gets the current state and then each turn. |
 
-| Seated tanks | What runs |
-|--------------|-----------|
-| 0 | No turn is simulated. The league exists and its page shows the empty board. |
-| 1 | One bot plays against it. |
-| 2 or more | No bot. The bot leaves at the next turn when the second tank arrives, and comes back when one tank is left. |
+Changed 2026-11-14 at the owner's request ("spawn and de-spawn bots every N minutes"): the bots are drawn again at every new start (every 5 minutes), at a new day, at a restart and at a rebuild. Each bot takes a random play style from the practice arena's bot mix (`apps/server/src/bots.ts`, `BOT_LINEUP`). A player keeps the points won from or lost to a bot.
+
+| Seated tanks | Bots at each draw |
+|--------------|-------------------|
+| 0 | None. No turn is simulated. The league exists and its page shows the empty board. |
+| 1 | 1 to 3. A draw of 0 is raised to 1, so the tank always has an opponent. When a quit leaves one tank without a bot, one bot joins at once. |
+| 2 or more | 0 to 3. A tank that arrives does not remove the bots; they change at the next new start. |
 
 Engine: joining and leaving happen between turns, as new functions beside `stepRound` (for example `joinRound(state, player)` and `leaveRound(state, id)`). A round that never calls them plays as before; the existing replay tests must stay identical.
 

@@ -84,7 +84,11 @@ describe("the monthly routes", () => {
 
     const [state, tick] = await firstMessages(t, 1, 2, cookie);
     if (state?.type !== "state" || tick?.type !== "tick") throw new Error("expected the state, then a turn");
-    expect(state.state.tanks.map((x) => x.isBot).sort()).toEqual([false, true]);
+    // One player, and the 1 to 3 bots that a lone tank always gets (league-day.ts).
+    const bots = state.state.tanks.filter((x) => x.isBot).length;
+    expect(state.state.tanks.filter((x) => !x.isBot)).toHaveLength(1);
+    expect(bots).toBeGreaterThanOrEqual(1);
+    expect(bots).toBeLessThanOrEqual(3);
     expect(tick.own?.botId).toBe(me.seat?.seatId);
 
     const ranking = await json<LeagueRankingResponse>(await t.api("/api/monthly/leagues/1/ranking"));

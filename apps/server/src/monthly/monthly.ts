@@ -72,7 +72,7 @@ import { newPlayerId } from "../secrets.ts";
 import type { Clock, Scheduler } from "../timers.ts";
 import type { CalendarDay, LeagueCalendar } from "./calendar.ts";
 import { RECORD_TOP, type Champions } from "./champions.ts";
-import { LeagueDay, type DayTank } from "./league-day.ts";
+import { LeagueDay, type DayTank, type Random } from "./league-day.ts";
 import { EMPTY_SEATS, type Checkpoint, type DayScore, type LeagueStore, type MonthState, type Seat, type SeatsState } from "./league-store.ts";
 import { closeMonth } from "./month-close.ts";
 import { rankMonth, type MonthPlace } from "./score.ts";
@@ -94,6 +94,8 @@ export interface MonthlyOptions {
   readonly tickMs: number;
   /** Times the turns and counts a failed league round (metrics/metrics.ts). NO_METRICS when not given. */
   readonly metrics?: MetricsRecorder;
+  /** Draws the leagues' bots (league-day.ts). Math.random when not given; tests fix it. */
+  readonly random?: Random;
 }
 
 const dayTankOf = (seat: Seat): DayTank => ({ id: seat.seatId, name: seat.name, look: seat.look, strategy: seat.strategy });
@@ -208,11 +210,17 @@ export class MonthlyLeagues {
   /** New day rounds for every league. With a checkpoint each seat gets its points and "counts"; without one, 0 points and counts. */
   private openDay(checkpoint: Checkpoint | null): void {
     this.days.clear();
-    for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, new LeagueDay(league));
+    for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, new LeagueDay(league, this.options.random));
     const ticksLeft = this.ticksLeft();
-    for (const seat of [...this.seats.seats.values()].sort((a, b) => a.order - b.order)) {
-      const saved = checkpoint?.tanks.find((t) => t.seatId === seat.seatId);
-      this.dayOf(seat.league).seat(dayTankOf(seat), saved?.points ?? 0, checkpoint === null ? true : (saved?.counts ?? false), ticksLeft, saved?.stats);
+    const seats = [...this.seats.seats.values()].sort((a, b) => a.order - b.order);
+    for (const [league, day] of this.days) {
+      const tanks = seats
+        .filter((seat) => seat.league === league)
+        .map((seat) => {
+          const saved = checkpoint?.tanks.find((t) => t.seatId === seat.seatId);
+          return { tank: dayTankOf(seat), points: saved?.points ?? 0, counts: checkpoint === null ? true : (saved?.counts ?? false), stats: saved?.stats };
+        });
+      day.start(tanks, ticksLeft);
     }
   }
 
@@ -332,7 +340,7 @@ export class MonthlyLeagues {
     };
     this.options.store.writeSeats(next);
     this.seats = next;
-    if (!this.days.has(league)) this.days.set(league, new LeagueDay(league));
+    if (!this.days.has(league)) this.days.set(league, new LeagueDay(league, this.options.random));
     // A tank that arrives during the day plays at once; the day does not count for it.
     this.dayOf(league).seat(dayTankOf(seat), 0, false, this.ticksLeft());
     this.sendState(league);

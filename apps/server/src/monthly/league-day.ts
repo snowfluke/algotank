@@ -5,15 +5,17 @@
 // The league's day:
 // | From         | To           | Actor            | Guard / effect                                            |
 // |--------------|--------------|------------------|-----------------------------------------------------------|
-// | idle         | withBot      | owner: seat      | the first tank arrives: a new open round, the tank and    |
-// |              |              |                  | the bot join it                                           |
-// | withBot      | withoutBot   | owner: seat      | a second tank arrives; the bot leaves before the next turn|
-// | withoutBot   | withBot      | owner: quit      | one tank is left; the bot comes back                      |
-// | withBot      | idle         | owner: quit      | the last tank leaves; the round is dropped (its points    |
-// |              |              |                  | were saved at the quit)                                   |
-// | withoutBot   | withoutBot   | owner: seat/quit | two or more tanks stay                                    |
-// | withBot or   | the same     | server (turns)   | the round played RESHUFFLE_TURNS turns: a new round with  |
-// | withoutBot   |              |                  | the same tanks, points and statistics on new squares      |
+// | idle         | withBot      | owner: seat      | the first tank arrives: a new open round, the tank joins  |
+// |              |              |                  | it and the bots are drawn (at least one, see below)       |
+// | withBot or   | the same     | owner: seat      | another tank arrives; the bots stay until the next new    |
+// | withoutBot   |              |                  | start                                                     |
+// | withBot or   | withBot or   | owner: quit      | the tank leaves; when one tank is left without a bot, one |
+// | withoutBot   | withoutBot   |                  | bot joins at once                                         |
+// | withBot or   | idle         | owner: quit      | the last tank leaves; the round and its bots are dropped  |
+// | withoutBot   |              |                  | (its points were saved at the quit)                       |
+// | withBot or   | withBot or   | server (turns)   | the round played RESHUFFLE_TURNS turns: a new round with  |
+// | withoutBot   | withoutBot   |                  | the same tanks, points and statistics on new squares, and |
+// |              |              |                  | the bots are drawn again                                  |
 // | any          | closing      | server (clock)   | the day's end: monthly.ts records the day; no turn runs   |
 // | closing      | idle, withBot| server           | the records are saved: a new day round with every seated  |
 // |              | or withoutBot|                  | tank at 0 points (closing stays while a save fails)       |
@@ -22,14 +24,18 @@
 // carried by rebuild; the bot has none. They start at zero at a seat and go at an unseat.
 // Terminal state: none; a league closes only at a month close that leaves it empty.
 //
-// Bot rule (one bot at most, never in a ranking):
-// | Seated tanks | What runs                              |
-// |--------------|----------------------------------------|
-// | 0            | no turn; the page shows the empty board|
-// | 1            | the tank and one bot                   |
-// | 2 or more    | the tanks, no bot                      |
+// Bot rule (owner, 2026-11-14: bots come and go every few minutes; a bot never appears in a ranking):
+// | Seated tanks | Bots drawn at each new round (a new start, a new day, a rebuild)        |
+// |--------------|--------------------------------------------------------------------------|
+// | 0            | none; no turn runs and the page shows the empty board                    |
+// | 1            | 1 to 3: a draw of 0 is raised to 1, so the tank always has an opponent   |
+// | 2 or more    | 0 to 3                                                                   |
+// Each bot takes a play style from BOT_LINEUP (apps/server/src/bots.ts), the practice arena's mix
+// of weak, middle and strong bots. A player keeps the points won from or lost to a bot; the bot's
+// own points go with it at the next new start.
 
 import { plainTankLook, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
+import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
 import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, ruleSet, STANDARD_RULE_SET_ID, stepRound, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_SEATS } from "@game/arena";
@@ -50,14 +56,23 @@ interface Seated {
   stats: TankStats;
 }
 
-const BOT_PRESET = "picker";
-const botStrategy: Strategy = (() => {
-  const preset = PRESETS.find((p) => p.id === BOT_PRESET);
+/** The most bots a league draws at a new round. */
+const MAX_BOTS = 3;
+const botStrategies: readonly Strategy[] = BOT_LINEUP.map((slot) => {
+  const preset = PRESETS.find((p) => p.id === slot.presetId);
   // Checked at load, so a renamed preset stops the start instead of a day.
-  if (preset === undefined) throw new Error(`The league's bot uses the preset "${BOT_PRESET}", which the engine does not have.`);
+  if (preset === undefined) throw new Error(`The bot lineup names the preset "${slot.presetId}", which the engine does not have.`);
   return preset.strategy;
-})();
-const BOT_NAME = "Splashy";
+});
+
+/** A number from 0 (inclusive) to 1 (exclusive): Math.random in the server, a fixed value in tests. */
+export type Random = () => number;
+
+interface LeagueBot {
+  readonly id: PlayerId;
+  readonly name: string;
+  readonly look: TankLook;
+}
 
 /**
  * Turns a day round plays before its tanks start again on new random squares with full water,
@@ -78,9 +93,12 @@ function emptyBoard(ticksTotal: number): Snapshot {
 export class LeagueDay {
   private round: RoundState | null = null;
   private readonly seated = new Map<PlayerId, Seated>();
-  private bot: { readonly id: PlayerId; readonly look: TankLook } | null = null;
+  private bots: LeagueBot[] = [];
 
-  constructor(readonly league: number) {}
+  constructor(
+    readonly league: number,
+    private readonly random: Random = Math.random,
+  ) {}
 
   /**
    * Seats a tank between turns. `ticksLeft` sizes a round that starts now. `points` is 0, or
@@ -88,10 +106,11 @@ export class LeagueDay {
    */
   seat(tank: DayTank, points: number, counts: boolean, ticksLeft: number, stats: TankStats = EMPTY_STATS): void {
     if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
+    const fresh = this.round === null;
     this.round ??= createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS });
     joinRound(this.round, { id: tank.id, strategy: tank.strategy }, points);
     this.seated.set(tank.id, { tank, counts, stats });
-    this.syncBot();
+    if (fresh) this.drawBots();
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */
@@ -101,7 +120,12 @@ export class LeagueDay {
     const points = this.pointsOf(id);
     leaveRound(this.round, id);
     this.seated.delete(id);
-    this.syncBot();
+    if (this.seated.size === 0) {
+      this.round = null;
+      this.bots = [];
+    } else if (this.seated.size === 1 && this.bots.length === 0) {
+      this.addBot();
+    }
     return { points, counts: seated.counts };
   }
 
@@ -136,7 +160,7 @@ export class LeagueDay {
   }
 
   phase(): Exclude<LeagueDayPhase, "closing"> {
-    return this.seated.size === 0 ? "idle" : this.seated.size === 1 ? "withBot" : "withoutBot";
+    return this.seated.size === 0 ? "idle" : this.bots.length > 0 ? "withBot" : "withoutBot";
   }
 
   /** One turn, or null when no turn runs: no tank, or the planned turns of the day are played and the clock has not closed it yet. */
@@ -173,14 +197,31 @@ export class LeagueDay {
   /**
    * A new round with the same tanks, points and statistics: every RESHUFFLE_TURNS turns, and for a
    * round the engine could not step. Positions, water and running step sequences are lost, as
-   * after a restart, and the bot comes back as a new tank with 0 points.
+   * after a restart, and the bots are drawn again as new tanks with 0 points.
    */
   rebuild(ticksLeft: number): void {
     const tanks = [...this.seated.values()].map(({ tank, counts, stats }) => ({ tank, counts, stats, points: this.pointsOf(tank.id) }));
     this.round = null;
     this.seated.clear();
-    this.bot = null;
-    for (const { tank, counts, stats, points } of tanks) this.seat(tank, points, counts, ticksLeft, stats);
+    this.bots = [];
+    this.start(tanks, ticksLeft);
+  }
+
+  /**
+   * A new round with all these tanks at once, then one draw of the bots: a new day, a restart and
+   * a rebuild. Seating them one by one would make the first draw see one tank and always add a bot.
+   */
+  start(tanks: readonly { readonly tank: DayTank; readonly points: number; readonly counts: boolean; readonly stats: TankStats | undefined }[], ticksLeft: number): void {
+    if (this.round !== null) throw new Error(`League ${this.league} already has a round.`);
+    if (tanks.length === 0) return;
+    const round = createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS });
+    this.round = round;
+    for (const { tank, points, counts, stats } of tanks) {
+      if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
+      joinRound(round, { id: tank.id, strategy: tank.strategy }, points);
+      this.seated.set(tank.id, { tank, counts, stats: stats ?? EMPTY_STATS });
+    }
+    this.drawBots();
   }
 
   /** The tanks in board order and the board now. */
@@ -188,7 +229,8 @@ export class LeagueDay {
     if (this.round === null) return { tanks: [], board: emptyBoard(ticksLeft) };
     const board = this.round.snapshot;
     const tanks = board.bots.map((b): LeagueTank => {
-      if (this.bot !== null && b.id === this.bot.id) return { id: b.id, name: BOT_NAME, look: this.bot.look, isBot: true };
+      const bot = this.bots.find((candidate) => candidate.id === b.id);
+      if (bot !== undefined) return { id: b.id, name: bot.name, look: bot.look, isBot: true };
       const seated = this.seated.get(b.id);
       if (seated === undefined) throw new Error(`Tank ${b.id} of league ${this.league} has no seat.`);
       return { id: b.id, name: seated.tank.name, look: seated.tank.look, isBot: false };
@@ -201,22 +243,24 @@ export class LeagueDay {
     return { seated: this.seated.size, onBoard: this.round?.snapshot.bots.length ?? 0 };
   }
 
-  /** The bot rule of the header. */
-  private syncBot(): void {
-    if (this.round === null) return;
-    if (this.seated.size === 0) {
-      this.round = null;
-      this.bot = null;
-      return;
-    }
-    if (this.seated.size === 1 && this.bot === null) {
-      const [only] = this.seated.values();
-      const colour = (((only?.tank.look.colour ?? 1) % 12) + 1) as TankColour;
-      this.bot = { id: newBotId(), look: plainTankLook(colour) };
-      joinRound(this.round, { id: this.bot.id, strategy: botStrategy });
-    } else if (this.seated.size > 1 && this.bot !== null) {
-      leaveRound(this.round, this.bot.id);
-      this.bot = null;
-    }
+  /** The bot rule of the header, at a new round: the round holds the seated tanks and no bot yet. */
+  private drawBots(): void {
+    const drawn = Math.min(MAX_BOTS, Math.floor(this.random() * (MAX_BOTS + 1)));
+    const count = this.seated.size === 1 ? Math.max(1, drawn) : drawn;
+    for (let i = 0; i < count; i++) this.addBot();
+  }
+
+  /** One bot with a play style from the practice mix, a bot name and a colour no seated tank has, if one is free. */
+  private addBot(): void {
+    if (this.round === null) throw new Error(`League ${this.league} has no round for a bot.`);
+    const strategy = botStrategies[Math.floor(this.random() * botStrategies.length)];
+    if (strategy === undefined) throw new Error("The bot lineup is empty.");
+    const taken = new Set<number>([...this.seated.values()].map(({ tank }) => tank.look.colour));
+    for (const bot of this.bots) taken.add(bot.look.colour);
+    const colour = ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const).find((c) => !taken.has(c)) ?? (((this.bots.length % 12) + 1) as TankColour);
+    const name = BOT_NAMES[this.bots.length] ?? `Bot ${this.bots.length + 1}`;
+    const bot: LeagueBot = { id: newBotId(), name, look: plainTankLook(colour) };
+    joinRound(this.round, { id: bot.id, strategy });
+    this.bots.push(bot);
   }
 }

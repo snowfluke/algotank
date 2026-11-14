@@ -49,6 +49,8 @@ function startLeague(options: { readonly at?: number; readonly db?: Database; re
     now: ticks.now,
     scheduler: ticks,
     tickMs: 900,
+    // Every draw is 0: no bot, except the one a lone tank always gets (league-day.ts), with the first play style of the lineup.
+    random: () => 0,
   });
   monthly.start();
   return { ticks, monthly, champions, streams };
@@ -125,7 +127,7 @@ describe("the day round", () => {
     expect(l.monthly.live(1).board.ticksTotal).toBe(96_000);
   });
 
-  test("0 tanks: no turn runs and the empty board shows; 1 tank: one bot; 2 tanks: no bot; back to 1: the bot returns", () => {
+  test("0 tanks: no turn runs; 1 tank: at least one bot; a second tank keeps the bots until the next new start, which draws again", () => {
     const l = startLeague();
     const empty = l.monthly.live(1);
     expect(empty).toMatchObject({ phase: "idle", tanks: [] });
@@ -143,9 +145,13 @@ describe("the day round", () => {
     const bo = newAccount();
     take(l, bo);
     const two = l.monthly.live(1);
-    expect(two.phase).toBe("withoutBot");
-    expect(two.tanks.some((t) => t.isBot)).toBe(false);
-    expect(two.tanks).toHaveLength(2);
+    expect(two.phase).toBe("withBot");
+    expect(two.tanks).toHaveLength(3);
+    // The next new start draws again; every draw is 0 here, and two tanks need no bot.
+    while (l.monthly.live(1).board.tick !== 0) l.ticks.tick();
+    const drawn = l.monthly.live(1);
+    expect(drawn.phase).toBe("withoutBot");
+    expect(drawn.tanks).toHaveLength(2);
 
     l.monthly.quit(bo);
     expect(l.monthly.live(1).tanks.filter((t) => t.isBot)).toHaveLength(1);
@@ -197,9 +203,8 @@ describe("the day round", () => {
     expect(after.board.tick).toBe(0);
     expect(after.board.bots.every((bot) => bot.water === after.board.bots[0]?.water)).toBe(true);
     const played = [seatOf(l, ada).points, seatOf(l, bo).points];
-    // The points of the last turn before the new start are kept, and the two tanks still add up to zero.
-    expect(played[0] ?? 0).toBe(-(played[1] ?? 0));
-    expect(Math.abs((played[0] ?? 0) - (before[0] ?? 0))).toBeLessThanOrEqual(1);
+    // The points are kept: only the one turn played before the new start can change them, by a few hits at most.
+    for (const [i, points] of played.entries()) expect(Math.abs(points - (before[i] ?? 0))).toBeLessThanOrEqual(3);
     const types = (await page.take()).messages.map((message) => message.type);
     expect(types.slice(-2)).toEqual(["tick", "state"]);
   });
@@ -290,7 +295,8 @@ describe("seats", () => {
     for (const owner of owners) take(l, owner);
     expect(seatOf(l, owners[16] ?? "").league).toBe(2);
     expect(l.monthly.overview().leagues).toEqual([
-      { league: 1, tanks: 16, phase: "withoutBot" },
+      // League 1's first tank got a bot, which stays until the next new start.
+      { league: 1, tanks: 16, phase: "withBot" },
       { league: 2, tanks: 1, phase: "withBot" },
     ]);
     l.monthly.quit(owners[0] ?? "");

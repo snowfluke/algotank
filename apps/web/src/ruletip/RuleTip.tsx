@@ -36,7 +36,8 @@ export function RuleTip({ gameKey, strategy, stats, onOpenRules }: RuleTipProps)
   const t = m.ruleTip;
   const [asked, setAsked] = useState(false);
   const saved = strategy.load.kind === "ready" ? strategy.load.saved : null;
-  const tip = saved !== null && stats !== null ? waterTipOf(saved, stats.last) : null;
+  // Unsaved edits in the rules hide the tip: the add starts from the saved rules and would replace them.
+  const tip = saved !== null && stats !== null && !strategy.dirty ? waterTipOf(saved, stats.last) : null;
   const save = saveView(strategy, m.prep, m.errors);
 
   useEffect(() => countOnce(gameKey, "encouraged"), [gameKey]);

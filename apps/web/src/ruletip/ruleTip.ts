@@ -1,11 +1,12 @@
-// The water tip after a practice game: for a rule list whose first rule shoots and that has no
-// water rule, add "When my water is less than 3 -> step out of the line of fire" on top.
+// The water tip after a practice game: for a mode whose rules all shoot (so none looks at the
+// tank's water), add "When my water is less than 3 -> step out of the line of fire" on top.
 //
 // Why only that pattern: 300 practice games per play style against the server's bot lineup
-// (measured 2026-11-14) showed the added rule gains 2.24 places for Charger (one shoot rule) and
-// 1.23 for Random walker, and does nothing or harm for the designed play styles: Evader, the
-// default, has a dodge rule first (0.00), and Dry hunter already has a water rule (+0.99 worse
-// with the other wording). A tip that is wrong is worse than none, so the pattern stays narrow.
+// (measured 2026-11-14) showed the added rule gains 2.24 places for Charger and 1.23 for Random
+// walker, the two styles whose only rule shoots, and does nothing or harm for the designed play
+// styles: Evader, the default, has a dodge rule first (0.00), and Dry hunter already has a water
+// rule (+0.99 worse with the other wording). Other shapes (shoot, then dodge) were not measured,
+// so they get no tip: a tip that is wrong is worse than none.
 
 import type { ActionRef, Rule, StatsView, StrategyInput } from "@game/engine";
 import { addRule, moveRuleTo, replaceRule, ruleIdAt } from "../editor/edit.ts";
@@ -38,8 +39,8 @@ export function waterTipOf(strategy: StrategyInput, stats: StatsView): WaterTip 
     const played = stats.modes[index];
     if (played === undefined || played.name !== mode.name || played.rules.length !== mode.rules.length) return null;
     const first = mode.rules[0];
-    // The first rule shoots and ran in this game, and no rule of the mode looks at the tank's water.
-    if (first !== undefined && shoots(first) && (played.rules[0] ?? 0) > 0 && !mode.rules.some(readsWater)) return { modeId: mode.id };
+    // Every rule of the mode shoots (the measured shape), the first one ran in this game, and none looks at the water.
+    if (first !== undefined && mode.rules.every(shoots) && (played.rules[0] ?? 0) > 0 && !mode.rules.some(readsWater)) return { modeId: mode.id };
   }
   return null;
 }

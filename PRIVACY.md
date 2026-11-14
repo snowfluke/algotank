@@ -65,7 +65,7 @@ The server prints to its standard output when it starts, when a request fails (t
 
 ## Usage numbers
 
-The server counts what happens each day, so the host can see whether people play: visitors, page opens by page, arenas created, joins, games and rounds by arena kind, tanks per round, new and verified accounts, sign-ins, monthly seats taken and given up, chat lines, the most open connections at once, the language shown, rules with steps saved, and how far new devices get on their first visit. Each number is a count for one day and nothing else. No count holds an address, an account, a name, an arena code or any text a person typed.
+The server counts what happens each day, so the host can see whether people play: visitors, page opens by page, arenas created, joins, games and rounds by arena kind, tanks per round, new and verified accounts, sign-ins, monthly seats taken and given up, chat lines, the most open connections at once, the language shown, rules with steps saved, how often the rule tip after a practice game was shown and used, and how far new devices get on their first visit. Each number is a count for one day and nothing else. No count holds an address, an account, a name, an arena code or any text a person typed.
 
 The numbers go to the table `metrics_counter`, one row per day and counter, and the server removes a row after 400 days. Only the accounts named in `ADMIN_EMAILS` can read them, on `/admin/metrics`. No outside tracker, script or cookie is used for counting.
 

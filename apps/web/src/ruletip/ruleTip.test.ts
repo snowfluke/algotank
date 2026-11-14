@@ -44,6 +44,15 @@ describe("the water tip", () => {
     }
   });
 
+  test("a mode that shoots first and then dodges gets no tip, because that shape was not measured", () => {
+    const charger = preset("charger");
+    const mode = charger.modes[0];
+    if (mode === undefined) throw new Error("Charger has no mode");
+    const dodge = { id: "dodge", match: "all" as const, conditions: [{ condition: "aimedAtMe", params: { k: 1 }, negate: false }], action: { action: "stepOutOfLine", params: {} }, chance: 100, switchToMode: null };
+    const mixed: StrategyInput = { ...charger, modes: [{ ...mode, rules: [...mode.rules, dodge] }, ...charger.modes.slice(1)] };
+    expect(waterTipOf(mixed, statsFor(mixed, 12))).toBeNull();
+  });
+
   test("no tip when the shoot rule never ran, or when the statistics belong to another rule list", () => {
     const charger = preset("charger");
     expect(waterTipOf(charger, statsFor(charger, 0))).toBeNull();

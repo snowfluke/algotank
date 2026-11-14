@@ -168,10 +168,15 @@ function focusOpener(opens: "settings" | "look"): void {
   requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-opens="${opens}"]`)?.focus());
 }
 
-/** The next lobby's status line after a practice game: the water tip while it still applies to the saved rules, else the encouragement. */
-function lobbySentence(strategy: StrategyHandle, stats: OwnStats | null, t: ReturnType<typeof useMessages>["ruleTip"]): string {
+/**
+ * The next lobby's status line after a practice game: the water tip while it still applies to the
+ * saved rules, else the encouragement. The short sentence is the line's title, because a phone shows
+ * only the title (StatusLine.tsx); the full one is its body, on screens with room. The title replaces
+ * "Your tank waits for round 1.", which the clock beside it already says.
+ */
+function lobbyTipOf(strategy: StrategyHandle, stats: OwnStats | null, t: ReturnType<typeof useMessages>["ruleTip"]): { readonly title: string; readonly body: string } {
   const saved = strategy.load.kind === "ready" ? strategy.load.saved : null;
-  return saved !== null && stats !== null && waterTipOf(saved, stats.last) !== null ? t.water : t.lobby;
+  return saved !== null && stats !== null && waterTipOf(saved, stats.last) !== null ? { title: t.waterShort, body: t.water } : { title: t.encourage, body: t.lobby };
 }
 
 export function JoinedRoom({ view, session, stream, chatFeed, strategy, isOwner, arenaName, autoSeconds, nextGameSeconds, firstResult, notices, onLeft }: RoomProps) {
@@ -232,15 +237,25 @@ export function JoinedRoom({ view, session, stream, chatFeed, strategy, isOwner,
   // one sentence in the status line of the next lobby, where the rules are on screen.
   const practice = arena.settings.kind === "practice";
   const playedThisGame = arena.phase.kind === "finished" && placeOf(me.status) !== null;
+  // The tip's button opens the rule list itself, not the Tank pane's play styles.
+  function openRules(): void {
+    setPrepTab("rules");
+    choose("tank");
+  }
   // The game's statistics are kept past the result, because the stream drops them when the next game begins.
   const [played, setPlayed] = useState<{ readonly game: number; readonly stats: OwnStats | null } | null>(null);
   useEffect(() => {
     if (playedThisGame) setPlayed({ game: arena.game, stats: ownStats });
   }, [playedThisGame, arena.game, ownStats]);
-  const tip = practice && playedThisGame ? <RuleTip gameKey={`${arena.id}|${arena.game}`} strategy={strategy} stats={ownStats} onOpenRules={() => choose("tank")} /> : undefined;
-  const lobbyTip = practice && view.kind === "lobby" && played !== null && played.game === arena.game - 1 ? lobbySentence(strategy, played.stats, m.ruleTip) : null;
+  const tip = practice && playedThisGame ? <RuleTip gameKey={`${arena.id}|${arena.game}`} strategy={strategy} stats={ownStats} onOpenRules={openRules} /> : undefined;
+  const lobbyTip = practice && view.kind === "lobby" && played !== null && played.game === arena.game - 1 ? lobbyTipOf(strategy, played.stats, m.ruleTip) : null;
+  // The lobby sentence asks for a rule change, so the Tank pane shows the rules when that lobby begins.
+  const lobbyAfterGame = lobbyTip !== null;
+  useEffect(() => {
+    if (lobbyAfterGame) setPrepTab("rules");
+  }, [lobbyAfterGame]);
   // A public arena's countdown is in the clock; a sentence that changes every second would be read aloud every second.
-  const statusBody = lobbyTip ?? (timer !== null && arena.phase.kind !== "running" ? undefined : status?.body);
+  const statusBody = lobbyTip?.body ?? (timer !== null && arena.phase.kind !== "running" ? undefined : status?.body);
   const action =
     isOwner && arena.phase.kind !== "running" ? (
       <StartControl arena={arena} ownId={me.id} />
@@ -358,7 +373,7 @@ export function JoinedRoom({ view, session, stream, chatFeed, strategy, isOwner,
           status === null ? null : (
             <StatusLine
               tone={status.tone}
-              title={status.title}
+              title={lobbyTip?.title ?? status.title}
               sentenceHidden={!statusSentenceShown(view)}
               {...(statusBody === undefined ? {} : { body: statusBody })}
               timer={timer}

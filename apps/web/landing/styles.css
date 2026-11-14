@@ -1,0 +1,663 @@
+/* The landing page. The tokens on :root come from apps/web/src/index.css at build
+   time (build.tsx), so the page uses the game's own colours, fonts and shapes. */
+
+@font-face {
+  font-family: "Fredoka Variable";
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("FONT_BASE/fredoka.woff2") format("woff2-variations");
+}
+@font-face {
+  font-family: "Figtree Variable";
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("FONT_BASE/figtree.woff2") format("woff2-variations");
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-ground, #f6f3ec);
+  color: var(--color-ink, #1b2733);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ground, #f6f3ec);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  caret-color: var(--color-water);
+  accent-color: var(--color-water);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-water);
+  text-underline-offset: 0.2em;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--color-water-soft);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-water);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Classes such as .button set display, which would otherwise show an element the script hid. */
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Class names that the game's drawings (EntryArt, TankBadge) carry from Tailwind. */
+.block {
+  display: block;
+}
+.size-full {
+  width: 100%;
+  height: 100%;
+}
+.shrink-0 {
+  flex-shrink: 0;
+}
+.overflow-visible {
+  overflow: visible;
+}
+
+/* ---- Buttons: the game's buttons, with a lip that sinks when pressed ---- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  min-width: 9rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-control);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.button-small {
+  min-height: 2.75rem;
+  min-width: 6rem;
+  padding: 0.5rem 1rem;
+  font-size: var(--text-body);
+}
+.button-primary {
+  border: 0;
+  border-bottom: 4px solid var(--color-water-deep);
+  background: var(--color-water);
+  color: var(--color-water-ink);
+}
+.button-secondary {
+  border: 2px solid var(--color-line);
+  border-bottom-width: 4px;
+  background: var(--color-panel);
+  color: var(--color-ink);
+}
+.press {
+  transition:
+    transform 80ms ease-out,
+    border-bottom-width 80ms ease-out,
+    background-color 120ms ease-out;
+}
+.press:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+  margin-bottom: 2px;
+}
+.button-primary:active {
+  background: var(--color-water-deep);
+}
+@media (hover: hover) {
+  .button-primary:hover {
+    background: var(--color-water-hover);
+  }
+  .button-secondary:hover,
+  .icon-button:hover:not(:disabled) {
+    border-color: var(--color-line-strong);
+  }
+  .arena-row:hover {
+    background: var(--color-panel);
+  }
+  .arena-row:hover .arena-arrow {
+    transform: translateX(4px);
+  }
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 2px solid var(--color-line);
+  border-bottom-width: 4px;
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.icon-button:disabled {
+  color: var(--color-line-strong);
+  cursor: default;
+}
+
+/* ---- Page frame ---- */
+
+.site-header,
+main > section:not(.organisers),
+.organisers-inner,
+.site-footer {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 56em) {
+  .site-header,
+  main > section:not(.organisers),
+  .organisers-inner,
+  .site-footer {
+    padding-inline: 2rem;
+  }
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  padding-block: 1rem;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 700;
+  text-decoration: none;
+}
+.header-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-left: auto;
+}
+.language {
+  font-weight: 600;
+}
+
+/* ---- Hero: the rules on one side, the arena on the other ---- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "copy" "board" "rules" "actions";
+  gap: 1.5rem;
+  padding-block: 1rem 4rem;
+}
+@media (min-width: 56em) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    grid-template-areas: "copy board" "rules board" "actions board";
+    grid-template-rows: auto auto 1fr;
+    column-gap: 3rem;
+    padding-block: 2rem 6rem;
+  }
+}
+.hero-copy {
+  grid-area: copy;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+/* Smaller than the game's display size: the heading has two clauses, and the rules must still fit on a laptop's first screen. */
+.hero h1 {
+  font-size: clamp(2.5rem, 1.9rem + 2.2vw, 3.75rem);
+  line-height: var(--text-display--line-height);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.lead {
+  max-width: 40ch;
+  color: var(--color-muted);
+  font-size: var(--text-lead);
+  line-height: var(--text-lead--line-height);
+}
+
+.rules {
+  grid-area: rules;
+  position: relative;
+  min-width: 0;
+  padding-left: 2.25rem;
+}
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0 0 0.625rem;
+  padding: 0;
+  list-style: none;
+}
+.rule {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+  margin: 0;
+  padding: 0.625rem 0.625rem 0.625rem 0.875rem;
+  border: 2px solid var(--color-line);
+  border-bottom-width: 4px;
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+.rule[data-active] {
+  border-color: var(--color-water);
+  background: var(--color-water-soft);
+}
+.rule-number {
+  display: grid;
+  place-items: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  border-radius: 999px;
+  background: var(--color-ground);
+  font-family: var(--font-display);
+  font-weight: 700;
+  transition:
+    background-color 160ms ease-out,
+    color 160ms ease-out;
+}
+.rule[data-active] .rule-number {
+  background: var(--color-water);
+  color: var(--color-water-ink);
+}
+.rule-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rule-when {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.rule-then {
+  color: var(--color-muted);
+}
+.rule-action {
+  font-weight: 700;
+  color: var(--color-water);
+}
+.rule-move {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.rule-fallback {
+  grid-template-columns: minmax(0, 1fr);
+  border-style: dashed;
+  border-bottom-width: 2px;
+  background: transparent;
+}
+.rule-fallback[data-active] {
+  border-style: solid;
+}
+/* The demo tank sits beside the rule it used on this turn and glides to the next one. */
+.rule-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.875rem;
+  height: 1.875rem;
+  margin-top: -0.9375rem;
+  opacity: 0;
+  transition:
+    transform 180ms var(--ease-out-expo, ease-out),
+    opacity 160ms ease-out;
+}
+.rule-marker[data-shown] {
+  opacity: 1;
+}
+.rule-marker svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* Before the script runs, no rule can move and the arrows stay quiet. */
+.rules:not([data-ready]) .rule-move {
+  visibility: hidden;
+}
+
+.hero-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.demo {
+  grid-area: board;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+  margin: 0;
+}
+.board-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.board-noscript {
+  padding-top: 0.5rem;
+  color: var(--color-muted);
+}
+.demo-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  min-height: 3rem;
+}
+.demo-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  color: var(--color-muted);
+}
+.demo-points {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+.demo-result {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.demo-result:empty {
+  display: none;
+}
+.demo-you {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-muted);
+  flex-basis: 100%;
+}
+.you-ring {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  border: 3px solid var(--color-self);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 2px var(--color-panel),
+    0 0 0 3px var(--color-ink);
+}
+
+/* ---- How a game works ---- */
+
+.steps,
+.arenas {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-block: 0 4rem;
+}
+@media (min-width: 56em) {
+  .steps,
+  .arenas {
+    padding-block: 0 6rem;
+  }
+}
+.steps h2,
+.arenas h2,
+.organisers h2 {
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
+}
+.step-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 1.5rem 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.step-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  counter-increment: step;
+  overflow-wrap: anywhere;
+}
+.step-list li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  border-bottom: 4px solid var(--color-water-deep);
+  background: var(--color-water);
+  color: var(--color-water-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+/* ---- Arenas: rows of data, with dividers between them ---- */
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.section-head p {
+  max-width: 60ch;
+  color: var(--color-muted);
+}
+.arena-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.arena-list li + li {
+  border-top: 1px solid var(--color-line);
+}
+.arena-row {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-card);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: background-color 120ms ease-out;
+}
+@media (min-width: 56em) {
+  .arena-row {
+    grid-template-columns: 4rem minmax(0, 1fr) auto;
+  }
+}
+.arena-art {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+@media (min-width: 56em) {
+  .arena-art {
+    width: 4rem;
+    height: 4rem;
+  }
+}
+.arena-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.arena-name {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.arena-text {
+  min-width: 0;
+  max-width: 60ch;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+.arena-arrow {
+  color: var(--color-water);
+  transition: transform 160ms var(--ease-out-expo, ease-out);
+}
+
+/* ---- Organisers: a band of arena floor ---- */
+
+.organisers {
+  padding-block: 4rem;
+  background: var(--color-arena-floor);
+}
+@media (min-width: 56em) {
+  .organisers {
+    padding-block: 5rem;
+  }
+}
+.organisers-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 2rem;
+}
+@media (min-width: 56em) {
+  .organisers-inner {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 3rem;
+  }
+}
+.organisers-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.organisers .lead {
+  color: var(--color-ink);
+}
+.organiser-points {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.organiser-points li::marker {
+  color: var(--color-water);
+}
+.organisers-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding-top: 0.5rem;
+}
+.note {
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+.screenshot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-raised);
+  background: var(--color-panel);
+}
+
+/* ---- Footer ---- */
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding-block: 2rem 3rem;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press,
+  .rule,
+  .rule-number,
+  .rule-marker,
+  .arena-row,
+  .arena-arrow {
+    transition: none;
+  }
+}

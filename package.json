@@ -17,6 +17,7 @@
     "dev:server": "bun run --cwd apps/server dev",
     "dev:web": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build",
+    "build:landing": "bun apps/web/landing/build.tsx",
     "start": "bun apps/server/src/index.ts",
     "test": "bun test",
     "type-check": "tsc --noEmit -p packages/engine && tsc --noEmit -p packages/arena && tsc --noEmit -p apps/server && tsc --noEmit -p apps/web",

@@ -2,12 +2,14 @@
 // clock the test moves (email-routes.ts has the state tables these tests walk through).
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AccountResponse, AuthCapabilities, AuthErrorResponse, MeResponse, RegisterResponse } from "@game/arena";
 import type { MailSender, OutgoingMail } from "../mail.ts";
 import { startServer, type RunningServer, type ServerOptions } from "../server.ts";
+import { DATABASE_FILE, openDatabase } from "../db/open.ts";
+import { countRows } from "../db/testing.ts";
 
 const MINUTE_MS = 60 * 1000;
 const PASSWORD = "correct horse battery";
@@ -256,15 +258,18 @@ describe("verification: unverified -> code sent -> verified", () => {
     const s = start({ dataDir, clock });
     const { cookie } = await signUp(s);
     const code = codeIn(s.mail?.sent[0]);
-    const file = readFileSync(join(dataDir, "auth", "codes.json"), "utf8");
-    expect(file).not.toContain(code);
-    expect(file).toContain("$argon2");
+    // The bytes on disk, the -wal file included, because a write sits there until a checkpoint.
+    const bytes = [DATABASE_FILE, `${DATABASE_FILE}-wal`].map((name) => join(dataDir, name)).filter((path) => existsSync(path)).map((path) => readFileSync(path).toString("latin1")).join("");
+    expect(bytes).not.toContain(code);
+    expect(bytes).toContain("$argon2");
     const server = servers.pop();
     await server?.stop();
 
     const again = start({ dataDir, clock });
     expect((await again.call("/api/auth/verify", { code }, { cookie })).status).toBe(200);
-    expect(readFileSync(join(dataDir, "auth", "codes.json"), "utf8")).not.toContain("verify");
+    const db = openDatabase({ kind: "file", dataDir });
+    expect(countRows(db, "email_code")).toBe(0);
+    db.close();
   });
 });
 

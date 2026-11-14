@@ -1,12 +1,15 @@
 // Wires the store, the stream hub, the round runner, the public arenas, the expiry
 // sweep and the routes into one Bun server.
 
+import type { Database } from "bun:sqlite";
 import { fileURLToPath } from "node:url";
 import type { HealthResponse } from "@game/arena";
 import { AccountStrategies, registerAccountStrategyRoutes } from "./account-strategies.ts";
 import { AccountTanks, registerAccountTankRoutes } from "./account-tank.ts";
 import { AccountStatsStore, registerAccountStatsRoutes } from "./stats/account-stats.ts";
 import { ArenaStats } from "./stats/arena-stats.ts";
+import { openDatabase } from "./db/open.ts";
+import { reportOldJsonFolders } from "./db/old-folders.ts";
 import { closeArena, DEFAULT_ARENA_TTL_HOURS, EXPIRY_SWEEP_MS, startExpirySweep, type ArenaParts } from "./arena-lifetime.ts";
 import { AuthError, createAuth } from "./auth/index.ts";
 import { SlidingWindowLimit } from "./rate-limit.ts";
@@ -62,8 +65,9 @@ export interface ServerOptions {
   /** Where the built web app lives. */
   readonly staticDir?: string;
   /**
-   * DATA_DIR: arenas go in its arenas/ folder and accounts in auth/. Without it everything
-   * lives in memory only, as in the tests. The server throws at start when a file in it is damaged.
+   * DATA_DIR: accounts go in its database algotank.sqlite (db/open.ts) and arenas in its arenas/
+   * folder. Without it everything lives in memory only, as in the tests. The server throws at
+   * start when a file in it is damaged.
    */
   readonly dataDir?: string;
   /** Replaces the timers (ticks, the pause before a round, public arena steps, sweeps). Tests use it to skip the waiting. */
@@ -110,17 +114,29 @@ export interface RunningServer {
 }
 
 export function startServer(options: ServerOptions): RunningServer {
+  // Creates DATA_DIR with mode 0700 when it does not exist.
+  const db = openDatabase(options.dataDir === undefined ? { kind: "memory" } : { kind: "file", dataDir: options.dataDir });
+  try {
+    return startWithDatabase(options, db);
+  } catch (error) {
+    // A damaged arena file stops the start; the database must not stay open behind it.
+    db.close();
+    throw error;
+  }
+}
+
+function startWithDatabase(options: ServerOptions, db: Database): RunningServer {
   const now = options.now ?? Date.now;
   const scheduler = options.schedule ?? realTimeScheduler;
   // Before the Store reads the arenas: it no longer knows the old monthly kind.
   if (options.dataDir !== undefined) setAsideOldMonthlyData(options.dataDir, now());
+  if (options.dataDir !== undefined) reportOldJsonFolders(options.dataDir);
   const leagueTimeZone = options.leagueTimeZone ?? DEFAULT_LEAGUE_TIME_ZONE;
   // The real calendar days of the zone, also when LEAGUE_SHORT_DAYS shortens the league's days.
   const metrics = new Metrics({ ...(options.dataDir === undefined ? {} : { dataDir: options.dataDir }), calendar: zoneCalendar(leagueTimeZone), now, scheduler });
   const store = new Store({ ...(options.dataDir === undefined ? {} : { dataDir: options.dataDir }), now, scheduler, metrics });
-  // After the Store, which creates DATA_DIR with mode 0700 before auth/ goes inside it.
   const auth = createAuth({
-    ...(options.dataDir === undefined ? {} : { dataDir: options.dataDir }),
+    db,
     secureCookies: options.secureCookies ?? false,
     trustProxy: options.trustProxy ?? false,
     now,
@@ -136,7 +152,7 @@ export function startServer(options: ServerOptions): RunningServer {
   });
   const rules = scaledPublicRules(options.publicTimeDivisor ?? 1);
   const autoSteps = new AutoSteps(scheduler, now, rules);
-  const accountStats = new AccountStatsStore(options.dataDir);
+  const accountStats = new AccountStatsStore(db);
   const monthCalendar = zoneCalendar(leagueTimeZone);
   const stats = new ArenaStats({ accounts: accountStats, month: () => monthCalendar.dayAt(now()).month });
   const runner = new RoundRunner(store, hub, autoSteps, {
@@ -197,8 +213,8 @@ export function startServer(options: ServerOptions): RunningServer {
   const router = createRouter({ store, runner, hub, auth, autoSteps, publicArenas, chat, chatLimits, results, limits, trustProxy: options.trustProxy ?? false, now, metrics, stats, mailOn });
   registerResultRoutes(router, { auth, results });
   registerChatRoutes(router, { store, hub, auth, autoSteps, chat, chatLimits, now, metrics });
-  registerAccountStrategyRoutes(router, { auth, strategies: new AccountStrategies(options.dataDir), now, metrics });
-  registerAccountTankRoutes(router, { auth, tanks: new AccountTanks(options.dataDir), now });
+  registerAccountStrategyRoutes(router, { auth, strategies: new AccountStrategies(db), now, metrics });
+  registerAccountTankRoutes(router, { auth, tanks: new AccountTanks(db), now });
   registerAccountStatsRoutes(router, { auth, stats: accountStats });
   registerPublicRoutes(router, { publicArenas, monthly, champions, winners });
   registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics });
@@ -300,6 +316,8 @@ export function startServer(options: ServerOptions): RunningServer {
       leagueStreams.closeAll();
       auth.stop();
       await server.stop(true);
+      // Last: a request that was still running may have written to it.
+      db.close();
     },
   };
 }

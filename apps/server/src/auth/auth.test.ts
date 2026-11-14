@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AccountResponse, AuthErrorResponse, MeResponse, RegisterResponse } from "@game/arena";
@@ -7,7 +7,11 @@ import { jsonResponse } from "../http.ts";
 import { Router } from "../router.ts";
 import { startServer, type RunningServer, type ServerOptions } from "../server.ts";
 import { SETTINGS } from "../test-helpers.ts";
+import { DATABASE_FILE, openDatabase } from "../db/open.ts";
+import { countRows, insertRow, memoryDatabase } from "../db/testing.ts";
+import { PersistenceError } from "../arena-files.ts";
 import { AuthError, createAuth, type Auth } from "./index.ts";
+import { AuthStore } from "./store.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
@@ -288,18 +292,23 @@ describe("session lifecycle", () => {
     expect((await second.login("ada@example.org")).status).toBe(200);
   });
 
-  test("an expired session is dropped from the file at the next start", async () => {
+  test("an expired session is deleted at the next start", async () => {
     const dataDir = temporaryDirectory();
     const clock = manualClock();
     const first = start({ dataDir, now: clock.now });
     await signedUp(first);
     await stopServer(first);
-    const sessionsPath = join(dataDir, "auth", "sessions.json");
-    expect((JSON.parse(readFileSync(sessionsPath, "utf8")) as { sessions: unknown[] }).sessions).toHaveLength(1);
+    const sessions = () => {
+      const db = openDatabase({ kind: "file", dataDir });
+      const count = countRows(db, "session");
+      db.close();
+      return count;
+    };
+    expect(sessions()).toBe(1);
 
     clock.advance(31 * DAY_MS);
     start({ dataDir, now: clock.now });
-    expect((JSON.parse(readFileSync(sessionsPath, "utf8")) as { sessions: unknown[] }).sessions).toHaveLength(0);
+    expect(sessions()).toBe(0);
   });
 
   test("the 11th login ends the oldest session", async () => {
@@ -316,19 +325,19 @@ describe("session lifecycle", () => {
     for (const cookie of cookies.slice(1)) expect((await client.me(cookie)).account?.email).toBe("ada@example.org");
   });
 
-  test("the files hold no password or token, with mode 0600 in a 0700 folder", async () => {
+  test("the database holds no password and no session token, only their hashes", async () => {
     const dataDir = temporaryDirectory();
     const client = start({ dataDir });
     const cookie = await signedUp(client);
-    const folder = join(dataDir, "auth");
-    expect(statSync(folder).mode & 0o777).toBe(0o700);
-    for (const name of ["accounts.json", "sessions.json"]) {
-      const path = join(folder, name);
-      expect([name, statSync(path).mode & 0o777]).toEqual([name, 0o600]);
-      const text = readFileSync(path, "utf8");
-      expect(text).not.toContain(PASSWORD);
-      expect(text).not.toContain(cookie.split("=")[1] ?? "");
-    }
+    const token = cookie.split("=")[1];
+    if (token === undefined || token === "") throw new Error("the cookie has no token");
+    // The bytes on disk, the -wal file included, because a write sits there until a checkpoint.
+    const files = [DATABASE_FILE, `${DATABASE_FILE}-wal`].map((name) => join(dataDir, name)).filter((path) => existsSync(path));
+    expect(files.length).toBeGreaterThan(0);
+    const bytes = files.map((path) => readFileSync(path).toString("latin1")).join("");
+    expect(bytes).toContain("ada@example.org");
+    expect(bytes).not.toContain(PASSWORD);
+    expect(bytes).not.toContain(token);
   });
 });
 
@@ -375,7 +384,7 @@ describe("origin check", () => {
 describe("requireAccount and accountOf", () => {
   /** The auth routes plus one route of another feature, on a real server, as B2 will use it. */
   function featureServer(): Client {
-    const auth = createAuth({ secureCookies: false, trustProxy: false, mail: null });
+    const auth = createAuth({ db: memoryDatabase(), secureCookies: false, trustProxy: false, mail: null });
     auths.push(auth);
     const router = new Router();
     auth.registerRoutes(router);
@@ -478,30 +487,32 @@ describe("rate limits", () => {
 });
 
 describe("storage", () => {
-  test("a damaged accounts or sessions file stops the start with a message that names it", async () => {
-    for (const name of ["accounts.json", "sessions.json"]) {
-      const dataDir = temporaryDirectory();
-      // The files are written at the first change, so make one.
-      const writer = start({ dataDir });
-      await signedUp(writer);
-      await stopServer(writer);
-
-      const path = join(dataDir, "auth", name);
-      writeFileSync(path, "{ damaged");
-      expect(() => startServer({ port: 0, dataDir })).toThrow(path);
-      writeFileSync(path, JSON.stringify({ version: 1, wrong: [] }));
-      expect(() => startServer({ port: 0, dataDir })).toThrow(path);
-    }
+  test("a damaged account row is a PersistenceError that names the table and the account", () => {
+    const db = memoryDatabase();
+    // An email that is not normalized passes the constraints but not the store's check.
+    insertRow(db, "account", { id: "acc-1", email: "ADA@example.org", password_hash: "hash", email_verified: 0, language: "en", created_at: 0 });
+    const store = new AuthStore(db, Date.now);
+    expect(() => store.accountById("acc-1")).toThrow(PersistenceError);
+    expect(() => store.accountById("acc-1")).toThrow("row acc-1 of the table account");
   });
 
-  test("the auth folder does not disturb the arena loader, and both come back after a restart", async () => {
+  test("the UNIQUE email answers email_taken, whatever the case of the letters", () => {
+    const store = new AuthStore(memoryDatabase(), Date.now);
+    const account = { id: "acc-1", email: "ada@example.org", passwordHash: "hash", createdAt: "2026-11-01T00:00:00.000Z", emailVerified: false, language: "en" } as const;
+    store.addAccount(account);
+    expect(() => store.addAccount({ ...account, id: "acc-2", email: "Ada@Example.org" })).toThrow(new AuthError("email_taken"));
+    expect(store.accountById("acc-2")).toBeUndefined();
+  });
+
+  test("the database does not disturb the arena loader, and both come back after a restart", async () => {
     const dataDir = temporaryDirectory();
     const first = start({ dataDir });
     const cookie = await signedUp(first);
     const created = await first.call("/api/arenas", { method: "POST", cookie, origin: true, body: { kind: "private", settings: SETTINGS } });
     const { arenaId } = (await created.json()) as { arenaId: string };
     await stopServer(first);
-    expect(readdirSync(dataDir).sort()).toEqual(["arenas", "auth", "metrics", "monthly", "results"]);
+    // macOS's SQLite keeps an empty -wal and the -shm after a clean close; Linux's removes them.
+    expect(readdirSync(dataDir).filter((name) => !name.startsWith(`${DATABASE_FILE}-`)).sort()).toEqual([DATABASE_FILE, "arenas", "metrics", "monthly", "results"]);
     // The other file is the public arena the server keeps.
     expect(readdirSync(join(dataDir, "arenas"))).toContain(`${arenaId}.json`);
 
@@ -546,14 +557,22 @@ describe("reset-password script", () => {
     expect((await second.login("ada@example.org", newPassword)).status).toBe(200);
   });
 
-  test("applies the password rules, refuses an unknown email, and refuses while the server runs", async () => {
+  test("works while the server runs, and the running server takes the new password at once", async () => {
+    const dataDir = temporaryDirectory();
+    const running = start({ dataDir });
+    const cookie = await signedUp(running);
+
+    const newPassword = "a brand new password";
+    expect((await runReset(dataDir, "ada@example.org", `${newPassword}\n`)).code).toBe(0);
+    expect(await running.me(cookie)).toEqual({ account: null });
+    expect((await running.login("ada@example.org", PASSWORD)).status).toBe(401);
+    expect((await running.login("ada@example.org", newPassword)).status).toBe(200);
+  });
+
+  test("applies the password rules and refuses an unknown email", async () => {
     const dataDir = temporaryDirectory();
     const running = start({ dataDir });
     await signedUp(running);
-
-    const whileRunning = await runReset(dataDir, "ada@example.org", "a brand new password\n");
-    expect(whileRunning.code).toBe(1);
-    expect(whileRunning.out).toContain("Stop it first");
     await stopServer(running);
 
     const short = await runReset(dataDir, "ada@example.org", "short\n");

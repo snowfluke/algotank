@@ -1,6 +1,6 @@
 // Accounts and sign-in: email and password, a session in an HttpOnly cookie.
 // Other features call accountOf or requireAccount; nothing outside this folder reads
-// the session cookie or the auth files.
+// the session cookie or the auth tables.
 //
 // Session lifecycle (terminal state: ended; an ended token is rejected like an unknown one):
 //
@@ -10,7 +10,8 @@
 // |        |        |         | correct credentials; rate limit not exceeded                      |
 // | active | ended  | account | logout                                                            |
 // | active | ended  | server  | 30 days after creation; the account's 11th login ends the oldest; |
-// |        |        |         | a password reset (scripts/reset-password.ts, or by an email code: |
+// |        |        |         | a password reset (scripts/reset-password.ts, also while the       |
+// |        |        |         | server runs, or by an email code:                                 |
 // |        |        |         | every session ends and the reset's own browser gets a new one)    |
 //
 // The email of an account (unverified, code sent, verified) and the password reset by an email
@@ -23,18 +24,13 @@
 //   next day. Each sign-up sends one, and each "Send a new code" or reset one more.
 // - The send limits of codes live in memory too, so a restart lets an account send again at once.
 // - Rate-limit counters live in memory and reset on a restart.
-// - Two server processes must not share one DATA_DIR: each holds the files in memory
-//   and overwrites the other's changes. The reset script refuses to run while the
-//   server that wrote auth/server.pid is alive, for the same reason.
 // - Anyone who knows an email can block its logins for 15 minutes with 5 wrong passwords.
 // - With TRUST_PROXY=1 the first X-Forwarded-For entry is the client address. A proxy
 //   that appends to a client-sent header lets a client choose its address and pass
 //   the per-address limits.
 
-import { existsSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import type { Database } from "bun:sqlite";
 import type { AccountId } from "@game/arena";
-import { PersistenceError, writePrivateFileAtomically } from "../arena-files.ts";
 import type { Router } from "../router.ts";
 import { AuthError } from "./errors.ts";
 import { SlidingWindowLimit } from "../rate-limit.ts";
@@ -66,7 +62,7 @@ export interface Auth {
   /**
    * Marks the account's email as verified, the guard of the "verified" join policy. The
    * email-verification package calls it once a code is confirmed; tests call it directly.
-   * Throws for an unknown account and a PersistenceError when the file cannot be saved.
+   * Throws for an unknown account.
    */
   markEmailVerified(id: AccountId): void;
   registerRoutes(router: Router): void;
@@ -75,8 +71,8 @@ export interface Auth {
 }
 
 export interface AuthOptions {
-  /** DATA_DIR. The auth files go in its auth/ folder. Without it everything stays in memory. */
-  readonly dataDir?: string;
+  /** The server's database (db/open.ts), with the tables account, session and email_code. */
+  readonly db: Database;
   /** Adds Secure to the session cookie. Turn it on when the site is served over HTTPS. */
   readonly secureCookies: boolean;
   /** Reads the client address and host from X-Forwarded-For and X-Forwarded-Host. Only behind a proxy that sets them. */
@@ -92,16 +88,12 @@ export interface AuthOptions {
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const SWEEP_INTERVAL_MS = HOUR_MS;
-/** Written while a server uses the directory; the reset script reads it. */
-export const SERVER_PID_FILE = "server.pid";
-export const AUTH_FOLDER = "auth";
-
-/** Throws a PersistenceError that names the file when an auth file is damaged. */
 export function createAuth(options: AuthOptions): Auth {
   const now = options.now ?? Date.now;
-  const directory = options.dataDir === undefined ? null : join(options.dataDir, AUTH_FOLDER);
-  const store = new AuthStore(directory, now);
-  const codes = new CodeStore(directory, now, (id) => store.accountById(id) !== undefined);
+  const store = new AuthStore(options.db, now);
+  const codes = new CodeStore(options.db, now);
+  // As at every start before the database: the sessions that expired while the server was stopped go now, not an hour later.
+  store.dropExpiredSessions();
   const limits: AuthLimits = {
     register: new SlidingWindowLimit(5, HOUR_MS, now),
     loginByAddress: new SlidingWindowLimit(10, 15 * MINUTE_MS, now),
@@ -114,14 +106,6 @@ export function createAuth(options: AuthOptions): Auth {
   // Hashed here with the same defaults as a real password, so a verify against it takes as long.
   const dummyHash = Bun.password.hash(crypto.randomUUID());
 
-  if (directory !== null) {
-    try {
-      writePrivateFileAtomically(directory, SERVER_PID_FILE, String(process.pid));
-    } catch (error) {
-      throw new PersistenceError(`${join(directory, SERVER_PID_FILE)} could not be written: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
   const sweep = setInterval(() => {
     limits.register.sweep();
     limits.loginByAddress.sweep();
@@ -132,8 +116,8 @@ export function createAuth(options: AuthOptions): Auth {
       store.dropExpiredSessions();
       codes.dropDead();
     } catch (error) {
-      // Memory keeps the expired sessions and codes (they are already refused at lookup), and the next sweep tries again.
-      console.error("The hourly sweep could not save the sessions or the codes:", error);
+      // The expired sessions and codes stay (they are already refused at lookup), and the next sweep tries again.
+      console.error("The hourly sweep could not delete the expired sessions or codes:", error);
     }
   }, SWEEP_INTERVAL_MS);
   sweep.unref();
@@ -167,6 +151,7 @@ export function createAuth(options: AuthOptions): Auth {
         secureCookies: options.secureCookies,
         trustProxy: options.trustProxy,
         now,
+        inTransaction: (work) => options.db.transaction(work).immediate(),
         codes,
         mail: options.mail,
         sendLimits,
@@ -178,7 +163,6 @@ export function createAuth(options: AuthOptions): Auth {
     },
     stop() {
       clearInterval(sweep);
-      if (directory !== null) removeOwnPidFile(directory);
     },
   };
 }
@@ -186,10 +170,4 @@ export function createAuth(options: AuthOptions): Auth {
 /** Built field by field, so the password hash never leaves this folder. */
 function toAccount(account: StoredAccount): Account {
   return { id: account.id, email: account.email, createdAt: account.createdAt, emailVerified: account.emailVerified };
-}
-
-function removeOwnPidFile(directory: string): void {
-  const path = join(directory, SERVER_PID_FILE);
-  // Another process may have started on the directory since; its file stays.
-  if (existsSync(path) && readFileSync(path, "utf8") === String(process.pid)) rmSync(path, { force: true });
 }

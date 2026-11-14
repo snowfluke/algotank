@@ -11,6 +11,7 @@ import { announcementFor, ruleSetToStart } from "./rule-set-draw.ts";
 import { Store, type ArenaRecord } from "./store.ts";
 import { ArenaStats } from "./stats/arena-stats.ts";
 import { AccountStatsStore } from "./stats/account-stats.ts";
+import { memoryDatabase } from "./db/testing.ts";
 import { StreamHub } from "./stream.ts";
 import { manualScheduler } from "./test-helpers.ts";
 
@@ -133,7 +134,7 @@ describe("a statistics failure", () => {
     const store = new Store({ now: ticks.now, scheduler: ticks });
     const hub = new StreamHub({ heartbeatMs: 60_000, maxStreamsPerArena: 10, now: ticks.now, scheduler: ticks, arenaMessageIntervalMs: 0 });
     const metrics = new Metrics({ calendar: zoneCalendar("Asia/Jakarta"), now: ticks.now, scheduler: ticks });
-    const stats = new FailingStats({ accounts: new AccountStatsStore(undefined), month: () => "2026-11" });
+    const stats = new FailingStats({ accounts: new AccountStatsStore(memoryDatabase()), month: () => "2026-11" });
     const runner = new RoundRunner(store, hub, new AutoSteps(ticks, ticks.now, PUBLIC_RULES), { scheduler: ticks, now: ticks.now, startDelayMs: 0, metrics, stats });
     const added = store.add(createArena(store.newArenaId(), SETTINGS, announcementFor(SETTINGS.ruleSetMode, null)), "owner");
     if (!added.ok) throw new Error("the arena was not added");

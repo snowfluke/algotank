@@ -1,13 +1,14 @@
 // "My tank" of an account: who may call the routes, the name rule and the block list,
-// the look check, "newer wins" with 409 for a stale copy, and the files.
+// the look check, "newer wins" with 409 for a stale copy, and the stored rows.
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AccountTank, AccountTankErrorResponse, AccountTankResponse } from "@game/arena";
-import { AccountTanks, TANKS_FOLDER } from "./account-tank.ts";
+import { AccountTanks } from "./account-tank.ts";
 import { PersistenceError } from "./arena-files.ts";
+import { insertAccount, insertRow, memoryDatabase } from "./db/testing.ts";
 import { signUp, startTestServer, type TestServer, type TestServerOptions } from "./test-helpers.ts";
 
 const open: TestServer[] = [];
@@ -86,35 +87,33 @@ describe("account tank routes", () => {
   });
 });
 
-describe("account tank files", () => {
-  test("a saved tank survives a restart in a 0600 file inside a 0700 folder", async () => {
+describe("stored account tanks", () => {
+  test("a saved tank survives a restart", async () => {
     const dataDir = temporaryDirectory();
     const first = start({ dataDir });
     const cookie = await signUp(first);
     await put(first, cookie, TANK);
-    const folder = join(dataDir, TANKS_FOLDER);
-    const [file] = readdirSync(folder);
-    expect(statSync(folder).mode & 0o777).toBe(0o700);
-    expect(statSync(join(folder, file!)).mode & 0o777).toBe(0o600);
-    const accountId = file!.replace(/\.json$/, "");
-    expect(new AccountTanks(dataDir).get(accountId)).toEqual(TANK);
+    await first.server.stop();
+    const second = start({ dataDir });
+    expect((await get(second, cookie)).tank).toEqual(TANK);
   });
 
-  test("a damaged file stops the start with a message that names it", () => {
-    const dataDir = temporaryDirectory();
-    const folder = join(dataDir, TANKS_FOLDER);
-    mkdirSync(folder, { recursive: true });
-    const path = join(folder, "00000000-0000-0000-0000-000000000000.json");
-    writeFileSync(path, JSON.stringify({ version: 1, tank: { ...TANK, look: { colour: 1 } } }));
-    expect(() => new AccountTanks(dataDir)).toThrow(PersistenceError);
-    expect(() => new AccountTanks(dataDir)).toThrow(path);
+  const ACCOUNT = "00000000-0000-0000-0000-000000000000";
+  const ROW = { account_id: ACCOUNT, name: TANK.name, colour: 9, skin: "stars", second: 3, plate: 6, icon: "moon", updated_at: NOW };
+
+  test("a damaged row is a PersistenceError that names the table and the account", () => {
+    const db = memoryDatabase();
+    insertAccount(db, ACCOUNT);
+    insertRow(db, "account_tank", { ...ROW, skin: "polka" });
+    const tanks = new AccountTanks(db);
+    expect(() => tanks.get(ACCOUNT)).toThrow(PersistenceError);
+    expect(() => tanks.get(ACCOUNT)).toThrow(`row ${ACCOUNT} of the table account_tank`);
   });
 
   test("a stored name with a word added to the block list later still loads", () => {
-    const dataDir = temporaryDirectory();
-    const folder = join(dataDir, TANKS_FOLDER);
-    mkdirSync(folder, { recursive: true });
-    writeFileSync(join(folder, "00000000-0000-0000-0000-000000000000.json"), JSON.stringify({ version: 1, tank: { ...TANK, name: "Anjing" } }));
-    expect(new AccountTanks(dataDir).get("00000000-0000-0000-0000-000000000000")?.name).toBe("Anjing");
+    const db = memoryDatabase();
+    insertAccount(db, ACCOUNT);
+    insertRow(db, "account_tank", { ...ROW, name: "Anjing" });
+    expect(new AccountTanks(db).get(ACCOUNT)?.name).toBe("Anjing");
   });
 });

@@ -14,7 +14,7 @@
 // | code sent  | 15 minutes pass                | clock   |                                                   | unverified |
 // | unverified | right reset code (see below)   | visitor | the reset proves the mailbox too                  | verified   |
 // "unverified" means no live code: a code that expired or is used up is refused like a missing one
-// (code_expired), and the hourly sweep removes it from the file.
+// (code_expired), and the hourly sweep removes it from the table.
 //
 // A password reset (per account, independent of the table above):
 //
@@ -52,7 +52,7 @@ import { AuthError } from "./errors.ts";
 import { readLanguage } from "./language.ts";
 import { codeMail } from "./mail-text.ts";
 import { clientAddress, refuseCrossSite, requireJsonContentType } from "./request.ts";
-import { accountOfRequest, AUTH_BODY_MAX_BYTES, publicAccount, signedIn, type AuthRouteDeps } from "./routes.ts";
+import { accountOfRequest, AUTH_BODY_MAX_BYTES, publicAccount, sessionResponse, startSession, type AuthRouteDeps } from "./routes.ts";
 import type { StoredAccount } from "./store.ts";
 
 const CODE_PATTERN = new RegExp(`^[0-9]{${EMAIL_CODE_LENGTH}}$`);
@@ -188,9 +188,11 @@ export function registerEmailRoutes(router: Router, deps: EmailRouteDeps): void 
       }
       throw new AuthError("code_wrong", undefined, CODE_MAX_WRONG_TRIES - counted.wrongTries);
     }
-    deps.store.markEmailVerified(account.id);
+    deps.inTransaction(() => {
+      deps.store.markEmailVerified(account.id);
+      codes.drop(account.id, "verify");
+    });
     deps.metrics.count("accountVerified");
-    codes.drop(account.id, "verify");
     const verified = deps.store.accountById(account.id);
     if (verified === undefined) throw new Error(`Account ${account.id} disappeared while it was verified.`);
     return done(verified);
@@ -251,15 +253,19 @@ export function registerEmailRoutes(router: Router, deps: EmailRouteDeps): void 
     }
     // Dropped first, so the code cannot set a second password while the new one is hashed.
     codes.drop(account.id, "reset");
-    // The hash is replaced before the sessions end: if ending them fails, the old password already no longer works.
-    deps.store.replacePasswordHash(account.id, await Bun.password.hash(password));
-    deps.store.endSessionsOf(account.id);
-    // The code reached this mailbox, which is the same proof a verification code gives.
-    deps.store.markEmailVerified(account.id);
+    const passwordHash = await Bun.password.hash(password);
+    // One transaction: the new password, the end of every old session and the reset's own new session happen together or not at all.
+    const token = deps.inTransaction(() => {
+      deps.store.replacePasswordHash(account.id, passwordHash);
+      deps.store.endSessionsOf(account.id);
+      // The code reached this mailbox, which is the same proof a verification code gives.
+      deps.store.markEmailVerified(account.id);
+      return startSession(deps.store, account.id);
+    });
     if (!account.emailVerified) deps.metrics.count("accountVerified");
     const updated = deps.store.accountById(account.id);
     if (updated === undefined) throw new Error(`Account ${account.id} disappeared during a reset.`);
-    return signedIn(deps, updated);
+    return sessionResponse(deps, token, updated);
   });
 }
 

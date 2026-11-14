@@ -4,7 +4,7 @@
 // owner-only email, the 180-day prune, the ended-arena link) and where an email must never go.
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -20,6 +20,7 @@ import {
   type ResultResponse,
 } from "@game/arena";
 import { AuthStore } from "./auth/store.ts";
+import { openDatabase } from "./db/open.ts";
 import type { MailSender } from "./mail.ts";
 import { RESULTS_FOLDER } from "./results.ts";
 import { createTestArena, getArena, joinTestPlayer, openStream, PASSWORD, SETTINGS, startTestServer, type StreamReader, type TestServer, type TestServerOptions } from "./test-helpers.ts";
@@ -285,7 +286,9 @@ describe("signed-in-only arenas (joinPolicy account and verified)", () => {
     const adaId = await accountId(first, ada);
     expect((await json<ErrorResponse>(await joinAs(first, arenaId, "Ada", ada))).code).toBe("email_not_verified");
     await stopServer(first);
-    new AuthStore(join(dataDir, "auth"), Date.now).markEmailVerified(adaId);
+    const db = openDatabase({ kind: "file", dataDir });
+    new AuthStore(db, Date.now).markEmailVerified(adaId);
+    db.close();
     const second = start({ dataDir, mail });
     expect((await joinAs(second, arenaId, "Ada", ada)).status).toBe(200);
     expect((await json<MeResponse>(await second.api("/api/auth/me", { cookie: ownerCookie }))).account).not.toBeNull();
@@ -488,19 +491,5 @@ describe("stored result", () => {
     const arena: PublicArena = await getArena(t, (await json<{ arenaId: string }>(await t.api("/api/public/seat", { method: "POST", body: { kind: "practice" } }))).arenaId);
     expect(arena.settings.joinPolicy).toBe("anyone");
     expect(arena.phase).toMatchObject({ kind: "lobby", start: { kind: "waiting" } });
-  });
-});
-
-describe("auth store version 2 (emailVerified)", () => {
-  test("a version 1 accounts file reads with every email not verified, and markEmailVerified saves version 2", () => {
-    const directory = temporaryDirectory();
-    const account = { id: "acc-1", email: "ada@example.org", passwordHash: "hash", createdAt: "2026-11-01T00:00:00.000Z" };
-    writeFileSync(join(directory, "accounts.json"), JSON.stringify({ version: 1, accounts: [account] }));
-    const store = new AuthStore(directory, Date.now);
-    expect(store.accountById("acc-1")?.emailVerified).toBe(false);
-    store.markEmailVerified("acc-1");
-    const saved = JSON.parse(readFileSync(join(directory, "accounts.json"), "utf8"));
-    expect(saved).toEqual({ version: 2, accounts: [{ ...account, emailVerified: true }] });
-    expect(new AuthStore(directory, Date.now).accountById("acc-1")?.emailVerified).toBe(true);
   });
 });

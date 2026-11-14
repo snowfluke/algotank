@@ -1,34 +1,19 @@
-// Accounts and sessions in memory, and, with a data directory, in
-// <DATA_DIR>/auth/accounts.json and <DATA_DIR>/auth/sessions.json (0600 files in a
-// 0700 directory). Every change is saved before memory changes, so a failed save
-// leaves the old state and the request gets the error.
+// Accounts and sessions in the tables `account` and `session` (db/schema.ts). Every call reads
+// the database, so the reset-password tool can change an account while the server runs.
 //
-// A session is stored by the SHA-256 hash of its token, so a copy of the files
-// does not hold a token that signs anyone in.
+// A session is stored by the SHA-256 hash of its token, so a copy of the database does not hold
+// a token that signs anyone in.
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import type { AccountId } from "@game/arena";
-import { createPrivateDirectory, PersistenceError, writePrivateFileAtomically } from "../arena-files.ts";
-import { isRecord } from "../http.ts";
+import { SQLiteError, type Database, type Statement } from "bun:sqlite";
+import { MAIL_LANGUAGES, type AccountId, type MailLanguage } from "@game/arena";
+import { PersistenceError } from "../arena-files.ts";
 import { emailProblem, normalizeEmail } from "./credentials.ts";
+import { AuthError } from "./errors.ts";
 
 export const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 /** An account keeps at most this many sessions; a new login ends the oldest. */
 const MAX_SESSIONS_PER_ACCOUNT = 10;
-
-/** The sessions file's version. */
-const STORE_VERSION = 1;
-/**
- * The accounts file's version. Version 2 added `emailVerified` (2026-11-13, for the "verified"
- * join policy of an owner's arena). A version 1 file is read with every email not verified, and
- * the next save writes version 2.
- */
-const ACCOUNTS_VERSION = 2;
-const ACCOUNTS_FILE = "accounts.json";
-const SESSIONS_FILE = "sessions.json";
-const TOKEN_HASH = /^[0-9a-f]{64}$/;
 
 export interface StoredAccount {
   readonly id: AccountId;
@@ -39,211 +24,139 @@ export interface StoredAccount {
   readonly createdAt: string;
   /** The owner of the email showed they read it. Set only by markEmailVerified (the email-verification package sends the codes). */
   readonly emailVerified: boolean;
+  /** The language of the page the account signed up on. Stored for later emails; nothing reads it yet. */
+  readonly language: MailLanguage;
 }
 
 export interface StoredSession {
   readonly tokenHash: string;
   readonly accountId: AccountId;
-  /** Milliseconds since 1970. The session ends SESSION_LIFETIME_MS later. */
-  readonly createdAt: number;
+  /** Milliseconds since 1970: SESSION_LIFETIME_MS after the sign-in. */
+  readonly expiresAt: number;
 }
+
+interface AccountRow {
+  readonly id: string;
+  readonly email: string;
+  readonly password_hash: string;
+  readonly email_verified: number;
+  readonly language: string;
+  readonly created_at: number;
+}
+
+interface SessionRow {
+  readonly token_hash: string;
+  readonly account_id: string;
+  readonly expires_at: number;
+}
+
+const ACCOUNT_COLUMNS = "id, email, password_hash, email_verified, language, created_at";
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-/** The one place the 30-day lifetime is applied. */
-function isExpired(session: StoredSession, now: number): boolean {
-  return now >= session.createdAt + SESSION_LIFETIME_MS;
-}
-
 export class AuthStore {
-  private accounts: ReadonlyMap<AccountId, StoredAccount> = new Map();
-  private accountIdByEmail: ReadonlyMap<string, AccountId> = new Map();
-  private sessions: ReadonlyMap<string, StoredSession> = new Map();
+  private readonly byId: Statement<AccountRow, [string]>;
+  private readonly byEmail: Statement<AccountRow, [string]>;
+  private readonly insertAccount: Statement<unknown, [string, string, string, number, string, number]>;
+  private readonly setVerified: Statement<unknown, [string]>;
+  private readonly setPasswordHash: Statement<unknown, [string, string]>;
+  private readonly liveSession: Statement<SessionRow, [string, number]>;
+  private readonly insertSession: Statement<unknown, [string, string, number]>;
+  private readonly trimSessions: Statement<unknown, [string, string, number]>;
+  private readonly deleteSession: Statement<unknown, [string]>;
+  private readonly deleteSessionsOf: Statement<unknown, [string]>;
+  private readonly deleteExpired: Statement<unknown, [number]>;
 
-  /**
-   * Without `directory` everything stays in memory. With one, both files are read,
-   * and a file that cannot be read or has a wrong shape throws a PersistenceError
-   * that names it. Expired sessions are dropped at load.
-   */
   constructor(
-    readonly directory: string | null,
+    private readonly db: Database,
     private readonly now: () => number,
   ) {
-    if (directory === null) return;
-    createPrivateDirectory(directory);
-    const accounts = readAccounts(join(directory, ACCOUNTS_FILE));
-    this.setAccounts(accounts);
-    this.sessions = readSessions(join(directory, SESSIONS_FILE), accounts);
-    this.dropExpiredSessions();
+    this.byId = db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM account WHERE id = ?`);
+    this.byEmail = db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM account WHERE email = ?`);
+    this.insertAccount = db.prepare(`INSERT INTO account (${ACCOUNT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?)`);
+    this.setVerified = db.prepare("UPDATE account SET email_verified = 1 WHERE id = ?");
+    this.setPasswordHash = db.prepare("UPDATE account SET password_hash = ? WHERE id = ?");
+    // A session is live while now < expires_at; deleteExpired removes the rest.
+    this.liveSession = db.prepare("SELECT token_hash, account_id, expires_at FROM session WHERE token_hash = ? AND expires_at > ?");
+    this.insertSession = db.prepare("INSERT INTO session (token_hash, account_id, expires_at) VALUES (?, ?, ?)");
+    // rowid orders two sessions of the same millisecond by when they were added.
+    this.trimSessions = db.prepare(
+      "DELETE FROM session WHERE account_id = ? AND token_hash NOT IN (SELECT token_hash FROM session WHERE account_id = ? ORDER BY expires_at DESC, rowid DESC LIMIT ?)",
+    );
+    this.deleteSession = db.prepare("DELETE FROM session WHERE token_hash = ?");
+    this.deleteSessionsOf = db.prepare("DELETE FROM session WHERE account_id = ?");
+    this.deleteExpired = db.prepare("DELETE FROM session WHERE expires_at <= ?");
   }
 
   accountById(id: AccountId): StoredAccount | undefined {
-    return this.accounts.get(id);
+    const row = this.byId.get(id);
+    return row === null ? undefined : toAccount(row);
   }
 
   accountByEmail(normalizedEmail: string): StoredAccount | undefined {
-    const id = this.accountIdByEmail.get(normalizedEmail);
-    return id === undefined ? undefined : this.accounts.get(id);
+    const row = this.byEmail.get(normalizedEmail);
+    return row === null ? undefined : toAccount(row);
   }
 
+  /** Throws AuthError("email_taken") when another account has the email, which the UNIQUE constraint guards. */
   addAccount(account: StoredAccount): void {
-    const next = new Map(this.accounts).set(account.id, account);
-    this.saveAccounts(next);
-    this.setAccounts(next);
+    try {
+      this.insertAccount.run(account.id, account.email, account.passwordHash, account.emailVerified ? 1 : 0, account.language, Date.parse(account.createdAt));
+    } catch (error) {
+      if (error instanceof SQLiteError && error.code === "SQLITE_CONSTRAINT_UNIQUE") throw new AuthError("email_taken");
+      throw error;
+    }
   }
 
-  /** Marks the account's email as verified. Saved before memory changes, like every change here. */
+  /** Marks the account's email as verified. */
   markEmailVerified(id: AccountId): void {
-    const account = this.accounts.get(id);
-    if (account === undefined) throw new Error(`Account ${id} does not exist.`);
-    if (account.emailVerified) return;
-    const next = new Map(this.accounts).set(id, { ...account, emailVerified: true });
-    this.saveAccounts(next);
-    this.setAccounts(next);
+    if (this.setVerified.run(id).changes === 0) throw new Error(`Account ${id} does not exist.`);
   }
 
   replacePasswordHash(id: AccountId, passwordHash: string): void {
-    const account = this.accounts.get(id);
-    if (account === undefined) throw new Error(`Account ${id} does not exist.`);
-    const next = new Map(this.accounts).set(id, { ...account, passwordHash });
-    this.saveAccounts(next);
-    this.setAccounts(next);
+    if (this.setPasswordHash.run(passwordHash, id).changes === 0) throw new Error(`Account ${id} does not exist.`);
   }
 
   /** The live session for a token, or undefined for an unknown or expired one. */
   sessionOf(token: string): StoredSession | undefined {
-    const session = this.sessions.get(hashToken(token));
-    return session === undefined || isExpired(session, this.now()) ? undefined : session;
+    const row = this.liveSession.get(hashToken(token), this.now());
+    return row === null ? undefined : { tokenHash: row.token_hash, accountId: row.account_id, expiresAt: row.expires_at };
   }
 
-  /** Adds a session for `token` and ends the oldest ones above MAX_SESSIONS_PER_ACCOUNT. */
+  /** Adds a session for `token` and ends the oldest ones above MAX_SESSIONS_PER_ACCOUNT, in one transaction. */
   addSession(token: string, accountId: AccountId): void {
-    const session: StoredSession = { tokenHash: hashToken(token), accountId, createdAt: this.now() };
-    const next = new Map(this.sessions);
-    const own = [...next.values()]
-      .filter((s) => s.accountId === accountId)
-      .sort((a, b) => a.createdAt - b.createdAt);
-    for (const old of own.slice(0, Math.max(0, own.length - (MAX_SESSIONS_PER_ACCOUNT - 1)))) next.delete(old.tokenHash);
-    next.set(session.tokenHash, session);
-    this.replaceSessions(next);
+    this.db.transaction(() => {
+      this.insertSession.run(hashToken(token), accountId, this.now() + SESSION_LIFETIME_MS);
+      this.trimSessions.run(accountId, accountId, MAX_SESSIONS_PER_ACCOUNT);
+    }).immediate();
   }
 
   endSession(token: string): void {
-    const tokenHash = hashToken(token);
-    if (!this.sessions.has(tokenHash)) return;
-    const next = new Map(this.sessions);
-    next.delete(tokenHash);
-    this.replaceSessions(next);
+    this.deleteSession.run(hashToken(token));
   }
 
   /** Returns how many sessions ended. */
   endSessionsOf(accountId: AccountId): number {
-    const next = new Map([...this.sessions].filter(([, s]) => s.accountId !== accountId));
-    const ended = this.sessions.size - next.size;
-    if (ended > 0) this.replaceSessions(next);
-    return ended;
+    return this.deleteSessionsOf.run(accountId).changes;
   }
 
   dropExpiredSessions(): void {
-    const now = this.now();
-    const next = new Map([...this.sessions].filter(([, s]) => !isExpired(s, now)));
-    if (next.size !== this.sessions.size) this.replaceSessions(next);
-  }
-
-  private setAccounts(accounts: ReadonlyMap<AccountId, StoredAccount>): void {
-    this.accounts = accounts;
-    this.accountIdByEmail = new Map([...accounts.values()].map((a) => [a.email, a.id]));
-  }
-
-  private replaceSessions(next: ReadonlyMap<string, StoredSession>): void {
-    if (this.directory !== null) {
-      save(this.directory, SESSIONS_FILE, { version: STORE_VERSION, sessions: [...next.values()] });
-    }
-    this.sessions = next;
-  }
-
-  private saveAccounts(next: ReadonlyMap<AccountId, StoredAccount>): void {
-    if (this.directory !== null) {
-      save(this.directory, ACCOUNTS_FILE, { version: ACCOUNTS_VERSION, accounts: [...next.values()] });
-    }
+    this.deleteExpired.run(this.now());
   }
 }
 
-function save(directory: string, name: string, content: unknown): void {
-  try {
-    writePrivateFileAtomically(directory, name, JSON.stringify(content));
-  } catch (error) {
-    throw new PersistenceError(`${join(directory, name)} could not be saved: ${error instanceof Error ? error.message : String(error)}`);
-  }
+function invalid(table: string, key: string, reason: string): PersistenceError {
+  return new PersistenceError(`The row ${key} of the table ${table} is not valid: ${reason}`);
 }
 
-/** The parsed file, or null when it does not exist yet (the first start). */
-function readJsonFile(path: string): unknown {
-  if (!existsSync(path)) return null;
-  try {
-    return JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    throw new PersistenceError(`The auth file ${path} cannot be read: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-function invalid(path: string, reason: string): PersistenceError {
-  return new PersistenceError(`The auth file ${path} is not valid: ${reason}`);
-}
-
-function readAccounts(path: string): ReadonlyMap<AccountId, StoredAccount> {
-  const raw = readJsonFile(path);
-  const accounts = new Map<AccountId, StoredAccount>();
-  if (raw === null) return accounts;
-  const version = isRecord(raw) ? raw["version"] : undefined;
-  if (!isRecord(raw) || (version !== 1 && version !== ACCOUNTS_VERSION) || !Array.isArray(raw["accounts"])) {
-    throw invalid(path, `it must be { "version": ${ACCOUNTS_VERSION}, "accounts": [...] }.`);
-  }
-  const emails = new Set<string>();
-  for (const [i, entry] of raw["accounts"].entries()) {
-    if (
-      !isRecord(entry) ||
-      typeof entry["id"] !== "string" || entry["id"] === "" ||
-      typeof entry["email"] !== "string" ||
-      typeof entry["passwordHash"] !== "string" || entry["passwordHash"] === "" ||
-      typeof entry["createdAt"] !== "string" || Number.isNaN(Date.parse(entry["createdAt"]))
-    ) {
-      throw invalid(path, `account ${i} needs an id, an email, a passwordHash and a createdAt date.`);
-    }
-    const email = entry["email"];
-    if (normalizeEmail(email) !== email || emailProblem(email) !== null) throw invalid(path, `account ${i} has an email that is not valid.`);
-    if (accounts.has(entry["id"]) || emails.has(email)) throw invalid(path, `account ${i} repeats an id or an email.`);
-    emails.add(email);
-    // Version 1 had no verification, so nobody's email was verified.
-    const verified = version === 1 ? false : entry["emailVerified"];
-    if (typeof verified !== "boolean") throw invalid(path, `account ${i} needs emailVerified as true or false.`);
-    accounts.set(entry["id"], { id: entry["id"], email, passwordHash: entry["passwordHash"], createdAt: entry["createdAt"], emailVerified: verified });
-  }
-  return accounts;
-}
-
-function readSessions(path: string, accounts: ReadonlyMap<AccountId, StoredAccount>): ReadonlyMap<string, StoredSession> {
-  const raw = readJsonFile(path);
-  const sessions = new Map<string, StoredSession>();
-  if (raw === null) return sessions;
-  if (!isRecord(raw) || raw["version"] !== STORE_VERSION || !Array.isArray(raw["sessions"])) {
-    throw invalid(path, `it must be { "version": ${STORE_VERSION}, "sessions": [...] }.`);
-  }
-  for (const [i, entry] of raw["sessions"].entries()) {
-    if (
-      !isRecord(entry) ||
-      typeof entry["tokenHash"] !== "string" || !TOKEN_HASH.test(entry["tokenHash"]) ||
-      typeof entry["accountId"] !== "string" ||
-      typeof entry["createdAt"] !== "number" || !Number.isFinite(entry["createdAt"])
-    ) {
-      throw invalid(path, `session ${i} needs a tokenHash, an accountId and a createdAt time.`);
-    }
-    // Accounts are never deleted, so a session of an unknown account means the files do not belong together.
-    if (!accounts.has(entry["accountId"])) throw invalid(path, `session ${i} belongs to an account that does not exist.`);
-    if (sessions.has(entry["tokenHash"])) throw invalid(path, `session ${i} repeats a tokenHash.`);
-    sessions.set(entry["tokenHash"], { tokenHash: entry["tokenHash"], accountId: entry["accountId"], createdAt: entry["createdAt"] });
-  }
-  return sessions;
+/** The CHECK constraints guard the types; this checks what they cannot (db/schema.ts). */
+function toAccount(row: AccountRow): StoredAccount {
+  if (normalizeEmail(row.email) !== row.email || emailProblem(row.email) !== null) throw invalid("account", row.id, "the email is not valid.");
+  const language = MAIL_LANGUAGES.find((l) => l === row.language);
+  if (language === undefined) throw invalid("account", row.id, `the language "${row.language}" is not en or id.`);
+  const createdAt = new Date(row.created_at);
+  if (Number.isNaN(createdAt.getTime())) throw invalid("account", row.id, "created_at is not a time.");
+  return { id: row.id, email: row.email, passwordHash: row.password_hash, createdAt: createdAt.toISOString(), emailVerified: row.email_verified === 1, language };
 }

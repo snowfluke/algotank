@@ -1,4 +1,4 @@
-// Sets a new password for an account and ends its sessions. Stop the server first.
+// Sets a new password for an account and ends its sessions. The server may keep running.
 //
 //   read -rs PASSWORD && printf '%s\n' "$PASSWORD" | DATA_DIR=./data bun apps/server/scripts/reset-password.ts ada@example.org
 //
@@ -22,7 +22,7 @@ try {
   const result = await resetPassword({ dataDir, email, password: firstLine });
   console.log(`The password of ${result.email} is changed, and ${result.sessionsEnded} session(s) ended.`);
 } catch (error) {
-  // A PersistenceError names a file and a ResetError names the problem; neither holds a secret.
+  // A PersistenceError names the database and a ResetError names the problem; neither holds a secret.
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }

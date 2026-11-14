@@ -3,26 +3,17 @@
 // ACCOUNT_STATS_MONTHS months it played in. The shapes and their check are in
 // packages/arena/src/stats-protocol.ts.
 //
-// One small file per account in DATA_DIR/stats/<account id>.json (the folder 0700), written
-// atomically with mode 0600 at a round's end, never per turn. Every file is read at start; a
-// damaged file stops the start with its name, as the other stores do. Without DATA_DIR the
-// totals live in memory (tests).
+// The totals are the table `account_stats` and the months `account_stats_month`
+// (db/schema.ts), written at a round's end, never per turn, and read on each call.
 //
 // GET /api/account/stats (account) -> AccountStatsResponse
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { ACCOUNT_STATS_MONTHS, parseAccountStats, type AccountId, type AccountNumbers, type AccountStats, type AccountStatsResponse } from "@game/arena";
-import { createPrivateDirectory, PersistenceError, writePrivateFileAtomically } from "../arena-files.ts";
+import type { Database, Statement } from "bun:sqlite";
+import { ACCOUNT_STATS_MONTHS, parseAccountStats, type AccountId, type AccountMonth, type AccountNumbers, type AccountStats, type AccountStatsResponse } from "@game/arena";
+import { PersistenceError } from "../arena-files.ts";
 import type { Auth } from "../auth/index.ts";
-import { isRecord, jsonResponse } from "../http.ts";
+import { jsonResponse } from "../http.ts";
 import type { Router } from "../router.ts";
-
-const STATS_FOLDER = "stats";
-const STORED_VERSION = 1;
-/** The server makes account ids with crypto.randomUUID; only that shape may name a file. */
-const ACCOUNT_FILE = /^([0-9a-f-]{36})\.json$/;
-const ACCOUNT_ID = /^[0-9a-f-]{36}$/;
 
 const ZERO: AccountNumbers = { games: 0, rounds: 0, wins: 0, shots: 0, hits: 0 };
 
@@ -39,62 +30,46 @@ function withAdded(stats: AccountStats | null, month: string, add: AccountNumber
   return { total: plus(before.total, add), months };
 }
 
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export class AccountStatsStore {
-  private readonly byAccount = new Map<AccountId, AccountStats>();
-  private readonly directory: string | null;
+  private readonly selectTotal: Statement<AccountNumbers, [string]>;
+  private readonly selectMonths: Statement<AccountMonth, [string]>;
+  private readonly upsertTotal: Statement<unknown, [string, number, number, number, number, number]>;
+  private readonly deleteMonths: Statement<unknown, [string]>;
+  private readonly insertMonth: Statement<unknown, [string, string, number, number, number, number, number]>;
 
-  /** `dataDirectory` is DATA_DIR, or undefined to keep everything in memory. Throws a PersistenceError that names a damaged file. */
-  constructor(dataDirectory: string | undefined) {
-    this.directory = dataDirectory === undefined ? null : join(dataDirectory, STATS_FOLDER);
-    if (this.directory === null || !existsSync(this.directory)) return;
-    for (const name of readdirSync(this.directory).sort()) {
-      if (!name.endsWith(".json")) continue; // temporary files of an interrupted write
-      const match = ACCOUNT_FILE.exec(name);
-      const path = join(this.directory, name);
-      if (match === null) throw new PersistenceError(`The statistics file ${path} is not valid: its name must be an account id.`);
-      this.byAccount.set(match[1] ?? "", readFile(path));
-    }
+  constructor(private readonly db: Database) {
+    const numbers = "games, rounds, wins, shots, hits";
+    this.selectTotal = db.prepare(`SELECT ${numbers} FROM account_stats WHERE account_id = ?`);
+    this.selectMonths = db.prepare(`SELECT month, ${numbers} FROM account_stats_month WHERE account_id = ? ORDER BY month`);
+    this.upsertTotal = db.prepare(
+      `INSERT INTO account_stats (account_id, ${numbers}) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (account_id) DO UPDATE SET games = excluded.games, rounds = excluded.rounds, wins = excluded.wins, shots = excluded.shots, hits = excluded.hits`,
+    );
+    this.deleteMonths = db.prepare("DELETE FROM account_stats_month WHERE account_id = ?");
+    this.insertMonth = db.prepare(`INSERT INTO account_stats_month (account_id, month, ${numbers}) VALUES (?, ?, ?, ?, ?, ?, ?)`);
   }
 
+  /** Throws a PersistenceError that names the account when its stored rows are damaged. */
   get(accountId: AccountId): AccountStats | null {
-    return this.byAccount.get(accountId) ?? null;
+    const total = this.selectTotal.get(accountId);
+    if (total === null) return null;
+    // The same check as an answer's (stats-protocol.ts), so a damaged row never reaches a page.
+    const stats = parseAccountStats({ total, months: this.selectMonths.all(accountId) });
+    if (stats === null) throw new PersistenceError(`The row ${accountId} of the tables account_stats and account_stats_month is not valid.`);
+    return stats;
   }
 
-  /** Adds `add` to the account's total and to `month`. Writes before memory changes, so a failed write leaves both as they were. */
+  /** Adds `add` to the account's total and to `month`, in one transaction. */
   add(accountId: AccountId, month: string, add: AccountNumbers): void {
-    const next = withAdded(this.get(accountId), month, add);
-    this.write(accountId, next);
-    this.byAccount.set(accountId, next);
+    this.db.transaction(() => {
+      const next = withAdded(this.get(accountId), month, add);
+      const t = next.total;
+      this.upsertTotal.run(accountId, t.games, t.rounds, t.wins, t.shots, t.hits);
+      // The months are rewritten whole (at most ACCOUNT_STATS_MONTHS rows), so withAdded stays the one place of the rule.
+      this.deleteMonths.run(accountId);
+      for (const m of next.months) this.insertMonth.run(accountId, m.month, m.games, m.rounds, m.wins, m.shots, m.hits);
+    }).immediate();
   }
-
-  private write(accountId: AccountId, stats: AccountStats): void {
-    if (this.directory === null) return;
-    // The id reaches a file path, so only the shape the server makes may pass.
-    if (!ACCOUNT_ID.test(accountId)) throw new PersistenceError(`"${accountId}" is not an account id, so it cannot name a file.`);
-    const name = `${accountId}.json`;
-    createPrivateDirectory(this.directory);
-    try {
-      writePrivateFileAtomically(this.directory, name, JSON.stringify({ version: STORED_VERSION, stats }));
-    } catch (error) {
-      throw new PersistenceError(`The statistics of account ${accountId} could not be saved to ${join(this.directory, name)}: ${describe(error)}`);
-    }
-  }
-}
-
-function readFile(path: string): AccountStats {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    throw new PersistenceError(`The statistics file ${path} cannot be read: ${describe(error)}`);
-  }
-  const stats = isRecord(raw) && raw["version"] === STORED_VERSION ? parseAccountStats(raw["stats"]) : null;
-  if (stats === null) throw new PersistenceError(`The statistics file ${path} is not valid: it must hold version ${STORED_VERSION} and the statistics.`);
-  return stats;
 }
 
 export function registerAccountStatsRoutes(router: Router, { auth, stats }: { readonly auth: Auth; readonly stats: AccountStatsStore }): void {

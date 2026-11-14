@@ -38,6 +38,8 @@ export interface AuthRouteDeps {
   readonly secureCookies: boolean;
   readonly trustProxy: boolean;
   readonly now: () => number;
+  /** Runs `work` in one database transaction, for a request that changes two things (an account and its session). */
+  readonly inTransaction: <T>(work: () => T) => T;
   /** Sends a new account its verification code (email-routes.ts). */
   readonly sendSignUpCode: (account: StoredAccount, language: MailLanguage) => Promise<VerificationEmail>;
   /** The usage numbers (metrics/metrics.ts). */
@@ -64,14 +66,24 @@ async function readCredentials(req: Request): Promise<Credentials> {
   return { email: normalizeEmail(body["email"]), password: body["password"], language: readLanguage(body) };
 }
 
-/** Starts a session for the account and answers with it. `extra` adds fields to the answer (the sign-up's code). */
-export function signedIn(deps: Pick<AuthRouteDeps, "store" | "secureCookies">, account: StoredAccount, extra: object = {}): Response {
+/** Stores a new session of the account and returns its token, for sessionResponse. */
+export function startSession(store: AuthStore, accountId: StoredAccount["id"]): string {
   const token = newSessionToken();
-  deps.store.addSession(token, account.id);
+  store.addSession(token, accountId);
+  return token;
+}
+
+/** The answer that sets the session cookie. `extra` adds fields to the answer (the sign-up's code). */
+export function sessionResponse(deps: Pick<AuthRouteDeps, "secureCookies">, token: string, account: StoredAccount, extra: object = {}): Response {
   const body: AccountResponse = { ...extra, account: publicAccount(account) };
   const response = jsonResponse(body);
   response.headers.set("set-cookie", sessionCookie(token, deps));
   return response;
+}
+
+/** Starts a session for the account and answers with it. */
+function signedIn(deps: Pick<AuthRouteDeps, "store" | "secureCookies">, account: StoredAccount): Response {
+  return sessionResponse(deps, startSession(deps.store, account.id), account);
 }
 
 export function registerAuthRoutes(router: Router, deps: AuthRouteDeps): void {
@@ -101,13 +113,18 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps): void {
       passwordHash,
       createdAt: new Date(deps.now()).toISOString(),
       emailVerified: false,
+      language,
     };
-    store.addAccount(account);
+    // The UNIQUE email is the second guard: a race the check above missed still answers email_taken.
+    const token = deps.inTransaction(() => {
+      store.addAccount(account);
+      return startSession(store, account.id);
+    });
     deps.metrics.count("accountRegistered");
     // Never throws: a failed send is "failed", and the page offers a new code.
     const verificationEmail = await deps.sendSignUpCode(account, language);
     const extra: Omit<RegisterResponse, "account"> = { verificationEmail };
-    return signedIn(deps, account, extra);
+    return sessionResponse(deps, token, account, extra);
   });
 
   router.add("POST", "/api/auth/login", async (ctx: RouteContext) => {

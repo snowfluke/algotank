@@ -1,14 +1,15 @@
 // The account's play styles: who may call the routes, the checks on a record, the limit
-// of 20, a stale copy, and the files (mode 0600, read back at start, a damaged file stops it).
+// of 20, a stale copy, and the stored rows (kept over a restart, a damaged row names itself).
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AccountStrategiesResponse, PutAccountStrategyRequest } from "@game/arena";
 import { PRESETS } from "@game/engine";
-import { AccountStrategies, STRATEGIES_FOLDER } from "./account-strategies.ts";
+import { AccountStrategies } from "./account-strategies.ts";
 import { PersistenceError } from "./arena-files.ts";
+import { insertAccount, insertRow, memoryDatabase } from "./db/testing.ts";
 import { signUp, startTestServer, type TestServer, type TestServerOptions } from "./test-helpers.ts";
 
 const open: TestServer[] = [];
@@ -117,33 +118,32 @@ describe("account play style routes", () => {
   });
 });
 
-describe("play style files", () => {
-  test("are written with mode 0600, read back by a new server, and removed when the last one goes", async () => {
+describe("stored play styles", () => {
+  test("are read back by a new server and go away when removed", async () => {
     const dataDir = temporaryDirectory();
     const first = start({ dataDir });
     const cookie = await signUp(first);
     await put(first, cookie, idOf(1), body("Kept"));
-    const folder = join(dataDir, STRATEGIES_FOLDER);
-    const [file] = readdirSync(folder).filter((name) => name.endsWith(".json"));
-    if (file === undefined) throw new Error("no file was written");
-    expect(statSync(join(folder, file)).mode & 0o777).toBe(0o600);
-    expect(statSync(folder).mode & 0o777).toBe(0o700);
+    await first.server.stop();
 
-    const accountId = file.replace(/\.json$/, "");
-    const store = new AccountStrategies(dataDir);
-    expect(store.list(accountId).map((s) => s.name)).toEqual(["Kept"]);
-    store.remove(accountId, idOf(1));
-    expect(readdirSync(folder).filter((name) => name.endsWith(".json"))).toEqual([]);
+    const second = start({ dataDir });
+    expect((await list(second, cookie)).strategies.map((s) => s.name)).toEqual(["Kept"]);
+    await second.api(`/api/account/strategies/${idOf(1)}`, { method: "DELETE", cookie });
+    expect((await list(second, cookie)).strategies).toEqual([]);
   });
 
-  test("a damaged file stops the start with a message that names it", () => {
-    const dataDir = temporaryDirectory();
-    mkdirSync(join(dataDir, STRATEGIES_FOLDER));
-    const path = join(dataDir, STRATEGIES_FOLDER, "0b1c2d3e-0000-4000-8000-000000000001.json");
-    writeFileSync(path, "{ not json");
-    expect(() => new AccountStrategies(dataDir)).toThrow(PersistenceError);
-    expect(() => new AccountStrategies(dataDir)).toThrow(path);
-    writeFileSync(path, JSON.stringify({ version: 1, strategies: [{ id: idOf(1), name: "", strategy, updatedAt: NOW }] }));
-    expect(() => new AccountStrategies(dataDir)).toThrow("entry 1");
+  test("a damaged row is a PersistenceError that names the table, the account and the id", () => {
+    const db = memoryDatabase();
+    const account = "0b1c2d3e-0000-4000-8000-000000000001";
+    insertAccount(db, account);
+    const row = { account_id: account, id: idOf(1), name: "Kept", updated_at: NOW, strategy_json: "{ not json" };
+    insertRow(db, "account_strategy", row);
+    const store = new AccountStrategies(db);
+    expect(() => store.list(account)).toThrow(PersistenceError);
+    expect(() => store.list(account)).toThrow(`row ${account}/${idOf(1)} of the table account_strategy`);
+    const second = memoryDatabase();
+    insertAccount(second, account);
+    insertRow(second, "account_strategy", { ...row, name: "", strategy_json: JSON.stringify(strategy) });
+    expect(() => new AccountStrategies(second).list(account)).toThrow("The name must have");
   });
 });

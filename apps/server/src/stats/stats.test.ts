@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { expandTick, parseOwnStats, plainTankLook, type AccountStatsResponse, type OwnStats, type ReplayResponse, type StreamMessage } from "@game/arena";
 import { createRound, PRESETS, runRound, statsOfRound, statsView, stepRound, type StrategyInput } from "@game/engine";
 import { AccountStatsStore } from "./account-stats.ts";
+import { insertAccount, memoryDatabase } from "../db/testing.ts";
 import { ArenaStats } from "./arena-stats.ts";
 import { manualScheduler } from "../test-helpers.ts";
 import { createTestArena, joinTestPlayer, openStream, SETTINGS, signUp, startTestServer, type StreamReader, type TestServer } from "../test-helpers.ts";
@@ -141,7 +142,7 @@ describe("a player's statistics in an arena", () => {
     expect((await t.api("/api/account/stats")).status).toBe(401);
   });
 
-  test("survive a restart as account totals, which are read back from their file", async () => {
+  test("survive a restart as account totals, which are read back from the database", async () => {
     const dataDir = mkdtempSync(join(tmpdir(), "algotank-stats-"));
     directories.push(dataDir);
     const { t, accountA } = await playedRound({ dataDir });
@@ -283,7 +284,10 @@ describe("the arena statistics in memory", () => {
   test("hold a fixed size per tank however many turns play, drop an aborted round and go with the arena", () => {
     const strategy = PRESETS.find((p) => p.id === "ambusher")?.strategy;
     if (strategy === undefined) throw new Error("test setup");
-    const stats = new ArenaStats({ accounts: new AccountStatsStore(undefined), month: () => "2026-11" });
+    const db = memoryDatabase();
+    insertAccount(db, "account-1");
+    insertAccount(db, "account-2");
+    const stats = new ArenaStats({ accounts: new AccountStatsStore(db), month: () => "2026-11" });
     // Two joins; only p1 plays the next game, so p2's credit goes at its start.
     stats.credit("ARENA1", "p1", "account-1");
     stats.credit("ARENA1", "p2", "account-2");

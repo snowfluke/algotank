@@ -2,12 +2,9 @@
 // play styles (account-strategies.ts holds the same pattern). The routes are listed in
 // packages/arena/src/account-tank-protocol.ts.
 //
-// One JSON file per account in DATA_DIR/tanks/<account id>.json (the folder 0700, made by
-// the first save), written atomically with mode 0600 like the arena files. Every file is
-// read at start, and a file that cannot be read stops the start with a message that names
-// it. A stored name is checked against the name rule but not the block list, so a word
-// added to the list later does not stop the start; the next PUT checks it. Without
-// DATA_DIR the tanks live in memory (tests).
+// One row per account in the table `account_tank` (db/schema.ts), read on each call. A stored
+// name is checked against the name rule but not the block list, so a word added to the list
+// later does not hide a saved tank; the next PUT checks it.
 //
 // One account's tank:
 // | From  | To    | Actor   | Guard                                                                        |
@@ -16,8 +13,7 @@
 // | saved | saved | account | PUT: the same, and updatedAt not older than the stored copy                 |
 // There is no delete, so "saved" is terminal.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import type { Database, Statement } from "bun:sqlite";
 import {
   parsePlayerName,
   parseTankLook,
@@ -26,33 +22,29 @@ import {
   type AccountTankErrorResponse,
   type AccountTankResponse,
 } from "@game/arena";
-import { createPrivateDirectory, PersistenceError, writePrivateFileAtomically } from "./arena-files.ts";
+import { PersistenceError } from "./arena-files.ts";
 import type { Auth } from "./auth/index.ts";
 import { httpErrorFor, isRecord, jsonResponse, noContent, readJson } from "./http.ts";
 import { checkTypedName } from "./name-filter.ts";
 import type { Router } from "./router.ts";
 
-export const TANKS_FOLDER = "tanks";
-const STORED_VERSION = 1;
-/** The server makes account ids with crypto.randomUUID; only that shape may name a file. */
-const ACCOUNT_FILE = /^([0-9a-f-]{36})\.json$/;
-const ACCOUNT_ID = /^[0-9a-f-]{36}$/;
 /** A device clock may run a little fast; a time further ahead than this is a broken client. */
 const FUTURE_SLACK_MS = 24 * 60 * 60 * 1000;
 
-interface StoredFile {
-  readonly version: typeof STORED_VERSION;
-  readonly tank: AccountTank;
+interface TankRow {
+  readonly name: string;
+  readonly colour: number;
+  readonly skin: string;
+  readonly second: number;
+  readonly plate: number | null;
+  readonly icon: string | null;
+  readonly updated_at: number;
 }
 
 type Refusal = { readonly code: AccountTankErrorCode; readonly problem: string; readonly suggestion?: string };
 type TankParse = { readonly ok: true; readonly value: AccountTank } | ({ readonly ok: false } & Refusal);
 
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-/** Checks the look and the time, which a request body and a stored file share. The caller checks the name. */
+/** Checks the look and the time, which a request body and a stored row share. The caller checks the name. */
 function parseLookAndTime(raw: Readonly<Record<string, unknown>>, name: string): TankParse {
   const look = parseTankLook(raw["look"]);
   if (look === null) return { ok: false, code: "look_invalid", problem: "The tank look is not valid." };
@@ -60,7 +52,7 @@ function parseLookAndTime(raw: Readonly<Record<string, unknown>>, name: string):
   if (typeof updatedAt !== "number" || !Number.isSafeInteger(updatedAt) || updatedAt <= 0) {
     return { ok: false, code: "tank_time_invalid", problem: "updatedAt must be a whole number of milliseconds since 1970." };
   }
-  // The checked values are stored, not the raw input, so no unknown field reaches the file.
+  // The checked values are stored, not the raw input, so no unknown field reaches the database.
   return { ok: true, value: { name, look, updatedAt } };
 }
 
@@ -77,68 +69,46 @@ function parseAccountTankRequest(raw: unknown): TankParse {
   return parseLookAndTime(raw, checked.name);
 }
 
-/** The tank of every account, in memory, with one file per account when a directory is given. */
+/** The tank of every account. */
 export class AccountTanks {
-  private readonly byAccount = new Map<string, AccountTank>();
-  private readonly directory: string | null;
+  private readonly select: Statement<TankRow, [string]>;
+  private readonly upsert: Statement<unknown, [string, string, number, string, number, number | null, string | null, number]>;
 
-  /** `dataDirectory` is DATA_DIR, or undefined to keep everything in memory. Throws a PersistenceError that names a damaged file. */
-  constructor(dataDirectory: string | undefined) {
-    this.directory = dataDirectory === undefined ? null : join(dataDirectory, TANKS_FOLDER);
-    if (this.directory === null || !existsSync(this.directory)) return;
-    for (const name of readdirSync(this.directory).sort()) {
-      if (!name.endsWith(".json")) continue; // temporary files of an interrupted write
-      const match = ACCOUNT_FILE.exec(name);
-      const path = join(this.directory, name);
-      if (match === null) throw new PersistenceError(`The tank file ${path} is not valid: its name must be an account id.`);
-      this.byAccount.set(match[1] ?? "", readFile(path));
-    }
+  constructor(private readonly db: Database) {
+    const columns = "name, colour, skin, second, plate, icon, updated_at";
+    this.select = db.prepare(`SELECT ${columns} FROM account_tank WHERE account_id = ?`);
+    this.upsert = db.prepare(
+      `INSERT INTO account_tank (account_id, ${columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (account_id) DO UPDATE SET name = excluded.name, colour = excluded.colour, skin = excluded.skin,
+         second = excluded.second, plate = excluded.plate, icon = excluded.icon, updated_at = excluded.updated_at`,
+    );
   }
 
+  /** Throws a PersistenceError that names the account when the stored row is damaged. */
   get(accountId: string): AccountTank | null {
-    return this.byAccount.get(accountId) ?? null;
+    const row = this.select.get(accountId);
+    return row === null ? null : toTank(accountId, row);
   }
 
   /** Creates or replaces the tank. The caller checked it. "Newer wins": an older copy is refused. */
   put(accountId: string, tank: AccountTank): { readonly ok: true } | { readonly ok: false; readonly code: "tank_stale" } {
-    const stored = this.byAccount.get(accountId);
-    if (stored !== undefined && stored.updatedAt > tank.updatedAt) return { ok: false, code: "tank_stale" };
-    this.write(accountId, tank);
-    this.byAccount.set(accountId, tank);
-    return { ok: true };
-  }
-
-  /** Writes before memory changes, so a failed write leaves both as they were. */
-  private write(accountId: string, tank: AccountTank): void {
-    if (this.directory === null) return;
-    // The id reaches a file path, so only the shape the server makes may pass.
-    if (!ACCOUNT_ID.test(accountId)) throw new PersistenceError(`"${accountId}" is not an account id, so it cannot name a file.`);
-    const name = `${accountId}.json`;
-    createPrivateDirectory(this.directory);
-    try {
-      const file: StoredFile = { version: STORED_VERSION, tank };
-      writePrivateFileAtomically(this.directory, name, JSON.stringify(file));
-    } catch (error) {
-      throw new PersistenceError(`The tank of account ${accountId} could not be saved to ${join(this.directory, name)}: ${describe(error)}`);
-    }
+    return this.db.transaction(() => {
+      const stored = this.get(accountId);
+      if (stored !== null && stored.updatedAt > tank.updatedAt) return { ok: false, code: "tank_stale" } as const;
+      const { look } = tank;
+      this.upsert.run(accountId, tank.name, look.colour, look.skin, look.second, look.plate, look.icon, tank.updatedAt);
+      return { ok: true } as const;
+    }).immediate();
   }
 }
 
-function readFile(path: string): AccountTank {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    throw new PersistenceError(`The tank file ${path} cannot be read: ${describe(error)}`);
-  }
-  if (!isRecord(raw) || raw["version"] !== STORED_VERSION || !isRecord(raw["tank"])) {
-    throw new PersistenceError(`The tank file ${path} is not valid: it must hold version ${STORED_VERSION} and a tank.`);
-  }
-  const tank = raw["tank"];
-  const name = parsePlayerName(tank["name"]);
-  if (name === null) throw new PersistenceError(`The tank file ${path} is not valid: the name breaks the name rule.`);
-  const parsed = parseLookAndTime(tank, name);
-  if (!parsed.ok) throw new PersistenceError(`The tank file ${path} is not valid: ${parsed.problem}`);
+function toTank(accountId: string, row: TankRow): AccountTank {
+  const invalid = (reason: string) => new PersistenceError(`The row ${accountId} of the table account_tank is not valid: ${reason}`);
+  const name = parsePlayerName(row.name);
+  if (name === null) throw invalid("the name breaks the name rule.");
+  const look = { colour: row.colour, skin: row.skin, second: row.second, plate: row.plate, icon: row.icon };
+  const parsed = parseLookAndTime({ look, updatedAt: row.updated_at }, name);
+  if (!parsed.ok) throw invalid(parsed.problem);
   return parsed.value;
 }
 

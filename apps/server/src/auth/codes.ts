@@ -1,20 +1,15 @@
-// The live email codes: at most one per account and purpose ("verify" for the email check,
-// "reset" for a new password). In memory, and with a data directory also in
-// <DATA_DIR>/auth/codes.json (0600), saved before memory changes, like the other auth files.
+// The live email codes in the table `email_code`: at most one per account and purpose ("verify"
+// for the email check, "reset" for a new password), read from the database on each call.
 //
 // A code is kept only as a slow password hash (Bun.password, argon2id), with its expiry and its
 // count of wrong tries; the code itself is never stored or logged. A 6-digit code has a million
-// values, so a fast hash such as SHA-256 would give the code back from a copy of the file in under
-// a second; with argon2id at about 50 ms per try a million tries take hours, and the code is dead
-// after 15 minutes.
-//
-// Kept in its own file, so accounts.json keeps version 2 and a restart keeps a code that was sent.
+// values, so a fast hash such as SHA-256 would give the code back from a copy of the database in
+// under a second; with argon2id at about 50 ms per try a million tries take hours, and the code is
+// dead after 15 minutes.
 
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import type { Database, Statement } from "bun:sqlite";
 import type { AccountId } from "@game/arena";
-import { PersistenceError, writePrivateFileAtomically } from "../arena-files.ts";
-import { isRecord } from "../http.ts";
+import { PersistenceError } from "../arena-files.ts";
 
 const CODE_LIFETIME_MS = 15 * 60 * 1000;
 /** Wrong tries one code allows; the fifth wrong try ends it. */
@@ -32,35 +27,50 @@ export interface StoredCode {
   readonly wrongTries: number;
 }
 
-const CODES_FILE = "codes.json";
-const CODES_VERSION = 1;
-
-const keyOf = (accountId: AccountId, purpose: CodePurpose) => `${purpose}:${accountId}`;
+interface CodeRow {
+  readonly account_id: string;
+  readonly purpose: string;
+  readonly code_hash: string;
+  readonly expires_at: number;
+  readonly attempts: number;
+}
 
 export class CodeStore {
-  private codes: ReadonlyMap<string, StoredCode> = new Map();
+  private readonly selectCode: Statement<CodeRow, [string, string]>;
+  private readonly upsertCode: Statement<unknown, [string, string, string, number, number]>;
+  private readonly addAttempt: Statement<CodeRow, [string, string]>;
+  private readonly deleteCode: Statement<unknown, [string, string]>;
+  private readonly deleteDead: Statement<unknown, [number, number]>;
 
-  /** `accountExists` checks the file against the accounts, so a code of an unknown account is a damaged file. */
   constructor(
-    private readonly directory: string | null,
+    db: Database,
     private readonly now: () => number,
-    accountExists: (id: AccountId) => boolean,
   ) {
-    if (directory === null) return;
-    this.codes = readCodes(join(directory, CODES_FILE), accountExists);
+    const columns = "account_id, purpose, code_hash, expires_at, attempts";
+    this.selectCode = db.prepare(`SELECT ${columns} FROM email_code WHERE account_id = ? AND purpose = ?`);
+    // A new code takes the place of the old one, which stops working.
+    this.upsertCode = db.prepare(
+      `INSERT INTO email_code (account_id, purpose, code_hash, attempts, expires_at, sent_at) VALUES (?1, ?2, ?3, 0, ?4, ?5)
+       ON CONFLICT (account_id, purpose) DO UPDATE SET code_hash = excluded.code_hash, attempts = 0, expires_at = excluded.expires_at, sent_at = excluded.sent_at`,
+    );
+    this.addAttempt = db.prepare(`UPDATE email_code SET attempts = attempts + 1 WHERE account_id = ? AND purpose = ? RETURNING ${columns}`);
+    this.deleteCode = db.prepare("DELETE FROM email_code WHERE account_id = ? AND purpose = ?");
+    this.deleteDead = db.prepare("DELETE FROM email_code WHERE expires_at <= ? OR attempts >= ?");
   }
 
   /** The code that still works, or undefined when there is none, it expired, or its tries are used up. */
   live(accountId: AccountId, purpose: CodePurpose): StoredCode | undefined {
-    const code = this.codes.get(keyOf(accountId, purpose));
-    if (code === undefined || this.now() >= code.expiresAt || code.wrongTries >= CODE_MAX_WRONG_TRIES) return undefined;
+    const row = this.selectCode.get(accountId, purpose);
+    if (row === null) return undefined;
+    const code = toCode(row);
+    if (this.now() >= code.expiresAt || code.wrongTries >= CODE_MAX_WRONG_TRIES) return undefined;
     return code;
   }
 
   /** Puts a new code in the place of the old one, which stops working. */
   put(accountId: AccountId, purpose: CodePurpose, codeHash: string): void {
-    const code: StoredCode = { accountId, purpose, codeHash, expiresAt: this.now() + CODE_LIFETIME_MS, wrongTries: 0 };
-    this.replace(new Map(this.codes).set(keyOf(accountId, purpose), code));
+    const sentAt = this.now();
+    this.upsertCode.run(accountId, purpose, codeHash, sentAt + CODE_LIFETIME_MS, sentAt);
   }
 
   /**
@@ -68,72 +78,30 @@ export class CodeStore {
    * limit; a right code is dropped right after. Returns the code with the new count.
    */
   countTry(code: StoredCode): StoredCode {
-    const next = { ...code, wrongTries: code.wrongTries + 1 };
-    this.replace(new Map(this.codes).set(keyOf(code.accountId, code.purpose), next));
-    return next;
+    const row = this.addAttempt.get(code.accountId, code.purpose);
+    // The callers read the code in the same synchronous step, so nothing can have dropped it.
+    if (row === null) throw new Error(`The ${code.purpose} code of account ${code.accountId} disappeared before its try was counted.`);
+    return toCode(row);
   }
 
   /** True while `code` is still the account's code for its purpose (no new code replaced it). */
   isCurrent(code: StoredCode): boolean {
-    return this.codes.get(keyOf(code.accountId, code.purpose))?.codeHash === code.codeHash;
+    return this.selectCode.get(code.accountId, code.purpose)?.code_hash === code.codeHash;
   }
 
   drop(accountId: AccountId, purpose: CodePurpose): void {
-    const key = keyOf(accountId, purpose);
-    if (!this.codes.has(key)) return;
-    const next = new Map(this.codes);
-    next.delete(key);
-    this.replace(next);
+    this.deleteCode.run(accountId, purpose);
   }
 
-  /** Drops codes that expired or are used up, so the file does not grow. */
+  /** Drops codes that expired or are used up, so the table does not grow. */
   dropDead(): void {
-    const now = this.now();
-    const next = new Map([...this.codes].filter(([, c]) => now < c.expiresAt && c.wrongTries < CODE_MAX_WRONG_TRIES));
-    if (next.size !== this.codes.size) this.replace(next);
-  }
-
-  private replace(next: ReadonlyMap<string, StoredCode>): void {
-    if (this.directory !== null) {
-      try {
-        writePrivateFileAtomically(this.directory, CODES_FILE, JSON.stringify({ version: CODES_VERSION, codes: [...next.values()] }));
-      } catch (error) {
-        throw new PersistenceError(`${join(this.directory, CODES_FILE)} could not be saved: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-    this.codes = next;
+    this.deleteDead.run(this.now(), CODE_MAX_WRONG_TRIES);
   }
 }
 
-function readCodes(path: string, accountExists: (id: AccountId) => boolean): ReadonlyMap<string, StoredCode> {
-  const codes = new Map<string, StoredCode>();
-  if (!existsSync(path)) return codes;
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    throw new PersistenceError(`The auth file ${path} cannot be read: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  const invalid = (reason: string) => new PersistenceError(`The auth file ${path} is not valid: ${reason}`);
-  if (!isRecord(raw) || raw["version"] !== CODES_VERSION || !Array.isArray(raw["codes"])) {
-    throw invalid(`it must be { "version": ${CODES_VERSION}, "codes": [...] }.`);
-  }
-  for (const [i, entry] of raw["codes"].entries()) {
-    const purpose = isRecord(entry) ? PURPOSES.find((p) => p === entry["purpose"]) : undefined;
-    if (
-      !isRecord(entry) ||
-      purpose === undefined ||
-      typeof entry["accountId"] !== "string" ||
-      typeof entry["codeHash"] !== "string" || entry["codeHash"] === "" ||
-      typeof entry["expiresAt"] !== "number" || !Number.isFinite(entry["expiresAt"]) ||
-      typeof entry["wrongTries"] !== "number" || !Number.isInteger(entry["wrongTries"]) || entry["wrongTries"] < 0
-    ) {
-      throw invalid(`code ${i} needs an accountId, a purpose, a codeHash, an expiresAt time and a count of wrongTries.`);
-    }
-    if (!accountExists(entry["accountId"])) throw invalid(`code ${i} belongs to an account that does not exist.`);
-    const key = keyOf(entry["accountId"], purpose);
-    if (codes.has(key)) throw invalid(`code ${i} repeats an account and purpose.`);
-    codes.set(key, { accountId: entry["accountId"], purpose, codeHash: entry["codeHash"], expiresAt: entry["expiresAt"], wrongTries: entry["wrongTries"] });
-  }
-  return codes;
+function toCode(row: CodeRow): StoredCode {
+  const purpose = PURPOSES.find((p) => p === row.purpose);
+  const key = `${row.account_id}/${row.purpose}`;
+  if (purpose === undefined) throw new PersistenceError(`The row ${key} of the table email_code is not valid: the purpose is not verify or reset.`);
+  return { accountId: row.account_id, purpose, codeHash: row.code_hash, expiresAt: row.expires_at, wrongTries: row.attempts };
 }

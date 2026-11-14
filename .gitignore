@@ -1,0 +1,27 @@
+# Dependencies and builds
+node_modules/
+dist/
+
+# What the server writes (DATA_DIR, default ./data from the folder the server starts in;
+# `bun run dev:server` starts in apps/server). It holds password hashes, sessions and player tokens.
+/data/
+/apps/server/data/
+
+# Settings with secrets. deploy/env.example is the template and stays.
+.env
+.env.*
+!.env.example
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
+
+# Promo video: kept out of the repository. Its voice files come from an online service and are not ours to license.
+promo/
+
+# Local agent and editor tool state
+.claude/
+.agents/
+.impeccable/
+skills-lock.json

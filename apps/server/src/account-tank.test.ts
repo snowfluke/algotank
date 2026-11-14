@@ -1,0 +1,120 @@
+// "My tank" of an account: who may call the routes, the name rule and the block list,
+// the look check, "newer wins" with 409 for a stale copy, and the files.
+
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { AccountTank, AccountTankErrorResponse, AccountTankResponse } from "@game/arena";
+import { AccountTanks, TANKS_FOLDER } from "./account-tank.ts";
+import { PersistenceError } from "./arena-files.ts";
+import { signUp, startTestServer, type TestServer, type TestServerOptions } from "./test-helpers.ts";
+
+const open: TestServer[] = [];
+const directories: string[] = [];
+afterEach(async () => {
+  for (const t of open.splice(0)) await t.server.stop();
+  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
+});
+
+function start(options: TestServerOptions = {}): TestServer {
+  const t = startTestServer(options);
+  open.push(t);
+  return t;
+}
+
+function temporaryDirectory(): string {
+  const directory = mkdtempSync(join(tmpdir(), "algotank-tanks-"));
+  directories.push(directory);
+  return directory;
+}
+
+const NOW = Date.parse("2026-11-11T09:00:00Z");
+const TANK: AccountTank = { name: "Rara 2015", look: { colour: 9, skin: "stars", second: 3, plate: 6, icon: "moon" }, updatedAt: NOW };
+
+const get = async (t: TestServer, cookie: string): Promise<AccountTankResponse> => {
+  const res = await t.api("/api/account/tank", { cookie });
+  expect(res.status).toBe(200);
+  return (await res.json()) as AccountTankResponse;
+};
+const put = (t: TestServer, cookie: string, body: unknown) => t.api("/api/account/tank", { method: "PUT", cookie, body });
+const errorOf = async (res: Response) => (await res.json()) as AccountTankErrorResponse;
+
+describe("account tank routes", () => {
+  test("need a session, and a change from another site is refused", async () => {
+    const t = start();
+    expect((await t.api("/api/account/tank")).status).toBe(401);
+    expect((await t.api("/api/account/tank", { method: "PUT", body: TANK })).status).toBe(401);
+    const cookie = await signUp(t);
+    const foreign = await t.api("/api/account/tank", { method: "PUT", cookie, body: TANK, headers: { origin: "https://evil.example" } });
+    expect(foreign.status).toBe(403);
+    expect(await get(t, cookie)).toEqual({ tank: null });
+  });
+
+  test("saves the tank and reads it back, per account, with the name as parsePlayerName gives it", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    const other = await signUp(t);
+    expect((await put(t, cookie, { ...TANK, name: "  Rara   2015 ", extra: "dropped" })).status).toBe(204);
+    expect(await get(t, cookie)).toEqual({ tank: TANK });
+    expect(await get(t, other)).toEqual({ tank: null });
+  });
+
+  test("refuses a bad name, a blocked name with a suggestion, a bad look and a bad time", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    expect(await errorOf(await put(t, cookie, { ...TANK, name: "Bo" }))).toMatchObject({ code: "name_invalid" });
+    const blocked = await put(t, cookie, { ...TANK, name: "Tolol 7" });
+    expect(blocked.status).toBe(400);
+    expect(await errorOf(blocked)).toMatchObject({ code: "name_blocked", suggestion: expect.stringMatching(/^[A-Z][a-z]+ [A-Z][a-z]+$/) });
+    expect(await errorOf(await put(t, cookie, { ...TANK, look: { ...TANK.look, second: 9 } }))).toMatchObject({ code: "look_invalid" });
+    for (const updatedAt of [0, 1.5, "now", NOW + 2 * 24 * 60 * 60 * 1000]) {
+      expect(await errorOf(await put(t, cookie, { ...TANK, updatedAt }))).toMatchObject({ code: "tank_time_invalid" });
+    }
+    expect(await get(t, cookie)).toEqual({ tank: null });
+  });
+
+  test("the newer copy wins: an older one is 409 tank_stale, the same time or newer replaces it", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    await put(t, cookie, TANK);
+    const stale = await put(t, cookie, { ...TANK, name: "Older", updatedAt: NOW - 1 });
+    expect(stale.status).toBe(409);
+    expect((await errorOf(stale)).code).toBe("tank_stale");
+    expect((await put(t, cookie, { ...TANK, name: "Newer", updatedAt: NOW + 1 })).status).toBe(204);
+    expect((await get(t, cookie)).tank?.name).toBe("Newer");
+  });
+});
+
+describe("account tank files", () => {
+  test("a saved tank survives a restart in a 0600 file inside a 0700 folder", async () => {
+    const dataDir = temporaryDirectory();
+    const first = start({ dataDir });
+    const cookie = await signUp(first);
+    await put(first, cookie, TANK);
+    const folder = join(dataDir, TANKS_FOLDER);
+    const [file] = readdirSync(folder);
+    expect(statSync(folder).mode & 0o777).toBe(0o700);
+    expect(statSync(join(folder, file!)).mode & 0o777).toBe(0o600);
+    const accountId = file!.replace(/\.json$/, "");
+    expect(new AccountTanks(dataDir).get(accountId)).toEqual(TANK);
+  });
+
+  test("a damaged file stops the start with a message that names it", () => {
+    const dataDir = temporaryDirectory();
+    const folder = join(dataDir, TANKS_FOLDER);
+    mkdirSync(folder, { recursive: true });
+    const path = join(folder, "00000000-0000-0000-0000-000000000000.json");
+    writeFileSync(path, JSON.stringify({ version: 1, tank: { ...TANK, look: { colour: 1 } } }));
+    expect(() => new AccountTanks(dataDir)).toThrow(PersistenceError);
+    expect(() => new AccountTanks(dataDir)).toThrow(path);
+  });
+
+  test("a stored name with a word added to the block list later still loads", () => {
+    const dataDir = temporaryDirectory();
+    const folder = join(dataDir, TANKS_FOLDER);
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, "00000000-0000-0000-0000-000000000000.json"), JSON.stringify({ version: 1, tank: { ...TANK, name: "Anjing" } }));
+    expect(new AccountTanks(dataDir).get("00000000-0000-0000-0000-000000000000")?.name).toBe("Anjing");
+  });
+});

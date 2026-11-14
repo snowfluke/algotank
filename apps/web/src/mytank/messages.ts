@@ -1,0 +1,164 @@
+// Text of "My tank": the editor, its parts, the names of the patterns and icons, and the
+// tank in the join step. Catalog slot: `mytank`. `en` is the source; `id` must have the same shape.
+
+import { PLAYER_NAME_MAX, PLAYER_NAME_MIN, type TankIcon, type TankSkin } from "@game/arena";
+import type { TankPart } from "./parts.ts";
+
+const skinsEn: Record<TankSkin, string> = {
+  plain: "Plain",
+  dots: "Dots",
+  stripes: "Stripes",
+  slants: "Slanted stripes",
+  checks: "Checks",
+  zigzag: "Zigzag",
+  waves: "Waves",
+  stars: "Stars",
+  hearts: "Hearts",
+  splashes: "Splashes",
+  bricks: "Bricks",
+  scales: "Scales",
+};
+
+const iconsEn: Record<TankIcon, string> = {
+  star: "Star",
+  heart: "Heart",
+  bolt: "Lightning",
+  drop: "Water drop",
+  leaf: "Leaf",
+  sun: "Sun",
+  moon: "Moon",
+  crown: "Crown",
+  fish: "Fish",
+  cat: "Cat",
+  bird: "Bird",
+  flower: "Flower",
+  rocket: "Rocket",
+  key: "Key",
+  bell: "Bell",
+  anchor: "Anchor",
+  cloud: "Cloud",
+  flame: "Flame",
+  gem: "Gem",
+  paw: "Paw print",
+  note: "Music note",
+  snowflake: "Snowflake",
+  mushroom: "Mushroom",
+  smile: "Smile",
+};
+
+const partsEn: Record<TankPart, string> = {
+  colour: "Colour",
+  skin: "Pattern",
+  second: "Pattern colour",
+  plate: "Plate",
+  icon: "Icon",
+  name: "Name",
+};
+
+export const en = {
+  heading: "My tank",
+  /** The header's entry: the player's own tank, which opens this page. */
+  open: "My tank, change how your tank looks",
+  parts: "Parts of your tank",
+  partNames: partsEn,
+  /** The question above each part's choices, read by a screen reader as the group's name. */
+  questions: {
+    colour: "Which colour is your tank?",
+    skin: "Which pattern goes on your tank?",
+    second: "Which colour is the pattern?",
+    plate: "Which plate does your tank stand on?",
+    icon: "Which picture goes on top of your tank?",
+    name: "What is your tank called?",
+  } satisfies Record<TankPart, string>,
+  skins: skinsEn,
+  icons: iconsEn,
+  none: "None",
+  /** The second colour cannot be the colour of the hull. */
+  sameAsHull: "This is the colour of your tank already.",
+  surprise: "Surprise me",
+  surprised: "Your tank has a new surprise look.",
+  done: "Done",
+  nameLabel: "Tank name",
+  nameHint: `Use ${PLAYER_NAME_MIN} to ${PLAYER_NAME_MAX} letters or digits, or leave it empty and the game gives your tank a name.`,
+  nameInvalid: `A name has ${PLAYER_NAME_MIN} to ${PLAYER_NAME_MAX} letters or digits, with one space between words, so change it.`,
+  /** In the join step, under the player's tank. */
+  change: "Change my tank",
+  /** The tank without a name yet, in the join step. */
+  /** The account refused the name and the game's suggestion took its place. */
+  nameReplaced: (refused: string) => `The game cannot use the name ${refused}, so it gave your tank one of its own names.`,
+  /** Shown when the browser blocks storage. */
+  notKept: "This browser does not keep your tank, so it lasts until you close this page.",
+};
+
+export const id: typeof en = {
+  heading: "Tank kamu",
+  open: "Tank kamu, ubah tampilannya",
+  parts: "Bagian tank kamu",
+  partNames: {
+    colour: "Warna",
+    skin: "Motif",
+    second: "Warna motif",
+    plate: "Alas",
+    icon: "Ikon",
+    name: "Nama",
+  },
+  questions: {
+    colour: "Tank kamu warna apa?",
+    skin: "Motif apa yang ada di tank kamu?",
+    second: "Motifnya warna apa?",
+    plate: "Tank kamu berdiri di atas alas apa?",
+    icon: "Gambar apa yang ada di atas tank kamu?",
+    name: "Apa nama tank kamu?",
+  },
+  skins: {
+    plain: "Polos",
+    dots: "Bintik",
+    stripes: "Garis",
+    slants: "Garis miring",
+    checks: "Kotak-kotak",
+    zigzag: "Zigzag",
+    waves: "Ombak",
+    stars: "Bintang",
+    hearts: "Hati",
+    splashes: "Cipratan",
+    bricks: "Bata",
+    scales: "Sisik",
+  },
+  icons: {
+    star: "Bintang",
+    heart: "Hati",
+    bolt: "Petir",
+    drop: "Tetes air",
+    leaf: "Daun",
+    sun: "Matahari",
+    moon: "Bulan",
+    crown: "Mahkota",
+    fish: "Ikan",
+    cat: "Kucing",
+    bird: "Burung",
+    flower: "Bunga",
+    rocket: "Roket",
+    key: "Kunci",
+    bell: "Lonceng",
+    anchor: "Jangkar",
+    cloud: "Awan",
+    flame: "Api",
+    gem: "Permata",
+    paw: "Jejak kaki",
+    note: "Not musik",
+    snowflake: "Kepingan salju",
+    mushroom: "Jamur",
+    smile: "Senyum",
+  },
+  none: "Tidak ada",
+  sameAsHull: "Ini sudah jadi warna tank kamu.",
+  surprise: "Pilih acak",
+  surprised: "Tank kamu dapat tampilan acak yang baru.",
+  done: "Selesai",
+  nameLabel: "Nama tank",
+  nameHint: `Pakai ${PLAYER_NAME_MIN} sampai ${PLAYER_NAME_MAX} huruf atau angka. Kalau dikosongkan, permainan memberi nama untuk tank kamu.`,
+  nameInvalid: `Nama berisi ${PLAYER_NAME_MIN} sampai ${PLAYER_NAME_MAX} huruf atau angka dengan satu spasi di antara kata, jadi ubah namanya.`,
+  change: "Ubah tank kamu",
+  nameReplaced: (refused) => `Permainan tidak bisa memakai nama ${refused}, jadi tank kamu diberi nama dari permainan.`,
+  notKept: "Browser ini tidak menyimpan tank kamu, jadi tank ini hanya ada sampai halaman ini ditutup.",
+};

@@ -1,0 +1,9102 @@
+[
+ {
+  "seed": 1000,
+  "ruleSetId": "standard",
+  "ticksSha256": "605d5670a968173f6947b8a5e1ad8291d2e304bd0387368d4f87ac98c7b729a1",
+  "standings": [
+   {
+    "botId": "seat-053",
+    "score": 15,
+    "rank": 1,
+    "hitsLanded": 21,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-008",
+    "score": 14,
+    "rank": 2,
+    "hitsLanded": 17,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-029",
+    "score": 13,
+    "rank": 3,
+    "hitsLanded": 19,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-060",
+    "score": 13,
+    "rank": 4,
+    "hitsLanded": 18,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-048",
+    "score": 13,
+    "rank": 5,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-056",
+    "score": 12,
+    "rank": 6,
+    "hitsLanded": 15,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-035",
+    "score": 11,
+    "rank": 7,
+    "hitsLanded": 24,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-059",
+    "score": 11,
+    "rank": 8,
+    "hitsLanded": 22,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-019",
+    "score": 11,
+    "rank": 9,
+    "hitsLanded": 21,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-005",
+    "score": 9,
+    "rank": 10,
+    "hitsLanded": 18,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-042",
+    "score": 8,
+    "rank": 11,
+    "hitsLanded": 22,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-051",
+    "score": 8,
+    "rank": 12,
+    "hitsLanded": 21,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-016",
+    "score": 8,
+    "rank": 13,
+    "hitsLanded": 19,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-049",
+    "score": 8,
+    "rank": 14,
+    "hitsLanded": 18,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-045",
+    "score": 8,
+    "rank": 15,
+    "hitsLanded": 14,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-028",
+    "score": 7,
+    "rank": 16,
+    "hitsLanded": 22,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-044",
+    "score": 7,
+    "rank": 17,
+    "hitsLanded": 21,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-020",
+    "score": 7,
+    "rank": 18,
+    "hitsLanded": 20,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-062",
+    "score": 7,
+    "rank": 19,
+    "hitsLanded": 14,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-000",
+    "score": 6,
+    "rank": 20,
+    "hitsLanded": 12,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-058",
+    "score": 5,
+    "rank": 21,
+    "hitsLanded": 20,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-011",
+    "score": 5,
+    "rank": 22,
+    "hitsLanded": 19,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-043",
+    "score": 5,
+    "rank": 23,
+    "hitsLanded": 16,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-061",
+    "score": 5,
+    "rank": 24,
+    "hitsLanded": 13,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-052",
+    "score": 4,
+    "rank": 25,
+    "hitsLanded": 17,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-012",
+    "score": 3,
+    "rank": 26,
+    "hitsLanded": 17,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-039",
+    "score": 3,
+    "rank": 27,
+    "hitsLanded": 14,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-057",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 10,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-013",
+    "score": 2,
+    "rank": 29,
+    "hitsLanded": 21,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-037",
+    "score": 2,
+    "rank": 30,
+    "hitsLanded": 15,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-025",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 9,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-002",
+    "score": 1,
+    "rank": 32,
+    "hitsLanded": 20,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-050",
+    "score": 1,
+    "rank": 33,
+    "hitsLanded": 18,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-034",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 17,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-009",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 16,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-017",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 14,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-027",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 20,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-003",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 19,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-036",
+    "score": -1,
+    "rank": 39,
+    "hitsLanded": 21,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-021",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 14,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-047",
+    "score": -2,
+    "rank": 41,
+    "hitsLanded": 9,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-040",
+    "score": -3,
+    "rank": 42,
+    "hitsLanded": 11,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-026",
+    "score": -4,
+    "rank": 43,
+    "hitsLanded": 22,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-033",
+    "score": -4,
+    "rank": 44,
+    "hitsLanded": 13,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-024",
+    "score": -4,
+    "rank": 45,
+    "hitsLanded": 11,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-041",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 9,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-004",
+    "score": -5,
+    "rank": 47,
+    "hitsLanded": 15,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-030",
+    "score": -5,
+    "rank": 48,
+    "hitsLanded": 14,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-063",
+    "score": -6,
+    "rank": 49,
+    "hitsLanded": 14,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-023",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 23,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-001",
+    "score": -7,
+    "rank": 51,
+    "hitsLanded": 8,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-018",
+    "score": -8,
+    "rank": 52,
+    "hitsLanded": 18,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-014",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 18,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-015",
+    "score": -10,
+    "rank": 54,
+    "hitsLanded": 19,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-010",
+    "score": -10,
+    "rank": 55,
+    "hitsLanded": 19,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-032",
+    "score": -10,
+    "rank": 56,
+    "hitsLanded": 12,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-055",
+    "score": -10,
+    "rank": 57,
+    "hitsLanded": 10,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-022",
+    "score": -12,
+    "rank": 58,
+    "hitsLanded": 16,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-046",
+    "score": -13,
+    "rank": 59,
+    "hitsLanded": 22,
+    "hitsTaken": 35
+   },
+   {
+    "botId": "seat-054",
+    "score": -14,
+    "rank": 60,
+    "hitsLanded": 20,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-038",
+    "score": -18,
+    "rank": 61,
+    "hitsLanded": 14,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-006",
+    "score": -22,
+    "rank": 62,
+    "hitsLanded": 17,
+    "hitsTaken": 39
+   },
+   {
+    "botId": "seat-031",
+    "score": -24,
+    "rank": 63,
+    "hitsLanded": 11,
+    "hitsTaken": 35
+   },
+   {
+    "botId": "seat-007",
+    "score": -27,
+    "rank": 64,
+    "hitsLanded": 9,
+    "hitsTaken": 36
+   }
+  ]
+ },
+ {
+  "seed": 8919,
+  "ruleSetId": "arms-length",
+  "ticksSha256": "f0967f6e9c8df320c9f6ac18fed7de1132b5b8bfc4b87308af6697348e35b190",
+  "standings": [
+   {
+    "botId": "seat-027",
+    "score": 14,
+    "rank": 1,
+    "hitsLanded": 21,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-035",
+    "score": 14,
+    "rank": 2,
+    "hitsLanded": 19,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-060",
+    "score": 13,
+    "rank": 3,
+    "hitsLanded": 19,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-062",
+    "score": 12,
+    "rank": 4,
+    "hitsLanded": 23,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-029",
+    "score": 12,
+    "rank": 5,
+    "hitsLanded": 16,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-061",
+    "score": 11,
+    "rank": 6,
+    "hitsLanded": 21,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-016",
+    "score": 11,
+    "rank": 7,
+    "hitsLanded": 21,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-043",
+    "score": 11,
+    "rank": 8,
+    "hitsLanded": 20,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-051",
+    "score": 11,
+    "rank": 9,
+    "hitsLanded": 18,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-044",
+    "score": 11,
+    "rank": 10,
+    "hitsLanded": 17,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-056",
+    "score": 10,
+    "rank": 11,
+    "hitsLanded": 20,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-040",
+    "score": 10,
+    "rank": 12,
+    "hitsLanded": 20,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-022",
+    "score": 10,
+    "rank": 13,
+    "hitsLanded": 19,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-026",
+    "score": 8,
+    "rank": 14,
+    "hitsLanded": 21,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-057",
+    "score": 8,
+    "rank": 15,
+    "hitsLanded": 18,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-048",
+    "score": 8,
+    "rank": 16,
+    "hitsLanded": 15,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-050",
+    "score": 7,
+    "rank": 17,
+    "hitsLanded": 23,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-042",
+    "score": 7,
+    "rank": 18,
+    "hitsLanded": 20,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-032",
+    "score": 7,
+    "rank": 19,
+    "hitsLanded": 19,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-052",
+    "score": 7,
+    "rank": 20,
+    "hitsLanded": 18,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-025",
+    "score": 7,
+    "rank": 21,
+    "hitsLanded": 16,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-041",
+    "score": 7,
+    "rank": 22,
+    "hitsLanded": 14,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-047",
+    "score": 7,
+    "rank": 23,
+    "hitsLanded": 12,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-059",
+    "score": 6,
+    "rank": 24,
+    "hitsLanded": 19,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-036",
+    "score": 5,
+    "rank": 25,
+    "hitsLanded": 20,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-008",
+    "score": 5,
+    "rank": 26,
+    "hitsLanded": 17,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-049",
+    "score": 4,
+    "rank": 27,
+    "hitsLanded": 18,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-053",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 21,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-058",
+    "score": 3,
+    "rank": 29,
+    "hitsLanded": 21,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-013",
+    "score": 3,
+    "rank": 30,
+    "hitsLanded": 19,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-014",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 21,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-034",
+    "score": 2,
+    "rank": 32,
+    "hitsLanded": 20,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-024",
+    "score": 2,
+    "rank": 33,
+    "hitsLanded": 19,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-019",
+    "score": 2,
+    "rank": 34,
+    "hitsLanded": 17,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-011",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 21,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-031",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 19,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-021",
+    "score": 1,
+    "rank": 37,
+    "hitsLanded": 17,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-030",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 19,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-004",
+    "score": 0,
+    "rank": 39,
+    "hitsLanded": 17,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-028",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 21,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-012",
+    "score": -1,
+    "rank": 41,
+    "hitsLanded": 19,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-020",
+    "score": -2,
+    "rank": 42,
+    "hitsLanded": 21,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-003",
+    "score": -2,
+    "rank": 43,
+    "hitsLanded": 18,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-055",
+    "score": -2,
+    "rank": 44,
+    "hitsLanded": 18,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-045",
+    "score": -2,
+    "rank": 45,
+    "hitsLanded": 14,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-002",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 19,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-046",
+    "score": -5,
+    "rank": 47,
+    "hitsLanded": 22,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-017",
+    "score": -5,
+    "rank": 48,
+    "hitsLanded": 15,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-039",
+    "score": -5,
+    "rank": 49,
+    "hitsLanded": 14,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-001",
+    "score": -5,
+    "rank": 50,
+    "hitsLanded": 9,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-033",
+    "score": -7,
+    "rank": 51,
+    "hitsLanded": 7,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-037",
+    "score": -8,
+    "rank": 52,
+    "hitsLanded": 19,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-005",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 19,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-009",
+    "score": -9,
+    "rank": 54,
+    "hitsLanded": 11,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-063",
+    "score": -10,
+    "rank": 55,
+    "hitsLanded": 15,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-054",
+    "score": -12,
+    "rank": 56,
+    "hitsLanded": 24,
+    "hitsTaken": 36
+   },
+   {
+    "botId": "seat-015",
+    "score": -13,
+    "rank": 57,
+    "hitsLanded": 12,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-038",
+    "score": -15,
+    "rank": 58,
+    "hitsLanded": 23,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-000",
+    "score": -15,
+    "rank": 59,
+    "hitsLanded": 9,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-018",
+    "score": -16,
+    "rank": 60,
+    "hitsLanded": 19,
+    "hitsTaken": 35
+   },
+   {
+    "botId": "seat-006",
+    "score": -23,
+    "rank": 61,
+    "hitsLanded": 21,
+    "hitsTaken": 44
+   },
+   {
+    "botId": "seat-007",
+    "score": -24,
+    "rank": 62,
+    "hitsLanded": 16,
+    "hitsTaken": 40
+   },
+   {
+    "botId": "seat-010",
+    "score": -27,
+    "rank": 63,
+    "hitsLanded": 20,
+    "hitsTaken": 47
+   },
+   {
+    "botId": "seat-023",
+    "score": -41,
+    "rank": 64,
+    "hitsLanded": 20,
+    "hitsTaken": 61
+   }
+  ]
+ },
+ {
+  "seed": 16838,
+  "ruleSetId": "dry-spell",
+  "ticksSha256": "4cdfdc0c5fcd4ab686dbdeadfa6c6306a6bafada45431d0225106d91bcd4afbe",
+  "standings": [
+   {
+    "botId": "seat-008",
+    "score": 10,
+    "rank": 1,
+    "hitsLanded": 14,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-032",
+    "score": 9,
+    "rank": 2,
+    "hitsLanded": 14,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-058",
+    "score": 9,
+    "rank": 3,
+    "hitsLanded": 13,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-050",
+    "score": 8,
+    "rank": 4,
+    "hitsLanded": 13,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-056",
+    "score": 7,
+    "rank": 5,
+    "hitsLanded": 12,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-030",
+    "score": 7,
+    "rank": 6,
+    "hitsLanded": 11,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-027",
+    "score": 7,
+    "rank": 7,
+    "hitsLanded": 10,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-042",
+    "score": 6,
+    "rank": 8,
+    "hitsLanded": 15,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-016",
+    "score": 6,
+    "rank": 9,
+    "hitsLanded": 12,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-024",
+    "score": 6,
+    "rank": 10,
+    "hitsLanded": 12,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-052",
+    "score": 6,
+    "rank": 11,
+    "hitsLanded": 10,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-029",
+    "score": 6,
+    "rank": 12,
+    "hitsLanded": 10,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-040",
+    "score": 6,
+    "rank": 13,
+    "hitsLanded": 10,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-060",
+    "score": 6,
+    "rank": 14,
+    "hitsLanded": 9,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-011",
+    "score": 6,
+    "rank": 15,
+    "hitsLanded": 8,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-019",
+    "score": 5,
+    "rank": 16,
+    "hitsLanded": 10,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-051",
+    "score": 5,
+    "rank": 17,
+    "hitsLanded": 8,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-059",
+    "score": 5,
+    "rank": 18,
+    "hitsLanded": 8,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-057",
+    "score": 5,
+    "rank": 19,
+    "hitsLanded": 7,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-041",
+    "score": 4,
+    "rank": 20,
+    "hitsLanded": 8,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-012",
+    "score": 4,
+    "rank": 21,
+    "hitsLanded": 7,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-035",
+    "score": 4,
+    "rank": 22,
+    "hitsLanded": 7,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-005",
+    "score": 4,
+    "rank": 23,
+    "hitsLanded": 7,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-026",
+    "score": 3,
+    "rank": 24,
+    "hitsLanded": 11,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-045",
+    "score": 3,
+    "rank": 25,
+    "hitsLanded": 10,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-018",
+    "score": 3,
+    "rank": 26,
+    "hitsLanded": 10,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-053",
+    "score": 3,
+    "rank": 27,
+    "hitsLanded": 6,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-025",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 5,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-062",
+    "score": 2,
+    "rank": 29,
+    "hitsLanded": 11,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-003",
+    "score": 2,
+    "rank": 30,
+    "hitsLanded": 10,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-055",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 9,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-021",
+    "score": 2,
+    "rank": 32,
+    "hitsLanded": 8,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-037",
+    "score": 2,
+    "rank": 33,
+    "hitsLanded": 6,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-002",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 13,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-043",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 10,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-044",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 9,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-017",
+    "score": 1,
+    "rank": 37,
+    "hitsLanded": 8,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-004",
+    "score": 1,
+    "rank": 38,
+    "hitsLanded": 8,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-061",
+    "score": 1,
+    "rank": 39,
+    "hitsLanded": 8,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-036",
+    "score": 1,
+    "rank": 40,
+    "hitsLanded": 7,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-049",
+    "score": 1,
+    "rank": 41,
+    "hitsLanded": 5,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-054",
+    "score": 0,
+    "rank": 42,
+    "hitsLanded": 12,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-033",
+    "score": 0,
+    "rank": 43,
+    "hitsLanded": 7,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-046",
+    "score": -1,
+    "rank": 44,
+    "hitsLanded": 14,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-000",
+    "score": -1,
+    "rank": 45,
+    "hitsLanded": 10,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-039",
+    "score": -1,
+    "rank": 46,
+    "hitsLanded": 9,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-034",
+    "score": -3,
+    "rank": 47,
+    "hitsLanded": 12,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-020",
+    "score": -3,
+    "rank": 48,
+    "hitsLanded": 9,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-028",
+    "score": -3,
+    "rank": 49,
+    "hitsLanded": 7,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-009",
+    "score": -3,
+    "rank": 50,
+    "hitsLanded": 5,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-023",
+    "score": -3,
+    "rank": 51,
+    "hitsLanded": 4,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-010",
+    "score": -4,
+    "rank": 52,
+    "hitsLanded": 12,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-048",
+    "score": -4,
+    "rank": 53,
+    "hitsLanded": 6,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-001",
+    "score": -5,
+    "rank": 54,
+    "hitsLanded": 6,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-007",
+    "score": -6,
+    "rank": 55,
+    "hitsLanded": 6,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-013",
+    "score": -8,
+    "rank": 56,
+    "hitsLanded": 9,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-022",
+    "score": -9,
+    "rank": 57,
+    "hitsLanded": 11,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-047",
+    "score": -9,
+    "rank": 58,
+    "hitsLanded": 9,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-031",
+    "score": -13,
+    "rank": 59,
+    "hitsLanded": 7,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-063",
+    "score": -13,
+    "rank": 60,
+    "hitsLanded": 7,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-015",
+    "score": -14,
+    "rank": 61,
+    "hitsLanded": 8,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-038",
+    "score": -15,
+    "rank": 62,
+    "hitsLanded": 11,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-006",
+    "score": -22,
+    "rank": 63,
+    "hitsLanded": 11,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-014",
+    "score": -34,
+    "rank": 64,
+    "hitsLanded": 5,
+    "hitsTaken": 39
+   }
+  ]
+ },
+ {
+  "seed": 24757,
+  "ruleSetId": "downpour",
+  "ticksSha256": "d157cc77120ea95598f2bd0bcbb23661df8594af4acfe524c397ac64deb87294",
+  "standings": [
+   {
+    "botId": "seat-026",
+    "score": 21,
+    "rank": 1,
+    "hitsLanded": 31,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-044",
+    "score": 19,
+    "rank": 2,
+    "hitsLanded": 28,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-052",
+    "score": 19,
+    "rank": 3,
+    "hitsLanded": 28,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-024",
+    "score": 19,
+    "rank": 4,
+    "hitsLanded": 26,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-057",
+    "score": 19,
+    "rank": 5,
+    "hitsLanded": 26,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-059",
+    "score": 19,
+    "rank": 6,
+    "hitsLanded": 24,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-032",
+    "score": 17,
+    "rank": 7,
+    "hitsLanded": 28,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-003",
+    "score": 16,
+    "rank": 8,
+    "hitsLanded": 27,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-028",
+    "score": 16,
+    "rank": 9,
+    "hitsLanded": 27,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-017",
+    "score": 16,
+    "rank": 10,
+    "hitsLanded": 23,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-054",
+    "score": 15,
+    "rank": 11,
+    "hitsLanded": 32,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-061",
+    "score": 15,
+    "rank": 12,
+    "hitsLanded": 27,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-045",
+    "score": 15,
+    "rank": 13,
+    "hitsLanded": 27,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-025",
+    "score": 15,
+    "rank": 14,
+    "hitsLanded": 24,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-037",
+    "score": 14,
+    "rank": 15,
+    "hitsLanded": 28,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-053",
+    "score": 14,
+    "rank": 16,
+    "hitsLanded": 27,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-060",
+    "score": 14,
+    "rank": 17,
+    "hitsLanded": 26,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-001",
+    "score": 13,
+    "rank": 18,
+    "hitsLanded": 27,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-033",
+    "score": 13,
+    "rank": 19,
+    "hitsLanded": 21,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-041",
+    "score": 12,
+    "rank": 20,
+    "hitsLanded": 22,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-009",
+    "score": 12,
+    "rank": 21,
+    "hitsLanded": 22,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-035",
+    "score": 11,
+    "rank": 22,
+    "hitsLanded": 26,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-048",
+    "score": 11,
+    "rank": 23,
+    "hitsLanded": 26,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-018",
+    "score": 10,
+    "rank": 24,
+    "hitsLanded": 29,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-043",
+    "score": 10,
+    "rank": 25,
+    "hitsLanded": 26,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-062",
+    "score": 10,
+    "rank": 26,
+    "hitsLanded": 26,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-016",
+    "score": 9,
+    "rank": 27,
+    "hitsLanded": 23,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-049",
+    "score": 9,
+    "rank": 28,
+    "hitsLanded": 23,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-058",
+    "score": 8,
+    "rank": 29,
+    "hitsLanded": 30,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-056",
+    "score": 5,
+    "rank": 30,
+    "hitsLanded": 18,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-046",
+    "score": 3,
+    "rank": 31,
+    "hitsLanded": 32,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-005",
+    "score": 3,
+    "rank": 32,
+    "hitsLanded": 28,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-034",
+    "score": 2,
+    "rank": 33,
+    "hitsLanded": 30,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-036",
+    "score": 2,
+    "rank": 34,
+    "hitsLanded": 26,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-000",
+    "score": 2,
+    "rank": 35,
+    "hitsLanded": 19,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-030",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 33,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-014",
+    "score": 1,
+    "rank": 37,
+    "hitsLanded": 28,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-008",
+    "score": -1,
+    "rank": 38,
+    "hitsLanded": 21,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-051",
+    "score": -2,
+    "rank": 39,
+    "hitsLanded": 27,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-063",
+    "score": -2,
+    "rank": 40,
+    "hitsLanded": 4,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-004",
+    "score": -3,
+    "rank": 41,
+    "hitsLanded": 28,
+    "hitsTaken": 31
+   },
+   {
+    "botId": "seat-027",
+    "score": -3,
+    "rank": 42,
+    "hitsLanded": 26,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-039",
+    "score": -4,
+    "rank": 43,
+    "hitsLanded": 10,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-012",
+    "score": -5,
+    "rank": 44,
+    "hitsLanded": 25,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-055",
+    "score": -6,
+    "rank": 45,
+    "hitsLanded": 21,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-047",
+    "score": -6,
+    "rank": 46,
+    "hitsLanded": 20,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-040",
+    "score": -6,
+    "rank": 47,
+    "hitsLanded": 17,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-019",
+    "score": -7,
+    "rank": 48,
+    "hitsLanded": 27,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-029",
+    "score": -7,
+    "rank": 49,
+    "hitsLanded": 22,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-031",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 12,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-021",
+    "score": -10,
+    "rank": 51,
+    "hitsLanded": 30,
+    "hitsTaken": 40
+   },
+   {
+    "botId": "seat-013",
+    "score": -12,
+    "rank": 52,
+    "hitsLanded": 29,
+    "hitsTaken": 41
+   },
+   {
+    "botId": "seat-042",
+    "score": -14,
+    "rank": 53,
+    "hitsLanded": 30,
+    "hitsTaken": 44
+   },
+   {
+    "botId": "seat-020",
+    "score": -15,
+    "rank": 54,
+    "hitsLanded": 30,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-011",
+    "score": -15,
+    "rank": 55,
+    "hitsLanded": 30,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-010",
+    "score": -18,
+    "rank": 56,
+    "hitsLanded": 28,
+    "hitsTaken": 46
+   },
+   {
+    "botId": "seat-015",
+    "score": -18,
+    "rank": 57,
+    "hitsLanded": 27,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-050",
+    "score": -25,
+    "rank": 58,
+    "hitsLanded": 29,
+    "hitsTaken": 54
+   },
+   {
+    "botId": "seat-023",
+    "score": -25,
+    "rank": 59,
+    "hitsLanded": 23,
+    "hitsTaken": 48
+   },
+   {
+    "botId": "seat-007",
+    "score": -28,
+    "rank": 60,
+    "hitsLanded": 18,
+    "hitsTaken": 46
+   },
+   {
+    "botId": "seat-022",
+    "score": -34,
+    "rank": 61,
+    "hitsLanded": 27,
+    "hitsTaken": 61
+   },
+   {
+    "botId": "seat-002",
+    "score": -36,
+    "rank": 62,
+    "hitsLanded": 27,
+    "hitsTaken": 63
+   },
+   {
+    "botId": "seat-038",
+    "score": -48,
+    "rank": 63,
+    "hitsLanded": 28,
+    "hitsTaken": 76
+   },
+   {
+    "botId": "seat-006",
+    "score": -73,
+    "rank": 64,
+    "hitsLanded": 28,
+    "hitsTaken": 101
+   }
+  ]
+ },
+ {
+  "seed": 32676,
+  "ruleSetId": "open-field",
+  "ticksSha256": "b1e6fa5eb590162a896c620cb1a25a17edfee631a4335ba1c7d2c2f9b648762a",
+  "standings": [
+   {
+    "botId": "seat-060",
+    "score": 19,
+    "rank": 1,
+    "hitsLanded": 19,
+    "hitsTaken": 0
+   },
+   {
+    "botId": "seat-014",
+    "score": 16,
+    "rank": 2,
+    "hitsLanded": 18,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-050",
+    "score": 15,
+    "rank": 3,
+    "hitsLanded": 19,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-061",
+    "score": 14,
+    "rank": 4,
+    "hitsLanded": 18,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-012",
+    "score": 13,
+    "rank": 5,
+    "hitsLanded": 18,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-053",
+    "score": 13,
+    "rank": 6,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-037",
+    "score": 13,
+    "rank": 7,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-045",
+    "score": 13,
+    "rank": 8,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-056",
+    "score": 13,
+    "rank": 9,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-059",
+    "score": 12,
+    "rank": 10,
+    "hitsLanded": 18,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-011",
+    "score": 12,
+    "rank": 11,
+    "hitsLanded": 17,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-032",
+    "score": 12,
+    "rank": 12,
+    "hitsLanded": 17,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-002",
+    "score": 12,
+    "rank": 13,
+    "hitsLanded": 16,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-052",
+    "score": 11,
+    "rank": 14,
+    "hitsLanded": 13,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-044",
+    "score": 10,
+    "rank": 15,
+    "hitsLanded": 17,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-026",
+    "score": 9,
+    "rank": 16,
+    "hitsLanded": 20,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-051",
+    "score": 9,
+    "rank": 17,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-062",
+    "score": 8,
+    "rank": 18,
+    "hitsLanded": 14,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-039",
+    "score": 8,
+    "rank": 19,
+    "hitsLanded": 14,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-041",
+    "score": 8,
+    "rank": 20,
+    "hitsLanded": 12,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-027",
+    "score": 6,
+    "rank": 21,
+    "hitsLanded": 19,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-035",
+    "score": 6,
+    "rank": 22,
+    "hitsLanded": 16,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-020",
+    "score": 5,
+    "rank": 23,
+    "hitsLanded": 21,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-043",
+    "score": 5,
+    "rank": 24,
+    "hitsLanded": 20,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-019",
+    "score": 5,
+    "rank": 25,
+    "hitsLanded": 17,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-017",
+    "score": 5,
+    "rank": 26,
+    "hitsLanded": 12,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-000",
+    "score": 4,
+    "rank": 27,
+    "hitsLanded": 17,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-040",
+    "score": 4,
+    "rank": 28,
+    "hitsLanded": 17,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-013",
+    "score": 4,
+    "rank": 29,
+    "hitsLanded": 16,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-024",
+    "score": 4,
+    "rank": 30,
+    "hitsLanded": 15,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-055",
+    "score": 4,
+    "rank": 31,
+    "hitsLanded": 13,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-009",
+    "score": 4,
+    "rank": 32,
+    "hitsLanded": 12,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-008",
+    "score": 4,
+    "rank": 33,
+    "hitsLanded": 11,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-033",
+    "score": 4,
+    "rank": 34,
+    "hitsLanded": 8,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-029",
+    "score": 3,
+    "rank": 35,
+    "hitsLanded": 18,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-004",
+    "score": 2,
+    "rank": 36,
+    "hitsLanded": 18,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-028",
+    "score": 2,
+    "rank": 37,
+    "hitsLanded": 16,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-036",
+    "score": 2,
+    "rank": 38,
+    "hitsLanded": 14,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-049",
+    "score": 2,
+    "rank": 39,
+    "hitsLanded": 8,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-018",
+    "score": 1,
+    "rank": 40,
+    "hitsLanded": 16,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-057",
+    "score": 0,
+    "rank": 41,
+    "hitsLanded": 8,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-038",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 20,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-042",
+    "score": -2,
+    "rank": 43,
+    "hitsLanded": 18,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-005",
+    "score": -3,
+    "rank": 44,
+    "hitsLanded": 17,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-015",
+    "score": -3,
+    "rank": 45,
+    "hitsLanded": 3,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-003",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 19,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-021",
+    "score": -4,
+    "rank": 47,
+    "hitsLanded": 18,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-063",
+    "score": -4,
+    "rank": 48,
+    "hitsLanded": 11,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-034",
+    "score": -6,
+    "rank": 49,
+    "hitsLanded": 17,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-058",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 15,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-048",
+    "score": -7,
+    "rank": 51,
+    "hitsLanded": 10,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-016",
+    "score": -7,
+    "rank": 52,
+    "hitsLanded": 8,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-047",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 15,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-025",
+    "score": -12,
+    "rank": 54,
+    "hitsLanded": 2,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-001",
+    "score": -15,
+    "rank": 55,
+    "hitsLanded": 4,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-054",
+    "score": -16,
+    "rank": 56,
+    "hitsLanded": 21,
+    "hitsTaken": 37
+   },
+   {
+    "botId": "seat-010",
+    "score": -17,
+    "rank": 57,
+    "hitsLanded": 21,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-030",
+    "score": -17,
+    "rank": 58,
+    "hitsLanded": 19,
+    "hitsTaken": 36
+   },
+   {
+    "botId": "seat-006",
+    "score": -18,
+    "rank": 59,
+    "hitsLanded": 20,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-022",
+    "score": -22,
+    "rank": 60,
+    "hitsLanded": 21,
+    "hitsTaken": 43
+   },
+   {
+    "botId": "seat-023",
+    "score": -26,
+    "rank": 61,
+    "hitsLanded": 11,
+    "hitsTaken": 37
+   },
+   {
+    "botId": "seat-046",
+    "score": -28,
+    "rank": 62,
+    "hitsLanded": 22,
+    "hitsTaken": 50
+   },
+   {
+    "botId": "seat-031",
+    "score": -42,
+    "rank": 63,
+    "hitsLanded": 21,
+    "hitsTaken": 63
+   },
+   {
+    "botId": "seat-007",
+    "score": -46,
+    "rank": 64,
+    "hitsLanded": 23,
+    "hitsTaken": 69
+   }
+  ]
+ },
+ {
+  "seed": 40595,
+  "ruleSetId": "sharp-eyes",
+  "ticksSha256": "01d37a818fa958404ab72b49eabae9360f4107876fccb51bb88c9530cb14938f",
+  "standings": [
+   {
+    "botId": "seat-035",
+    "score": 13,
+    "rank": 1,
+    "hitsLanded": 20,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-059",
+    "score": 13,
+    "rank": 2,
+    "hitsLanded": 20,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-021",
+    "score": 12,
+    "rank": 3,
+    "hitsLanded": 21,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-018",
+    "score": 12,
+    "rank": 4,
+    "hitsLanded": 21,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-049",
+    "score": 12,
+    "rank": 5,
+    "hitsLanded": 19,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-003",
+    "score": 11,
+    "rank": 6,
+    "hitsLanded": 20,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-061",
+    "score": 11,
+    "rank": 7,
+    "hitsLanded": 19,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-027",
+    "score": 10,
+    "rank": 8,
+    "hitsLanded": 19,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-056",
+    "score": 10,
+    "rank": 9,
+    "hitsLanded": 19,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-045",
+    "score": 10,
+    "rank": 10,
+    "hitsLanded": 16,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-054",
+    "score": 9,
+    "rank": 11,
+    "hitsLanded": 24,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-043",
+    "score": 9,
+    "rank": 12,
+    "hitsLanded": 19,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-040",
+    "score": 9,
+    "rank": 13,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-042",
+    "score": 9,
+    "rank": 14,
+    "hitsLanded": 15,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-060",
+    "score": 8,
+    "rank": 15,
+    "hitsLanded": 22,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-052",
+    "score": 8,
+    "rank": 16,
+    "hitsLanded": 22,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-024",
+    "score": 8,
+    "rank": 17,
+    "hitsLanded": 14,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-026",
+    "score": 7,
+    "rank": 18,
+    "hitsLanded": 20,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-044",
+    "score": 7,
+    "rank": 19,
+    "hitsLanded": 19,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-048",
+    "score": 7,
+    "rank": 20,
+    "hitsLanded": 16,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-053",
+    "score": 7,
+    "rank": 21,
+    "hitsLanded": 10,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-010",
+    "score": 6,
+    "rank": 22,
+    "hitsLanded": 19,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-051",
+    "score": 5,
+    "rank": 23,
+    "hitsLanded": 17,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-017",
+    "score": 4,
+    "rank": 24,
+    "hitsLanded": 11,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-008",
+    "score": 4,
+    "rank": 25,
+    "hitsLanded": 10,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-050",
+    "score": 3,
+    "rank": 26,
+    "hitsLanded": 19,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-037",
+    "score": 2,
+    "rank": 27,
+    "hitsLanded": 18,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-036",
+    "score": 2,
+    "rank": 28,
+    "hitsLanded": 18,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-023",
+    "score": 2,
+    "rank": 29,
+    "hitsLanded": 15,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-001",
+    "score": 2,
+    "rank": 30,
+    "hitsLanded": 13,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-057",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 12,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-012",
+    "score": 1,
+    "rank": 32,
+    "hitsLanded": 20,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-028",
+    "score": 1,
+    "rank": 33,
+    "hitsLanded": 18,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-041",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 16,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-000",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 9,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-004",
+    "score": 0,
+    "rank": 36,
+    "hitsLanded": 20,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-029",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 17,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-013",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 14,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-019",
+    "score": -1,
+    "rank": 39,
+    "hitsLanded": 21,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-038",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 19,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-016",
+    "score": -1,
+    "rank": 41,
+    "hitsLanded": 14,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-047",
+    "score": -3,
+    "rank": 42,
+    "hitsLanded": 9,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-025",
+    "score": -3,
+    "rank": 43,
+    "hitsLanded": 9,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-020",
+    "score": -4,
+    "rank": 44,
+    "hitsLanded": 20,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-058",
+    "score": -4,
+    "rank": 45,
+    "hitsLanded": 19,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-005",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 16,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-014",
+    "score": -4,
+    "rank": 47,
+    "hitsLanded": 12,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-063",
+    "score": -4,
+    "rank": 48,
+    "hitsLanded": 8,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-034",
+    "score": -6,
+    "rank": 49,
+    "hitsLanded": 18,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-007",
+    "score": -6,
+    "rank": 50,
+    "hitsLanded": 10,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-009",
+    "score": -6,
+    "rank": 51,
+    "hitsLanded": 7,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-011",
+    "score": -7,
+    "rank": 52,
+    "hitsLanded": 21,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-033",
+    "score": -7,
+    "rank": 53,
+    "hitsLanded": 6,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-030",
+    "score": -8,
+    "rank": 54,
+    "hitsLanded": 22,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-046",
+    "score": -8,
+    "rank": 55,
+    "hitsLanded": 17,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-032",
+    "score": -8,
+    "rank": 56,
+    "hitsLanded": 10,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-031",
+    "score": -11,
+    "rank": 57,
+    "hitsLanded": 7,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-039",
+    "score": -12,
+    "rank": 58,
+    "hitsLanded": 15,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-055",
+    "score": -15,
+    "rank": 59,
+    "hitsLanded": 19,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-006",
+    "score": -15,
+    "rank": 60,
+    "hitsLanded": 18,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-015",
+    "score": -17,
+    "rank": 61,
+    "hitsLanded": 7,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-002",
+    "score": -19,
+    "rank": 62,
+    "hitsLanded": 20,
+    "hitsTaken": 39
+   },
+   {
+    "botId": "seat-022",
+    "score": -31,
+    "rank": 63,
+    "hitsLanded": 18,
+    "hitsTaken": 49
+   },
+   {
+    "botId": "seat-062",
+    "score": -33,
+    "rank": 64,
+    "hitsLanded": 17,
+    "hitsTaken": 50
+   }
+  ]
+ },
+ {
+  "seed": 48514,
+  "ruleSetId": "standard",
+  "ticksSha256": "01e839b3f590067ce686bee8bdf4cc3016f07ff5125971d00b7f6bef2a4d02d5",
+  "standings": [
+   {
+    "botId": "seat-058",
+    "score": 16,
+    "rank": 1,
+    "hitsLanded": 21,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-061",
+    "score": 16,
+    "rank": 2,
+    "hitsLanded": 21,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-043",
+    "score": 16,
+    "rank": 3,
+    "hitsLanded": 19,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-060",
+    "score": 16,
+    "rank": 4,
+    "hitsLanded": 18,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-035",
+    "score": 14,
+    "rank": 5,
+    "hitsLanded": 21,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-028",
+    "score": 14,
+    "rank": 6,
+    "hitsLanded": 20,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-032",
+    "score": 13,
+    "rank": 7,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-052",
+    "score": 13,
+    "rank": 8,
+    "hitsLanded": 16,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-021",
+    "score": 12,
+    "rank": 9,
+    "hitsLanded": 17,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-003",
+    "score": 11,
+    "rank": 10,
+    "hitsLanded": 21,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-050",
+    "score": 11,
+    "rank": 11,
+    "hitsLanded": 18,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-008",
+    "score": 11,
+    "rank": 12,
+    "hitsLanded": 17,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-049",
+    "score": 11,
+    "rank": 13,
+    "hitsLanded": 16,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-048",
+    "score": 11,
+    "rank": 14,
+    "hitsLanded": 16,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-023",
+    "score": 10,
+    "rank": 15,
+    "hitsLanded": 21,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-025",
+    "score": 10,
+    "rank": 16,
+    "hitsLanded": 19,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-033",
+    "score": 10,
+    "rank": 17,
+    "hitsLanded": 18,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-036",
+    "score": 10,
+    "rank": 18,
+    "hitsLanded": 18,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-051",
+    "score": 9,
+    "rank": 19,
+    "hitsLanded": 22,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-019",
+    "score": 9,
+    "rank": 20,
+    "hitsLanded": 20,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-053",
+    "score": 9,
+    "rank": 21,
+    "hitsLanded": 15,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-037",
+    "score": 8,
+    "rank": 22,
+    "hitsLanded": 20,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-063",
+    "score": 8,
+    "rank": 23,
+    "hitsLanded": 13,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-031",
+    "score": 6,
+    "rank": 24,
+    "hitsLanded": 19,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-004",
+    "score": 6,
+    "rank": 25,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-011",
+    "score": 6,
+    "rank": 26,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-056",
+    "score": 6,
+    "rank": 27,
+    "hitsLanded": 16,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-009",
+    "score": 6,
+    "rank": 28,
+    "hitsLanded": 12,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-022",
+    "score": 6,
+    "rank": 29,
+    "hitsLanded": 11,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-041",
+    "score": 5,
+    "rank": 30,
+    "hitsLanded": 15,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-020",
+    "score": 4,
+    "rank": 31,
+    "hitsLanded": 22,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-059",
+    "score": 4,
+    "rank": 32,
+    "hitsLanded": 19,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-027",
+    "score": 4,
+    "rank": 33,
+    "hitsLanded": 19,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-017",
+    "score": 4,
+    "rank": 34,
+    "hitsLanded": 15,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-034",
+    "score": 3,
+    "rank": 35,
+    "hitsLanded": 17,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-012",
+    "score": 2,
+    "rank": 36,
+    "hitsLanded": 20,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-042",
+    "score": 1,
+    "rank": 37,
+    "hitsLanded": 15,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-057",
+    "score": 1,
+    "rank": 38,
+    "hitsLanded": 13,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-029",
+    "score": 0,
+    "rank": 39,
+    "hitsLanded": 18,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-002",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 19,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-030",
+    "score": -1,
+    "rank": 41,
+    "hitsLanded": 19,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-055",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 9,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-045",
+    "score": -2,
+    "rank": 43,
+    "hitsLanded": 18,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-000",
+    "score": -2,
+    "rank": 44,
+    "hitsLanded": 14,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-024",
+    "score": -2,
+    "rank": 45,
+    "hitsLanded": 12,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-016",
+    "score": -3,
+    "rank": 46,
+    "hitsLanded": 17,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-013",
+    "score": -3,
+    "rank": 47,
+    "hitsLanded": 13,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-015",
+    "score": -5,
+    "rank": 48,
+    "hitsLanded": 8,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-040",
+    "score": -6,
+    "rank": 49,
+    "hitsLanded": 14,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-001",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 13,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-047",
+    "score": -8,
+    "rank": 51,
+    "hitsLanded": 21,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-010",
+    "score": -9,
+    "rank": 52,
+    "hitsLanded": 19,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-026",
+    "score": -10,
+    "rank": 53,
+    "hitsLanded": 23,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-018",
+    "score": -11,
+    "rank": 54,
+    "hitsLanded": 18,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-044",
+    "score": -13,
+    "rank": 55,
+    "hitsLanded": 20,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-005",
+    "score": -13,
+    "rank": 56,
+    "hitsLanded": 18,
+    "hitsTaken": 31
+   },
+   {
+    "botId": "seat-038",
+    "score": -15,
+    "rank": 57,
+    "hitsLanded": 24,
+    "hitsTaken": 39
+   },
+   {
+    "botId": "seat-014",
+    "score": -18,
+    "rank": 58,
+    "hitsLanded": 11,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-054",
+    "score": -20,
+    "rank": 59,
+    "hitsLanded": 20,
+    "hitsTaken": 40
+   },
+   {
+    "botId": "seat-039",
+    "score": -23,
+    "rank": 60,
+    "hitsLanded": 22,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-007",
+    "score": -30,
+    "rank": 61,
+    "hitsLanded": 14,
+    "hitsTaken": 44
+   },
+   {
+    "botId": "seat-006",
+    "score": -33,
+    "rank": 62,
+    "hitsLanded": 20,
+    "hitsTaken": 53
+   },
+   {
+    "botId": "seat-062",
+    "score": -45,
+    "rank": 63,
+    "hitsLanded": 19,
+    "hitsTaken": 64
+   },
+   {
+    "botId": "seat-046",
+    "score": -51,
+    "rank": 64,
+    "hitsLanded": 21,
+    "hitsTaken": 72
+   }
+  ]
+ },
+ {
+  "seed": 56433,
+  "ruleSetId": "arms-length",
+  "ticksSha256": "e5becdb9be29468a151eb45ba840eaf0668c4a8e5089463503e838aed1b2bc3f",
+  "standings": [
+   {
+    "botId": "seat-051",
+    "score": 14,
+    "rank": 1,
+    "hitsLanded": 21,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-056",
+    "score": 14,
+    "rank": 2,
+    "hitsLanded": 21,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-052",
+    "score": 14,
+    "rank": 3,
+    "hitsLanded": 19,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-026",
+    "score": 13,
+    "rank": 4,
+    "hitsLanded": 24,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-044",
+    "score": 13,
+    "rank": 5,
+    "hitsLanded": 21,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-012",
+    "score": 12,
+    "rank": 6,
+    "hitsLanded": 21,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-036",
+    "score": 12,
+    "rank": 7,
+    "hitsLanded": 18,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-058",
+    "score": 12,
+    "rank": 8,
+    "hitsLanded": 17,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-059",
+    "score": 11,
+    "rank": 9,
+    "hitsLanded": 16,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-020",
+    "score": 10,
+    "rank": 10,
+    "hitsLanded": 19,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-048",
+    "score": 10,
+    "rank": 11,
+    "hitsLanded": 17,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-011",
+    "score": 9,
+    "rank": 12,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-046",
+    "score": 8,
+    "rank": 13,
+    "hitsLanded": 20,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-053",
+    "score": 8,
+    "rank": 14,
+    "hitsLanded": 19,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-027",
+    "score": 8,
+    "rank": 15,
+    "hitsLanded": 18,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-041",
+    "score": 8,
+    "rank": 16,
+    "hitsLanded": 15,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-042",
+    "score": 7,
+    "rank": 17,
+    "hitsLanded": 21,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-040",
+    "score": 7,
+    "rank": 18,
+    "hitsLanded": 18,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-032",
+    "score": 7,
+    "rank": 19,
+    "hitsLanded": 18,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-019",
+    "score": 6,
+    "rank": 20,
+    "hitsLanded": 21,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-002",
+    "score": 6,
+    "rank": 21,
+    "hitsLanded": 21,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-060",
+    "score": 6,
+    "rank": 22,
+    "hitsLanded": 21,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-054",
+    "score": 6,
+    "rank": 23,
+    "hitsLanded": 20,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-037",
+    "score": 5,
+    "rank": 24,
+    "hitsLanded": 18,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-049",
+    "score": 5,
+    "rank": 25,
+    "hitsLanded": 16,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-017",
+    "score": 5,
+    "rank": 26,
+    "hitsLanded": 14,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-033",
+    "score": 5,
+    "rank": 27,
+    "hitsLanded": 14,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-057",
+    "score": 5,
+    "rank": 28,
+    "hitsLanded": 13,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-034",
+    "score": 4,
+    "rank": 29,
+    "hitsLanded": 17,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-061",
+    "score": 4,
+    "rank": 30,
+    "hitsLanded": 16,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-024",
+    "score": 3,
+    "rank": 31,
+    "hitsLanded": 15,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-039",
+    "score": 3,
+    "rank": 32,
+    "hitsLanded": 12,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-045",
+    "score": 1,
+    "rank": 33,
+    "hitsLanded": 20,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-004",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 19,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-016",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 18,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-015",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 12,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-035",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 20,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-008",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 18,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-063",
+    "score": 0,
+    "rank": 39,
+    "hitsLanded": 12,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-030",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 22,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-029",
+    "score": -2,
+    "rank": 41,
+    "hitsLanded": 17,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-021",
+    "score": -2,
+    "rank": 42,
+    "hitsLanded": 15,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-009",
+    "score": -3,
+    "rank": 43,
+    "hitsLanded": 8,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-043",
+    "score": -4,
+    "rank": 44,
+    "hitsLanded": 19,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-050",
+    "score": -4,
+    "rank": 45,
+    "hitsLanded": 18,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-031",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 14,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-010",
+    "score": -5,
+    "rank": 47,
+    "hitsLanded": 21,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-025",
+    "score": -5,
+    "rank": 48,
+    "hitsLanded": 14,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-055",
+    "score": -5,
+    "rank": 49,
+    "hitsLanded": 11,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-013",
+    "score": -6,
+    "rank": 50,
+    "hitsLanded": 17,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-022",
+    "score": -7,
+    "rank": 51,
+    "hitsLanded": 19,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-038",
+    "score": -8,
+    "rank": 52,
+    "hitsLanded": 21,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-028",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 19,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-005",
+    "score": -9,
+    "rank": 54,
+    "hitsLanded": 12,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-003",
+    "score": -10,
+    "rank": 55,
+    "hitsLanded": 20,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-062",
+    "score": -10,
+    "rank": 56,
+    "hitsLanded": 18,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-000",
+    "score": -11,
+    "rank": 57,
+    "hitsLanded": 10,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-007",
+    "score": -12,
+    "rank": 58,
+    "hitsLanded": 13,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-023",
+    "score": -13,
+    "rank": 59,
+    "hitsLanded": 14,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-001",
+    "score": -14,
+    "rank": 60,
+    "hitsLanded": 10,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-018",
+    "score": -21,
+    "rank": 61,
+    "hitsLanded": 19,
+    "hitsTaken": 40
+   },
+   {
+    "botId": "seat-047",
+    "score": -29,
+    "rank": 62,
+    "hitsLanded": 22,
+    "hitsTaken": 51
+   },
+   {
+    "botId": "seat-006",
+    "score": -30,
+    "rank": 63,
+    "hitsLanded": 21,
+    "hitsTaken": 51
+   },
+   {
+    "botId": "seat-014",
+    "score": -40,
+    "rank": 64,
+    "hitsLanded": 19,
+    "hitsTaken": 59
+   }
+  ]
+ },
+ {
+  "seed": 64352,
+  "ruleSetId": "dry-spell",
+  "ticksSha256": "e2fbe241e9f419a017748dadb469b578dd68e27ce9e43acb317ff32e5ab1108b",
+  "standings": [
+   {
+    "botId": "seat-058",
+    "score": 8,
+    "rank": 1,
+    "hitsLanded": 12,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-010",
+    "score": 7,
+    "rank": 2,
+    "hitsLanded": 14,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-024",
+    "score": 6,
+    "rank": 3,
+    "hitsLanded": 11,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-016",
+    "score": 6,
+    "rank": 4,
+    "hitsLanded": 9,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-051",
+    "score": 6,
+    "rank": 5,
+    "hitsLanded": 8,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-045",
+    "score": 6,
+    "rank": 6,
+    "hitsLanded": 6,
+    "hitsTaken": 0
+   },
+   {
+    "botId": "seat-056",
+    "score": 5,
+    "rank": 7,
+    "hitsLanded": 10,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-029",
+    "score": 5,
+    "rank": 8,
+    "hitsLanded": 9,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-060",
+    "score": 5,
+    "rank": 9,
+    "hitsLanded": 9,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-026",
+    "score": 4,
+    "rank": 10,
+    "hitsLanded": 13,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-035",
+    "score": 4,
+    "rank": 11,
+    "hitsLanded": 10,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-037",
+    "score": 4,
+    "rank": 12,
+    "hitsLanded": 9,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-013",
+    "score": 4,
+    "rank": 13,
+    "hitsLanded": 8,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-002",
+    "score": 3,
+    "rank": 14,
+    "hitsLanded": 10,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-040",
+    "score": 3,
+    "rank": 15,
+    "hitsLanded": 9,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-059",
+    "score": 3,
+    "rank": 16,
+    "hitsLanded": 8,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-044",
+    "score": 3,
+    "rank": 17,
+    "hitsLanded": 7,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-049",
+    "score": 3,
+    "rank": 18,
+    "hitsLanded": 7,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-062",
+    "score": 2,
+    "rank": 19,
+    "hitsLanded": 13,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-038",
+    "score": 2,
+    "rank": 20,
+    "hitsLanded": 12,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-047",
+    "score": 2,
+    "rank": 21,
+    "hitsLanded": 11,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-052",
+    "score": 2,
+    "rank": 22,
+    "hitsLanded": 9,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-057",
+    "score": 2,
+    "rank": 23,
+    "hitsLanded": 7,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-019",
+    "score": 2,
+    "rank": 24,
+    "hitsLanded": 7,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-005",
+    "score": 2,
+    "rank": 25,
+    "hitsLanded": 7,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-036",
+    "score": 2,
+    "rank": 26,
+    "hitsLanded": 7,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-046",
+    "score": 1,
+    "rank": 27,
+    "hitsLanded": 13,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-034",
+    "score": 1,
+    "rank": 28,
+    "hitsLanded": 11,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-033",
+    "score": 1,
+    "rank": 29,
+    "hitsLanded": 10,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-032",
+    "score": 1,
+    "rank": 30,
+    "hitsLanded": 9,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-055",
+    "score": 1,
+    "rank": 31,
+    "hitsLanded": 8,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-048",
+    "score": 1,
+    "rank": 32,
+    "hitsLanded": 8,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-042",
+    "score": 0,
+    "rank": 33,
+    "hitsLanded": 12,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-006",
+    "score": 0,
+    "rank": 34,
+    "hitsLanded": 12,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-031",
+    "score": 0,
+    "rank": 35,
+    "hitsLanded": 11,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-011",
+    "score": 0,
+    "rank": 36,
+    "hitsLanded": 10,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-012",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 8,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-017",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 8,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-027",
+    "score": 0,
+    "rank": 39,
+    "hitsLanded": 5,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-003",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 9,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-043",
+    "score": -1,
+    "rank": 41,
+    "hitsLanded": 9,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-028",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 8,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-009",
+    "score": -1,
+    "rank": 43,
+    "hitsLanded": 8,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-020",
+    "score": -1,
+    "rank": 44,
+    "hitsLanded": 6,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-053",
+    "score": -1,
+    "rank": 45,
+    "hitsLanded": 6,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-041",
+    "score": -1,
+    "rank": 46,
+    "hitsLanded": 5,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-063",
+    "score": -1,
+    "rank": 47,
+    "hitsLanded": 5,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-039",
+    "score": -2,
+    "rank": 48,
+    "hitsLanded": 8,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-061",
+    "score": -2,
+    "rank": 49,
+    "hitsLanded": 7,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-001",
+    "score": -2,
+    "rank": 50,
+    "hitsLanded": 6,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-030",
+    "score": -3,
+    "rank": 51,
+    "hitsLanded": 10,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-008",
+    "score": -3,
+    "rank": 52,
+    "hitsLanded": 8,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-014",
+    "score": -4,
+    "rank": 53,
+    "hitsLanded": 10,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-050",
+    "score": -4,
+    "rank": 54,
+    "hitsLanded": 9,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-025",
+    "score": -4,
+    "rank": 55,
+    "hitsLanded": 4,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-023",
+    "score": -4,
+    "rank": 56,
+    "hitsLanded": 2,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-021",
+    "score": -5,
+    "rank": 57,
+    "hitsLanded": 8,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-000",
+    "score": -6,
+    "rank": 58,
+    "hitsLanded": 9,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-018",
+    "score": -6,
+    "rank": 59,
+    "hitsLanded": 8,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-015",
+    "score": -7,
+    "rank": 60,
+    "hitsLanded": 8,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-004",
+    "score": -9,
+    "rank": 61,
+    "hitsLanded": 9,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-022",
+    "score": -10,
+    "rank": 62,
+    "hitsLanded": 12,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-054",
+    "score": -10,
+    "rank": 63,
+    "hitsLanded": 10,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-007",
+    "score": -18,
+    "rank": 64,
+    "hitsLanded": 10,
+    "hitsTaken": 28
+   }
+  ]
+ },
+ {
+  "seed": 72271,
+  "ruleSetId": "downpour",
+  "ticksSha256": "1a5c36ede66fbb04d0c177379c9a286c0b7651d8957e08b31a8f40c0ba133647",
+  "standings": [
+   {
+    "botId": "seat-049",
+    "score": 19,
+    "rank": 1,
+    "hitsLanded": 22,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-033",
+    "score": 18,
+    "rank": 2,
+    "hitsLanded": 24,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-045",
+    "score": 18,
+    "rank": 3,
+    "hitsLanded": 21,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-057",
+    "score": 16,
+    "rank": 4,
+    "hitsLanded": 22,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-053",
+    "score": 15,
+    "rank": 5,
+    "hitsLanded": 26,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-051",
+    "score": 14,
+    "rank": 6,
+    "hitsLanded": 27,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-020",
+    "score": 14,
+    "rank": 7,
+    "hitsLanded": 24,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-063",
+    "score": 13,
+    "rank": 8,
+    "hitsLanded": 14,
+    "hitsTaken": 1
+   },
+   {
+    "botId": "seat-044",
+    "score": 12,
+    "rank": 9,
+    "hitsLanded": 26,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-050",
+    "score": 11,
+    "rank": 10,
+    "hitsLanded": 27,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-009",
+    "score": 11,
+    "rank": 11,
+    "hitsLanded": 23,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-030",
+    "score": 10,
+    "rank": 12,
+    "hitsLanded": 24,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-017",
+    "score": 10,
+    "rank": 13,
+    "hitsLanded": 22,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-032",
+    "score": 10,
+    "rank": 14,
+    "hitsLanded": 22,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-061",
+    "score": 10,
+    "rank": 15,
+    "hitsLanded": 21,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-040",
+    "score": 9,
+    "rank": 16,
+    "hitsLanded": 27,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-012",
+    "score": 8,
+    "rank": 17,
+    "hitsLanded": 26,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-055",
+    "score": 8,
+    "rank": 18,
+    "hitsLanded": 24,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-001",
+    "score": 8,
+    "rank": 19,
+    "hitsLanded": 20,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-000",
+    "score": 7,
+    "rank": 20,
+    "hitsLanded": 28,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-060",
+    "score": 7,
+    "rank": 21,
+    "hitsLanded": 28,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-018",
+    "score": 7,
+    "rank": 22,
+    "hitsLanded": 26,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-008",
+    "score": 7,
+    "rank": 23,
+    "hitsLanded": 25,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-059",
+    "score": 7,
+    "rank": 24,
+    "hitsLanded": 20,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-031",
+    "score": 7,
+    "rank": 25,
+    "hitsLanded": 16,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-056",
+    "score": 5,
+    "rank": 26,
+    "hitsLanded": 25,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-025",
+    "score": 5,
+    "rank": 27,
+    "hitsLanded": 19,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-037",
+    "score": 4,
+    "rank": 28,
+    "hitsLanded": 31,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-005",
+    "score": 3,
+    "rank": 29,
+    "hitsLanded": 29,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-027",
+    "score": 3,
+    "rank": 30,
+    "hitsLanded": 28,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-043",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 27,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-004",
+    "score": 2,
+    "rank": 32,
+    "hitsLanded": 26,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-041",
+    "score": 2,
+    "rank": 33,
+    "hitsLanded": 12,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-021",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 24,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-039",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 22,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-046",
+    "score": 0,
+    "rank": 36,
+    "hitsLanded": 32,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-002",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 31,
+    "hitsTaken": 31
+   },
+   {
+    "botId": "seat-029",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 26,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-047",
+    "score": 0,
+    "rank": 39,
+    "hitsLanded": 9,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-054",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 29,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-062",
+    "score": -1,
+    "rank": 41,
+    "hitsLanded": 25,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-052",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 24,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-038",
+    "score": -2,
+    "rank": 43,
+    "hitsLanded": 27,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-048",
+    "score": -3,
+    "rank": 44,
+    "hitsLanded": 19,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-036",
+    "score": -4,
+    "rank": 45,
+    "hitsLanded": 26,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-035",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 23,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-019",
+    "score": -6,
+    "rank": 47,
+    "hitsLanded": 28,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-028",
+    "score": -7,
+    "rank": 48,
+    "hitsLanded": 27,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-007",
+    "score": -7,
+    "rank": 49,
+    "hitsLanded": 26,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-034",
+    "score": -8,
+    "rank": 50,
+    "hitsLanded": 32,
+    "hitsTaken": 40
+   },
+   {
+    "botId": "seat-003",
+    "score": -8,
+    "rank": 51,
+    "hitsLanded": 26,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-011",
+    "score": -10,
+    "rank": 52,
+    "hitsLanded": 28,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-016",
+    "score": -10,
+    "rank": 53,
+    "hitsLanded": 11,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-024",
+    "score": -10,
+    "rank": 54,
+    "hitsLanded": 10,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-014",
+    "score": -13,
+    "rank": 55,
+    "hitsLanded": 32,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-026",
+    "score": -14,
+    "rank": 56,
+    "hitsLanded": 29,
+    "hitsTaken": 43
+   },
+   {
+    "botId": "seat-058",
+    "score": -14,
+    "rank": 57,
+    "hitsLanded": 29,
+    "hitsTaken": 43
+   },
+   {
+    "botId": "seat-013",
+    "score": -15,
+    "rank": 58,
+    "hitsLanded": 27,
+    "hitsTaken": 42
+   },
+   {
+    "botId": "seat-022",
+    "score": -19,
+    "rank": 59,
+    "hitsLanded": 30,
+    "hitsTaken": 49
+   },
+   {
+    "botId": "seat-042",
+    "score": -22,
+    "rank": 60,
+    "hitsLanded": 29,
+    "hitsTaken": 51
+   },
+   {
+    "botId": "seat-010",
+    "score": -27,
+    "rank": 61,
+    "hitsLanded": 29,
+    "hitsTaken": 56
+   },
+   {
+    "botId": "seat-015",
+    "score": -27,
+    "rank": 62,
+    "hitsLanded": 14,
+    "hitsTaken": 41
+   },
+   {
+    "botId": "seat-023",
+    "score": -28,
+    "rank": 63,
+    "hitsLanded": 25,
+    "hitsTaken": 53
+   },
+   {
+    "botId": "seat-006",
+    "score": -43,
+    "rank": 64,
+    "hitsLanded": 30,
+    "hitsTaken": 73
+   }
+  ]
+ },
+ {
+  "seed": 80190,
+  "ruleSetId": "open-field",
+  "ticksSha256": "dda1c29af4a0631b2d87fde92ccf8b9db72bdfdb8324770dce09b23b0690a630",
+  "standings": [
+   {
+    "botId": "seat-032",
+    "score": 14,
+    "rank": 1,
+    "hitsLanded": 18,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-053",
+    "score": 13,
+    "rank": 2,
+    "hitsLanded": 20,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-049",
+    "score": 13,
+    "rank": 3,
+    "hitsLanded": 19,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-040",
+    "score": 13,
+    "rank": 4,
+    "hitsLanded": 15,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-027",
+    "score": 11,
+    "rank": 5,
+    "hitsLanded": 20,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-025",
+    "score": 11,
+    "rank": 6,
+    "hitsLanded": 15,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-056",
+    "score": 10,
+    "rank": 7,
+    "hitsLanded": 17,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-037",
+    "score": 10,
+    "rank": 8,
+    "hitsLanded": 16,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-043",
+    "score": 9,
+    "rank": 9,
+    "hitsLanded": 18,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-028",
+    "score": 9,
+    "rank": 10,
+    "hitsLanded": 15,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-045",
+    "score": 8,
+    "rank": 11,
+    "hitsLanded": 20,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-044",
+    "score": 8,
+    "rank": 12,
+    "hitsLanded": 18,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-052",
+    "score": 8,
+    "rank": 13,
+    "hitsLanded": 18,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-019",
+    "score": 8,
+    "rank": 14,
+    "hitsLanded": 17,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-020",
+    "score": 8,
+    "rank": 15,
+    "hitsLanded": 16,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-018",
+    "score": 7,
+    "rank": 16,
+    "hitsLanded": 23,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-046",
+    "score": 6,
+    "rank": 17,
+    "hitsLanded": 21,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-030",
+    "score": 6,
+    "rank": 18,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-001",
+    "score": 5,
+    "rank": 19,
+    "hitsLanded": 16,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-048",
+    "score": 5,
+    "rank": 20,
+    "hitsLanded": 16,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-033",
+    "score": 5,
+    "rank": 21,
+    "hitsLanded": 11,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-035",
+    "score": 4,
+    "rank": 22,
+    "hitsLanded": 21,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-060",
+    "score": 4,
+    "rank": 23,
+    "hitsLanded": 20,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-004",
+    "score": 4,
+    "rank": 24,
+    "hitsLanded": 18,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-061",
+    "score": 4,
+    "rank": 25,
+    "hitsLanded": 16,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-051",
+    "score": 4,
+    "rank": 26,
+    "hitsLanded": 13,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-057",
+    "score": 4,
+    "rank": 27,
+    "hitsLanded": 12,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-012",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 16,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-013",
+    "score": 2,
+    "rank": 29,
+    "hitsLanded": 20,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-011",
+    "score": 2,
+    "rank": 30,
+    "hitsLanded": 19,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-010",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 18,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-059",
+    "score": 2,
+    "rank": 32,
+    "hitsLanded": 17,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-017",
+    "score": 2,
+    "rank": 33,
+    "hitsLanded": 8,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-029",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 17,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-058",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 17,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-063",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 11,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-055",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 13,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-054",
+    "score": -1,
+    "rank": 38,
+    "hitsLanded": 22,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-022",
+    "score": -1,
+    "rank": 39,
+    "hitsLanded": 22,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-000",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 12,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-003",
+    "score": -2,
+    "rank": 41,
+    "hitsLanded": 21,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-042",
+    "score": -2,
+    "rank": 42,
+    "hitsLanded": 19,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-007",
+    "score": -2,
+    "rank": 43,
+    "hitsLanded": 11,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-015",
+    "score": -3,
+    "rank": 44,
+    "hitsLanded": 10,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-050",
+    "score": -4,
+    "rank": 45,
+    "hitsLanded": 18,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-038",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 17,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-047",
+    "score": -4,
+    "rank": 47,
+    "hitsLanded": 14,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-024",
+    "score": -5,
+    "rank": 48,
+    "hitsLanded": 17,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-026",
+    "score": -5,
+    "rank": 49,
+    "hitsLanded": 15,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-036",
+    "score": -6,
+    "rank": 50,
+    "hitsLanded": 15,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-034",
+    "score": -6,
+    "rank": 51,
+    "hitsLanded": 14,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-009",
+    "score": -7,
+    "rank": 52,
+    "hitsLanded": 7,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-041",
+    "score": -7,
+    "rank": 53,
+    "hitsLanded": 6,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-062",
+    "score": -8,
+    "rank": 54,
+    "hitsLanded": 19,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-002",
+    "score": -9,
+    "rank": 55,
+    "hitsLanded": 16,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-016",
+    "score": -9,
+    "rank": 56,
+    "hitsLanded": 10,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-008",
+    "score": -10,
+    "rank": 57,
+    "hitsLanded": 6,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-023",
+    "score": -10,
+    "rank": 58,
+    "hitsLanded": 5,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-031",
+    "score": -14,
+    "rank": 59,
+    "hitsLanded": 19,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-039",
+    "score": -14,
+    "rank": 60,
+    "hitsLanded": 10,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-005",
+    "score": -15,
+    "rank": 61,
+    "hitsLanded": 21,
+    "hitsTaken": 36
+   },
+   {
+    "botId": "seat-021",
+    "score": -16,
+    "rank": 62,
+    "hitsLanded": 16,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-006",
+    "score": -30,
+    "rank": 63,
+    "hitsLanded": 22,
+    "hitsTaken": 52
+   },
+   {
+    "botId": "seat-014",
+    "score": -32,
+    "rank": 64,
+    "hitsLanded": 19,
+    "hitsTaken": 51
+   }
+  ]
+ },
+ {
+  "seed": 88109,
+  "ruleSetId": "sharp-eyes",
+  "ticksSha256": "3e17b0e13084888bd0dee5f96446e99e60f29942d850993e92f7bd410d7e0c34",
+  "standings": [
+   {
+    "botId": "seat-049",
+    "score": 19,
+    "rank": 1,
+    "hitsLanded": 20,
+    "hitsTaken": 1
+   },
+   {
+    "botId": "seat-042",
+    "score": 16,
+    "rank": 2,
+    "hitsLanded": 23,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-060",
+    "score": 16,
+    "rank": 3,
+    "hitsLanded": 23,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-018",
+    "score": 14,
+    "rank": 4,
+    "hitsLanded": 24,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-054",
+    "score": 14,
+    "rank": 5,
+    "hitsLanded": 18,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-028",
+    "score": 13,
+    "rank": 6,
+    "hitsLanded": 21,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-050",
+    "score": 13,
+    "rank": 7,
+    "hitsLanded": 18,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-037",
+    "score": 13,
+    "rank": 8,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-021",
+    "score": 12,
+    "rank": 9,
+    "hitsLanded": 21,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-051",
+    "score": 12,
+    "rank": 10,
+    "hitsLanded": 19,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-000",
+    "score": 11,
+    "rank": 11,
+    "hitsLanded": 20,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-048",
+    "score": 10,
+    "rank": 12,
+    "hitsLanded": 14,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-034",
+    "score": 9,
+    "rank": 13,
+    "hitsLanded": 22,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-043",
+    "score": 9,
+    "rank": 14,
+    "hitsLanded": 21,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-010",
+    "score": 9,
+    "rank": 15,
+    "hitsLanded": 21,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-026",
+    "score": 9,
+    "rank": 16,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-052",
+    "score": 8,
+    "rank": 17,
+    "hitsLanded": 21,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-012",
+    "score": 7,
+    "rank": 18,
+    "hitsLanded": 23,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-053",
+    "score": 7,
+    "rank": 19,
+    "hitsLanded": 21,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-035",
+    "score": 7,
+    "rank": 20,
+    "hitsLanded": 18,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-023",
+    "score": 7,
+    "rank": 21,
+    "hitsLanded": 12,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-044",
+    "score": 6,
+    "rank": 22,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-040",
+    "score": 6,
+    "rank": 23,
+    "hitsLanded": 17,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-059",
+    "score": 6,
+    "rank": 24,
+    "hitsLanded": 17,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-045",
+    "score": 5,
+    "rank": 25,
+    "hitsLanded": 20,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-057",
+    "score": 5,
+    "rank": 26,
+    "hitsLanded": 17,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-032",
+    "score": 4,
+    "rank": 27,
+    "hitsLanded": 14,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-020",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 18,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-058",
+    "score": 3,
+    "rank": 29,
+    "hitsLanded": 16,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-017",
+    "score": 3,
+    "rank": 30,
+    "hitsLanded": 15,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-004",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 21,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-011",
+    "score": 2,
+    "rank": 32,
+    "hitsLanded": 20,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-025",
+    "score": 1,
+    "rank": 33,
+    "hitsLanded": 12,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-062",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 10,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-003",
+    "score": 0,
+    "rank": 35,
+    "hitsLanded": 22,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-005",
+    "score": 0,
+    "rank": 36,
+    "hitsLanded": 15,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-061",
+    "score": -1,
+    "rank": 37,
+    "hitsLanded": 18,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-056",
+    "score": -1,
+    "rank": 38,
+    "hitsLanded": 13,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-033",
+    "score": -2,
+    "rank": 39,
+    "hitsLanded": 9,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-022",
+    "score": -3,
+    "rank": 40,
+    "hitsLanded": 18,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-038",
+    "score": -3,
+    "rank": 41,
+    "hitsLanded": 16,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-046",
+    "score": -4,
+    "rank": 42,
+    "hitsLanded": 20,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-029",
+    "score": -4,
+    "rank": 43,
+    "hitsLanded": 16,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-002",
+    "score": -5,
+    "rank": 44,
+    "hitsLanded": 18,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-036",
+    "score": -5,
+    "rank": 45,
+    "hitsLanded": 18,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-009",
+    "score": -5,
+    "rank": 46,
+    "hitsLanded": 13,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-015",
+    "score": -6,
+    "rank": 47,
+    "hitsLanded": 12,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-041",
+    "score": -6,
+    "rank": 48,
+    "hitsLanded": 10,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-024",
+    "score": -7,
+    "rank": 49,
+    "hitsLanded": 8,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-019",
+    "score": -8,
+    "rank": 50,
+    "hitsLanded": 20,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-013",
+    "score": -8,
+    "rank": 51,
+    "hitsLanded": 18,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-055",
+    "score": -8,
+    "rank": 52,
+    "hitsLanded": 12,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-001",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 10,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-047",
+    "score": -9,
+    "rank": 54,
+    "hitsLanded": 6,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-063",
+    "score": -11,
+    "rank": 55,
+    "hitsLanded": 17,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-027",
+    "score": -12,
+    "rank": 56,
+    "hitsLanded": 17,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-016",
+    "score": -13,
+    "rank": 57,
+    "hitsLanded": 13,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-030",
+    "score": -15,
+    "rank": 58,
+    "hitsLanded": 23,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-006",
+    "score": -15,
+    "rank": 59,
+    "hitsLanded": 19,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-008",
+    "score": -15,
+    "rank": 60,
+    "hitsLanded": 11,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-039",
+    "score": -15,
+    "rank": 61,
+    "hitsLanded": 9,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-014",
+    "score": -18,
+    "rank": 62,
+    "hitsLanded": 22,
+    "hitsTaken": 40
+   },
+   {
+    "botId": "seat-031",
+    "score": -23,
+    "rank": 63,
+    "hitsLanded": 15,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-007",
+    "score": -51,
+    "rank": 64,
+    "hitsLanded": 7,
+    "hitsTaken": 58
+   }
+  ]
+ },
+ {
+  "seed": 96028,
+  "ruleSetId": "standard",
+  "ticksSha256": "ee9af62cb26a0fa6edac98226fb40ac68051325053bf3863d5dd225e5aecaba6",
+  "standings": [
+   {
+    "botId": "seat-008",
+    "score": 16,
+    "rank": 1,
+    "hitsLanded": 20,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-053",
+    "score": 15,
+    "rank": 2,
+    "hitsLanded": 20,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-012",
+    "score": 13,
+    "rank": 3,
+    "hitsLanded": 19,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-052",
+    "score": 12,
+    "rank": 4,
+    "hitsLanded": 17,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-062",
+    "score": 11,
+    "rank": 5,
+    "hitsLanded": 22,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-059",
+    "score": 11,
+    "rank": 6,
+    "hitsLanded": 20,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-013",
+    "score": 11,
+    "rank": 7,
+    "hitsLanded": 19,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-035",
+    "score": 10,
+    "rank": 8,
+    "hitsLanded": 20,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-058",
+    "score": 10,
+    "rank": 9,
+    "hitsLanded": 20,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-032",
+    "score": 10,
+    "rank": 10,
+    "hitsLanded": 19,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-036",
+    "score": 10,
+    "rank": 11,
+    "hitsLanded": 18,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-043",
+    "score": 9,
+    "rank": 12,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-056",
+    "score": 9,
+    "rank": 13,
+    "hitsLanded": 16,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-016",
+    "score": 9,
+    "rank": 14,
+    "hitsLanded": 13,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-027",
+    "score": 8,
+    "rank": 15,
+    "hitsLanded": 19,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-025",
+    "score": 8,
+    "rank": 16,
+    "hitsLanded": 13,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-019",
+    "score": 6,
+    "rank": 17,
+    "hitsLanded": 20,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-050",
+    "score": 6,
+    "rank": 18,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-011",
+    "score": 6,
+    "rank": 19,
+    "hitsLanded": 17,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-060",
+    "score": 6,
+    "rank": 20,
+    "hitsLanded": 16,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-000",
+    "score": 6,
+    "rank": 21,
+    "hitsLanded": 15,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-017",
+    "score": 6,
+    "rank": 22,
+    "hitsLanded": 13,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-037",
+    "score": 5,
+    "rank": 23,
+    "hitsLanded": 17,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-049",
+    "score": 5,
+    "rank": 24,
+    "hitsLanded": 15,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-048",
+    "score": 5,
+    "rank": 25,
+    "hitsLanded": 14,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-046",
+    "score": 4,
+    "rank": 26,
+    "hitsLanded": 24,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-018",
+    "score": 4,
+    "rank": 27,
+    "hitsLanded": 21,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-061",
+    "score": 4,
+    "rank": 28,
+    "hitsLanded": 15,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-028",
+    "score": 3,
+    "rank": 29,
+    "hitsLanded": 21,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-034",
+    "score": 3,
+    "rank": 30,
+    "hitsLanded": 21,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-042",
+    "score": 3,
+    "rank": 31,
+    "hitsLanded": 19,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-021",
+    "score": 3,
+    "rank": 32,
+    "hitsLanded": 16,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-024",
+    "score": 3,
+    "rank": 33,
+    "hitsLanded": 16,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-041",
+    "score": 3,
+    "rank": 34,
+    "hitsLanded": 11,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-031",
+    "score": 2,
+    "rank": 35,
+    "hitsLanded": 8,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-045",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 18,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-001",
+    "score": 1,
+    "rank": 37,
+    "hitsLanded": 16,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-063",
+    "score": 1,
+    "rank": 38,
+    "hitsLanded": 11,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-057",
+    "score": 1,
+    "rank": 39,
+    "hitsLanded": 8,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-044",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 17,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-033",
+    "score": -2,
+    "rank": 41,
+    "hitsLanded": 12,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-003",
+    "score": -3,
+    "rank": 42,
+    "hitsLanded": 18,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-040",
+    "score": -4,
+    "rank": 43,
+    "hitsLanded": 17,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-047",
+    "score": -5,
+    "rank": 44,
+    "hitsLanded": 14,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-005",
+    "score": -5,
+    "rank": 45,
+    "hitsLanded": 13,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-007",
+    "score": -5,
+    "rank": 46,
+    "hitsLanded": 12,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-026",
+    "score": -6,
+    "rank": 47,
+    "hitsLanded": 21,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-004",
+    "score": -6,
+    "rank": 48,
+    "hitsLanded": 20,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-039",
+    "score": -6,
+    "rank": 49,
+    "hitsLanded": 11,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-015",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 17,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-020",
+    "score": -8,
+    "rank": 51,
+    "hitsLanded": 20,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-009",
+    "score": -8,
+    "rank": 52,
+    "hitsLanded": 5,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-029",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 19,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-051",
+    "score": -9,
+    "rank": 54,
+    "hitsLanded": 16,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-055",
+    "score": -9,
+    "rank": 55,
+    "hitsLanded": 11,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-038",
+    "score": -11,
+    "rank": 56,
+    "hitsLanded": 19,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-030",
+    "score": -14,
+    "rank": 57,
+    "hitsLanded": 22,
+    "hitsTaken": 36
+   },
+   {
+    "botId": "seat-014",
+    "score": -14,
+    "rank": 58,
+    "hitsLanded": 15,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-010",
+    "score": -15,
+    "rank": 59,
+    "hitsLanded": 19,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-054",
+    "score": -15,
+    "rank": 60,
+    "hitsLanded": 19,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-023",
+    "score": -19,
+    "rank": 61,
+    "hitsLanded": 11,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-006",
+    "score": -24,
+    "rank": 62,
+    "hitsLanded": 14,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-022",
+    "score": -25,
+    "rank": 63,
+    "hitsLanded": 7,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-002",
+    "score": -29,
+    "rank": 64,
+    "hitsLanded": 20,
+    "hitsTaken": 49
+   }
+  ]
+ },
+ {
+  "seed": 103947,
+  "ruleSetId": "arms-length",
+  "ticksSha256": "23e6c55228bed3aa4245a08f54996cb3cf9398943d6d74e0d5932dab4b463fba",
+  "standings": [
+   {
+    "botId": "seat-027",
+    "score": 13,
+    "rank": 1,
+    "hitsLanded": 18,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-056",
+    "score": 12,
+    "rank": 2,
+    "hitsLanded": 20,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-028",
+    "score": 11,
+    "rank": 3,
+    "hitsLanded": 23,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-019",
+    "score": 10,
+    "rank": 4,
+    "hitsLanded": 20,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-061",
+    "score": 10,
+    "rank": 5,
+    "hitsLanded": 16,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-053",
+    "score": 10,
+    "rank": 6,
+    "hitsLanded": 15,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-008",
+    "score": 9,
+    "rank": 7,
+    "hitsLanded": 21,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-010",
+    "score": 9,
+    "rank": 8,
+    "hitsLanded": 20,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-060",
+    "score": 9,
+    "rank": 9,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-052",
+    "score": 9,
+    "rank": 10,
+    "hitsLanded": 16,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-035",
+    "score": 8,
+    "rank": 11,
+    "hitsLanded": 19,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-043",
+    "score": 8,
+    "rank": 12,
+    "hitsLanded": 19,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-012",
+    "score": 7,
+    "rank": 13,
+    "hitsLanded": 22,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-018",
+    "score": 7,
+    "rank": 14,
+    "hitsLanded": 20,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-059",
+    "score": 7,
+    "rank": 15,
+    "hitsLanded": 19,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-017",
+    "score": 7,
+    "rank": 16,
+    "hitsLanded": 18,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-032",
+    "score": 7,
+    "rank": 17,
+    "hitsLanded": 18,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-057",
+    "score": 7,
+    "rank": 18,
+    "hitsLanded": 15,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-058",
+    "score": 6,
+    "rank": 19,
+    "hitsLanded": 19,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-044",
+    "score": 6,
+    "rank": 20,
+    "hitsLanded": 16,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-037",
+    "score": 5,
+    "rank": 21,
+    "hitsLanded": 23,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-051",
+    "score": 5,
+    "rank": 22,
+    "hitsLanded": 18,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-020",
+    "score": 5,
+    "rank": 23,
+    "hitsLanded": 18,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-063",
+    "score": 5,
+    "rank": 24,
+    "hitsLanded": 12,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-002",
+    "score": 4,
+    "rank": 25,
+    "hitsLanded": 17,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-001",
+    "score": 4,
+    "rank": 26,
+    "hitsLanded": 15,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-047",
+    "score": 3,
+    "rank": 27,
+    "hitsLanded": 18,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-045",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 17,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-036",
+    "score": 3,
+    "rank": 29,
+    "hitsLanded": 17,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-041",
+    "score": 3,
+    "rank": 30,
+    "hitsLanded": 16,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-049",
+    "score": 3,
+    "rank": 31,
+    "hitsLanded": 15,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-026",
+    "score": 2,
+    "rank": 32,
+    "hitsLanded": 22,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-005",
+    "score": 2,
+    "rank": 33,
+    "hitsLanded": 19,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-025",
+    "score": 2,
+    "rank": 34,
+    "hitsLanded": 17,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-031",
+    "score": 2,
+    "rank": 35,
+    "hitsLanded": 13,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-048",
+    "score": 2,
+    "rank": 36,
+    "hitsLanded": 12,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-055",
+    "score": 2,
+    "rank": 37,
+    "hitsLanded": 6,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-003",
+    "score": 1,
+    "rank": 38,
+    "hitsLanded": 21,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-050",
+    "score": 1,
+    "rank": 39,
+    "hitsLanded": 21,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-011",
+    "score": 1,
+    "rank": 40,
+    "hitsLanded": 21,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-040",
+    "score": 1,
+    "rank": 41,
+    "hitsLanded": 14,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-042",
+    "score": 0,
+    "rank": 42,
+    "hitsLanded": 22,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-030",
+    "score": -1,
+    "rank": 43,
+    "hitsLanded": 19,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-029",
+    "score": -1,
+    "rank": 44,
+    "hitsLanded": 19,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-004",
+    "score": -2,
+    "rank": 45,
+    "hitsLanded": 20,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-054",
+    "score": -2,
+    "rank": 46,
+    "hitsLanded": 19,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-024",
+    "score": -2,
+    "rank": 47,
+    "hitsLanded": 13,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-015",
+    "score": -3,
+    "rank": 48,
+    "hitsLanded": 15,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-000",
+    "score": -4,
+    "rank": 49,
+    "hitsLanded": 13,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-009",
+    "score": -4,
+    "rank": 50,
+    "hitsLanded": 12,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-033",
+    "score": -5,
+    "rank": 51,
+    "hitsLanded": 13,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-021",
+    "score": -7,
+    "rank": 52,
+    "hitsLanded": 17,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-034",
+    "score": -8,
+    "rank": 53,
+    "hitsLanded": 23,
+    "hitsTaken": 31
+   },
+   {
+    "botId": "seat-016",
+    "score": -10,
+    "rank": 54,
+    "hitsLanded": 6,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-022",
+    "score": -12,
+    "rank": 55,
+    "hitsLanded": 19,
+    "hitsTaken": 31
+   },
+   {
+    "botId": "seat-046",
+    "score": -13,
+    "rank": 56,
+    "hitsLanded": 23,
+    "hitsTaken": 36
+   },
+   {
+    "botId": "seat-023",
+    "score": -13,
+    "rank": 57,
+    "hitsLanded": 19,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-062",
+    "score": -14,
+    "rank": 58,
+    "hitsLanded": 21,
+    "hitsTaken": 35
+   },
+   {
+    "botId": "seat-013",
+    "score": -14,
+    "rank": 59,
+    "hitsLanded": 16,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-007",
+    "score": -16,
+    "rank": 60,
+    "hitsLanded": 10,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-039",
+    "score": -17,
+    "rank": 61,
+    "hitsLanded": 17,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-014",
+    "score": -22,
+    "rank": 62,
+    "hitsLanded": 22,
+    "hitsTaken": 44
+   },
+   {
+    "botId": "seat-006",
+    "score": -28,
+    "rank": 63,
+    "hitsLanded": 18,
+    "hitsTaken": 46
+   },
+   {
+    "botId": "seat-038",
+    "score": -33,
+    "rank": 64,
+    "hitsLanded": 21,
+    "hitsTaken": 54
+   }
+  ]
+ },
+ {
+  "seed": 111866,
+  "ruleSetId": "dry-spell",
+  "ticksSha256": "f57ed4d5c95726da4e672a49aecf48cb92160a3ecc4eba5b17dfaec72183971c",
+  "standings": [
+   {
+    "botId": "seat-060",
+    "score": 9,
+    "rank": 1,
+    "hitsLanded": 11,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-018",
+    "score": 8,
+    "rank": 2,
+    "hitsLanded": 14,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-058",
+    "score": 8,
+    "rank": 3,
+    "hitsLanded": 12,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-008",
+    "score": 7,
+    "rank": 4,
+    "hitsLanded": 12,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-051",
+    "score": 7,
+    "rank": 5,
+    "hitsLanded": 10,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-021",
+    "score": 7,
+    "rank": 6,
+    "hitsLanded": 8,
+    "hitsTaken": 1
+   },
+   {
+    "botId": "seat-050",
+    "score": 6,
+    "rank": 7,
+    "hitsLanded": 13,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-048",
+    "score": 6,
+    "rank": 8,
+    "hitsLanded": 9,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-002",
+    "score": 5,
+    "rank": 9,
+    "hitsLanded": 13,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-040",
+    "score": 5,
+    "rank": 10,
+    "hitsLanded": 10,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-036",
+    "score": 5,
+    "rank": 11,
+    "hitsLanded": 8,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-056",
+    "score": 4,
+    "rank": 12,
+    "hitsLanded": 10,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-028",
+    "score": 4,
+    "rank": 13,
+    "hitsLanded": 9,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-044",
+    "score": 4,
+    "rank": 14,
+    "hitsLanded": 8,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-011",
+    "score": 4,
+    "rank": 15,
+    "hitsLanded": 8,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-027",
+    "score": 3,
+    "rank": 16,
+    "hitsLanded": 9,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-020",
+    "score": 3,
+    "rank": 17,
+    "hitsLanded": 9,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-041",
+    "score": 3,
+    "rank": 18,
+    "hitsLanded": 8,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-029",
+    "score": 3,
+    "rank": 19,
+    "hitsLanded": 8,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-043",
+    "score": 3,
+    "rank": 20,
+    "hitsLanded": 8,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-045",
+    "score": 3,
+    "rank": 21,
+    "hitsLanded": 7,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-047",
+    "score": 3,
+    "rank": 22,
+    "hitsLanded": 7,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-035",
+    "score": 3,
+    "rank": 23,
+    "hitsLanded": 7,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-033",
+    "score": 2,
+    "rank": 24,
+    "hitsLanded": 9,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-049",
+    "score": 2,
+    "rank": 25,
+    "hitsLanded": 6,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-052",
+    "score": 2,
+    "rank": 26,
+    "hitsLanded": 6,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-039",
+    "score": 2,
+    "rank": 27,
+    "hitsLanded": 5,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-059",
+    "score": 1,
+    "rank": 28,
+    "hitsLanded": 9,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-037",
+    "score": 1,
+    "rank": 29,
+    "hitsLanded": 9,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-003",
+    "score": 1,
+    "rank": 30,
+    "hitsLanded": 8,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-004",
+    "score": 1,
+    "rank": 31,
+    "hitsLanded": 7,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-024",
+    "score": 1,
+    "rank": 32,
+    "hitsLanded": 7,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-057",
+    "score": 1,
+    "rank": 33,
+    "hitsLanded": 7,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-009",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 4,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-042",
+    "score": 0,
+    "rank": 35,
+    "hitsLanded": 13,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-034",
+    "score": 0,
+    "rank": 36,
+    "hitsLanded": 13,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-016",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 10,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-025",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 7,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-061",
+    "score": 0,
+    "rank": 39,
+    "hitsLanded": 7,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-000",
+    "score": 0,
+    "rank": 40,
+    "hitsLanded": 5,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-015",
+    "score": 0,
+    "rank": 41,
+    "hitsLanded": 5,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-053",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 9,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-022",
+    "score": -1,
+    "rank": 43,
+    "hitsLanded": 9,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-012",
+    "score": -1,
+    "rank": 44,
+    "hitsLanded": 8,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-026",
+    "score": -2,
+    "rank": 45,
+    "hitsLanded": 13,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-005",
+    "score": -2,
+    "rank": 46,
+    "hitsLanded": 9,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-054",
+    "score": -2,
+    "rank": 47,
+    "hitsLanded": 9,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-019",
+    "score": -3,
+    "rank": 48,
+    "hitsLanded": 9,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-017",
+    "score": -3,
+    "rank": 49,
+    "hitsLanded": 7,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-010",
+    "score": -4,
+    "rank": 50,
+    "hitsLanded": 13,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-062",
+    "score": -4,
+    "rank": 51,
+    "hitsLanded": 10,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-023",
+    "score": -4,
+    "rank": 52,
+    "hitsLanded": 5,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-031",
+    "score": -5,
+    "rank": 53,
+    "hitsLanded": 10,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-013",
+    "score": -5,
+    "rank": 54,
+    "hitsLanded": 9,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-046",
+    "score": -6,
+    "rank": 55,
+    "hitsLanded": 12,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-055",
+    "score": -6,
+    "rank": 56,
+    "hitsLanded": 9,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-001",
+    "score": -6,
+    "rank": 57,
+    "hitsLanded": 5,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-038",
+    "score": -7,
+    "rank": 58,
+    "hitsLanded": 10,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-006",
+    "score": -8,
+    "rank": 59,
+    "hitsLanded": 14,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-063",
+    "score": -8,
+    "rank": 60,
+    "hitsLanded": 12,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-007",
+    "score": -10,
+    "rank": 61,
+    "hitsLanded": 13,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-032",
+    "score": -11,
+    "rank": 62,
+    "hitsLanded": 5,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-030",
+    "score": -12,
+    "rank": 63,
+    "hitsLanded": 11,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-014",
+    "score": -17,
+    "rank": 64,
+    "hitsLanded": 15,
+    "hitsTaken": 32
+   }
+  ]
+ },
+ {
+  "seed": 119785,
+  "ruleSetId": "downpour",
+  "ticksSha256": "cb5668623720e61099062197acdc2c82c1569d48eea369665540cdc8a77bf0d0",
+  "standings": [
+   {
+    "botId": "seat-061",
+    "score": 18,
+    "rank": 1,
+    "hitsLanded": 32,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-024",
+    "score": 18,
+    "rank": 2,
+    "hitsLanded": 31,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-026",
+    "score": 18,
+    "rank": 3,
+    "hitsLanded": 30,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-045",
+    "score": 17,
+    "rank": 4,
+    "hitsLanded": 27,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-040",
+    "score": 17,
+    "rank": 5,
+    "hitsLanded": 26,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-048",
+    "score": 15,
+    "rank": 6,
+    "hitsLanded": 28,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-060",
+    "score": 14,
+    "rank": 7,
+    "hitsLanded": 30,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-017",
+    "score": 14,
+    "rank": 8,
+    "hitsLanded": 25,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-052",
+    "score": 13,
+    "rank": 9,
+    "hitsLanded": 30,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-008",
+    "score": 13,
+    "rank": 10,
+    "hitsLanded": 18,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-063",
+    "score": 13,
+    "rank": 11,
+    "hitsLanded": 17,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-019",
+    "score": 12,
+    "rank": 12,
+    "hitsLanded": 22,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-043",
+    "score": 11,
+    "rank": 13,
+    "hitsLanded": 28,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-033",
+    "score": 11,
+    "rank": 14,
+    "hitsLanded": 25,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-044",
+    "score": 11,
+    "rank": 15,
+    "hitsLanded": 23,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-035",
+    "score": 10,
+    "rank": 16,
+    "hitsLanded": 29,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-028",
+    "score": 10,
+    "rank": 17,
+    "hitsLanded": 27,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-050",
+    "score": 9,
+    "rank": 18,
+    "hitsLanded": 28,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-056",
+    "score": 9,
+    "rank": 19,
+    "hitsLanded": 23,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-049",
+    "score": 9,
+    "rank": 20,
+    "hitsLanded": 19,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-057",
+    "score": 8,
+    "rank": 21,
+    "hitsLanded": 22,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-053",
+    "score": 6,
+    "rank": 22,
+    "hitsLanded": 25,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-041",
+    "score": 6,
+    "rank": 23,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-039",
+    "score": 6,
+    "rank": 24,
+    "hitsLanded": 13,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-059",
+    "score": 5,
+    "rank": 25,
+    "hitsLanded": 28,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-054",
+    "score": 4,
+    "rank": 26,
+    "hitsLanded": 32,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-036",
+    "score": 4,
+    "rank": 27,
+    "hitsLanded": 29,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-051",
+    "score": 4,
+    "rank": 28,
+    "hitsLanded": 28,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-037",
+    "score": 4,
+    "rank": 29,
+    "hitsLanded": 26,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-001",
+    "score": 4,
+    "rank": 30,
+    "hitsLanded": 21,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-042",
+    "score": 3,
+    "rank": 31,
+    "hitsLanded": 31,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-029",
+    "score": 3,
+    "rank": 32,
+    "hitsLanded": 27,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-047",
+    "score": 3,
+    "rank": 33,
+    "hitsLanded": 15,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-005",
+    "score": 2,
+    "rank": 34,
+    "hitsLanded": 27,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-011",
+    "score": 2,
+    "rank": 35,
+    "hitsLanded": 26,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-021",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 28,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-032",
+    "score": 1,
+    "rank": 37,
+    "hitsLanded": 16,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-055",
+    "score": 1,
+    "rank": 38,
+    "hitsLanded": 16,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-031",
+    "score": 1,
+    "rank": 39,
+    "hitsLanded": 5,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-012",
+    "score": 0,
+    "rank": 40,
+    "hitsLanded": 28,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-025",
+    "score": 0,
+    "rank": 41,
+    "hitsLanded": 17,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-000",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 11,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-018",
+    "score": -2,
+    "rank": 43,
+    "hitsLanded": 29,
+    "hitsTaken": 31
+   },
+   {
+    "botId": "seat-009",
+    "score": -2,
+    "rank": 44,
+    "hitsLanded": 19,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-046",
+    "score": -3,
+    "rank": 45,
+    "hitsLanded": 29,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-004",
+    "score": -3,
+    "rank": 46,
+    "hitsLanded": 29,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-038",
+    "score": -4,
+    "rank": 47,
+    "hitsLanded": 30,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-058",
+    "score": -6,
+    "rank": 48,
+    "hitsLanded": 27,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-007",
+    "score": -6,
+    "rank": 49,
+    "hitsLanded": 18,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-027",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 26,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-016",
+    "score": -7,
+    "rank": 51,
+    "hitsLanded": 16,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-014",
+    "score": -8,
+    "rank": 52,
+    "hitsLanded": 30,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-034",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 29,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-022",
+    "score": -11,
+    "rank": 54,
+    "hitsLanded": 31,
+    "hitsTaken": 42
+   },
+   {
+    "botId": "seat-020",
+    "score": -12,
+    "rank": 55,
+    "hitsLanded": 25,
+    "hitsTaken": 37
+   },
+   {
+    "botId": "seat-002",
+    "score": -14,
+    "rank": 56,
+    "hitsLanded": 28,
+    "hitsTaken": 42
+   },
+   {
+    "botId": "seat-003",
+    "score": -15,
+    "rank": 57,
+    "hitsLanded": 30,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-006",
+    "score": -17,
+    "rank": 58,
+    "hitsLanded": 28,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-013",
+    "score": -20,
+    "rank": 59,
+    "hitsLanded": 30,
+    "hitsTaken": 50
+   },
+   {
+    "botId": "seat-062",
+    "score": -22,
+    "rank": 60,
+    "hitsLanded": 30,
+    "hitsTaken": 52
+   },
+   {
+    "botId": "seat-023",
+    "score": -27,
+    "rank": 61,
+    "hitsLanded": 14,
+    "hitsTaken": 41
+   },
+   {
+    "botId": "seat-010",
+    "score": -33,
+    "rank": 62,
+    "hitsLanded": 25,
+    "hitsTaken": 58
+   },
+   {
+    "botId": "seat-015",
+    "score": -34,
+    "rank": 63,
+    "hitsLanded": 16,
+    "hitsTaken": 50
+   },
+   {
+    "botId": "seat-030",
+    "score": -67,
+    "rank": 64,
+    "hitsLanded": 29,
+    "hitsTaken": 96
+   }
+  ]
+ },
+ {
+  "seed": 127704,
+  "ruleSetId": "open-field",
+  "ticksSha256": "4bdb64a69a4f8a7d60b508bc9b7d9d9d924b625c9bf3fb6f9871f35ba846f176",
+  "standings": [
+   {
+    "botId": "seat-059",
+    "score": 13,
+    "rank": 1,
+    "hitsLanded": 15,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-042",
+    "score": 12,
+    "rank": 2,
+    "hitsLanded": 21,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-060",
+    "score": 12,
+    "rank": 3,
+    "hitsLanded": 17,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-016",
+    "score": 12,
+    "rank": 4,
+    "hitsLanded": 15,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-051",
+    "score": 11,
+    "rank": 5,
+    "hitsLanded": 19,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-050",
+    "score": 11,
+    "rank": 6,
+    "hitsLanded": 18,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-019",
+    "score": 11,
+    "rank": 7,
+    "hitsLanded": 18,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-043",
+    "score": 10,
+    "rank": 8,
+    "hitsLanded": 19,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-057",
+    "score": 10,
+    "rank": 9,
+    "hitsLanded": 17,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-029",
+    "score": 10,
+    "rank": 10,
+    "hitsLanded": 15,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-044",
+    "score": 9,
+    "rank": 11,
+    "hitsLanded": 20,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-011",
+    "score": 9,
+    "rank": 12,
+    "hitsLanded": 19,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-052",
+    "score": 9,
+    "rank": 13,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-040",
+    "score": 9,
+    "rank": 14,
+    "hitsLanded": 16,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-028",
+    "score": 7,
+    "rank": 15,
+    "hitsLanded": 16,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-003",
+    "score": 7,
+    "rank": 16,
+    "hitsLanded": 16,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-009",
+    "score": 7,
+    "rank": 17,
+    "hitsLanded": 15,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-026",
+    "score": 6,
+    "rank": 18,
+    "hitsLanded": 19,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-055",
+    "score": 6,
+    "rank": 19,
+    "hitsLanded": 19,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-054",
+    "score": 6,
+    "rank": 20,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-013",
+    "score": 6,
+    "rank": 21,
+    "hitsLanded": 18,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-020",
+    "score": 5,
+    "rank": 22,
+    "hitsLanded": 19,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-005",
+    "score": 5,
+    "rank": 23,
+    "hitsLanded": 19,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-062",
+    "score": 4,
+    "rank": 24,
+    "hitsLanded": 21,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-018",
+    "score": 4,
+    "rank": 25,
+    "hitsLanded": 19,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-061",
+    "score": 4,
+    "rank": 26,
+    "hitsLanded": 18,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-014",
+    "score": 3,
+    "rank": 27,
+    "hitsLanded": 20,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-035",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 16,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-024",
+    "score": 3,
+    "rank": 29,
+    "hitsLanded": 14,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-021",
+    "score": 3,
+    "rank": 30,
+    "hitsLanded": 14,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-033",
+    "score": 3,
+    "rank": 31,
+    "hitsLanded": 8,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-037",
+    "score": 2,
+    "rank": 32,
+    "hitsLanded": 18,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-004",
+    "score": 2,
+    "rank": 33,
+    "hitsLanded": 17,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-017",
+    "score": 2,
+    "rank": 34,
+    "hitsLanded": 7,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-058",
+    "score": 1,
+    "rank": 35,
+    "hitsLanded": 19,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-049",
+    "score": 1,
+    "rank": 36,
+    "hitsLanded": 7,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-036",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 18,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-008",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 15,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-041",
+    "score": 0,
+    "rank": 39,
+    "hitsLanded": 12,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-022",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 20,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-032",
+    "score": -1,
+    "rank": 41,
+    "hitsLanded": 15,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-039",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 10,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-001",
+    "score": -1,
+    "rank": 43,
+    "hitsLanded": 5,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-012",
+    "score": -2,
+    "rank": 44,
+    "hitsLanded": 20,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-027",
+    "score": -2,
+    "rank": 45,
+    "hitsLanded": 16,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-056",
+    "score": -3,
+    "rank": 46,
+    "hitsLanded": 13,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-025",
+    "score": -3,
+    "rank": 47,
+    "hitsLanded": 6,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-030",
+    "score": -4,
+    "rank": 48,
+    "hitsLanded": 16,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-023",
+    "score": -4,
+    "rank": 49,
+    "hitsLanded": 5,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-047",
+    "score": -4,
+    "rank": 50,
+    "hitsLanded": 3,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-010",
+    "score": -6,
+    "rank": 51,
+    "hitsLanded": 16,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-015",
+    "score": -6,
+    "rank": 52,
+    "hitsLanded": 2,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-053",
+    "score": -8,
+    "rank": 53,
+    "hitsLanded": 12,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-034",
+    "score": -9,
+    "rank": 54,
+    "hitsLanded": 21,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-038",
+    "score": -10,
+    "rank": 55,
+    "hitsLanded": 14,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-045",
+    "score": -11,
+    "rank": 56,
+    "hitsLanded": 14,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-048",
+    "score": -13,
+    "rank": 57,
+    "hitsLanded": 11,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-063",
+    "score": -13,
+    "rank": 58,
+    "hitsLanded": 11,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-000",
+    "score": -15,
+    "rank": 59,
+    "hitsLanded": 9,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-006",
+    "score": -17,
+    "rank": 60,
+    "hitsLanded": 16,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-046",
+    "score": -17,
+    "rank": 61,
+    "hitsLanded": 11,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-002",
+    "score": -18,
+    "rank": 62,
+    "hitsLanded": 15,
+    "hitsTaken": 33
+   },
+   {
+    "botId": "seat-031",
+    "score": -23,
+    "rank": 63,
+    "hitsLanded": 21,
+    "hitsTaken": 44
+   },
+   {
+    "botId": "seat-007",
+    "score": -46,
+    "rank": 64,
+    "hitsLanded": 8,
+    "hitsTaken": 54
+   }
+  ]
+ },
+ {
+  "seed": 135623,
+  "ruleSetId": "sharp-eyes",
+  "ticksSha256": "cdea28e00b48399aca6291b3c0196fd79db6b826cb6f8c520f546f7a6d4dbbdf",
+  "standings": [
+   {
+    "botId": "seat-008",
+    "score": 16,
+    "rank": 1,
+    "hitsLanded": 19,
+    "hitsTaken": 3
+   },
+   {
+    "botId": "seat-050",
+    "score": 14,
+    "rank": 2,
+    "hitsLanded": 23,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-034",
+    "score": 14,
+    "rank": 3,
+    "hitsLanded": 21,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-045",
+    "score": 14,
+    "rank": 4,
+    "hitsLanded": 21,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-053",
+    "score": 13,
+    "rank": 5,
+    "hitsLanded": 19,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-003",
+    "score": 12,
+    "rank": 6,
+    "hitsLanded": 19,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-011",
+    "score": 12,
+    "rank": 7,
+    "hitsLanded": 18,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-048",
+    "score": 12,
+    "rank": 8,
+    "hitsLanded": 18,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-051",
+    "score": 11,
+    "rank": 9,
+    "hitsLanded": 20,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-058",
+    "score": 11,
+    "rank": 10,
+    "hitsLanded": 19,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-020",
+    "score": 11,
+    "rank": 11,
+    "hitsLanded": 19,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-054",
+    "score": 11,
+    "rank": 12,
+    "hitsLanded": 19,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-021",
+    "score": 11,
+    "rank": 13,
+    "hitsLanded": 18,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-059",
+    "score": 11,
+    "rank": 14,
+    "hitsLanded": 18,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-040",
+    "score": 11,
+    "rank": 15,
+    "hitsLanded": 16,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-060",
+    "score": 10,
+    "rank": 16,
+    "hitsLanded": 20,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-052",
+    "score": 10,
+    "rank": 17,
+    "hitsLanded": 17,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-019",
+    "score": 9,
+    "rank": 18,
+    "hitsLanded": 20,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-017",
+    "score": 9,
+    "rank": 19,
+    "hitsLanded": 19,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-026",
+    "score": 9,
+    "rank": 20,
+    "hitsLanded": 19,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-028",
+    "score": 8,
+    "rank": 21,
+    "hitsLanded": 21,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-010",
+    "score": 8,
+    "rank": 22,
+    "hitsLanded": 19,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-056",
+    "score": 8,
+    "rank": 23,
+    "hitsLanded": 15,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-057",
+    "score": 8,
+    "rank": 24,
+    "hitsLanded": 14,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-009",
+    "score": 7,
+    "rank": 25,
+    "hitsLanded": 17,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-033",
+    "score": 7,
+    "rank": 26,
+    "hitsLanded": 14,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-012",
+    "score": 6,
+    "rank": 27,
+    "hitsLanded": 21,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-044",
+    "score": 6,
+    "rank": 28,
+    "hitsLanded": 17,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-032",
+    "score": 6,
+    "rank": 29,
+    "hitsLanded": 16,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-035",
+    "score": 5,
+    "rank": 30,
+    "hitsLanded": 20,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-062",
+    "score": 4,
+    "rank": 31,
+    "hitsLanded": 23,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-042",
+    "score": 4,
+    "rank": 32,
+    "hitsLanded": 20,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-043",
+    "score": 4,
+    "rank": 33,
+    "hitsLanded": 18,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-061",
+    "score": 3,
+    "rank": 34,
+    "hitsLanded": 17,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-046",
+    "score": 3,
+    "rank": 35,
+    "hitsLanded": 14,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-001",
+    "score": 3,
+    "rank": 36,
+    "hitsLanded": 13,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-049",
+    "score": 3,
+    "rank": 37,
+    "hitsLanded": 12,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-031",
+    "score": 3,
+    "rank": 38,
+    "hitsLanded": 8,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-016",
+    "score": 2,
+    "rank": 39,
+    "hitsLanded": 16,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-037",
+    "score": 2,
+    "rank": 40,
+    "hitsLanded": 15,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-025",
+    "score": 2,
+    "rank": 41,
+    "hitsLanded": 10,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-024",
+    "score": 1,
+    "rank": 42,
+    "hitsLanded": 16,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-041",
+    "score": 0,
+    "rank": 43,
+    "hitsLanded": 15,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-063",
+    "score": -1,
+    "rank": 44,
+    "hitsLanded": 20,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-029",
+    "score": -3,
+    "rank": 45,
+    "hitsLanded": 15,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-004",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 21,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-002",
+    "score": -4,
+    "rank": 47,
+    "hitsLanded": 18,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-013",
+    "score": -6,
+    "rank": 48,
+    "hitsLanded": 19,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-027",
+    "score": -7,
+    "rank": 49,
+    "hitsLanded": 20,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-036",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 16,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-022",
+    "score": -10,
+    "rank": 51,
+    "hitsLanded": 22,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-023",
+    "score": -10,
+    "rank": 52,
+    "hitsLanded": 14,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-015",
+    "score": -10,
+    "rank": 53,
+    "hitsLanded": 12,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-000",
+    "score": -10,
+    "rank": 54,
+    "hitsLanded": 7,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-055",
+    "score": -12,
+    "rank": 55,
+    "hitsLanded": 13,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-018",
+    "score": -15,
+    "rank": 56,
+    "hitsLanded": 14,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-005",
+    "score": -16,
+    "rank": 57,
+    "hitsLanded": 16,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-039",
+    "score": -17,
+    "rank": 58,
+    "hitsLanded": 11,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-030",
+    "score": -18,
+    "rank": 59,
+    "hitsLanded": 16,
+    "hitsTaken": 34
+   },
+   {
+    "botId": "seat-038",
+    "score": -29,
+    "rank": 60,
+    "hitsLanded": 22,
+    "hitsTaken": 51
+   },
+   {
+    "botId": "seat-007",
+    "score": -36,
+    "rank": 61,
+    "hitsLanded": 9,
+    "hitsTaken": 45
+   },
+   {
+    "botId": "seat-047",
+    "score": -37,
+    "rank": 62,
+    "hitsLanded": 7,
+    "hitsTaken": 44
+   },
+   {
+    "botId": "seat-006",
+    "score": -40,
+    "rank": 63,
+    "hitsLanded": 21,
+    "hitsTaken": 61
+   },
+   {
+    "botId": "seat-014",
+    "score": -42,
+    "rank": 64,
+    "hitsLanded": 19,
+    "hitsTaken": 61
+   }
+  ]
+ },
+ {
+  "seed": 143542,
+  "ruleSetId": "standard",
+  "ticksSha256": "5400b4499ae16d5b31697dbfaf34a3544957df47547243a8c34f3f1e0e6696cc",
+  "standings": [
+   {
+    "botId": "seat-051",
+    "score": 15,
+    "rank": 1,
+    "hitsLanded": 22,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-028",
+    "score": 14,
+    "rank": 2,
+    "hitsLanded": 19,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-050",
+    "score": 13,
+    "rank": 3,
+    "hitsLanded": 18,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-059",
+    "score": 12,
+    "rank": 4,
+    "hitsLanded": 22,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-053",
+    "score": 12,
+    "rank": 5,
+    "hitsLanded": 22,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-060",
+    "score": 12,
+    "rank": 6,
+    "hitsLanded": 21,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-011",
+    "score": 12,
+    "rank": 7,
+    "hitsLanded": 19,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-037",
+    "score": 12,
+    "rank": 8,
+    "hitsLanded": 18,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-054",
+    "score": 11,
+    "rank": 9,
+    "hitsLanded": 17,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-032",
+    "score": 11,
+    "rank": 10,
+    "hitsLanded": 16,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-048",
+    "score": 11,
+    "rank": 11,
+    "hitsLanded": 16,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-036",
+    "score": 9,
+    "rank": 12,
+    "hitsLanded": 19,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-045",
+    "score": 9,
+    "rank": 13,
+    "hitsLanded": 18,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-040",
+    "score": 9,
+    "rank": 14,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-041",
+    "score": 9,
+    "rank": 15,
+    "hitsLanded": 13,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-063",
+    "score": 9,
+    "rank": 16,
+    "hitsLanded": 11,
+    "hitsTaken": 2
+   },
+   {
+    "botId": "seat-027",
+    "score": 8,
+    "rank": 17,
+    "hitsLanded": 22,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-016",
+    "score": 8,
+    "rank": 18,
+    "hitsLanded": 16,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-052",
+    "score": 7,
+    "rank": 19,
+    "hitsLanded": 15,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-033",
+    "score": 6,
+    "rank": 20,
+    "hitsLanded": 16,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-055",
+    "score": 5,
+    "rank": 21,
+    "hitsLanded": 12,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-030",
+    "score": 4,
+    "rank": 22,
+    "hitsLanded": 23,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-010",
+    "score": 4,
+    "rank": 23,
+    "hitsLanded": 20,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-044",
+    "score": 4,
+    "rank": 24,
+    "hitsLanded": 18,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-008",
+    "score": 4,
+    "rank": 25,
+    "hitsLanded": 16,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-057",
+    "score": 4,
+    "rank": 26,
+    "hitsLanded": 14,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-035",
+    "score": 3,
+    "rank": 27,
+    "hitsLanded": 18,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-061",
+    "score": 3,
+    "rank": 28,
+    "hitsLanded": 18,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-042",
+    "score": 2,
+    "rank": 29,
+    "hitsLanded": 23,
+    "hitsTaken": 21
+   },
+   {
+    "botId": "seat-058",
+    "score": 2,
+    "rank": 30,
+    "hitsLanded": 19,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-017",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 15,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-003",
+    "score": 1,
+    "rank": 32,
+    "hitsLanded": 23,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-049",
+    "score": 1,
+    "rank": 33,
+    "hitsLanded": 13,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-025",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 10,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-019",
+    "score": 0,
+    "rank": 35,
+    "hitsLanded": 19,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-023",
+    "score": 0,
+    "rank": 36,
+    "hitsLanded": 19,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-018",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 18,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-056",
+    "score": 0,
+    "rank": 38,
+    "hitsLanded": 13,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-020",
+    "score": -1,
+    "rank": 39,
+    "hitsLanded": 21,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-043",
+    "score": -1,
+    "rank": 40,
+    "hitsLanded": 17,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-031",
+    "score": -1,
+    "rank": 41,
+    "hitsLanded": 13,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-015",
+    "score": -1,
+    "rank": 42,
+    "hitsLanded": 8,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-009",
+    "score": -2,
+    "rank": 43,
+    "hitsLanded": 11,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-007",
+    "score": -2,
+    "rank": 44,
+    "hitsLanded": 10,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-013",
+    "score": -3,
+    "rank": 45,
+    "hitsLanded": 20,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-005",
+    "score": -3,
+    "rank": 46,
+    "hitsLanded": 16,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-029",
+    "score": -3,
+    "rank": 47,
+    "hitsLanded": 16,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-038",
+    "score": -5,
+    "rank": 48,
+    "hitsLanded": 14,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-001",
+    "score": -5,
+    "rank": 49,
+    "hitsLanded": 12,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-034",
+    "score": -6,
+    "rank": 50,
+    "hitsLanded": 18,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-047",
+    "score": -6,
+    "rank": 51,
+    "hitsLanded": 4,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-024",
+    "score": -8,
+    "rank": 52,
+    "hitsLanded": 8,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-004",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 17,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-039",
+    "score": -9,
+    "rank": 54,
+    "hitsLanded": 14,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-021",
+    "score": -10,
+    "rank": 55,
+    "hitsLanded": 14,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-012",
+    "score": -11,
+    "rank": 56,
+    "hitsLanded": 17,
+    "hitsTaken": 28
+   },
+   {
+    "botId": "seat-022",
+    "score": -11,
+    "rank": 57,
+    "hitsLanded": 15,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-026",
+    "score": -12,
+    "rank": 58,
+    "hitsLanded": 15,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-002",
+    "score": -14,
+    "rank": 59,
+    "hitsLanded": 23,
+    "hitsTaken": 37
+   },
+   {
+    "botId": "seat-000",
+    "score": -15,
+    "rank": 60,
+    "hitsLanded": 11,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-046",
+    "score": -19,
+    "rank": 61,
+    "hitsLanded": 19,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-006",
+    "score": -19,
+    "rank": 62,
+    "hitsLanded": 19,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-014",
+    "score": -36,
+    "rank": 63,
+    "hitsLanded": 14,
+    "hitsTaken": 50
+   },
+   {
+    "botId": "seat-062",
+    "score": -37,
+    "rank": 64,
+    "hitsLanded": 19,
+    "hitsTaken": 56
+   }
+  ]
+ },
+ {
+  "seed": 151461,
+  "ruleSetId": "arms-length",
+  "ticksSha256": "04b97da934999efbc329d703ae416bd79b79d396d2a6092d0850bc252c2fad26",
+  "standings": [
+   {
+    "botId": "seat-022",
+    "score": 15,
+    "rank": 1,
+    "hitsLanded": 21,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-058",
+    "score": 14,
+    "rank": 2,
+    "hitsLanded": 21,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-036",
+    "score": 13,
+    "rank": 3,
+    "hitsLanded": 21,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-040",
+    "score": 13,
+    "rank": 4,
+    "hitsLanded": 21,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-020",
+    "score": 12,
+    "rank": 5,
+    "hitsLanded": 20,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-051",
+    "score": 12,
+    "rank": 6,
+    "hitsLanded": 16,
+    "hitsTaken": 4
+   },
+   {
+    "botId": "seat-019",
+    "score": 11,
+    "rank": 7,
+    "hitsLanded": 21,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-063",
+    "score": 10,
+    "rank": 8,
+    "hitsLanded": 20,
+    "hitsTaken": 10
+   },
+   {
+    "botId": "seat-045",
+    "score": 10,
+    "rank": 9,
+    "hitsLanded": 16,
+    "hitsTaken": 6
+   },
+   {
+    "botId": "seat-033",
+    "score": 9,
+    "rank": 10,
+    "hitsLanded": 18,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-041",
+    "score": 9,
+    "rank": 11,
+    "hitsLanded": 18,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-056",
+    "score": 9,
+    "rank": 12,
+    "hitsLanded": 17,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-049",
+    "score": 9,
+    "rank": 13,
+    "hitsLanded": 16,
+    "hitsTaken": 7
+   },
+   {
+    "botId": "seat-043",
+    "score": 8,
+    "rank": 14,
+    "hitsLanded": 20,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-016",
+    "score": 8,
+    "rank": 15,
+    "hitsLanded": 20,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-027",
+    "score": 8,
+    "rank": 16,
+    "hitsLanded": 19,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-052",
+    "score": 8,
+    "rank": 17,
+    "hitsLanded": 17,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-003",
+    "score": 7,
+    "rank": 18,
+    "hitsLanded": 18,
+    "hitsTaken": 11
+   },
+   {
+    "botId": "seat-032",
+    "score": 7,
+    "rank": 19,
+    "hitsLanded": 16,
+    "hitsTaken": 9
+   },
+   {
+    "botId": "seat-028",
+    "score": 7,
+    "rank": 20,
+    "hitsLanded": 15,
+    "hitsTaken": 8
+   },
+   {
+    "botId": "seat-004",
+    "score": 6,
+    "rank": 21,
+    "hitsLanded": 21,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-059",
+    "score": 6,
+    "rank": 22,
+    "hitsLanded": 20,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-061",
+    "score": 5,
+    "rank": 23,
+    "hitsLanded": 20,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-035",
+    "score": 5,
+    "rank": 24,
+    "hitsLanded": 18,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-034",
+    "score": 4,
+    "rank": 25,
+    "hitsLanded": 20,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-026",
+    "score": 4,
+    "rank": 26,
+    "hitsLanded": 19,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-053",
+    "score": 4,
+    "rank": 27,
+    "hitsLanded": 19,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-009",
+    "score": 4,
+    "rank": 28,
+    "hitsLanded": 17,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-057",
+    "score": 3,
+    "rank": 29,
+    "hitsLanded": 16,
+    "hitsTaken": 13
+   },
+   {
+    "botId": "seat-048",
+    "score": 3,
+    "rank": 30,
+    "hitsLanded": 8,
+    "hitsTaken": 5
+   },
+   {
+    "botId": "seat-029",
+    "score": 2,
+    "rank": 31,
+    "hitsLanded": 17,
+    "hitsTaken": 15
+   },
+   {
+    "botId": "seat-047",
+    "score": 1,
+    "rank": 32,
+    "hitsLanded": 19,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-002",
+    "score": 1,
+    "rank": 33,
+    "hitsLanded": 18,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-037",
+    "score": 1,
+    "rank": 34,
+    "hitsLanded": 15,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-044",
+    "score": 0,
+    "rank": 35,
+    "hitsLanded": 20,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-021",
+    "score": 0,
+    "rank": 36,
+    "hitsLanded": 17,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-017",
+    "score": 0,
+    "rank": 37,
+    "hitsLanded": 14,
+    "hitsTaken": 14
+   },
+   {
+    "botId": "seat-039",
+    "score": -1,
+    "rank": 38,
+    "hitsLanded": 18,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-023",
+    "score": -1,
+    "rank": 39,
+    "hitsLanded": 15,
+    "hitsTaken": 16
+   },
+   {
+    "botId": "seat-055",
+    "score": -2,
+    "rank": 40,
+    "hitsLanded": 22,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-054",
+    "score": -2,
+    "rank": 41,
+    "hitsLanded": 21,
+    "hitsTaken": 23
+   },
+   {
+    "botId": "seat-011",
+    "score": -2,
+    "rank": 42,
+    "hitsLanded": 18,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-038",
+    "score": -3,
+    "rank": 43,
+    "hitsLanded": 22,
+    "hitsTaken": 25
+   },
+   {
+    "botId": "seat-042",
+    "score": -3,
+    "rank": 44,
+    "hitsLanded": 19,
+    "hitsTaken": 22
+   },
+   {
+    "botId": "seat-050",
+    "score": -4,
+    "rank": 45,
+    "hitsLanded": 22,
+    "hitsTaken": 26
+   },
+   {
+    "botId": "seat-012",
+    "score": -4,
+    "rank": 46,
+    "hitsLanded": 16,
+    "hitsTaken": 20
+   },
+   {
+    "botId": "seat-006",
+    "score": -5,
+    "rank": 47,
+    "hitsLanded": 22,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-031",
+    "score": -5,
+    "rank": 48,
+    "hitsLanded": 12,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-000",
+    "score": -5,
+    "rank": 49,
+    "hitsLanded": 7,
+    "hitsTaken": 12
+   },
+   {
+    "botId": "seat-005",
+    "score": -7,
+    "rank": 50,
+    "hitsLanded": 20,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-024",
+    "score": -7,
+    "rank": 51,
+    "hitsLanded": 11,
+    "hitsTaken": 18
+   },
+   {
+    "botId": "seat-010",
+    "score": -9,
+    "rank": 52,
+    "hitsLanded": 22,
+    "hitsTaken": 31
+   },
+   {
+    "botId": "seat-025",
+    "score": -9,
+    "rank": 53,
+    "hitsLanded": 8,
+    "hitsTaken": 17
+   },
+   {
+    "botId": "seat-060",
+    "score": -10,
+    "rank": 54,
+    "hitsLanded": 20,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-018",
+    "score": -11,
+    "rank": 55,
+    "hitsLanded": 19,
+    "hitsTaken": 30
+   },
+   {
+    "botId": "seat-062",
+    "score": -11,
+    "rank": 56,
+    "hitsLanded": 18,
+    "hitsTaken": 29
+   },
+   {
+    "botId": "seat-001",
+    "score": -11,
+    "rank": 57,
+    "hitsLanded": 8,
+    "hitsTaken": 19
+   },
+   {
+    "botId": "seat-013",
+    "score": -13,
+    "rank": 58,
+    "hitsLanded": 19,
+    "hitsTaken": 32
+   },
+   {
+    "botId": "seat-008",
+    "score": -14,
+    "rank": 59,
+    "hitsLanded": 10,
+    "hitsTaken": 24
+   },
+   {
+    "botId": "seat-015",
+    "score": -15,
+    "rank": 60,
+    "hitsLanded": 12,
+    "hitsTaken": 27
+   },
+   {
+    "botId": "seat-030",
+    "score": -19,
+    "rank": 61,
+    "hitsLanded": 19,
+    "hitsTaken": 38
+   },
+   {
+    "botId": "seat-014",
+    "score": -22,
+    "rank": 62,
+    "hitsLanded": 22,
+    "hitsTaken": 44
+   },
+   {
+    "botId": "seat-046",
+    "score": -25,
+    "rank": 63,
+    "hitsLanded": 22,
+    "hitsTaken": 47
+   },
+   {
+    "botId": "seat-007",
+    "score": -28,
+    "rank": 64,
+    "hitsLanded": 17,
+    "hitsTaken": 45
+   }
+  ]
+ }
+]

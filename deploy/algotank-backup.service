@@ -1,0 +1,21 @@
+# Runs deploy/backup.sh once. algotank-backup.timer starts it every day.
+# Copy to /etc/systemd/system/algotank-backup.service. See docs/deployment/05-backup-and-restore.md.
+
+[Unit]
+Description=AlgoTank data backup
+
+[Service]
+Type=oneshot
+# root, because the data folder is mode 0700 and owned by the user algotank.
+ExecStart=/usr/local/sbin/algotank-backup
+# The archives hold password hashes and tokens.
+UMask=0077
+NoNewPrivileges=yes
+# The whole file system is read-only for the backup, except the backup folder.
+ProtectSystem=strict
+ReadWritePaths=/var/backups/algotank
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+# The backup needs no network.
+PrivateNetwork=yes

@@ -1,0 +1,33 @@
+name: Idea
+description: Suggest a change to the game or to the code.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Write who has the problem and when, for example "a child who plays for the first time does not find the rules tab".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+    validations:
+      required: true
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who it is for
+      multiple: true
+      options:
+        - Players
+        - Organisers of private or presenter arenas
+        - People who host a server
+        - Contributors
+    validations:
+      required: true
+  - type: textarea
+    id: other-ways
+    attributes:
+      label: Other ways you thought of

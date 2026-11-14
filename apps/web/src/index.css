@@ -1,0 +1,300 @@
+@import "tailwindcss";
+
+/* Every colour, size and motion in the interface comes from these tokens. The
+   usage guide is docs/specs/revamp/11-foundation-guide.md. Text uses three tiers:
+   ink, muted, and water for links and the primary action. Contrast ratios are
+   against panel (white); every text colour is 4.5:1 or better on panel and ground.
+   `static` emits every token on :root even when no utility uses it, because SVG
+   and inline styles read them as var(--color-tank-3) and similar. */
+@theme static {
+  /* Surfaces and text */
+  --color-ground: #f6f3ec; /* page background, warm paper */
+  --color-panel: #ffffff; /* raised surfaces: cards, inputs, dialogs */
+  --color-ink: #1b2733; /* main text, 15.2:1 */
+  --color-muted: #54616d; /* secondary text, 6.4:1 */
+  --color-line: #d8d2c4; /* input borders and row dividers, never text */
+  --color-line-strong: #b9b3a5; /* hovered borders and the lip of a disabled button */
+
+  /* Water: the primary colour for primary actions, shots and the water gauge */
+  --color-water: #1667c0; /* 5.6:1; white text on it is 5.6:1 */
+  --color-water-ink: #ffffff; /* text on water */
+  --color-water-deep: #0e4b8f; /* pressed state and the lip under a primary button */
+  --color-water-hover: #125aa9; /* hovered primary button */
+  --color-water-light: #9cc8f5; /* water-coloured text on ink (the toast), 9.6:1 */
+  --color-water-soft: #e2eefb; /* selected card background; ink on it is 12.9:1 */
+
+  /* "You": warm orange. Fill and rings only; use self-ink for text. */
+  --color-self: #e8650f;
+  --color-self-ink: #a5470a; /* 6.0:1 */
+  --color-self-soft: #fdebdc;
+
+  /* Guide: sunny yellow, used only for guidance for first-timers (docs/specs/revamp/65-guidance.md):
+     the coach mark's ring, its step counter and callout, the workshop's first-play-style checklist
+     and the workshop tile on the home page. Nothing else uses it, so yellow means "look here next".
+     Tank yellow (tank-3) is close to it, so guidance is also told by its form: the thick pulsing
+     ring with an ink casing, the callout and the step counter appear nowhere else. */
+  --color-guide: #ffd23f; /* fills and the ring only; 1.3:1 on ground, so the ring has an ink casing (13.7:1) */
+  --color-guide-ink: #3d2c00; /* text on guide 9.3:1, on guide-soft 12.3:1, on panel 13.5:1 */
+  --color-guide-soft: #fff5cc; /* background of the checklist and the callout's counter row */
+  --color-guide-deep: #b88a00; /* the lip under a guide-coloured tile or button, never text */
+
+  /* Status. Each has a text-safe colour and a soft background. */
+  --color-ok: #21784a; /* 5.5:1 */
+  --color-ok-soft: #e1f3e8;
+  --color-hit: #c4302b; /* hit and danger, 5.5:1 */
+  --color-hit-soft: #fce4e2;
+  --color-hit-deep: #8a1f1b; /* lip and pressed state of a danger button */
+  --color-warning: #8a5a00; /* 5.9:1 */
+  --color-warning-soft: #fdf1d3;
+
+  /* The arena */
+  --color-arena-floor: #efe6d0;
+  --color-arena-grid: #dccfb0;
+  --color-tank-outline: #1b2733;
+
+  /* Tank colours (12), for the hull, the pattern and the plate. Ordered so neighbours
+     differ in hue and lightness; white and black add two lightness extremes that stay
+     apart for colour-blind players. Each -dark is for tracks and the barrel. Labels and
+     icons sit on a white hatch, so no hull carries text. Orange (9) is lighter and more
+     yellow than `self`, and the "you" ring has a white casing, so it shows on it. */
+  --color-tank-1: #2f7fe0; /* blue */
+  --color-tank-1-dark: #1c4f8f;
+  --color-tank-2: #e2453c; /* red */
+  --color-tank-2-dark: #9a2a24;
+  --color-tank-3: #f4c534; /* yellow */
+  --color-tank-3-dark: #a07c10;
+  --color-tank-4: #2ea869; /* green */
+  --color-tank-4-dark: #1b6b42;
+  --color-tank-5: #8b5cd6; /* purple */
+  --color-tank-5-dark: #583596;
+  --color-tank-6: #ef77b4; /* pink */
+  --color-tank-6-dark: #a8467a;
+  --color-tank-7: #58c7e8; /* sky */
+  --color-tank-7-dark: #2b7e99;
+  --color-tank-8: #59646f; /* slate */
+  --color-tank-8-dark: #323a42;
+  --color-tank-9: #f7962b; /* orange */
+  --color-tank-9-dark: #a65a0c;
+  --color-tank-10: #8d5b37; /* brown */
+  --color-tank-10-dark: #573620;
+  --color-tank-11: #f4f2ec; /* white */
+  --color-tank-11-dark: #9e9a8e;
+  --color-tank-12: #2a2f36; /* black */
+  --color-tank-12-dark: #0f1216;
+
+  /* Type: Fredoka for display, Figtree for text, both bundled for offline events. */
+  --font-display: "Fredoka Variable", "Fredoka", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  --font-sans: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Type scale for phone and laptop. The big screen overrides these under
+     [data-scale="screen"]. Use text-caption ... text-display, not text-sm/lg. */
+  --text-caption: 0.875rem;
+  --text-caption--line-height: 1.35;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.45;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.25;
+  --text-heading: clamp(1.75rem, 1.4rem + 1.6vw, 2.25rem);
+  --text-heading--line-height: 1.15;
+  --text-display: clamp(2.75rem, 2rem + 3.6vw, 4.5rem);
+  --text-display--line-height: 1;
+
+  /* Shape and depth */
+  --radius-control: 0.875rem; /* buttons, inputs, segmented controls */
+  --radius-card: 1.25rem; /* cards and dialogs */
+  --shadow-raised: 0 6px 18px -6px rgb(27 39 51 / 0.22); /* the only shadow: cards that float, dialogs, toasts */
+
+  /* Motion. Each animation has a reduced-motion rule at the bottom of this file. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-pop: pop 260ms var(--ease-back) both;
+  --animate-rise: rise 420ms var(--ease-out-expo) both;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
+
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes rise {
+    0% { transform: translateY(12px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+}
+
+/* The no-scroll layout (docs/specs/revamp/60-no-scroll.md). `fit:` styles apply only
+   where a screen has a fixed height that its panes must fit: at least 360 by 560 CSS px.
+   Below that, a phone held sideways, or enlarged default text (the queries are in em, so
+   a larger default font raises the limits) uses the fallback: the page scrolls and nothing
+   is cut off. `laptop:` is where panes may sit side by side: the owner's 1000 x 600 window
+   is a laptop, an upright 768 x 1024 tablet is not. ui/layout.ts holds the same queries for
+   code; change both together. */
+@custom-variant fit (@media (min-width: 22.5em) and (min-height: 35em));
+@custom-variant laptop (@media (min-width: 56em));
+
+/* The big screen (1920x1080 read from 5 m): set data-scale="screen" on the page root. */
+[data-scale="screen"] {
+  /* 26px: the smallest text the big screen shows (labels, notes, the language switch). */
+  --text-caption: 1.625rem;
+  --text-body: 1.75rem;
+  --text-lead: 2rem;
+  --text-title: 2.5rem;
+  --text-heading: 3.5rem;
+  --text-display: 6rem;
+  font-size: var(--text-body);
+}
+
+/* Base rules sit in @layer base so that Tailwind utilities (in @layer utilities)
+   win over them: `text-lead` on a button or `font-bold` on a heading works. An
+   unlayered rule here would beat every utility. */
+@layer base {
+  html {
+    background: var(--color-ground);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-ground);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    caret-color: var(--color-water);
+    accent-color: var(--color-water);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--color-water-soft);
+    color: var(--color-ink);
+  }
+
+  /* One focus ring for every control: a water ring with a gap, visible on any surface. */
+  :focus-visible {
+    outline: 3px solid var(--color-water);
+    outline-offset: 2px;
+  }
+
+  /* 16px stops iOS Safari from zooming when an input takes focus. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+
+  /* Numbers that change in place (points, timers, codes) keep their width. */
+  .tabular,
+  time,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* In @layer components, so a utility such as translate-y-0.5 can still override it. */
+@layer components {
+  /* The pressed state of every control: it sinks by the height of its lip. */
+  .press {
+    transition:
+      transform 80ms ease-out,
+      border-bottom-width 80ms ease-out,
+      background-color 120ms ease-out;
+  }
+  .press:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: translateY(2px);
+  }
+
+  /* A drawing that hides when the box around it (container-type: size) is under 7rem
+     tall, where it would be too small to read: the home page's arena scene. */
+  @container (max-height: 7rem) {
+    .hide-when-short {
+      display: none;
+    }
+  }
+}
+
+/* "My tank": in a short editor box (the room's sheet under the start bar on a small phone)
+   the live tank gives its room to the choices, which must keep a whole row. The header's
+   own tank and the part pictures still show the look. The editor sets the container in fit:
+   only. Unlayered on purpose: the stage's `flex` utility would beat a layered rule. */
+@container mytank (max-height: 17rem) {
+  .mytank-stage {
+    display: none;
+  }
+}
+
+/* The big tank in "My tank" turns slowly so every side shows; its hatch turns back at the
+   same speed, so the icon stays upright. Both run from the same start, so they stay in step. */
+@keyframes tank-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes tank-turn-back {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+.tank-turn {
+  animation: tank-turn 14s linear infinite;
+}
+
+/* The coach mark's ring breathes out slowly, so the eye finds it (ui/CoachMark.tsx). */
+@keyframes coach-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  70%,
+  100% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+}
+.coach-pulse {
+  animation: coach-pulse 1.8s ease-out infinite;
+}
+.tank-turn-back {
+  animation: tank-turn-back 14s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The "My tank" tank stands still, facing up. */
+  .tank-turn,
+  .tank-turn-back {
+    animation: none;
+  }
+  /* The coach mark's ring stays still; its thickness and colour still show it. */
+  .coach-pulse {
+    animation: none;
+    opacity: 0;
+  }
+  .animate-pop,
+  .animate-rise {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .animate-pulse-soft {
+    animation: none;
+  }
+  .press {
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

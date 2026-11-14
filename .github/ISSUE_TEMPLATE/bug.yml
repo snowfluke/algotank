@@ -1,0 +1,66 @@
+name: Bug
+description: Something in the game does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Report a vulnerability through the repository's Security tab, not here (SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Write what you saw, including any message on the screen.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Number each step, starting from the page you opened first.
+      placeholder: |
+        1. Open the home page.
+        2. Press "Play now".
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it happened
+      options:
+        - Practice arena
+        - Tournament arena
+        - Monthly league
+        - Private arena
+        - Presenter arena or big screen
+        - Tank workshop
+        - Sign-in or account
+        - Somewhere else
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language of the page
+      options:
+        - English
+        - Indonesian
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: Android phone, Chrome 140
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Add a screenshot when the problem is on the screen. Hide email addresses and arena codes first.

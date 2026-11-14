@@ -1,0 +1,16 @@
+{
+  "name": "@game/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts"
+  },
+  "dependencies": {
+    "@game/arena": "workspace:*",
+    "@game/engine": "workspace:*",
+    "nodemailer": "^10.5.0"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.2"
+  }
+}

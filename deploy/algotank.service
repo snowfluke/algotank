@@ -1,0 +1,87 @@
+# The game server as a systemd service. Copy to /etc/systemd/system/algotank.service.
+# See docs/deployment/02-first-deploy.md.
+#
+# Not verified on a server yet. When the first start fails because of a hardening line,
+# journalctl -u algotank shows "Operation not permitted" or a similar error. Comment out
+# the newest hardening line you suspect, then run: systemctl daemon-reload && systemctl restart algotank
+
+[Unit]
+Description=AlgoTank game server
+After=network-online.target
+Wants=network-online.target
+# A damaged data file stops every start. After 5 failed starts in 60 s, systemd stops
+# trying, so the journal shows the file's name instead of an endless loop.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=algotank
+Group=algotank
+EnvironmentFile=/etc/algotank/env
+# systemd resolves the symlink at start, so the process keeps its release until the next restart.
+WorkingDirectory=/opt/algotank/current
+# Bun runs the server directly, not through "bun run start", so SIGTERM reaches the
+# server's own handler, which writes the stores and closes the streams.
+ExecStart=/usr/local/bin/bun apps/server/src/index.ts
+Restart=always
+RestartSec=2
+# The server's shutdown took 0.3 s in a test with one open stream. 30 s leaves room
+# for a slow disk. After this time systemd sends SIGKILL and the last second of edits is lost.
+TimeoutStopSec=30
+
+# Bun writes transpiler cache files to the user's cache folder, which this user does not have.
+Environment=BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
+# Stops crash-report uploads to bun.report.
+Environment=DO_NOT_TRACK=1
+
+# /var/lib/algotank, owned by the service user. The data holds password hashes and tokens.
+StateDirectory=algotank
+StateDirectoryMode=0700
+# New files are readable by the service user only.
+UMask=0077
+
+# --- Hardening. Each line removes a permission that this server does not use. ---
+# The process and its children cannot gain privileges, for example through a setuid program.
+NoNewPrivileges=yes
+# The whole file system is read-only for the process, except the StateDirectory above.
+# A bug in the server cannot change the code or the system.
+ProtectSystem=strict
+# /home, /root and /run/user are empty for the process.
+ProtectHome=yes
+# The process gets its own /tmp and /var/tmp, which other services cannot read.
+PrivateTmp=yes
+# The process sees no physical devices, only /dev/null, /dev/zero, /dev/random and similar.
+PrivateDevices=yes
+# The process cannot change kernel settings in /proc/sys and /sys.
+ProtectKernelTunables=yes
+# The process cannot load kernel modules.
+ProtectKernelModules=yes
+# The process cannot read the kernel log.
+ProtectKernelLogs=yes
+# The process cannot change the control groups.
+ProtectControlGroups=yes
+# The process cannot set the system clock.
+ProtectClock=yes
+# The process cannot change the host name.
+ProtectHostname=yes
+# The process can open IPv4, IPv6 and local sockets only.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# The process cannot make Linux namespaces, which containers use.
+RestrictNamespaces=yes
+# The process cannot use realtime scheduling, which could take all CPU time.
+RestrictRealtime=yes
+# The process cannot make setuid or setgid files.
+RestrictSUIDSGID=yes
+# The process cannot change its kernel execution domain.
+LockPersonality=yes
+# The process can use system calls of the native architecture only.
+SystemCallArchitectures=native
+# The process has no Linux capabilities. The port is above 1023, so it needs none.
+CapabilityBoundingSet=
+# Not set: MemoryDenyWriteExecute=yes. Bun's JavaScript engine compiles code at run time
+# into memory that is writable and executable, and this option forbids that memory.
+# Not set: SystemCallFilter=@system-service. Not tested with Bun; add it after a test on the server.
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,30 @@
+{
+  "name": "game-root",
+  "private": true,
+  "description": "A water fight game in the browser where players build rules for a toy tank and watch it play by itself.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snowfluke/algotank.git"
+  },
+  "homepage": "https://github.com/snowfluke/algotank#readme",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:server": "bun run --cwd apps/server dev",
+    "dev:web": "bun run --cwd apps/web dev",
+    "build": "bun run --cwd apps/web build",
+    "start": "bun apps/server/src/index.ts",
+    "test": "bun test",
+    "type-check": "tsc --noEmit -p packages/engine && tsc --noEmit -p packages/arena && tsc --noEmit -p apps/server && tsc --noEmit -p apps/web",
+    "simulate": "bun packages/engine/scripts/simulate.ts",
+    "complete-check": "bun run type-check && bun test && bun run build"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "^7.0.2"
+  }
+}

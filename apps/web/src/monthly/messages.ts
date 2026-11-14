@@ -1,0 +1,151 @@
+// Interface text for "/monthly", the monthly arena: a league that always runs, watched by
+// anyone and joined with an account (docs/specs/revamp/77-monthly-league.md, section 6).
+// Catalog slot: `monthly`. The monthly points rule is worded once in publicplay/messages.ts.
+
+const points = (n: number) => (n === 1 ? "1 point" : `${n} points`);
+
+export const en = {
+  /** "League 2": the switch, the list and the headings. */
+  league: (n: number) => `League ${n}`,
+  /** The league switch's name for a screen reader. */
+  leagues: "Leagues",
+  /** Read after the own league's name in the switch. */
+  ownLeague: "your tank plays here",
+  /** The own league in the list of 6 or more leagues. */
+  ownLeagueChoice: (n: number) => `League ${n}, your tank`,
+  /** `clock` is "05:12:44". */
+  endsIn: (clock: string) => `Today's round ends in ${clock}`,
+  dayClosing: "Today's round is ending, and the new round starts in a moment.",
+  /** The accessible name of the board. */
+  board: (league: number) => `The board of League ${league}`,
+  connecting: "The page is connecting to the monthly arena.",
+  reconnecting: "The connection dropped, so the page is connecting again.",
+  failed: "The page cannot show this league right now, so try again.",
+  retry: "Try again",
+  /** The one action of a visitor without a tank in the league. */
+  join: "Join the monthly arena",
+  /** Over the empty board. */
+  empty: {
+    title: "No tank plays in this league yet.",
+    body: "Your tank can be the first one on this board.",
+  },
+  /** The phone's tabs. */
+  tabs: { label: "Parts of the monthly arena", arena: "Arena", ranking: "Ranking", mine: "Your tank" },
+  /** The ranking's switch. */
+  ranking: { label: "Ranking", today: "Today", month: "This month" },
+  todayEmpty: "No tank plays in this league today yet.",
+  monthEmpty: "No tank plays in this league this month yet.",
+  /** The line before the tanks with fewer counted days than a place needs. */
+  notRanked: (days: number) => `Fewer than ${days} days, not ranked yet`,
+  /** "Go to" the not-ranked line on its page. */
+  toNotRanked: "Not ranked yet",
+  yesterdayWinner: (name: string, score: number) => `${name} won yesterday's round with ${points(score)}.`,
+  /** `date` is "12 November 2026". */
+  dayWinner: (date: string, name: string, score: number) => `${name} won the round of ${date} with ${points(score)}.`,
+  /** Over the board for a few seconds after midnight. */
+  dayDone: (date: string) => `The round of ${date} has ended.`,
+  newDay: "A new round has started, and every tank starts again at 0 points.",
+  own: {
+    heading: "Your tank",
+    /** `place` is today's place in the league. */
+    today: (place: number, score: number) => `Your tank is in place ${place} today with ${points(score)}.`,
+    counts: "Today counts for your monthly points.",
+    notCounted: "Today does not count yet, because your tank joined after the round started.",
+    /** Counted days so far against the days a place needs, such as "5 of 7". */
+    daysNeeded: (days: number, need: number) => `Your tank has ${days} of the ${need} days it needs for a place.`,
+    daysCounted: (days: number) => `Your tank has played ${days === 1 ? "1 counted day" : `${days} counted days`} this month.`,
+    monthPlace: (place: number, score: number) => `Your tank is in place ${place} this month with ${points(score)}.`,
+    otherLeague: (league: number) => `Your tank plays in League ${league}.`,
+    show: (league: number) => `Show League ${league}`,
+  },
+  quit: {
+    open: "Leave the monthly arena",
+    title: "Leave the monthly arena?",
+    /** Today counts for the tank: its points now stay. */
+    bodyCounted: (score: number) => `Your tank leaves the board now, and its ${points(score)} of today still count. Your name stays the same until the month ends.`,
+    bodyNotCounted: "Your tank leaves the board now, and today does not count for it. Your name stays the same until the month ends.",
+    confirm: "Leave the arena",
+  },
+  /** The month close's notice, shown once. `month` is "October 2026". */
+  move: {
+    up: (league: number) => `Your tank moved up to League ${league}.`,
+    down: (league: number) => `Your tank moved down to League ${league}.`,
+    stayed: (league: number) => `Your tank stays in League ${league}.`,
+    body: (month: string) => `${month} has ended, so every league was put together again.`,
+    ok: "OK",
+  },
+  joinSteps: {
+    nameTitle: "Your tank's name",
+    nameHint: "This name stays with your tank until the month ends.",
+    nameFixed: (name: string) => `Your tank's name this month is ${name}, and you can change it next month.`,
+    next: "Next",
+    tankTitle: "Get your tank ready",
+    submit: "Put in my tank",
+    nameTaken: "Another tank in the monthly arena has this name, so type another name.",
+    seatTaken: "Your account already has a tank in the monthly arena, so the page shows it now.",
+  },
+};
+
+export const id: typeof en = {
+  league: (n) => `Liga ${n}`,
+  leagues: "Liga",
+  ownLeague: "tank kamu main di sini",
+  ownLeagueChoice: (n) => `Liga ${n}, tank kamu`,
+  endsIn: (clock) => `Ronde hari ini berakhir dalam ${clock}`,
+  dayClosing: "Ronde hari ini sedang ditutup, dan ronde baru mulai sebentar lagi.",
+  board: (league) => `Papan Liga ${league}`,
+  connecting: "Halaman sedang tersambung ke arena bulanan.",
+  reconnecting: "Sambungan terputus, jadi halaman sedang menyambung lagi.",
+  failed: "Halaman belum bisa menampilkan liga ini, jadi coba lagi.",
+  retry: "Coba lagi",
+  join: "Ikut arena bulanan",
+  empty: {
+    title: "Belum ada tank yang main di liga ini.",
+    body: "Tank kamu bisa jadi tank pertama di papan ini.",
+  },
+  tabs: { label: "Bagian arena bulanan", arena: "Arena", ranking: "Peringkat", mine: "Tank kamu" },
+  ranking: { label: "Peringkat", today: "Hari ini", month: "Bulan ini" },
+  todayEmpty: "Belum ada tank yang main di liga ini hari ini.",
+  monthEmpty: "Belum ada tank yang main di liga ini bulan ini.",
+  notRanked: (days) => `Kurang dari ${days} hari, belum masuk peringkat`,
+  toNotRanked: "Belum masuk peringkat",
+  yesterdayWinner: (name, score) => `${name} juara ronde kemarin dengan ${score} poin.`,
+  dayWinner: (date, name, score) => `${name} juara ronde ${date} dengan ${score} poin.`,
+  dayDone: (date) => `Ronde ${date} sudah selesai.`,
+  newDay: "Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.",
+  own: {
+    heading: "Tank kamu",
+    today: (place, score) => `Tank kamu di peringkat ${place} hari ini dengan ${score} poin.`,
+    counts: "Hari ini masuk hitungan poin bulananmu.",
+    notCounted: "Hari ini belum dihitung karena tank kamu masuk setelah ronde dimulai.",
+    daysNeeded: (days, need) => `Tank kamu sudah main ${days} dari ${need} hari yang dibutuhkan untuk masuk peringkat.`,
+    daysCounted: (days) => `Tank kamu sudah main ${days} hari yang dihitung bulan ini.`,
+    monthPlace: (place, score) => `Tank kamu di peringkat ${place} bulan ini dengan ${score} poin.`,
+    otherLeague: (league) => `Tank kamu main di Liga ${league}.`,
+    show: (league) => `Lihat Liga ${league}`,
+  },
+  quit: {
+    open: "Keluar dari arena bulanan",
+    title: "Keluar dari arena bulanan?",
+    bodyCounted: (score) => `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap dihitung. Namamu tetap sama sampai bulan ini selesai.`,
+    bodyNotCounted: "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung. Namamu tetap sama sampai bulan ini selesai.",
+    confirm: "Keluar dari arena",
+  },
+  move: {
+    up: (league) => `Tank kamu naik ke Liga ${league}.`,
+    down: (league) => `Tank kamu turun ke Liga ${league}.`,
+    stayed: (league) => `Tank kamu tetap di Liga ${league}.`,
+    body: (month) => `Bulan ${month} sudah selesai, jadi semua liga disusun lagi.`,
+    ok: "Oke",
+  },
+  joinSteps: {
+    nameTitle: "Nama tank kamu",
+    nameHint: "Nama ini tetap dipakai tank kamu sampai bulan ini selesai.",
+    nameFixed: (name) => `Nama tank kamu bulan ini ${name}, dan kamu bisa menggantinya bulan depan.`,
+    next: "Lanjut",
+    tankTitle: "Siapkan tank kamu",
+    submit: "Masukkan tank",
+    nameTaken: "Nama ini sudah dipakai tank lain di arena bulanan, jadi ketik nama lain.",
+    seatTaken: "Akun kamu sudah punya tank di arena bulanan, jadi halaman ini menampilkannya sekarang.",
+  },
+};

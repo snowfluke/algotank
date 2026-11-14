@@ -1,0 +1,15 @@
+# Starts algotank-backup.service once a day.
+# Copy to /etc/systemd/system/algotank-backup.timer, then: systemctl enable --now algotank-backup.timer
+
+[Unit]
+Description=Daily AlgoTank data backup
+
+[Timer]
+# 03:00 in the server's time zone (timedatectl shows it).
+OnCalendar=*-*-* 03:00:00
+# A backup that was missed while the server was off runs at the next boot.
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

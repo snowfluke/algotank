@@ -1,0 +1,41 @@
+# Caddy in front of the game server, behind Cloudflare. Copy to /etc/caddy/Caddyfile.
+# Replace game.example.com with your domain. See docs/deployment/02-first-deploy.md.
+# Check it with: sudo -u caddy caddy validate --config /etc/caddy/Caddyfile
+#
+# How the visitor's address reaches the server (TRUST_PROXY=1 reads the first X-Forwarded-For entry):
+# - Cloudflare appends to an X-Forwarded-For that the visitor sent, so that header's first
+#   entry is text the visitor chose. Caddy does not pass it on.
+# - Cloudflare sets CF-Connecting-IP to the address that connected to it.
+# - trusted_proxies lists Cloudflare's ranges. Only a request from those ranges has its
+#   CF-Connecting-IP read. For any other request, {client_ip} is the connection's own address.
+# - header_up replaces X-Forwarded-For with that one address.
+#
+# Cloudflare's ranges change sometimes. Compare them with https://www.cloudflare.com/ips-v4
+# and https://www.cloudflare.com/ips-v6 (listed on 2026-11-12) and with the firewall rules.
+{
+	servers {
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
+game.example.com {
+	# This setup uses a Cloudflare Origin CA certificate, which Cloudflare accepts in the
+	# "Full (strict)" mode (docs/deployment/03-cloudflare.md). Mode 0640, group caddy.
+	tls /etc/caddy/origin-cert.pem /etc/caddy/origin-key.pem
+
+	# One JSON line per request in the journal (journalctl -u caddy). The field
+	# request.client_ip shows the address that the game server receives.
+	log
+
+	# No "encode" directive: compression can hold back the event stream.
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Forwarded-For {client_ip}
+		# A trusted proxy's X-Forwarded-Host passes through by default, and the visitor can set it.
+		# The server compares it with the Origin header, so Caddy sets it to the site's host.
+		header_up X-Forwarded-Host {host}
+		# No flush_interval: Caddy sends a text/event-stream response (/api/arenas/*/events)
+		# to the client at once. flush_interval -1 would also keep the server's stream
+		# open after the visitor leaves.
+	}
+}

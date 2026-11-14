@@ -1,0 +1,113 @@
+/// <reference types="bun" />
+// The page's states as the phone (and a server render) draws them, in both languages.
+import { describe, expect, test } from "bun:test";
+import { renderToStaticMarkup } from "react-dom/server";
+import { I18nProvider } from "../i18n/I18nProvider.tsx";
+import { createLanguageStore } from "../i18n/language.ts";
+import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureRanking, fixtureSeat, OWN_SEAT } from "./monthlyFixtures.ts";
+import { MonthlyPhoneBar, MonthlyView, type MonthlyViewProps } from "./MonthlyView.tsx";
+
+const NOW = 1_000_000;
+
+function props(over: Partial<MonthlyViewProps> = {}, tanks = 5): MonthlyViewProps {
+  const live = fixtureLive(1, tanks);
+  return {
+    league: 1,
+    leagues: fixtureLeagues(1, tanks),
+    onLeague: () => undefined,
+    load: fixtureLoad(live, NOW),
+    connection: "open",
+    onRetry: () => undefined,
+    now: NOW,
+    ranking: fixtureRanking(live),
+    days: fixtureDays(1),
+    seat: null,
+    move: null,
+    onMoveSeen: () => undefined,
+    onJoin: () => undefined,
+    dayChange: null,
+    onQuit: () => undefined,
+    tab: "arena",
+    onTab: () => undefined,
+    side: "today",
+    onSide: () => undefined,
+    ...over,
+  };
+}
+
+const render = (p: MonthlyViewProps, language: "en" | "id" = "en") =>
+  renderToStaticMarkup(
+    <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
+      <MonthlyView {...p} />
+      <MonthlyPhoneBar seat={p.seat} onJoin={p.onJoin} tab={p.tab} onTab={p.onTab} />
+    </I18nProvider>,
+  );
+
+describe("the monthly page", () => {
+  test("a visitor sees the board, the day's clock and one action to join", () => {
+    const html = render(props());
+    expect(html).toContain("data-monthly-board");
+    expect(html).toContain("Today&#x27;s round ends in 05:12:44");
+    expect(html.match(/data-monthly-join/g)?.length).toBe(1);
+    const id = render(props(), "id");
+    expect(id).toContain("Ronde hari ini berakhir dalam 05:12:44");
+    expect(id).toContain("Ikut arena bulanan");
+    // A visitor has no "Your tank" tab.
+    expect(html).not.toContain('data-tab="mine"');
+  });
+
+  test("an empty league shows the empty board and invites the first tank", () => {
+    const html = render(props({}, 0));
+    expect(html).toContain("data-league-empty");
+    expect(html).toContain("Your tank can be the first one on this board.");
+    expect(render(props({}, 0), "id")).toContain("Belum ada tank yang main di liga ini.");
+    // An owner looking at an empty league is not invited.
+    expect(render(props({ seat: fixtureSeat(2), onJoin: null }, 0))).not.toContain("can be the first");
+  });
+
+  test("the league switch: none for one league, buttons for two, a list for nine with the own league named", () => {
+    expect(render(props())).not.toContain("data-league-switch");
+    expect(render(props({ leagues: fixtureLeagues(2, 20) }))).toContain('data-league-switch="row"');
+    const nine = render(props({ leagues: fixtureLeagues(9, 140), seat: fixtureSeat(4), onJoin: null }), "id");
+    expect(nine).toContain('data-league-switch="list"');
+  });
+
+  test("a seated owner's tank is ringed on the board and kept in the ranking; the own pane counts its days", () => {
+    const seat = fixtureSeat(1);
+    const ranking = render(props({ seat, onJoin: null, tab: "ranking" }, 16));
+    expect(ranking).toMatch(new RegExp(`aria-current="true"[^>]*data-player-id="${OWN_SEAT}"`));
+    expect(ranking).not.toContain("data-monthly-join");
+    const mine = render(props({ seat, onJoin: null, tab: "mine" }, 16), "id");
+    expect(mine).toContain("Tank kamu sudah main 5 dari 7 hari yang dibutuhkan untuk masuk peringkat.");
+    expect(mine).toContain("Hari ini masuk hitungan poin bulananmu.");
+    expect(mine).toContain("Keluar dari arena bulanan");
+    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank has 5 of the 7 days it needs for a place.");
+  });
+
+  test("an owner whose tank plays in another league is told where, with the way back", () => {
+    const html = render(props({ seat: fixtureSeat(2), onJoin: null, leagues: fixtureLeagues(2, 20) }, 16), "id");
+    expect(html).toContain("Tank kamu main di Liga 2.");
+    expect(html).toContain("Lihat Liga 2");
+  });
+
+  test("this month's ranking lists the tanks without a place after a line", () => {
+    const html = render(props({ tab: "ranking", side: "month" }, 16));
+    expect(html).toContain("Fewer than 7 days, not ranked yet");
+  });
+
+  test("the month close's notice, the finished day at midnight, and yesterday's winner", () => {
+    expect(render(props({ seat: fixtureSeat(1), onJoin: null, move: FIXTURE_MOVE }, 16), "id")).toContain("Tank kamu naik ke Liga 1.");
+    const done = render(props({ dayChange: { kind: "done", day: "2026-11-13", winner: fixtureDays(1)[0] ?? null } }), "id");
+    expect(done).toContain("Ronde 13 November 2026 sudah selesai.");
+    expect(done).toContain("Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.");
+    expect(render(props())).toContain("Citra won yesterday&#x27;s round with 31 points.");
+  });
+
+  test("the day's end and a refused stream are said in words", () => {
+    const live = fixtureLive(1, 5);
+    expect(render(props({ load: fixtureLoad({ ...live, dayEndsInMs: 0 }, NOW) }), "id")).toContain("Ronde hari ini sedang ditutup");
+    const failed = render(props({ load: { kind: "connecting" }, connection: "failed" }));
+    expect(failed).toContain("The page cannot show this league right now, so try again.");
+    expect(failed).toContain("Try again");
+  });
+});

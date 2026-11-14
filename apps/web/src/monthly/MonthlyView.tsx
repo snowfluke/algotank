@@ -17,6 +17,7 @@
 import { ListOrdered, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
+import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import type { StrategyInput } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
 import { boardAspect, FittedBoard } from "../board/FittedBoard.tsx";
@@ -303,6 +304,12 @@ function OwnPane({ seat, league, board, ranking, onLeague, onQuit, strategy }: {
             )}
             {todayRow === null ? null : <p>{t.today(todayRow.rank, todayRow.points)}</p>}
             <p className="text-muted">{seat.countsToday ? t.counts : t.notCounted}</p>
+            {/* Only beside the own league: the other league's view spends this room on the way back, and the help dialog says it too. */}
+            {here ? (
+              <p data-own-plays-alone="" className="text-muted">
+                {t.playsAlone}
+              </p>
+            ) : null}
             <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score)}</p>
             {seat.rank === null ? null : <p className="text-muted">{t.daysCounted(seat.countedDays)}</p>}
           </div>
@@ -379,6 +386,7 @@ function PresenterLayout(props: MonthlyViewProps) {
             {t.join}
           </Button>
         )}
+        <MonthlyAbout />
       </div>
       <div className="flex min-w-0 shrink-0 flex-col gap-2 empty:hidden">
         {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
@@ -468,6 +476,7 @@ function PhoneLayout(props: MonthlyViewProps) {
         <div className="min-w-0 flex-1 basis-48">
           <DayClock board={board} now={props.now} dayChange={props.dayChange} />
         </div>
+        <MonthlyAbout />
       </div>
       {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
       <StreamLine load={load} connection={props.connection} onRetry={props.onRetry} />

@@ -157,6 +157,7 @@ export function MonthlyPage() {
       if (result.data.seat !== null) setAsked(result.data.seat.league);
       setTab("arena");
       dispatch({ type: "seatTaken" });
+      toast.show({ message: t.joinSteps.joined });
       reloadMe();
       reloadOverview();
       return;

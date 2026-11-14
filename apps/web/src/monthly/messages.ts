@@ -51,6 +51,8 @@ export const en = {
     today: (place: number, score: number) => `Your tank is in place ${place} today with ${points(score)}.`,
     counts: "Today counts for your monthly points.",
     notCounted: "Today does not count yet, because your tank joined after the round started.",
+    /** People thought they had to keep the page open; the tank plays without it. */
+    playsAlone: "Your tank plays every round by itself, so you can close this page and come back any time.",
     /** Counted days so far against the days a place needs, such as "5 of 7". */
     daysNeeded: (days: number, need: number) => `Your tank has ${days} of the ${need} days it needs for a place.`,
     daysCounted: (days: number) => `Your tank has played ${days === 1 ? "1 counted day" : `${days} counted days`} this month.`,
@@ -62,9 +64,25 @@ export const en = {
     open: "Leave the monthly arena",
     title: "Leave the monthly arena?",
     /** Today counts for the tank: its points now stay. */
-    bodyCounted: (score: number) => `Your tank leaves the board now, and its ${points(score)} of today still count. Your name stays the same until the month ends.`,
-    bodyNotCounted: "Your tank leaves the board now, and today does not count for it. Your name stays the same until the month ends.",
+    // The last sentence of each body: leaving is not how to stop watching.
+    bodyCounted: (score: number) =>
+      `Your tank leaves the board now, and its ${points(score)} of today still count. Your name stays the same until the month ends. If you only want to stop watching, close this page instead, and your tank keeps playing.`,
+    bodyNotCounted:
+      "Your tank leaves the board now, and today does not count for it. Your name stays the same until the month ends. If you only want to stop watching, close this page instead, and your tank keeps playing.",
     confirm: "Leave the arena",
+  },
+  /** The help button at the top of the page and the dialog it opens (MonthlyAbout.tsx). */
+  about: {
+    open: "How the monthly arena works",
+    heading: "How the monthly arena works",
+    round: "Each round lasts one day, and every tank in a league plays it by itself.",
+    playsAlone: "Your tank plays every day until you leave the arena, so you can close this page and come back any time.",
+    /** The server's RESHUFFLE_TURNS: said without a number, so the text cannot drift from it. */
+    reshuffle: "Every few minutes the tanks start again on new squares and keep their points, so no tank stays stuck in one place.",
+    /** `days` is MONTHLY_RANKED_DAYS. The monthly points rule comes from publicplay/messages.ts. */
+    rankedDays: (days: number) => `A tank needs ${days} counted days for a place in the month's ranking.`,
+    /** The champion and the name rule are left out: the dialog must fit a 360 x 640 phone, and the champions page and the join step say them. */
+    leagues: "When the month ends, the lower half of each league changes places with the upper half of the league below.",
   },
   /** The month close's notice, shown once. `month` is "October 2026". */
   move: {
@@ -83,6 +101,8 @@ export const en = {
     submit: "Put in my tank",
     nameTaken: "Another tank in the monthly arena has this name, so type another name.",
     seatTaken: "Your account already has a tank in the monthly arena, so the page shows it now.",
+    /** The toast after the tank joined. */
+    joined: "Your tank is in the monthly arena now and plays every round by itself, so you can close this page.",
   },
 };
 
@@ -118,6 +138,7 @@ export const id: typeof en = {
     today: (place, score) => `Tank kamu di peringkat ${place} hari ini dengan ${score} poin.`,
     counts: "Hari ini masuk hitungan poin bulananmu.",
     notCounted: "Hari ini belum dihitung karena tank kamu masuk setelah ronde dimulai.",
+    playsAlone: "Tank kamu main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
     daysNeeded: (days, need) => `Tank kamu sudah main ${days} dari ${need} hari yang dibutuhkan untuk masuk peringkat.`,
     daysCounted: (days) => `Tank kamu sudah main ${days} hari yang dihitung bulan ini.`,
     monthPlace: (place, score) => `Tank kamu di peringkat ${place} bulan ini dengan ${score} poin.`,
@@ -127,9 +148,20 @@ export const id: typeof en = {
   quit: {
     open: "Keluar dari arena bulanan",
     title: "Keluar dari arena bulanan?",
-    bodyCounted: (score) => `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap dihitung. Namamu tetap sama sampai bulan ini selesai.`,
-    bodyNotCounted: "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung. Namamu tetap sama sampai bulan ini selesai.",
+    bodyCounted: (score) =>
+      `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap dihitung. Namamu tetap sama sampai bulan ini selesai. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.`,
+    bodyNotCounted:
+      "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung. Namamu tetap sama sampai bulan ini selesai. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
     confirm: "Keluar dari arena",
+  },
+  about: {
+    open: "Cara kerja arena bulanan",
+    heading: "Cara kerja arena bulanan",
+    round: "Setiap ronde berlangsung satu hari, dan setiap tank di satu liga memainkannya sendiri.",
+    playsAlone: "Tank kamu main setiap hari sampai kamu keluar dari arena, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
+    reshuffle: "Setiap beberapa menit, semua tank mulai lagi di petak baru dan poinnya tetap, jadi tidak ada tank yang terjebak di satu tempat.",
+    rankedDays: (days) => `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`,
+    leagues: "Saat bulan berakhir, separuh bawah setiap liga bertukar tempat dengan separuh atas liga di bawahnya.",
   },
   move: {
     up: (league) => `Tank kamu naik ke Liga ${league}.`,
@@ -147,5 +179,6 @@ export const id: typeof en = {
     submit: "Masukkan tank",
     nameTaken: "Nama ini sudah dipakai tank lain di arena bulanan, jadi ketik nama lain.",
     seatTaken: "Akun kamu sudah punya tank di arena bulanan, jadi halaman ini menampilkannya sekarang.",
+    joined: "Tank kamu sudah masuk arena bulanan dan main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini.",
   },
 };

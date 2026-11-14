@@ -84,6 +84,24 @@ describe("the monthly page", () => {
     expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank has 5 of the 7 days it needs for a place.");
   });
 
+  test("the help button opens a list that says the tank plays without the page, in both languages", () => {
+    const html = render(props());
+    expect(html).toContain("data-monthly-about-open");
+    expect(html).toContain("so you can close this page and come back any time.");
+    expect(html).toContain("A tank needs 7 counted days for a place in the month&#x27;s ranking.");
+    expect(render(props(), "id")).toContain("jadi kamu boleh menutup halaman ini dan kembali kapan saja.");
+  });
+
+  test("a seated owner is told the tank plays without the page beside the own league", () => {
+    const seat = fixtureSeat(1);
+    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank plays every round by itself, so you can close this page and come back any time.");
+    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16), "id")).toContain("jadi kamu boleh menutup halaman ini");
+    // Beside another league the pane spends that room on the way back; the help dialog still says it.
+    expect(render(props({ seat: fixtureSeat(2), onJoin: null, leagues: fixtureLeagues(2, 20), tab: "mine" }, 16))).not.toContain("data-own-plays-alone");
+    // A visitor without a tank gets no such line.
+    expect(render(props({ tab: "mine" }, 16))).not.toContain("data-own-plays-alone");
+  });
+
   test("an owner whose tank plays in another league is told where, with the way back", () => {
     const html = render(props({ seat: fixtureSeat(2), onJoin: null, leagues: fixtureLeagues(2, 20) }, 16), "id");
     expect(html).toContain("Tank kamu main di Liga 2.");

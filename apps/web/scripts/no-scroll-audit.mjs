@@ -488,6 +488,8 @@ export const STATES = [
     as: "player",
     fixture: "privateLobby",
     steps: [tab("try"), { click: "[data-test-run]" }, { click: "[data-test-show-result]" }, { wait: "[data-test-result]" }],
+    // The room swaps its panes at the laptop width and unmounts the result, so it is reached again at every size.
+    perSize: true,
   },
   // S1b: the same pane without a server, in a room-sized box ("/kit?show=prep"), across the whole
   // width and in the room's laptop middle column (22rem). "&strategy=stress" starts from 6 modes with

@@ -38,7 +38,7 @@ You need Bun 1.4 or later. The no-scroll audit also needs Node 23.6 or later.
 | No-scroll audit | `bun run audit -- ...` in `apps/web` | Every change to a screen. The section below explains it. |
 | Balance | `bun run simulate` | Every change of game behaviour. Write the change in the pull request. |
 
-`bun run complete-check` runs the type check, the tests and the build in one command. CI runs the same three steps on every push and pull request (`.github/workflows/ci.yml`). CI does not run the audit.
+`bun run complete-check` runs the type check, the tests and the build in one command. CI runs the same steps on pushes to `main` and on pull requests (`.github/workflows/ci.yml`), but only for the parts a change can affect: a change in `packages/` runs everything, a change in one app runs that app's tests, and a change to docs alone runs nothing. CI does not run the audit.
 
 ## How the code is organised
 

@@ -1,13 +1,40 @@
-# The checks every change must pass (CONTRIBUTING.md). The no-scroll audit needs a browser and a
-# running server, so it stays a local check.
+# The checks every change must pass (CONTRIBUTING.md), run only for the parts a change
+# can affect. The packages feed both apps, so a change there runs everything; a change in
+# one app runs that app's tests. The server's tests take most of the time, so a web-only
+# change skips them. The type check is a few seconds and always runs. The no-scroll
+# audit needs a browser and a running server, so it stays a local check.
+
 name: CI
 
 on:
   push:
+    branches: [main]
+    # Changes that no check reads. Keep this list the same as the one under pull_request.
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
+      - "deploy/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/FUNDING.yml"
+      - ".github/workflows/landing.yml"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
+      - "deploy/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/FUNDING.yml"
+      - ".github/workflows/landing.yml"
 
 permissions:
   contents: read
+
+# A newer push to the same pull request replaces the run in progress; runs on main all finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -15,11 +42,44 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The whole history, so the change can be compared with the commit before it.
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           # The Bun version the project is developed and tested with.
           bun-version: 1.4.2
+
+      - name: Find the changed parts
+        id: changed
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # A first push or a force push has no base to compare with, so everything runs.
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            files="packages/"
+          else
+            files=$(git diff --name-only "$BASE" HEAD)
+          fi
+          has() { printf '%s\n' "$files" | grep -Eq "$1"; }
+          shared='^(packages/|package\.json|bun\.lock|bunfig\.toml|tsconfig|\.github/workflows/ci\.yml)'
+          has "$shared" && echo "shared=true" >> "$GITHUB_OUTPUT"
+          has '^apps/server/' && echo "server=true" >> "$GITHUB_OUTPUT"
+          has '^apps/web/' && echo "web=true" >> "$GITHUB_OUTPUT"
+          printf 'Changed files:\n%s\n' "$files"
+
       - run: bun install --frozen-lockfile
       - run: bun run type-check
-      - run: bun test
-      - run: bun run build
+      - name: Test the packages
+        if: steps.changed.outputs.shared
+        run: bun test packages
+      - name: Test the server
+        if: steps.changed.outputs.shared || steps.changed.outputs.server
+        run: bun test apps/server
+      # The landing page imports the server's bot lineup, so a server change tests the web app too (about 1 s).
+      - name: Test the web app
+        if: steps.changed.outputs.shared || steps.changed.outputs.web || steps.changed.outputs.server
+        run: bun test apps/web
+      - name: Build the web app
+        if: steps.changed.outputs.shared || steps.changed.outputs.web
+        run: bun run build

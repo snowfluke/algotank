@@ -213,6 +213,9 @@ export class MonthlyLeagues {
     for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, new LeagueDay(league, this.options.random));
     const ticksLeft = this.ticksLeft();
     const seats = [...this.seats.seats.values()].sort((a, b) => a.order - b.order);
+    // Each league seats its own tanks below, so a seat in a league with no day would be left out without a word.
+    const outside = seats.filter((seat) => !this.days.has(seat.league));
+    if (outside.length > 0) throw new Error(`Seats ${outside.map((seat) => seat.seatId).join(", ")} are in a league that has no day round.`);
     for (const [league, day] of this.days) {
       const tanks = seats
         .filter((seat) => seat.league === league)

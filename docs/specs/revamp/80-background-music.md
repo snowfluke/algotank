@@ -20,3 +20,5 @@ Checks without ears, per track: integrated loudness, true peak under -3 dBTP, th
 You own `tools/music/**`, `apps/web/public/music/**`, the web app's sound feature folder and the header's sound control. Other builders are changing the monthly league (engine, server, monthly pages) and the repository's documentation files; edit shared files with small targeted edits after re-reading them.
 
 Never `bun run build`; never port 8787; build to your own scratch folder and serve on port 9008; one headless browser. Report briefly, with the three files for the owner to listen to as WAV or MP3 paths.
+
+Status 2026-11-14: the owner chose track A; B and C are removed.

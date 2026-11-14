@@ -90,3 +90,5 @@ Tests (injected clock and time zone): every row of both tables in section 2; joi
 ## Both
 
 Never `bun run build`; never port 8787; build to your own scratch folder; M1 serves on port 9004 and M2 on port 9006. One headless browser at a time. Another builder may edit the create form and arena settings at the same time (`78-arena-seats.md`, port 9005, it takes stored arena version 8): edit shared files with small targeted edits after re-reading them. Report briefly.
+
+Status 2026-11-14: the owner confirmed three choices as built: the month's rank is the average of counted day points, a tank's name is unique across all leagues, and only a tank that still has its seat at the month's end can be champion.

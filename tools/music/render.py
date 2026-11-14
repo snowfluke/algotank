@@ -1,8 +1,7 @@
-"""AlgoTank's background music: three candidate tracks, synthesised with numpy (docs/specs/revamp/80-background-music.md).
+"""AlgoTank's background music, track A (soft mallets), synthesised with numpy (docs/specs/revamp/80-background-music.md).
 
 Run (Python 3.12 with numpy and soundfile, ffmpeg on PATH or at /opt/homebrew/bin/ffmpeg):
-    python -I tools/music/render.py <repo root>            renders all three tracks
-    python -I tools/music/render.py <repo root> a          renders track A only
+    python -I tools/music/render.py <repo root>
 
 Why it is built this way:
 - Seamless loop. Every note is added modulo the loop length, and the filters and the reverb are FFT
@@ -10,8 +9,8 @@ Why it is built this way:
 - Encoder delay. The MP3 holds the last PAD seconds of the loop, the loop, and its first PAD seconds.
   The player loops from PAD to PAD + length; a decoder that shifts the audio by a few milliseconds
   shifts both loop points equally, so the seam stays inside periodic audio.
-- Level. Each track is normalised to TARGET_LUFS, so one gain constant in the web player
-  (sound/musicTracks.ts) gives about -30 LUFS for whichever track the owner picks.
+- Level. The track is normalised to TARGET_LUFS, so the gain constant in the web player
+  (sound/musicTracks.ts) gives about -30 LUFS.
 - Keys agree with the game's effect sounds, which sit in C major (A5, E5, E6, and a C-E-G-C win tune).
 
 Checks without ears, printed and written to tools/music/measurements.json, all on the decoded MP3:
@@ -79,15 +78,6 @@ class Loop:
             pos += k
             i = 0
 
-    def add_stereo(self, at: float, sig: np.ndarray, gain: float) -> None:
-        i = int(round(at * SR)) % self.n
-        pos = 0
-        while pos < sig.shape[1]:
-            k = min(sig.shape[1] - pos, self.n - i)
-            self.buf[:, i : i + k] += sig[:, pos : pos + k] * gain
-            pos += k
-            i = 0
-
 
 # --- Envelopes and voices --------------------------------------------------------------------
 # Every voice starts with an attack of 10 ms or more and ends with a release, so nothing clicks or snaps.
@@ -124,21 +114,6 @@ def marimba(f: float, dur: float = 1.6) -> np.ndarray:
     return s * envelope(dur, 0.014, 0.32, 0.25)
 
 
-def epiano(f: float, dur: float = 2.6, velocity: float = 1.0) -> np.ndarray:
-    """A mellow electric piano: two-operator FM whose brightness fades fast, so the note settles into a sine."""
-    t = times(dur)
-    index = (0.9 * velocity) * np.exp(-t / 0.35) + 0.15
-    s = np.sin(2 * np.pi * f * t + index * np.sin(2 * np.pi * f * t))
-    return s * envelope(dur, 0.012, 1.1, 0.4)
-
-
-def pluck(f: float, dur: float = 2.4) -> np.ndarray:
-    """A round pluck for the ambient track: sine plus a little third harmonic, slow 18 ms attack."""
-    t = times(dur)
-    s = np.sin(2 * np.pi * f * t) + 0.1 * np.sin(2 * np.pi * 3 * f * t) * np.exp(-t / 0.2)
-    return s * envelope(dur, 0.018, 0.7, 0.4)
-
-
 def bass(f: float, dur: float) -> np.ndarray:
     """A soft bass with its 2nd and 3rd harmonics, so a phone speaker that cannot play the fundamental still plays the note."""
     t = times(dur)
@@ -154,16 +129,6 @@ def pad_voice(f: float, dur: float, rng: np.random.Generator, attack: float = 1.
         for k in range(1, harmonics + 1):
             s += np.sin(2 * np.pi * f * (1 + detune) * k * t + rng.uniform(0, 2 * np.pi)) / k**1.6
     return s * envelope(dur, attack, None, release) / 2
-
-
-def soft_noise(rng: np.random.Generator, dur: float, low: float, high: float) -> np.ndarray:
-    """Band-limited noise made in the frequency domain, for the brushes. Normalised to a peak of 1."""
-    n = int(dur * SR)
-    spectrum = np.fft.rfft(rng.standard_normal(n))
-    f = np.fft.rfftfreq(n, 1 / SR)
-    shape = 1 / np.sqrt(1 + (low / np.maximum(f, 1)) ** 4) / np.sqrt(1 + (f / high) ** 4)
-    out = np.fft.irfft(spectrum * shape, n)
-    return out / np.max(np.abs(out))
 
 
 # --- Whole-loop processing -------------------------------------------------------------------
@@ -262,141 +227,6 @@ def track_a() -> Loop:
     return loop
 
 
-# --- Track B: mellow electric piano with a quiet brushed beat (C major, 80 BPM, 36 bars) ------
-
-
-def track_b() -> Loop:
-    loop = Loop(bpm=80, bars=36)
-    rng = np.random.default_rng(22)
-    beat, bar = loop.beat, loop.bar
-    chords = [
-        ("C3", ["E3", "G3", "B3", "D4"]),  # Cmaj9
-        ("A2", ["E3", "G3", "B3", "C4"]),  # Am9
-        ("D3", ["F3", "A3", "C4", "E4"]),  # Dm9
-        ("G2", ["F3", "A3", "C4", "D4"]),  # G9sus4
-        ("C3", ["E3", "G3", "B3", "D4"]),  # Cmaj9
-        ("E2", ["E3", "G3", "B3", "D4"]),  # Em7
-        ("F2", ["E3", "G3", "A3", "C4"]),  # Fmaj9
-        ("G2", ["F3", "A3", "C4", "E4"]),  # G13sus4
-    ]
-    motif = [
-        [(1.5, "G4"), (2.5, "E4")],
-        [(0, "C5"), (2, "B4")],
-        [(1, "A4"), (2.5, "C5")],
-        [(0.5, "D5")],
-        [(1.5, "G4"), (2.5, "B4")],
-        [(0, "D5"), (2, "B4")],
-        [(1, "C5"), (2.5, "A4")],
-        [(0.5, "G4")],
-    ]
-    answer = [[(at + 1.0, note) for at, note in notes] for notes in motif[:4]] + motif[4:]
-    brush = soft_noise(rng, 0.6, 400, 3000)
-    sweep = soft_noise(rng, 1.4, 300, 2200)
-
-    # Sections: S1 piano and brush sweeps; S2 adds bass, the soft kick and the brush on 2 and 4;
-    # S3 adds the motif; S4 drops the beat and answers the motif over a pad; S5 (4 bars) leads back to S1.
-    def section(b: int) -> dict:
-        if b < 8:
-            return {"beat": False, "bass": False, "motif": None, "pad": False}
-        if b < 16:
-            return {"beat": True, "bass": True, "motif": None, "pad": False}
-        if b < 24:
-            return {"beat": True, "bass": True, "motif": motif, "pad": False}
-        if b < 32:
-            return {"beat": False, "bass": True, "motif": answer, "pad": True}
-        return {"beat": False, "bass": False, "motif": None, "pad": False}
-
-    for b in range(loop.bars):
-        s = section(b)
-        root, voicing = chords[b % 8]
-        t0 = b * bar
-        # Comping: the chord on beat 1, a softer touch on the "and" of 2, both rolled by 12 ms per note.
-        for k, (at, vel) in enumerate([(0.0, 1.0), (2.5, 0.6)]):
-            for i, note in enumerate(voicing):
-                loop.add(t0 + at * beat + 0.012 * i, epiano(hz(note), 2.4 if k == 0 else 1.6, vel), 0.075 * vel, pan=(-0.3 + 0.2 * i))
-        if s["pad"]:
-            for i, note in enumerate(voicing):
-                loop.add(t0, pad_voice(hz(note) * 2, bar + 1.6, rng, attack=1.5), 0.035, pan=(-0.5, 0.5, -0.2, 0.2)[i])
-        if s["bass"]:
-            loop.add(t0, bass(hz(root), 1.8 * beat), 0.13)
-            loop.add(t0 + 2.5 * beat, bass(hz(root), 1.2 * beat), 0.08)
-        if s["motif"] is not None:
-            for at, note in s["motif"][b % 8]:
-                loop.add(t0 + at * beat, epiano(hz(note), 2.2, 0.7), 0.09, pan=0.15)
-        # Brush sweeps on every beat, alternating sides, very quiet: the "shh" that keeps time without a hi-hat.
-        for q in range(4):
-            sw = sweep[: int(beat * 1.2 * SR)] * envelope(beat * 1.2, 0.18, 0.25, 0.2)
-            loop.add(t0 + q * beat, sw, 0.022, pan=(-0.5 if q % 2 == 0 else 0.5))
-        if s["beat"]:
-            for at in (0.0, 2.5):
-                tk = times(0.35)
-                thump = np.sin(2 * np.pi * np.cumsum(95 + 40 * np.exp(-tk / 0.03)) / SR) * envelope(0.35, 0.010, 0.11, 0.1)
-                loop.add(t0 + at * beat, thump, 0.05)
-            for at in (1.0, 3.0):
-                hit = brush[: int(0.4 * SR)] * envelope(0.4, 0.015, 0.09, 0.1)
-                loop.add(t0 + at * beat, hit, 0.05, pan=0.15)
-    return loop
-
-
-# --- Track C: slow ambient pads with sparse plucks (G major, 70 BPM, 32 bars) ------------------
-
-
-def track_c() -> Loop:
-    loop = Loop(bpm=70, bars=32)
-    rng = np.random.default_rng(33)
-    beat, bar = loop.beat, loop.bar
-    # Two bars a chord, eight chords over 16 bars, played twice with different layers.
-    chords = [
-        ("G2", ["A3", "B3", "D4", "F#4"]),  # Gmaj9
-        ("E2", ["G3", "B3", "D4", "F#4"]),  # Em9
-        ("C3", ["G3", "B3", "D4", "E4"]),  # Cmaj9
-        ("D3", ["A3", "B3", "D4", "E4"]),  # D6/9
-        ("B2", ["A3", "B3", "D4", "F#4"]),  # Bm7
-        ("E2", ["G3", "B3", "D4", "E4"]),  # Em7
-        ("A2", ["G3", "B3", "C4", "E4"]),  # Am9
-        ("D3", ["G3", "A3", "C4", "E4"]),  # D9sus4, back to G
-    ]
-    pentatonic = ["D4", "E4", "G4", "A4", "B4", "D5", "E5", "G5"]
-    # A slow motif of long notes, one every two bars; the second time it turns downward.
-    motif = ["B4", "A4", "G4", "E4", "D5", "B4", "A4", "G4"]
-    motif_down = ["B4", "A4", "G4", "E4", "D5", "B4", "G4", "D4"]
-
-    sections = [
-        {"plucks": 0.14, "bass": False, "shimmer": False, "motif": None},
-        {"plucks": 0.10, "bass": True, "shimmer": False, "motif": motif},
-        {"plucks": 0.20, "bass": True, "shimmer": True, "motif": None},
-        {"plucks": 0.10, "bass": False, "shimmer": True, "motif": motif_down},
-    ]
-    for c in range(loop.bars // 2):
-        s = sections[(2 * c) // 8]
-        root, voicing = chords[c % 8]
-        t0 = 2 * c * bar
-        length = 2 * bar
-        for i, note in enumerate(voicing):
-            loop.add(t0, pad_voice(hz(note), length + 2.5, rng, attack=2.0, release=2.5), 0.05, pan=(-0.5, 0.5, -0.2, 0.2)[i])
-        if s["shimmer"]:
-            for i, note in enumerate(voicing[1:]):
-                loop.add(t0, pad_voice(hz(note) * 2, length + 2.5, rng, attack=2.5, release=2.5, harmonics=2), 0.018, pan=(0.6, -0.6, 0.0)[i])
-        if s["bass"]:
-            loop.add(t0, bass(hz(root), length * 0.97) * envelope(length * 0.97, 0.8, None, 1.0), 0.22)
-        if s["motif"] is not None:
-            loop.add(t0 + beat, pluck(hz(s["motif"][c % 8]), 3.6), 0.09, pan=-0.1)
-    # Plucks on the eighth-note grid, chosen by a fixed seed, with a ping-pong echo (dotted quarter).
-    chord_pitch_classes = [{NOTE_INDEX[NOTE_NAME.match(n).group(1)] for n in [r, *v]} for r, v in chords]  # type: ignore[union-attr]
-    for e in range(loop.bars * 8):
-        b = e // 8
-        s = sections[b // 8]
-        if rng.random() >= s["plucks"] or e % 8 == 0:
-            continue
-        allowed = [n for n in pentatonic if NOTE_INDEX[NOTE_NAME.match(n).group(1)] in chord_pitch_classes[(b // 2) % 8]]  # type: ignore[union-attr]
-        note = allowed[int(rng.integers(len(allowed)))]
-        at = e * beat / 2
-        pan = float(rng.uniform(-0.5, 0.5))
-        for k, g in enumerate((0.07, 0.03, 0.013)):
-            loop.add(at + k * 1.5 * beat, pluck(hz(note)), g, pan=pan * (1 if k % 2 == 0 else -1))
-    return loop
-
-
 # --- Rendering, encoding and measuring ------------------------------------------------------
 
 
@@ -413,11 +243,8 @@ class Track:
     wet: float
 
 
-TRACKS = [
-    Track("a", "a-mallets-v1.mp3", "Soft mallets with a warm pad", "F major", 75, track_a, 4200, 2.4, 0.32),
-    Track("b", "b-keys-v1.mp3", "Mellow electric piano with a quiet brushed beat", "C major", 80, track_b, 4500, 1.8, 0.22),
-    Track("c", "c-pads-v1.mp3", "Slow ambient pads with sparse plucks", "G major", 70, track_c, 3800, 3.2, 0.42),
-]
+# The letter stays "a": it seeds the reverb and names the file, so a re-render gives the same audio.
+TRACK = Track("a", "a-mallets-v1.mp3", "Soft mallets with a warm pad", "F major", 75, track_a, 4200, 2.4, 0.32)
 
 
 def ffmpeg(*args: str) -> str:
@@ -514,19 +341,12 @@ def render(track: Track, out_dir: Path, work: Path) -> dict:
 
 def main() -> None:
     root = Path(sys.argv[1]).resolve()
-    only = set(sys.argv[2:])
     out_dir = root / "apps/web/public/music"
     out_dir.mkdir(parents=True, exist_ok=True)
-    report_path = root / "tools/music/measurements.json"
-    report = json.loads(report_path.read_text()) if report_path.exists() else {}
     with tempfile.TemporaryDirectory() as tmp:
-        for track in TRACKS:
-            if only and track.letter not in only:
-                continue
-            result = render(track, out_dir, Path(tmp))
-            report[track.letter] = result
-            print(json.dumps({track.letter: result}, indent=2))
-    report_path.write_text(json.dumps(report, indent=2) + "\n")
+        report = {TRACK.letter: render(TRACK, out_dir, Path(tmp))}
+    print(json.dumps(report, indent=2))
+    (root / "tools/music/measurements.json").write_text(json.dumps(report, indent=2) + "\n")
 
 
 if __name__ == "__main__":

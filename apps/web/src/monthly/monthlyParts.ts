@@ -1,7 +1,7 @@
 // Pure rules of the monthly page: the day's clock, which league switch it shows, the
 // rankings as rows of a paged list, and which finished day it names as yesterday's.
 
-import { type LeagueDayRecord, type LeagueMonthRow, type LeagueTodayRow } from "@game/arena";
+import { type LeagueDayRecord, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow } from "@game/arena";
 import type { RankingItem } from "../standings/StandingsTable.tsx";
 
 /** Time left in the day round as "05:12:44", rounded up to the second. */
@@ -61,3 +61,23 @@ export function monthItems(rows: readonly LeagueMonthRow[], notRankedLabel: stri
   return items;
 }
 
+
+/**
+ * Today's ranking with each seated tank's points from the stream's latest turn, sorted again. The
+ * page reads the ranking every few seconds (useMonthlyData.ts), but the board moves every turn, so
+ * without this the ranking trailed the tanks by up to one poll. Only a ranking and a board of the
+ * same league and day are merged; a tank that quit keeps the points the server gave it. Ties keep
+ * the server's order, which already puts the earlier seat first.
+ */
+export function withLivePoints(
+  ranking: LeagueRankingResponse | null,
+  board: { readonly league: number; readonly day: string; readonly snapshot: { readonly bots: readonly { readonly id: string; readonly score: number }[] } } | null,
+): LeagueRankingResponse | null {
+  if (ranking === null || board === null || ranking.league !== board.league || ranking.day !== board.day) return ranking;
+  const live = new Map(board.snapshot.bots.map((bot) => [bot.id, bot.score]));
+  const today = ranking.today
+    .map((row, index) => ({ row: row.seated ? { ...row, points: live.get(row.seatId) ?? row.points } : row, index }))
+    .sort((a, b) => b.row.points - a.row.points || a.index - b.index)
+    .map(({ row }, i) => ({ ...row, rank: i + 1 }));
+  return { ...ranking, today };
+}

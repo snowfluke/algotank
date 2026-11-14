@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { plainTankLook, type LeagueMonthRow } from "@game/arena";
-import { dayBefore, formatDayClock, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems } from "./monthlyParts.ts";
+import { plainTankLook, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow } from "@game/arena";
+import { dayBefore, formatDayClock, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems, withLivePoints } from "./monthlyParts.ts";
 
 const look = plainTankLook(3);
 
@@ -38,5 +38,36 @@ describe("the monthly page's rules", () => {
     expect(items.map((item) => (item.kind === "cut" ? "cut" : item.row.place))).toEqual([1, 2, "cut", null, null]);
     expect(monthItems([row(null, 1)], "x").map((item) => item.kind)).toEqual(["cut", "row"]);
     expect(monthItems([row(1, 1)], "x").map((item) => item.kind)).toEqual(["row"]);
+  });
+});
+
+describe("today's ranking follows the board", () => {
+  const row = (seatId: string, points: number, rank: number, seated = true): LeagueTodayRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), points, counts: true, seated });
+  const ranking: LeagueRankingResponse = {
+    league: 1,
+    month: "2026-11",
+    day: "2026-11-14",
+    today: [row("a", 10, 1), row("b", 5, 2), row("gone", 4, 3, false)],
+    thisMonth: [],
+  };
+  const board = (scores: Record<string, number>, day = "2026-11-14", league = 1) => ({ league, day, snapshot: { bots: Object.entries(scores).map(([id, score]) => ({ id, score })) } });
+
+  test("the points of the latest turn reorder the seated tanks; a tank that quit keeps its points", () => {
+    const merged = withLivePoints(ranking, board({ a: 3, b: 8, bot1: 2 }));
+    expect(merged?.today.map((r) => [r.rank, r.seatId, r.points])).toEqual([
+      [1, "b", 8],
+      [2, "gone", 4],
+      [3, "a", 3],
+    ]);
+  });
+
+  test("a board of another day or league leaves the server's ranking as it is", () => {
+    expect(withLivePoints(ranking, board({ a: 0, b: 99 }, "2026-11-15"))).toBe(ranking);
+    expect(withLivePoints(ranking, board({ a: 0, b: 99 }, "2026-11-14", 2))).toBe(ranking);
+    expect(withLivePoints(null, board({ a: 1 }))).toBeNull();
+  });
+
+  test("equal points keep the server's order", () => {
+    expect(withLivePoints(ranking, board({ a: 6, b: 6 }))?.today.map((r) => r.seatId)).toEqual(["a", "b", "gone"]);
   });
 });

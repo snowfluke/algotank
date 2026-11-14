@@ -36,7 +36,7 @@ import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
-import { formatDayClock, lastFinishedDay, leagueSwitchKind, monthItems, todayItems } from "./monthlyParts.ts";
+import { formatDayClock, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
 import type { LeagueConnection } from "./useLeagueLive.ts";
 
 export type MonthlySeat = NonNullable<MonthlyMeResponse["seat"]>;
@@ -354,7 +354,14 @@ function OwnLine({ seat, league, ranking, onLeague }: { seat: MonthlySeat; leagu
 export function MonthlyView(props: MonthlyViewProps) {
   const laptop = useLaptopLayout();
   const fit = useFitLayout();
-  return laptop && fit ? <PresenterLayout {...props} /> : <PhoneLayout {...props} />;
+  // Today's points follow the board turn by turn (monthlyParts.ts, withLivePoints); the layouts read only this ranking.
+  const board = boardOf(props.load);
+  const ranking = useMemo(
+    () => withLivePoints(props.ranking, board === null ? null : { league: board.live.league, day: board.live.day, snapshot: board.snapshot }),
+    [props.ranking, board],
+  );
+  const live = { ...props, ranking };
+  return laptop && fit ? <PresenterLayout {...live} /> : <PhoneLayout {...live} />;
 }
 
 function boardOf(load: LeagueLiveLoad): LeagueBoard | null {

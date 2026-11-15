@@ -1067,6 +1067,9 @@ STATES.push(
   monthlyKit("closing", "case=closing"),
   monthlyKit("failed", "case=failed"),
   monthlyKit("quit", "case=seated&tab=mine&side=mine&quit=1", { steps: [{ wait: "dialog[data-dialog=monthly-quit][open]" }] }),
+  // The information list and the board legend (84-items.md): both are dialogs that must fit without scrolling.
+  monthlyKit("about", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-monthly-about-open]" }, { wait: "dialog[data-monthly-about][open]" }] }),
+  monthlyKit("legend", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-legend-open]" }, { wait: "dialog[open]" }] }),
   { screen: "monthly", state: "page-visitor", owner: "M2", path: () => "/monthly", as: "visitor", sizes: MONTHLY_SIZES, steps: [{ wait: "[data-monthly-board]" }] },
   { screen: "monthly", state: "join-name", owner: "M2", path: () => "/monthly", as: "creator", perSize: true, steps: [{ click: "[data-monthly-join]" }, { wait: "[data-monthly-name]" }] },
   {

@@ -18,6 +18,7 @@ import { ListOrdered, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
+import { LegendButton } from "../board/BoardLegend.tsx";
 import type { StrategyInput } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
 import { boardAspect, FittedBoard } from "../board/FittedBoard.tsx";
@@ -394,6 +395,8 @@ function PresenterLayout(props: MonthlyViewProps) {
           </Button>
         )}
         <MonthlyAbout />
+        {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
+        <LegendButton />
       </div>
       <div className="flex min-w-0 shrink-0 flex-col gap-2 empty:hidden">
         {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
@@ -484,6 +487,8 @@ function PhoneLayout(props: MonthlyViewProps) {
           <DayClock board={board} now={props.now} dayChange={props.dayChange} />
         </div>
         <MonthlyAbout />
+        {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
+        <LegendButton />
       </div>
       {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
       <StreamLine load={load} connection={props.connection} onRetry={props.onRetry} />

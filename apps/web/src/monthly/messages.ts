@@ -78,7 +78,9 @@ export const en = {
     round: "Each round lasts one day, and every tank in a league plays it by itself.",
     playsAlone: "Your tank plays every day until you leave the arena, so you can close this page and come back any time.",
     /** The server's RESHUFFLE_TURNS: said without a number, so the text cannot drift from it. */
-    reshuffle: "Every few minutes the tanks start again on new squares and keep their points, so no tank stays stuck in one place.",
+    reshuffle: "Every few minutes the tanks start again on new squares and keep their points.",
+    /** Names the board legend's button (board/messages.ts, legend.button), which lists the items. */
+    items: "Items appear on the board, and Help says what each one does.",
     /** `days` is MONTHLY_RANKED_DAYS. The monthly points rule comes from publicplay/messages.ts. */
     rankedDays: (days: number) => `A tank needs ${days} counted days for a place in the month's ranking.`,
     /** The champion and the name rule are left out: the dialog must fit a 360 x 640 phone, and the champions page and the join step say them. */
@@ -157,11 +159,12 @@ export const id: typeof en = {
   about: {
     open: "Cara kerja arena bulanan",
     heading: "Cara kerja arena bulanan",
-    round: "Setiap ronde berlangsung satu hari, dan setiap tank di satu liga memainkannya sendiri.",
+    round: "Satu ronde berlangsung sehari, dan setiap tank memainkannya sendiri.",
     playsAlone: "Tank kamu main setiap hari sampai kamu keluar dari arena, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
-    reshuffle: "Setiap beberapa menit, semua tank mulai lagi di petak baru dan poinnya tetap, jadi tidak ada tank yang terjebak di satu tempat.",
+    reshuffle: "Setiap beberapa menit, semua tank mulai lagi di petak baru dengan poin yang tetap.",
+    items: "Item muncul di arena, dan tombol Bantuan menjelaskan gunanya.",
     rankedDays: (days) => `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`,
-    leagues: "Saat bulan berakhir, separuh bawah setiap liga bertukar tempat dengan separuh atas liga di bawahnya.",
+    leagues: "Di akhir bulan, separuh bawah tiap liga bertukar tempat dengan separuh atas liga di bawahnya.",
   },
   move: {
     up: (league) => `Tank kamu naik ke Liga ${league}.`,

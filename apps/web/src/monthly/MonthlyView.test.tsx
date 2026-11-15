@@ -92,6 +92,13 @@ describe("the monthly page", () => {
     expect(render(props(), "id")).toContain("jadi kamu boleh menutup halaman ini dan kembali kapan saja.");
   });
 
+  test("the board legend's button sits beside the information button, and the list points to it for the items", () => {
+    const html = render(props());
+    expect(html).toContain("data-legend-open");
+    expect(html).toContain("Items appear on the board, and Help says what each one does.");
+    expect(render(props(), "id")).toContain("tombol Bantuan menjelaskan gunanya");
+  });
+
   test("a seated owner is told the tank plays without the page beside the own league", () => {
     const seat = fixtureSeat(1);
     expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank plays every round by itself, so you can close this page and come back any time.");

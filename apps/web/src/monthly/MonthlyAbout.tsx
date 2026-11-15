@@ -1,10 +1,10 @@
-// "How the monthly arena works": the help button at the top of the monthly page and the
-// list it opens. Players thought they had to keep the page open while their tank played,
+// "How the monthly arena works": the information button (an "i", so it differs from the board
+// legend's "?" beside it) at the top of the monthly page and the list it opens. Players thought they had to keep the page open while their tank played,
 // so the list says that the tank plays without it, next to the league's other rules.
 // A native <dialog>, like room/HowItWorks.tsx, so focus stays inside and Escape closes it;
 // ui/Dialog.tsx is for confirmations only.
 
-import { CircleHelp, X } from "lucide-react";
+import { Info, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { MONTHLY_RANKED_DAYS } from "@game/arena";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -13,7 +13,7 @@ import { IconButton } from "../ui/IconButton.tsx";
 /** The facts in reading order: how a round runs, that the tank plays alone, then how the month counts. */
 export function monthlyFacts(m: ReturnType<typeof useMessages>): readonly string[] {
   const t = m.monthly.about;
-  return [t.round, t.reshuffle, t.playsAlone, m.publicplay.league.rule, t.rankedDays(MONTHLY_RANKED_DAYS), t.leagues];
+  return [t.round, t.reshuffle, t.items, t.playsAlone, m.publicplay.league.rule, t.rankedDays(MONTHLY_RANKED_DAYS), t.leagues];
 }
 
 export function MonthlyAbout() {
@@ -32,7 +32,7 @@ export function MonthlyAbout() {
 
   return (
     <>
-      <IconButton label={t.open} icon={<CircleHelp aria-hidden size={24} />} variant="quiet" data-monthly-about-open="" onClick={() => setOpen(true)} />
+      <IconButton label={t.open} icon={<Info aria-hidden size={24} />} variant="quiet" data-monthly-about-open="" onClick={() => setOpen(true)} />
       <dialog
         ref={ref}
         aria-labelledby={titleId}

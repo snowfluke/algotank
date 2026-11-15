@@ -86,8 +86,9 @@ export function turnsOf(before: Snapshot, result: TickResult): Map<BotId, TankTu
   const shots = new Map<BotId, "hit" | "miss">();
   const hitsOn = new Map<BotId, number>();
   for (const event of result.throws) {
-    if (event.outcome !== "hit" && event.outcome !== "miss") continue;
-    shots.set(event.throwerId, event.outcome);
+    if (event.outcome === "empty" || event.outcome === "dry") continue;
+    // A throw an umbrella stopped spent water and rolled, so it is a shot, and it hit nobody.
+    shots.set(event.throwerId, event.outcome === "hit" ? "hit" : "miss");
     if (event.outcome === "hit") hitsOn.set(event.targetId, (hitsOn.get(event.targetId) ?? 0) + 1);
   }
   const turns = new Map<BotId, TankTurn>();

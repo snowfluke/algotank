@@ -327,7 +327,18 @@ export const STATES = [
     path: (f) => `/a/${f.privateLobby.id}`,
     as: "player",
     fixture: "privateLobby",
-    steps: [{ click: "[data-how-it-works-open]" }, { wait: "dialog[open]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { wait: "[data-how-it-works-done]" }],
+    // Six steps (84-items.md added the items): five clicks reach the last one.
+    steps: [{ click: "[data-how-it-works-open]" }, { wait: "dialog[open]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { wait: "[data-how-it-works-done]" }],
+  },
+  {
+    screen: "room",
+    state: "lobby-how-it-works-items",
+    owner: "S1a",
+    path: (f) => `/a/${f.privateLobby.id}`,
+    as: "player",
+    fixture: "privateLobby",
+    // The fifth step, the four items with their sentence (84-items.md).
+    steps: [{ click: "[data-how-it-works-open]" }, { wait: "dialog[open]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { click: "[data-how-it-works-next]" }, { wait: "dialog[open]" }],
   },
   { screen: "room", state: "lobby-owner-settings", owner: "S1a", path: (f) => `/a/${f.privateLobby.id}`, as: "owner", fixture: "privateLobby", steps: [{ click: '[data-opens="settings"]' }, { wait: "[data-step-sheet]" }] },
   {
@@ -428,6 +439,9 @@ export const STATES = [
   // The player's legend in a real room, with "Show me around" (fix 9 of 70-fixes-after-guidance.md).
   { screen: "room", state: "running-player-legend", owner: "F1", path: (f) => `/a/${f.privateRunning.id}`, as: "player", fixture: "privateRunning", perSize: true, steps: [{ click: "[data-legend-open]" }, { wait: "dialog[open]" }] },
   { screen: "panes", state: "running-legend", owner: "S2", path: () => "/kit?show=board&pane=running&players=16", as: "visitor", steps: [{ click: "[data-legend-open]" }, { wait: "dialog[open]" }] },
+  // The items and their effects (84-items.md) are on the legend's later pages; how many pages there are depends on the height.
+  { screen: "panes", state: "running-legend-page-2", owner: "S2", path: () => "/kit?show=board&pane=running&players=16", as: "visitor", steps: [{ click: "[data-legend-open]" }, { wait: "dialog[open]" }, { click: "dialog[open] [data-pager-next]" }] },
+  { screen: "panes", state: "running-legend-page-3", owner: "S2", path: () => "/kit?show=board&pane=running&players=16", as: "visitor", steps: [{ click: "[data-legend-open]" }, { wait: "dialog[open]" }, { click: "dialog[open] [data-pager-next]" }, { click: "dialog[open] [data-pager-next]" }] },
   { screen: "panes", state: "test-match", owner: "S2", path: () => "/kit?show=board&pane=test", as: "visitor", steps: [{ click: "[data-test-run]" }, { wait: "[data-test-board]" }] },
   {
     screen: "panes",

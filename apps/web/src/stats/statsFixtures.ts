@@ -6,7 +6,7 @@ import { DEFAULT_PRESET_ID, parseStrategy, PRESETS, runRound, STANDARD_RULE_SET_
 /** The statistics of `strategy` after `ticks` turns against one tank of each built-in play style. */
 export function playedStats(strategy: Strategy, ticks: number, seed = 42): StatsView {
   const players = [{ id: "me", strategy }, ...PRESETS.map((preset, i) => ({ id: `bot-${i}`, strategy: preset.strategy }))];
-  const { spawn, ticks: turns } = runRound({ seed, ticksTotal: ticks, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players });
+  const { spawn, ticks: turns } = runRound({ seed, ticksTotal: ticks, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players, items: true });
   return statsView(statsOfRound(spawn, turns, "me"), strategy);
 }
 

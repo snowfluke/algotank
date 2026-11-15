@@ -4,6 +4,12 @@
 // shot is three drops at the nozzle. Every effect is keyed by the turn, so it plays
 // once and returns to rest. The gauge under each tank is drawn last, so no effect
 // ever covers it.
+//
+// Items (docs/specs/revamp/84-items.md, itemShapes.tsx) lie on the floor under the jets
+// and tanks. A tank shows the item it holds on a white disc at its top-left corner, mud
+// under and on its treads while it is stuck, and stars around it while it is dizzy. A
+// blocked throw opens the target's umbrella toward the jet, with no "+1" and no wobble,
+// and a hit with a bucket pops "+2". In a crowd only the viewer's tank shows these marks.
 
 import type { CSSProperties } from "react";
 import { useEffect, useId, useMemo, useRef } from "react";
@@ -37,6 +43,7 @@ import {
 } from "./boardHelpers.ts";
 import type { ShotShape } from "./boardHelpers.ts";
 import { Crown, DryDrops, JetShape, Puff, Splash } from "./boardShapes.tsx";
+import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import type { ArenaBoardProps } from "./props.ts";
 import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
 import { useCellPixels } from "./useCellPixels.ts";
@@ -56,6 +63,13 @@ const PLATE_SCALE = 0.88;
 /** In a crowd (a big arena seen whole) the viewer's tank is drawn at least this many CSS px wide, so it is found at once. */
 const CROWD_SELF_MIN_PX = 20;
 const YOU_MIN_PX = 15;
+/** An item blinks in its last turns on the board, so a viewer sees that it is about to go. */
+const ITEM_FADE_TURNS = 5;
+/** Where the disc of a held item sits on the tank's square, and its size. */
+const BADGE_AT = { x: -3.5, y: -3.3 } as const;
+const BADGE_SCALE = 0.85;
+/** The open umbrella of a blocked throw is drawn at this share of its size, so it covers only the front of the tank. */
+const UMBRELLA_SCALE = 0.75;
 
 const FALLBACK_LOOK: TankLook = plainTankLook(1);
 
@@ -154,6 +168,7 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
   const hidden = cellPx === 0;
   const drawn = hidden ? [] : camera === null ? bots : bots.filter((bot) => inWindow(camera, bot.x, bot.y, CULL_MARGIN));
   const drawnIds = camera === null && !hidden ? null : new Set(drawn.map((bot) => bot.id));
+  const drawnItems = hidden ? [] : camera === null ? snapshot.items : snapshot.items.filter((item) => inWindow(camera, item.x, item.y, CULL_MARGIN));
   // SVG has no z-index, so the highlighted tank is drawn last to stay on top.
   const drawOrder = [...drawn.filter((bot) => bot.id !== highlightId), ...drawn.filter((bot) => bot.id === highlightId)];
 
@@ -219,6 +234,23 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
           </defs>
         ) : null}
 
+        {/* Items lie on the floor. Each keeps its key while it stays, so it pops in once. */}
+        <g data-layer="items">
+          {drawnItems.map((item) => {
+            const centre = cellCenter(item.x, item.y);
+            const fading = item.turnsLeft <= ITEM_FADE_TURNS;
+            return (
+              <g key={`${item.kind}-${item.x}-${item.y}`} transform={`translate(${centre.x} ${centre.y})`} data-item={item.kind} data-fading={fading ? "true" : undefined}>
+                <g className="ab-anim ab-item-in">
+                  <g className={fading ? "ab-item-fade" : undefined} opacity={fading ? 0.6 : undefined}>
+                    <ItemShape kind={item.kind} spin="ab-anim ab-pinwheel" />
+                  </g>
+                </g>
+              </g>
+            );
+          })}
+        </g>
+
         {/* Jets run under the tanks, so a jet starts at the nozzle and never covers a hull. */}
         <g key={`jets-${tick}`}>
           {shots.map(({ id, shape }) =>
@@ -239,6 +271,7 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
           const tankLabel = detail.labels ? labels.get(bot.id) : undefined;
           // The viewer's own tank is never tiny, so it keeps its hatch in a crowd.
           const tankDetail = isSelf && detail.tank === "tiny" ? "simple" : detail.tank;
+          const stuck = bot.effect?.kind === "stuck";
           if (crowd && !isSelf) {
             // The same transform as the nested groups below in one list, so one transition moves and turns the tank.
             return (
@@ -269,6 +302,11 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
                   <TankPlate colour={look.plate} />
                 </g>
               )}
+              {stuck ? (
+                <g data-effect="stuck">
+                  <MudPuddle />
+                </g>
+              ) : null}
               <g transform={`translate(0 ${-TANK_LIFT}) scale(${isSelf && crowd ? selfCrowdScale(cellPx) : TANK_SCALE})`}>
                 {isSelf && counting ? (
                   <circle r={7.6} fill="none" strokeWidth={1.2} className="ab-anim ab-you-pulse" style={{ stroke: "var(--color-self)" }} />
@@ -287,7 +325,22 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
                     </g>
                   )}
                 </g>
+                {/* The effects keep still while the tank turns, like the plate. */}
+                {stuck ? <MudSplats /> : null}
+                {bot.effect?.kind === "dizzy" ? (
+                  <g data-effect="dizzy">
+                    <DizzyStars motion="ab-anim ab-dizzy" />
+                  </g>
+                ) : null}
               </g>
+              {bot.item === null ? null : (
+                // Keyed by the item, so the disc pops in on the turn the tank takes it.
+                <g key={`held-${bot.item}`} transform={`translate(${BADGE_AT.x} ${BADGE_AT.y}) scale(${BADGE_SCALE})`} data-held={bot.item}>
+                  <g className="ab-anim ab-item-in">
+                    <HeldBadge kind={bot.item} />
+                  </g>
+                </g>
+              )}
             </g>
           );
         })}
@@ -318,7 +371,8 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
           {[...shooters].flatMap((id) => {
             const shooter = botsById.get(id);
             if (crowd && id !== highlightId) return [];
-            if (shooter === undefined || !throws.some((event) => event.throwerId === id && event.outcome === "hit")) return [];
+            const hit = throws.find((event) => event.throwerId === id && event.outcome === "hit");
+            if (shooter === undefined || hit === undefined) return [];
             const at = tankCenter(shooter.x, shooter.y);
             // In the top row the "+1" stays inside the wall instead of leaving the picture.
             return [
@@ -334,7 +388,7 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
                   paintOrder="stroke"
                   style={{ fill: id === highlightId ? "var(--color-self-ink)" : "var(--color-ink)", stroke: "var(--color-panel)" }}
                 >
-                  {m.board.plusOne}
+                  {hit.outcome === "hit" && hit.bucket === true ? m.board.plusTwo : m.board.plusOne}
                 </text>
               </g>,
             ];
@@ -377,6 +431,12 @@ function ShotMark({ shape }: { shape: ShotShape }) {
       return (
         <g data-mark="hit" transform={`translate(${shape.splash.x} ${shape.splash.y})`}>
           <Splash motion="ab-anim ab-splash" />
+        </g>
+      );
+    case "blocked":
+      return (
+        <g data-mark="blocked" transform={`translate(${shape.umbrella.x} ${shape.umbrella.y}) rotate(${shape.angle}) scale(${UMBRELLA_SCALE})`}>
+          <OpenUmbrella motion="ab-anim ab-umbrella" />
         </g>
       );
     case "miss":

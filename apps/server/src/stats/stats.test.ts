@@ -162,7 +162,7 @@ describe("the engine's count matches a hand-checked round", () => {
   test("statsView over a played round adds up to its turns", () => {
     const strategy = PRESETS[0]?.strategy;
     if (strategy === undefined) throw new Error("test setup");
-    const { spawn, ticks } = runRound({ seed: 11, ticksTotal: 30, survivorsAfterRound: null, ruleSetId: "standard", players: [{ id: "x", strategy }, { id: "y", strategy }] });
+    const { spawn, ticks } = runRound({ seed: 11, ticksTotal: 30, survivorsAfterRound: null, ruleSetId: "standard", players: [{ id: "x", strategy }, { id: "y", strategy }], items: true });
     const view = statsView(statsOfRound(spawn, ticks, "x"), strategy);
     expect(view.modes.reduce((sum, mode) => sum + mode.rules.reduce((s, n) => s + n, 0) + mode.fallback, 0)).toBe(30);
   });
@@ -274,7 +274,7 @@ describe("the arena statistics in memory", () => {
     // Two joins; only p1 plays the next game, so p2's credit goes at its start.
     stats.credit("ARENA1", "p1", "account-1");
     stats.credit("ARENA1", "p2", "account-2");
-    const round = createRound({ seed: 5, ticksTotal: 500, survivorsAfterRound: null, ruleSetId: "standard", players: [{ id: "p1", strategy }, { id: "p2", strategy }] });
+    const round = createRound({ seed: 5, ticksTotal: 500, survivorsAfterRound: null, ruleSetId: "standard", players: [{ id: "p1", strategy }, { id: "p2", strategy }], items: true });
     stats.roundStarted("ARENA1", 1, 1, [{ id: "p1", strategy }]);
     const sizes: number[] = [];
     while (!round.isOver) {

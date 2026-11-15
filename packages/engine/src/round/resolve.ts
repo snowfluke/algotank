@@ -5,13 +5,14 @@
 import { POINTS_PER_HIT, canThrow, hitChancePercent, throwRange, waterAfterTick } from "../combat/combat.ts";
 import { rulesOf } from "../combat/rule-sets.ts";
 import type { RoundRules } from "../combat/rule-sets.ts";
-import type { BotId, BotState, Build, Move, Rng, Snapshot, ThrowEvent } from "../types.ts";
+import type { BotId, BotState, Build, Move, Rng, Snapshot, TankEffectKind, ThrowEvent } from "../types.ts";
+import { ITEM_RULES, actsOnOwnHit, effectOfHit, holderBlocks } from "../items/items.ts";
 import { TURN_EIGHTHS, rotate } from "../directions.ts";
 import { cellAhead, cellKey, isInside } from "./grid.ts";
 import type { ArenaSize } from "./grid.ts";
 
-/** The fields of a bot that a tick changes through its own move or through throws. */
-export type Placement = Pick<BotState, "id" | "x" | "y" | "direction" | "score" | "water">;
+/** The fields of a bot that a tick changes through its own move or through throws. `item` loses an item that acted. */
+export type Placement = Pick<BotState, "id" | "x" | "y" | "direction" | "score" | "water" | "item">;
 
 export interface TickMove {
   readonly botId: BotId;
@@ -23,6 +24,8 @@ export interface TickResolution {
   readonly placements: readonly Placement[];
   /** In resolution order. Only T moves produce an entry. */
   readonly throws: readonly ThrowEvent[];
+  /** The effect each tank got from a hit on this tick; a later hit replaces an earlier one. */
+  readonly inflicted: ReadonlyMap<BotId, TankEffectKind>;
 }
 
 /** A bot while the tick resolves: the placement changes, the build does not. */
@@ -32,6 +35,8 @@ interface Slot {
   readonly move: Move;
   /** True once this bot's throw at a bot used water this tick. */
   spent: boolean;
+  /** A stuck tank's drive and turns do nothing; it can still throw. Read from the snapshot before the tick. */
+  readonly stuck: boolean;
 }
 
 /**
@@ -67,10 +72,11 @@ export function resolveTick(
     if (move === undefined) throw new Error(`no move for bot "${bot.id}"`);
     if (slots.has(bot.id)) throw new Error(`snapshot has two bots with id "${bot.id}"`);
     slots.set(bot.id, {
-      place: { id: bot.id, x: bot.x, y: bot.y, direction: bot.direction, score: bot.score, water: bot.water },
+      place: { id: bot.id, x: bot.x, y: bot.y, direction: bot.direction, score: bot.score, water: bot.water, item: bot.item },
       build: bot.build,
       move,
       spent: false,
+      stuck: bot.effect?.kind === "stuck",
     });
     occupant.set(cellKey(bot), bot.id);
   }
@@ -80,12 +86,15 @@ export function resolveTick(
   }
 
   const throws: ThrowEvent[] = [];
+  const inflicted = new Map<BotId, TankEffectKind>();
 
   for (const botId of order) {
     const slot = slots.get(botId);
     if (slot === undefined) throw new Error(`order names a bot that is not in the snapshot: "${botId}"`);
     const me = slot.place;
 
+    // A stuck tank chose to drive or turn and stays as it was, like a drive into a held cell.
+    if (slot.stuck && slot.move !== "T") continue;
     if (slot.move === "F") {
       // A diagonal step only needs its target cell free: it may pass between two held cells.
       const ahead = cellAhead(me, me.direction);
@@ -96,7 +105,7 @@ export function resolveTick(
         occupant.set(cellKey(me), botId);
       }
     } else if (slot.move === "T") {
-      throws.push(resolveThrow(slot, size, rules, slots, occupant, rng));
+      throws.push(resolveThrow(slot, size, rules, slots, occupant, rng, inflicted));
     } else if (slot.move === "W") {
       // Waiting changes nothing; the refill below still counts it as a turn without a throw.
     } else {
@@ -107,7 +116,7 @@ export function resolveTick(
   // Refill after all moves, so the water a throw checks is the water from before this tick.
   for (const slot of slots.values()) slot.place.water = waterAfterTick(slot.place.water, slot.spent, rules);
 
-  return { placements: bots.map((bot) => ({ ...(slots.get(bot.id) as Slot).place })), throws };
+  return { placements: bots.map((bot) => ({ ...(slots.get(bot.id) as Slot).place })), throws, inflicted };
 }
 
 function resolveThrow(
@@ -117,6 +126,7 @@ function resolveThrow(
   slots: ReadonlyMap<BotId, Slot>,
   occupant: ReadonlyMap<string, BotId>,
   rng: Rng,
+  inflicted: Map<BotId, TankEffectKind>,
 ): ThrowEvent {
   const me = thrower.place;
   const range = throwRange(thrower.build, rules);
@@ -133,13 +143,21 @@ function resolveThrow(
 
     const target = slots.get(targetId) as Slot;
     const hitChance = hitChancePercent(thrower.build, target.build, distance, rules);
-    const hit = rng.chance(hitChance);
-    if (hit) {
-      // The same amount leaves one bot and reaches the other, so scores sum to 0.
-      me.score += POINTS_PER_HIT;
-      target.place.score -= POINTS_PER_HIT;
+    if (!rng.chance(hitChance)) return { throwerId: me.id, outcome: "miss", targetId, distance, hitChance };
+    // The roll hit. An umbrella turns it into a block and is used up, so a second hit on this tick lands.
+    if (holderBlocks(target.place)) {
+      target.place.item = null;
+      return { throwerId: me.id, outcome: "blocked", targetId, distance, hitChance };
     }
-    return { throwerId: me.id, outcome: hit ? "hit" : "miss", targetId, distance, hitChance };
+    // The same amount leaves one bot and reaches the other, so scores sum to 0.
+    const bucket = me.item === "bucket";
+    const points = bucket ? ITEM_RULES.bucketHitPoints : POINTS_PER_HIT;
+    me.score += points;
+    target.place.score -= points;
+    const effect = effectOfHit(me);
+    if (effect !== null) inflicted.set(targetId, effect);
+    if (actsOnOwnHit(me.item)) me.item = null;
+    return bucket ? { throwerId: me.id, outcome: "hit", targetId, distance, hitChance, bucket } : { throwerId: me.id, outcome: "hit", targetId, distance, hitChance };
   }
   return { throwerId: me.id, outcome: "empty" };
 }

@@ -63,6 +63,9 @@ function shotMarkup(shooter: BotState, event: ThrowEvent, bounds: { width: numbe
       };
     case "dry":
       return { under: "", over: svg(<DryDrops drops={shape.drops} motion="ab-anim ab-dry" />) };
+    case "blocked":
+      // demo-round.ts plays with items off, so no tank holds an umbrella.
+      throw new Error("The landing demo plays without items, so no throw can be blocked.");
   }
 }
 

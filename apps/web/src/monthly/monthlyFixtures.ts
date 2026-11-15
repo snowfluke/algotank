@@ -45,7 +45,10 @@ export function fixtureLive(league: number, count: number): LeagueLive {
       hitsLanded: 0,
       hitsTaken: 0,
       water: 6,
+      item: null,
+      effect: null,
     })),
+    items: [],
   };
   return { league, month: "2026-11", day: FIXTURE_DAY, dayEndsInMs: (5 * 3600 + 12 * 60 + 44) * 1000, tickMs: 900, phase: count === 0 ? "idle" : bot ? "withBot" : "withoutBot", tanks, board };
 }

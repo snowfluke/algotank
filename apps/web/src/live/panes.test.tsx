@@ -30,6 +30,8 @@ const bot = (id: string, score: number) => ({
   hitsLanded: 0,
   hitsTaken: 0,
   water: 6,
+  item: null,
+  effect: null,
 });
 
 /** 512 players, so every list is checked at the presenter arena's limit. */

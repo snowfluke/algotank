@@ -27,6 +27,7 @@ function finishedStored(): StoredArena {
     survivorsAfterRound: null,
     ruleSetId: "downpour",
     players: ["a", "b", "c"].map((id) => ({ id, strategy })),
+    items: true,
   };
   apply({ kind: "roundCompleted", standings: runRound(config).standings, nextRuleSetId: null });
   return {
@@ -53,6 +54,14 @@ describe("parseStoredArena", () => {
     const parsed = parseStoredArena(JSON.parse(JSON.stringify(stored)));
     if (!parsed.ok) throw new Error(parsed.error);
     expect(parsed.stored).toEqual(stored);
+  });
+
+  test("a round config stored before items reads as a round without items, so its replay plays as it was played", () => {
+    const parsed = parseStoredArena(damaged((p) => delete p.roundConfigs[0].config.items));
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.stored.roundConfigs[0]?.config.items).toBe(false);
+    const wrong = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.items = "yes")));
+    expect(wrong.ok ? "" : wrong.error).toMatch(/items/);
   });
 
   test("returns strategies that parseStrategy granted, not the parsed object itself", () => {

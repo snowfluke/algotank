@@ -159,6 +159,10 @@ const MISS_ARC = 0.22;
 const HIT_ARC = 0.06;
 /** The highest arc of any jet, so a long lob does not sweep across other tanks' squares. */
 const MAX_BEND = 4;
+/** A blocked jet: the open umbrella sits this far in front of the target's centre, toward the shooter. */
+const UMBRELLA_FRONT = 1.2;
+/** A blocked jet stops at the umbrella's dome, this far in front of the target's centre. */
+const BLOCK_SHORT = 4.2;
 /** Distances of the three drops of a dry shot from the nozzle tip. */
 const DRY_DROPS = [1.1, 2.4, 3.5] as const;
 
@@ -173,10 +177,13 @@ export interface Jet {
  * A shot as the board draws it. "hit" ends in a splash on the target, "miss" is
  * a lob that lands past the target in a puff, "empty" is a short jet into
  * nothing, and "dry" is three drops at the nozzle: no jet, because the tank had too
- * little water. The four differ by shape, not only by colour.
+ * little water. "blocked" is a hard jet that stops at the umbrella the target opens,
+ * whose dome faces the shooter (`angle`, in degrees, turns the dome from straight up).
+ * The five differ by shape, not only by colour.
  */
 export type ShotShape =
   | { readonly kind: "hit"; readonly jet: Jet; readonly splash: Point }
+  | { readonly kind: "blocked"; readonly jet: Jet; readonly umbrella: Point; readonly angle: number }
   | { readonly kind: "miss"; readonly jet: Jet }
   | { readonly kind: "empty"; readonly jet: Jet }
   | { readonly kind: "dry"; readonly drops: readonly Point[] };
@@ -234,6 +241,12 @@ export function shotShape(shooter: PublicBot, event: ThrowEvent, bounds: ArenaBo
     case "miss": {
       const target = along(centre, cellStep(shooter.direction), event.distance * CELL);
       return { kind: "miss", jet: arcJet(nozzle, clampToFloor(along(target, unit, MISS_PAST), bounds), MISS_ARC) };
+    }
+    case "blocked": {
+      const target = along(centre, cellStep(shooter.direction), event.distance * CELL);
+      // The dome faces back along the jet: straight up turned to the shooter's side.
+      const angle = directionDegrees(shooter.direction) - 90;
+      return { kind: "blocked", jet: arcJet(nozzle, along(target, unit, -BLOCK_SHORT), HIT_ARC), umbrella: along(target, unit, -UMBRELLA_FRONT), angle };
     }
   }
 }

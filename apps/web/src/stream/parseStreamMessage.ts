@@ -137,7 +137,9 @@ function isDecision(value: unknown): boolean {
     MOVE_VALUES.includes(value["move"]) &&
     typeof value["nextModeId"] === "string" &&
     // Present only on a turn of a rule's steps in order (engine Decision.step).
-    (value["step"] === undefined || (isRecord(value["step"]) && typeof value["step"]["index"] === "number" && typeof value["step"]["count"] === "number"))
+    (value["step"] === undefined || (isRecord(value["step"]) && typeof value["step"]["index"] === "number" && typeof value["step"]["count"] === "number")) &&
+    // Present only on a turn of a dizzy tank (engine Decision.dizzy).
+    (value["dizzy"] === undefined || value["dizzy"] === true)
   );
 }
 
@@ -145,12 +147,12 @@ function isNumberRow(value: unknown): boolean {
   return Array.isArray(value) && value.every((n) => typeof n === "number");
 }
 
-/** The compact form's shape: a turn number and three lists of number rows. */
+/** The compact form's shape: a turn number and five lists of number rows (the last two are the items and the pickups). */
 function isCompactTick(value: unknown): boolean {
   return (
     isRecord(value) &&
     typeof value["tick"] === "number" &&
-    [value["bots"], value["moves"], value["throws"]].every((rows) => Array.isArray(rows) && rows.every(isNumberRow))
+    [value["bots"], value["moves"], value["throws"], value["items"], value["pickups"]].every((rows) => Array.isArray(rows) && rows.every(isNumberRow))
   );
 }
 

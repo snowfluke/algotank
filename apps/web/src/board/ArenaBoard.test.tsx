@@ -30,6 +30,8 @@ function bot(i: number, over: Partial<BotState> = {}): BotState {
     hitsLanded: 0,
     hitsTaken: 0,
     ticksSinceLandedHit: null,
+    item: null,
+    effect: null,
     ...over,
   };
 }
@@ -42,6 +44,7 @@ const snapshot: Snapshot = {
   survivorsAfterRound: 4,
   ruleSetId: "standard",
   bots: Array.from({ length: 8 }, (_, i) => bot(i)),
+  items: [],
 };
 const names = Object.fromEntries(snapshot.bots.map((b, i) => [b.id, `Player ${i}`]));
 const throws: ThrowEvent[] = [
@@ -86,6 +89,50 @@ describe("ArenaBoard", () => {
     // A dry shot sends no water, so the tank does not recoil.
     expect(tank("p6")).not.toContain("ab-recoil");
     expect(count(html, ">+1</text>")).toBe(1);
+  });
+
+  describe("items (84-items.md)", () => {
+    const withItems: Snapshot = {
+      ...snapshot,
+      bots: snapshot.bots.map((b) =>
+        b.id === "p2" ? { ...b, item: "umbrella" } : b.id === "p3" ? { ...b, effect: { kind: "dizzy", turnsLeft: 2 } } : b.id === "p4" ? { ...b, effect: { kind: "stuck", turnsLeft: 1 } } : b,
+      ),
+      items: [
+        { kind: "bucket", x: 5, y: 5, turnsLeft: 20 },
+        { kind: "pinwheel", x: 6, y: 1, turnsLeft: 4 },
+      ],
+    };
+    const itemThrows: ThrowEvent[] = [
+      { throwerId: "p0", outcome: "blocked", targetId: "p1", distance: 1, hitChance: 90 },
+      { throwerId: "p6", outcome: "hit", targetId: "p7", distance: 1, hitChance: 90, bucket: true },
+    ];
+    const itemHtml = renderToStaticMarkup(<ArenaBoard snapshot={withItems} throws={itemThrows} names={names} highlightId="p5" tickMs={300} />);
+    const tank = (id: string) => itemHtml.slice(itemHtml.indexOf(`data-bot-id="${id}"`), itemHtml.indexOf(`data-bot-id="p${Number(id.slice(1)) + 1}"`));
+
+    test("each item lies on its square, and one in its last turns is marked as fading", () => {
+      expect(count(itemHtml, 'data-item="')).toBe(2);
+      expect(itemHtml).toContain('transform="translate(55 55)" data-item="bucket">');
+      expect(itemHtml).toContain('transform="translate(65 15)" data-item="pinwheel" data-fading="true"');
+    });
+
+    test("a tank shows the item it holds and its effect", () => {
+      expect(tank("p2")).toContain('data-held="umbrella"');
+      expect(tank("p3")).toContain('data-effect="dizzy"');
+      expect(tank("p4")).toContain('data-effect="stuck"');
+      expect(count(itemHtml, "data-held=")).toBe(1);
+    });
+
+    test("a blocked throw opens the umbrella, and nobody wobbles or gets a point for it", () => {
+      expect(count(itemHtml, 'data-mark="blocked"')).toBe(1);
+      expect(tank("p1")).not.toContain("ab-wobble");
+      expect(tank("p0")).toContain("ab-recoil");
+      expect(count(itemHtml, ">+1</text>")).toBe(0);
+    });
+
+    test("a hit with a bucket pops +2", () => {
+      expect(count(itemHtml, ">+2</text>")).toBe(1);
+      expect(tank("p7")).toContain("ab-wobble");
+    });
   });
 
   test("a live board animates, a paused board shows the turn as a still picture", () => {

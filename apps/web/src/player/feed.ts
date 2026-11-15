@@ -32,7 +32,7 @@ function capitalised(text: string): string {
  * (packages/engine/src/strategy/actions.ts and movement.ts). The other actions
  * shoot as part of what they say, such as "drive forward, shoot any tank in the way".
  */
-const STEP_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>(["moveToward", "moveAway", "stepOutOfLine", "awayFromCrowd", "wander"]);
+const STEP_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>(["moveToward", "moveAway", "stepOutOfLine", "awayFromCrowd", "wander", "goToItem"]);
 
 /** The rule that ran, and its action with the parameters from the strategy. */
 export function decisionAction(decision: Decision, strategy: StrategyInput): { rule: Rule | undefined; action: ActionRef } {
@@ -53,7 +53,9 @@ function blocked(decision: Decision): boolean {
 function outcomeText(t: FeedText, entry: OwnDecision): string | null {
   switch (entry.throwEvent?.outcome) {
     case "hit":
-      return t.hit;
+      return entry.throwEvent.bucket === true ? t.bucketHit : t.hit;
+    case "blocked":
+      return t.blocked;
     case "miss":
       return t.miss;
     case "empty":
@@ -80,6 +82,8 @@ export function describeDecision(entry: OwnDecision, strategy: StrategyInput, v:
     first = t.because(what, conditions.join(rule.match === "all" ? t.and : t.or));
   }
   const sentences = [first];
+  // The rule that ran may sit low in the list: a dizzy tank read its rules from the bottom up.
+  if (decision.dizzy === true) sentences.push(t.dizzy);
   const ruleIndex = rule === undefined ? -1 : (strategy.modes.find((m) => m.id === decision.modeId)?.rules.indexOf(rule) ?? -1);
   if (decision.step !== undefined && ruleIndex >= 0) sentences.push(t.stepOf(ruleIndex + 1, decision.step.index, decision.step.count));
   if (stopped) sentences.push(t.blockedShot);

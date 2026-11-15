@@ -11,6 +11,7 @@ const snapshot = (tick: number, ticksTotal: number): Snapshot => ({
   survivorsAfterRound: null,
   ruleSetId: "standard",
   bots: [],
+  items: [],
 });
 
 describe("clock", () => {

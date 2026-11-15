@@ -32,11 +32,14 @@ import { goForward, steerTowards, stepTowards } from "./movement.ts";
 import { tableOf, withLiteralIds, targetParam, textValue } from "./define.ts";
 import { pickTarget } from "./targets.ts";
 import { forEachBotNear } from "./snapshot-index.ts";
+import { canTake, nearestItem } from "../items/items.ts";
+import { itemParam, itemValue } from "../items/params.ts";
 
 const ATTACK = "Attack";
 const CHASE_AND_FLEE = "Chase and flee";
 const POSITION = "Position";
 const BASIC = "Basic moves";
+const ITEMS = "Items";
 
 /** "Move away from the crowd" counts bots this close to a cell. */
 const CROWD_RADIUS = 4;
@@ -296,8 +299,19 @@ const defs = withLiteralIds<ActionDef>()([
     label: "Wait",
     params: [],
     // A step of a sequence (S3): stand still without a throw, so a tank in line is not shot at.
-    // Last in the table, so the order of the older entries stays.
     toMove: () => "W",
+  },
+  {
+    id: "goToItem",
+    group: ITEMS,
+    label: "Go to the nearest item ({item})",
+    params: [itemParam()],
+    // It cannot act when no such item is on the board or the tank's hand is full, because the
+    // tank would not take the item. After the older entries, so their order stays.
+    toMove: (ctx, params) => {
+      const item = canTake(ctx.self) ? nearestItem(ctx.snapshot, ctx.self, itemValue(params)) : undefined;
+      return item === undefined ? null : stepTowards(ctx, stepToward(ctx.self, item));
+    },
   },
 ]);
 

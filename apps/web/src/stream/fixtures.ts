@@ -4,12 +4,12 @@ import { PRESETS, STANDARD_RULE_SET_ID, runRound } from "@game/engine";
 import type { Decision, Snapshot } from "@game/engine";
 
 export function snapshotAt(tick: number, ticksTotal = 100): PublicSnapshot {
-  return { width: 10, height: 10, tick, ticksTotal, survivorsAfterRound: 8, ruleSetId: "standard", bots: [] };
+  return { width: 10, height: 10, tick, ticksTotal, survivorsAfterRound: 8, ruleSetId: "standard", bots: [], items: [] };
 }
 
 /** A turn of a round without tanks in the compact form the server sends; its spawn is snapshotAt(0). */
 export function emptyCompactTick(tick: number): CompactTick {
-  return { tick, bots: [], moves: [], throws: [] };
+  return { tick, bots: [], moves: [], throws: [], items: [], pickups: [] };
 }
 
 export function decision(ruleId: string | null, modeId = "m1", nextModeId = modeId): Decision {
@@ -53,6 +53,7 @@ export function arenaIn(
 export function engineRound(count: number, turns: number): { spawn: PublicSnapshot; ticks: PublicTick[] } {
   const round = runRound({
     seed: 7,
+    items: true,
     ruleSetId: STANDARD_RULE_SET_ID,
     ticksTotal: turns,
     survivorsAfterRound: null,
@@ -65,10 +66,11 @@ export function engineRound(count: number, turns: number): { spawn: PublicSnapsh
     ticksTotal: s.ticksTotal,
     survivorsAfterRound: s.survivorsAfterRound,
     ruleSetId: s.ruleSetId,
-    bots: s.bots.map((b) => ({ id: b.id, x: b.x, y: b.y, direction: b.direction, score: b.score, wasHit: b.wasHit, build: b.build, hitsLanded: b.hitsLanded, hitsTaken: b.hitsTaken, water: b.water })),
+    bots: s.bots.map((b) => ({ id: b.id, x: b.x, y: b.y, direction: b.direction, score: b.score, wasHit: b.wasHit, build: b.build, hitsLanded: b.hitsLanded, hitsTaken: b.hitsTaken, water: b.water, item: b.item, effect: b.effect })),
+    items: s.items,
   });
   return {
     spawn: pub(round.spawn),
-    ticks: round.ticks.map((t) => ({ tick: t.tick, order: t.order, moves: t.decisions.map((d) => ({ botId: d.botId, move: d.move })), throws: t.throws, snapshot: pub(t.snapshot) })),
+    ticks: round.ticks.map((t) => ({ tick: t.tick, order: t.order, moves: t.decisions.map((d) => ({ botId: d.botId, move: d.move })), throws: t.throws, pickups: t.pickups, snapshot: pub(t.snapshot) })),
   };
 }

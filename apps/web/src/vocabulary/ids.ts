@@ -11,6 +11,7 @@ export const CONDITION_GROUPS = {
   me: "About me",
   walls: "Walls and space",
   round: "The round",
+  items: "Items",
 } as const;
 export type ConditionGroupId = keyof typeof CONDITION_GROUPS;
 
@@ -19,6 +20,7 @@ export const ACTION_GROUPS = {
   chase: "Chase and flee",
   position: "Position",
   basic: "Basic moves",
+  items: "Items",
 } as const;
 export type ActionGroupId = keyof typeof ACTION_GROUPS;
 
@@ -45,6 +47,8 @@ export const CHOICE_OPTIONS = {
   round: ["cut", "final"],
   place: ["middle", "corner"],
   way: ["left", "right", "slightLeft", "slightRight"],
+  item: ["any", "bucket", "umbrella", "pinwheel", "mudBall"],
+  effect: ["dizzy", "stuck"],
 } as const;
 export type ChoiceKey = keyof typeof CHOICE_OPTIONS;
 export type ChoiceValue<K extends ChoiceKey> = (typeof CHOICE_OPTIONS)[K][number];

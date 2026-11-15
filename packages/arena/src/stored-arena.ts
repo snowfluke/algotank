@@ -355,7 +355,15 @@ function roundConfig(raw: unknown, path: string): RoundConfig {
     survivorsAfterRound: survivors === null ? null : int(survivors, `${path}.survivorsAfterRound`, 1),
     ruleSetId: ruleSetId(c["ruleSetId"], `${path}.ruleSetId`),
     players,
+    items: itemsOn(c["items"], `${path}.items`),
   };
+}
+
+/** A config stored before items (docs/specs/revamp/84-items.md) has no key: that round played without items, so its replay does too. */
+function itemsOn(raw: unknown, path: string): boolean {
+  if (raw === undefined) return false;
+  if (typeof raw !== "boolean") fail(path, "true or false");
+  return raw;
 }
 
 /** A replay is recomputed from the config, so the config of a completed round must be the one that was played. */

@@ -38,10 +38,10 @@ export const en = {
   turn: "Turn",
   turnOf: (turn: number, turns: number) => `Turn ${turn} of ${turns}`,
   result: (rank: number, players: number) => `Your tank finished ${ordinal(rank)} of ${players} in this test.`,
-  /** A score below zero is explained in the same sentence: a hit moves 1 point, so it took more hits than it landed. */
+  /** A score below zero is explained in the same sentence. It says points, not hits, because a bucket's hit moves 2 points (84-items.md). */
   points: (points: number) =>
     points < 0
-      ? `It was hit more often than it hit, so it ended ${plural(-points, "point", "points")} below zero.`
+      ? `Other tanks took more points from it than it took from them, so it ended ${plural(-points, "point", "points")} below zero.`
       : `It ended with ${plural(points, "point", "points")}.`,
   didMost: "What your tank did most",
   mostOften: (phrase: string, turns: number, total: number) => `Your tank most often ${phrase}, in ${turns} of ${total} turns.`,
@@ -108,7 +108,7 @@ export const id: typeof en = {
   result: (rank, players) => `Tank kamu dapat peringkat ${rank} dari ${players} tank dalam uji coba ini.`,
   points: (points) =>
     points < 0
-      ? `Tank kamu lebih sering terkena daripada mengenai tank lain, jadi poinnya minus ${-points}.`
+      ? `Tank lain mengambil lebih banyak poin dari tank kamu daripada yang diambilnya, jadi poinnya minus ${-points}.`
       : `Tank kamu selesai dengan ${points} poin.`,
   didMost: "Yang paling sering dilakukan tank kamu",
   mostOften: (phrase, turns, total) => `Tank kamu paling sering ${phrase}, yaitu ${turns} dari ${total} giliran.`,

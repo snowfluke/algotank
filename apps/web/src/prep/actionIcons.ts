@@ -13,6 +13,7 @@ import {
   Crosshair,
   Droplets,
   Expand,
+  Gift,
   Hourglass,
   LocateFixed,
   MapPin,
@@ -38,6 +39,7 @@ export const ACTION_ICONS: Readonly<Record<ActionId, LucideIcon>> = {
   turn: RotateCw,
   wander: Shuffle,
   wait: Hourglass,
+  goToItem: Gift,
 };
 
 /** The icon of each step block of a sequence: the same picture as the action it stands for, with the way of a turn drawn. */

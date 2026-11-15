@@ -6,7 +6,13 @@
 // board is live (class ab-live) and the viewer allows motion, so a paused turn and
 // reduced motion show the shots of the turn without movement. Every effect is keyed
 // by the turn and ends at rest: the jet, splash and "+1" fade out, the hit tank
-// stops wobbling. A hit layers four of these, a miss two, a dry shot one.
+// stops wobbling. A hit layers four of these, a miss two, a dry shot one, and a
+// blocked throw three (jet, open umbrella, recoil).
+//
+// Items (84-items.md) add the only motion that repeats while the board is live: a
+// pinwheel's blades and a dizzy tank's stars turn, and an item in its last turns
+// blinks. A new item and a newly held one pop in once. Under reduced motion they
+// stand still, and a blinking item shows at the lower strength of its blink.
 //
 // The splash and the puff hold at full strength through the middle of the effect
 // (38% to 75% of it, about 330 ms at 0.9 s per turn) before they fade, because an
@@ -28,6 +34,29 @@ export const ARENA_MOTION_CSS = `
   .ab-live .ab-recoil { animation: ab-recoil var(--fx-ms, 400ms) ease-out both; }
   .ab-live .ab-plus { animation: ab-plus var(--fx-ms, 400ms) cubic-bezier(0.34, 1.56, 0.64, 1) both; }
   .ab-you-pulse { animation: ab-you-pulse 1.2s ease-in-out infinite; }
+  .ab-live .ab-umbrella { animation: ab-umbrella var(--fx-ms, 400ms) linear both; }
+  .ab-live .ab-item-in { animation: ab-item-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .ab-live .ab-item-fade { animation: ab-item-fade 900ms ease-in-out infinite; }
+  .ab-live .ab-pinwheel { animation: ab-spin 2.4s linear infinite; }
+  .ab-live .ab-dizzy { animation: ab-spin 1.4s linear infinite; }
+}
+@keyframes ab-umbrella {
+  0%, 20% { opacity: 0; transform: scale(0.2, 0.5); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  38% { opacity: 1; transform: scale(1); animation-timing-function: linear; }
+  78% { opacity: 1; transform: scale(1); animation-timing-function: ease-in; }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+@keyframes ab-item-in {
+  0% { opacity: 0; transform: scale(0.3); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ab-item-fade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes ab-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 @keyframes ab-jet {
   0% { stroke-dashoffset: 1; opacity: 1; }

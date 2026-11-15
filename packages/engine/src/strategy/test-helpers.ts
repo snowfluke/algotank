@@ -40,6 +40,8 @@ export function bot(id: string, x: number, y: number, direction: Direction, over
     hitsTaken: 0,
     ticksSinceLandedHit: null,
     water: STANDARD.waterCapacity,
+    item: null,
+    effect: null,
     ...overrides,
   };
 }
@@ -54,6 +56,7 @@ export function snapshotOf(bots: readonly BotState[], overrides: Partial<Snapsho
     survivorsAfterRound: 8,
     ruleSetId: STANDARD_RULE_SET_ID,
     bots,
+    items: [],
     ...overrides,
   };
 }

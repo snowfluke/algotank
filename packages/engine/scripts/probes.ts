@@ -16,14 +16,17 @@
 // It needs no knowledge of the draw. Its numbers show how much a prepared document
 // keeps when the rules change, so this part reports and has no pass mark.
 //
-// Usage: bun packages/engine/scripts/probes.ts [finals=1000] [ticks=150]
+// Usage: bun packages/engine/scripts/probes.ts [finals=1000] [ticks=150] [--items=off]
+// Items are on, as in every arena; --items=off plays the same seeds without them.
 
 import { PRESETS, RULE_SET_IDS, RULE_SETS, parseStrategy, runRound } from "../src/index.ts";
 import type { Build, RoundPlayer, RuleSetId, Strategy, StrategyInput } from "../src/index.ts";
 import { FINAL_SIZE, mixedField } from "./field.ts";
 
-const finals = Number(process.argv[2] ?? 1000);
-const ticksTotal = Number(process.argv[3] ?? 150);
+const numbers = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+const items = !process.argv.includes("--items=off");
+const finals = Number(numbers[0] ?? 1000);
+const ticksTotal = Number(numbers[1] ?? 150);
 if (![finals, ticksTotal].every((n) => Number.isInteger(n) && n >= 1)) {
   throw new Error("finals and ticks must be positive integers");
 }
@@ -73,7 +76,7 @@ function winPercentOfReplacement(ruleSetId: RuleSetId, replacement: Strategy, re
       id: `seat${seat}`,
       strategy: preset.id === replacedId ? replacement : preset.strategy,
     }));
-    const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId, players });
+    const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId, players, items });
     const winner = result.standings.find((standing) => standing.rank === 1)?.botId;
     const seat = field.findIndex((preset) => preset.id === replacedId);
     if (winner === `seat${seat}`) wins += 1;

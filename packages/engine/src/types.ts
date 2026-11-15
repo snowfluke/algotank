@@ -37,6 +37,38 @@ export type TurnMove = Extract<Move, "L" | "R" | "L45" | "R45">;
 export type BotId = string;
 
 // ---------------------------------------------------------------------------
+// Items (items/items.ts holds the rules, docs/specs/revamp/84-items.md the design)
+// ---------------------------------------------------------------------------
+
+/** The kinds of item, in the order of every table and of the compact tick's item index. A tank holds one until it acts. */
+export const ITEM_KINDS = ["bucket", "umbrella", "pinwheel", "mudBall"] as const;
+export type ItemKind = (typeof ITEM_KINDS)[number];
+/** Dizzy: the rules are checked from the bottom up. Stuck: the tank cannot drive or turn. */
+export const TANK_EFFECT_KINDS = ["dizzy", "stuck"] as const;
+export type TankEffectKind = (typeof TANK_EFFECT_KINDS)[number];
+
+export interface TankEffect {
+  readonly kind: TankEffectKind;
+  /** Turns the effect still acts on, from 1 up. */
+  readonly turnsLeft: number;
+}
+
+/** An item that lies on a square nobody holds. */
+export interface BoardItem {
+  readonly kind: ItemKind;
+  readonly x: number;
+  readonly y: number;
+  /** Turns until it leaves the board, from 1 up. */
+  readonly turnsLeft: number;
+}
+
+/** A tank took an item on this turn. */
+export interface Pickup {
+  readonly botId: BotId;
+  readonly item: ItemKind;
+}
+
+// ---------------------------------------------------------------------------
 // Random numbers
 // ---------------------------------------------------------------------------
 
@@ -257,6 +289,10 @@ export interface BotState {
    * waterRefillPerTick (see RoundRules). Every condition, selector and screen counts in this unit.
    */
   readonly water: number;
+  /** The item the tank holds, or null. */
+  readonly item: ItemKind | null;
+  /** What an item did to the tank, while it lasts, or null. */
+  readonly effect: TankEffect | null;
 }
 
 export interface Snapshot {
@@ -270,6 +306,8 @@ export interface Snapshot {
   /** The rule set this round plays under. ruleSet(id) gives its numbers. */
   readonly ruleSetId: RuleSetId;
   readonly bots: readonly BotState[];
+  /** Items on the board. Always empty in a round with items off. */
+  readonly items: readonly BoardItem[];
 }
 
 export interface RoundPlayer {
@@ -286,6 +324,11 @@ export interface RoundConfig {
   readonly ruleSetId: RuleSetId;
   /** At least two players, with unique ids. */
   readonly players: readonly RoundPlayer[];
+  /**
+   * True in every arena. False only for the balance scripts, the landing demo and the older
+   * seed fixtures: such a round draws exactly what it drew before items existed.
+   */
+  readonly items: boolean;
 }
 
 /** What one bot decided on one tick, and why. */
@@ -310,6 +353,11 @@ export interface Decision {
    * exactly the decisions it produced before sequences existed.
    */
   readonly step?: SequenceStep;
+  /**
+   * Only when the tank was dizzy (an item effect) and checked its rules from the bottom up.
+   * Absent on every other turn, so a round without items gives the decisions it gave before.
+   */
+  readonly dizzy?: true;
 }
 
 /** The place of a turn in a running sequence: step `index` (from 1) of `count`. */
@@ -335,12 +383,18 @@ export type ThrowEvent =
     }
   | {
       readonly throwerId: BotId;
-      readonly outcome: "miss" | "hit";
+      /** "blocked": the roll hit, and the target's umbrella stopped it, so no point moved. */
+      readonly outcome: "miss" | "hit" | "blocked";
       /** The first bot in the line within range. */
       readonly targetId: BotId;
       readonly distance: number;
       /** The probability used for the roll, 0 to 100. */
       readonly hitChance: number;
+      /**
+       * Only on a hit from a tank with a bucket: the hit moved ITEM_RULES.bucketHitPoints points.
+       * The key is absent on every other throw, so a round without items gives the throws it gave before.
+       */
+      readonly bucket?: true;
     };
 
 export interface TickResult {
@@ -351,6 +405,8 @@ export interface TickResult {
   /** One entry per bot, in the snapshot's bot order. */
   readonly decisions: readonly Decision[];
   readonly throws: readonly ThrowEvent[];
+  /** Items taken on this tick, in snapshot order of the tanks. */
+  readonly pickups: readonly Pickup[];
   /** The state after the tick. */
   readonly snapshot: Snapshot;
 }

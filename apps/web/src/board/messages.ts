@@ -8,6 +8,8 @@ export const en = {
     canShoot ? `${name}, ${water} of ${max} water` : `${name}, ${water} of ${max} water, too little to shoot`,
   leaderTitle: (name: string) => `${name} leads`,
   plusOne: "+1",
+  /** A hit from a tank with a bucket (84-items.md). */
+  plusTwo: "+2",
   scoreboard: "Points",
   ownWater: (water: number, max: number) => `Water: ${water} of ${max}`,
   /** The switch of a big arena between a window around one tank and the whole arena (board/camera.ts). */
@@ -28,6 +30,13 @@ export const en = {
     dry: { term: "Too little water", body: "A few drops fall from the nozzle when a tank shoots with too little water." },
     you: { term: "You", body: "The orange ring marks your tank." },
     leader: { term: "Leader", body: "The crown marks the tank with the most points, and nobody wears it during a tie." },
+    items: { term: "Items", body: "A tank takes an item by driving onto its square, and it holds one item at a time." },
+    bucket: { term: "Bucket", body: "When the tank with the bucket lands its next hit, it takes 2 points." },
+    umbrella: { term: "Umbrella", body: "The umbrella opens and stops the next hit on its tank, so no point moves." },
+    pinwheel: { term: "Pinwheel", body: "The next hit of the tank with the pinwheel makes the other tank dizzy for 3 turns." },
+    mudBall: { term: "Mud ball", body: "The next hit of the tank with the mud ball makes the other tank stuck for 2 turns." },
+    dizzy: { term: "Dizzy", body: "A dizzy tank checks its rules from the bottom up, so its last rule comes first." },
+    stuck: { term: "Stuck", body: "A stuck tank cannot drive or turn, and it can still shoot straight ahead." },
   },
   /** "/kit?show=board", the page engineers use to check the board without a server. */
   harness: {
@@ -63,6 +72,7 @@ export const id: typeof en = {
     canShoot ? `${name}, air ${water} dari ${max}` : `${name}, air ${water} dari ${max}, belum cukup untuk menembak`,
   leaderTitle: (name) => `${name} memimpin`,
   plusOne: "+1",
+  plusTwo: "+2",
   scoreboard: "Poin",
   ownWater: (water, max) => `Air: ${water} dari ${max}`,
   camera: {
@@ -81,6 +91,13 @@ export const id: typeof en = {
     dry: { term: "Air kurang", body: "Beberapa tetes jatuh dari moncong kalau tank menembak saat airnya kurang." },
     you: { term: "Kamu", body: "Cincin oranye menandai tank kamu." },
     leader: { term: "Pemimpin", body: "Mahkota menandai tank dengan poin terbanyak, kecuali saat poinnya seri." },
+    items: { term: "Item", body: "Tank mengambil item dengan melaju ke petaknya, dan tank hanya bisa membawa satu item." },
+    bucket: { term: "Ember", body: "Kalau tembakan berikutnya dari tank yang membawa ember kena, tank itu mengambil 2 poin." },
+    umbrella: { term: "Payung", body: "Payung terbuka dan menahan tembakan berikutnya ke tanknya, jadi tidak ada poin yang pindah." },
+    pinwheel: { term: "Kincir", body: "Tembakan kena berikutnya dari tank yang membawa kincir membuat tank lawan pusing selama 3 giliran." },
+    mudBall: { term: "Bola lumpur", body: "Tembakan kena berikutnya dari tank yang membawa bola lumpur membuat tank lawan terjebak selama 2 giliran." },
+    dizzy: { term: "Pusing", body: "Tank yang pusing memeriksa aturannya dari bawah ke atas, jadi aturan terakhir dicek lebih dulu." },
+    stuck: { term: "Terjebak", body: "Tank yang terjebak tidak bisa jalan atau berbelok, tetapi masih bisa menembak lurus ke depan." },
   },
   harness: {
     heading: "Cek arena",

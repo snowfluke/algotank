@@ -66,6 +66,16 @@ describe("describeDecision", () => {
     expect(say(decision({}), dry).text).toEndWith("My water was too low, so nothing came out.");
   });
 
+  test("an item's part in the turn is said: a blocked shot, a bucket hit, and a dizzy tank's bottom-up reading", () => {
+    const blocked: ThrowEvent = { throwerId: "p", outcome: "blocked", targetId: "q", distance: 1, hitChance: 90 };
+    const bucket: ThrowEvent = { throwerId: "p", outcome: "hit", targetId: "q", distance: 1, hitChance: 90, bucket: true };
+    expect(say(decision({}), blocked).text).toEndWith("An umbrella stopped my shot.");
+    expect(say(decision({}), bucket).text).toEndWith("My bucket shot hit, worth 2 points.");
+    // "Go to an item" at a tank on the next square shoots instead, like every step toward a tank.
+    expect(say(decision({ ruleId: null, actionId: "goToItem", move: "T" })).text).toContain("My way was blocked, so I shot instead.");
+    expect(say(decision({ dizzy: true })).text).toBe("Shot, because a tank is in my line of fire and within my range. I was dizzy, so I checked my rules from the bottom up.");
+  });
+
   test("a mode switch is part of the text", () => {
     expect(say(decision({ nextModeId: "m2" })).text).toEndWith("Then I switched to the “Flee” mode.");
   });

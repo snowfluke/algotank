@@ -1,5 +1,6 @@
-// "How the game works": five steps, one at a time, each with a drawing (a tank, a
-// shot, water, a point, two tanks with the same points). The last step is the rule for
+// "How the game works": six steps, one at a time, each with a drawing (a tank, a
+// shot, water, a point, the four items, two tanks with the same points). The board
+// legend says what each item does (docs/items.md). The last step is the rule for
 // tanks with the same points, which no timed result screen has the time to say
 // (73-after-first-timer-test.md, row 7). The help button in the status line opens it; it no longer
 // opens by itself, because a first-timer's lobby tour (guide/) replaces that. When the
@@ -10,6 +11,8 @@
 import { CircleHelp, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
+import { ITEM_KINDS } from "@game/engine";
+import { ItemShape } from "../board/itemShapes.tsx";
 import { TankShape } from "../tank/TankShape.tsx";
 import { Button } from "../ui/Button.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
@@ -49,6 +52,13 @@ const DRAWINGS: readonly ReactNode[] = [
       +1
     </text>
   </Drawing>,
+  <Drawing key="items">
+    {ITEM_KINDS.map((kind, i) => (
+      <g key={kind} transform={`translate(${5.5 + i * 9.7} 10) scale(0.9)`}>
+        <ItemShape kind={kind} />
+      </g>
+    ))}
+  </Drawing>,
   <Drawing key="tie">
     <g transform="translate(9 11)">
       <TankShape colour={1} angle={-90} detail="simple" />
@@ -62,7 +72,7 @@ const DRAWINGS: readonly ReactNode[] = [
   </Drawing>,
 ];
 
-/** The sentences of the steps, in order: what the tank plays by, the three rules, then the rule for the same points. */
+/** The sentences of the steps, in order: what the tank plays by, the three rules, the items, then the rule for the same points. */
 export function howItWorksSteps(t: ReturnType<typeof useMessages>["room"]["howTo"]): readonly string[] {
   return [t.playsBy, ...t.lines];
 }

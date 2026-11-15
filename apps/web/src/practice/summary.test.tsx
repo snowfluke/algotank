@@ -22,7 +22,7 @@ const strategy: StrategyInput = {
 
 function turn(tick: number, actionId: string, throws: ThrowEvent[]): TickResult {
   const decision: Decision = { botId: PLAYER_ID, modeId: "m", ruleId: actionId, actionId, move: "F", nextModeId: "m" } as Decision;
-  return { tick, order: [PLAYER_ID], decisions: [decision], throws, snapshot };
+  return { tick, order: [PLAYER_ID], decisions: [decision], throws, pickups: [], snapshot };
 }
 
 describe("summarise", () => {
@@ -48,7 +48,7 @@ describe("summarise", () => {
   });
 
   test("a turn without the player's decision is an error, not a silent zero", () => {
-    const broken: TickResult = { tick: 0, order: [], decisions: [], throws: [], snapshot };
+    const broken: TickResult = { tick: 0, order: [], decisions: [], throws: [], pickups: [], snapshot };
     expect(() => summarise([broken], PLAYER_ID, strategy, { shots: 0, hits: 0, timesHit: 0 })).toThrow();
   });
 });
@@ -135,8 +135,8 @@ describe("matchTanks", () => {
 
 describe("the points sentence", () => {
   test("a score below zero says what it means, in both languages", () => {
-    expect(en.points(-11)).toBe("It was hit more often than it hit, so it ended 11 points below zero.");
-    expect(id.points(-11)).toContain("lebih sering terkena");
+    expect(en.points(-11)).toBe("Other tanks took more points from it than it took from them, so it ended 11 points below zero.");
+    expect(id.points(-11)).toContain("mengambil lebih banyak poin");
     expect(id.points(-11)).toContain("minus 11");
     expect(en.points(4)).toBe("It ended with 4 points.");
   });

@@ -23,6 +23,13 @@ describe("turnSounds for a viewer without a tank in the round (big screen, prese
     expect(turnSounds([empty], null)).toEqual(["shot", "miss"]);
   });
 
+  test("a throw an umbrella blocked is a shot and the miss sound, and a tank saved by its umbrella hears no splash", () => {
+    const blocked: ThrowEvent = { throwerId: "a", outcome: "blocked", targetId: "b", distance: 1, hitChance: 90 };
+    expect(turnSounds([blocked], null)).toEqual(["shot", "miss"]);
+    expect(turnSounds([blocked], "a")).toEqual(["shot", "miss"]);
+    expect(turnSounds([blocked], "b")).toEqual([]);
+  });
+
   test("a dry shot alone makes only the dry sound, because no water left the nozzle", () => {
     expect(turnSounds([dry], null)).toEqual(["dry"]);
   });

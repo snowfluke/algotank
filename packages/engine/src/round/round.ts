@@ -8,6 +8,8 @@
 //                bot in the middle of a sequence, whose step draws nothing; then the
 //                shuffle of the move order; then one chance roll for each throw that
 //                has a target and enough water, in move order. A dry throw draws nothing.
+//                Then, in a round with items on and only on a spawn turn, one int for the
+//                item's kind and one int for its square (items/items.ts, spawnItem).
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
 //
@@ -35,10 +37,12 @@ import type {
   Snapshot,
   Standing,
   Strategy,
+  TankEffectKind,
   ThrowEvent,
   TickResult,
 } from "../types.ts";
 import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
+import { ageItems, countDown, newEffect, pickUp, spawnItem } from "../items/items.ts";
 import { decide } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
 import { allCells, arenaSize, cellKey, type Cell } from "./grid.ts";
@@ -113,6 +117,7 @@ export function createRound(config: RoundConfig): RoundState {
     survivorsAfterRound: config.survivorsAfterRound,
     ruleSetId: config.ruleSetId,
     bots,
+    items: [],
   };
   const strategies = new Map(config.players.map((p) => [p.id, p.strategy] as const));
   return new RoundRuntime(config, spawn, rng, strategies, tieBreaks);
@@ -138,6 +143,8 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
     hitsTaken: 0,
     ticksSinceLandedHit: null,
     water,
+    item: null,
+    effect: null,
   };
 }
 
@@ -150,6 +157,8 @@ export interface OpenRoundConfig {
   readonly ruleSetId: RuleSetId;
   /** The board is sized for this many tanks (arenaSize) and keeps that size when tanks come and go. */
   readonly boardFor: number;
+  /** As RoundConfig.items. */
+  readonly items: boolean;
 }
 
 /**
@@ -162,8 +171,8 @@ export function createOpenRound(config: OpenRoundConfig): RoundState {
   }
   const rules = ruleSet(config.ruleSetId);
   const { width, height } = arenaSize(config.boardFor, rules);
-  const roundConfig: RoundConfig = { seed: config.seed, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, players: [] };
-  const spawn: Snapshot = { width, height, tick: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, bots: [] };
+  const roundConfig: RoundConfig = { seed: config.seed, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, players: [], items: config.items };
+  const spawn: Snapshot = { width, height, tick: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, bots: [], items: [] };
   return new RoundRuntime(roundConfig, spawn, createRng(config.seed), new Map(), new Map());
 }
 
@@ -177,7 +186,8 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   if (!Number.isSafeInteger(score)) throw new Error(`score must be a whole number, got ${score}`);
   const before = round.snapshot;
   if (before.bots.some((bot) => bot.id === player.id)) throw new Error(`player "${player.id}" is already in the round`);
-  const taken = new Set(before.bots.map(cellKey));
+  // A joining tank never lands on an item: it would take it without driving there.
+  const taken = new Set([...before.bots, ...before.items].map(cellKey));
   const freeCells = allCells(before).filter((cell) => !taken.has(cellKey(cell)));
   if (freeCells.length === 0) throw new Error(`no free square is left for player "${player.id}"`);
   const cell = freeCells[round.rng.int(freeCells.length)];
@@ -231,18 +241,26 @@ export function stepRound(state: RoundState): TickResult {
   const order = round.rng.shuffle(before.bots.map((bot) => bot.id));
 
   // 3. Moves resolve one at a time.
-  const { placements, throws } = resolveTick(before, decisions, order, round.rng);
+  const { placements, throws, inflicted } = resolveTick(before, decisions, order, round.rng);
 
-  // 4. Next snapshot.
+  // 4. Items: tanks take what lies on their square, effects count down and new ones start,
+  //    items age, and on a spawn turn one more appears.
+  const carriers: { -readonly [K in keyof Placement]: Placement[K] }[] = placements.map((place) => ({ ...place }));
+  const { items: left, pickups } = pickUp(before.items, carriers);
+  const aged = ageItems(left);
+  const spawned = round.config.items ? spawnItem(before, before.tick, carriers, aged, round.rng) : null;
+
+  // 5. Next snapshot.
   const hits = tallyHits(throws);
   const next: Snapshot = {
     ...before,
     tick: before.tick + 1,
-    bots: before.bots.map((bot, i) => nextBotState(bot, placements[i], decisions[i], hits)),
+    bots: before.bots.map((bot, i) => nextBotState(bot, carriers[i], decisions[i], hits, inflicted.get(bot.id) ?? null)),
+    items: spawned === null ? aged : [...aged, spawned],
   };
   round.snapshot = next;
 
-  return { tick: before.tick, order, decisions, throws, snapshot: next };
+  return { tick: before.tick, order, decisions, throws, pickups, snapshot: next };
 }
 
 /** What the throws of one tick did to each bot. A bot can be hit more than once in a tick. */
@@ -271,6 +289,7 @@ function nextBotState(
   placement: Placement | undefined,
   decision: Decision | undefined,
   hits: HitTally,
+  inflicted: TankEffectKind | null,
 ): BotState {
   if (placement === undefined || decision === undefined || placement.id !== bot.id || decision.botId !== bot.id) {
     throw new Error(`tick results do not line up for bot "${bot.id}"`);
@@ -297,6 +316,9 @@ function nextBotState(
     // 0 on the tick after a landed hit, like ticksSinceHit.
     ticksSinceLandedHit:
       landedNow > 0 ? 0 : bot.ticksSinceLandedHit === null ? null : bot.ticksSinceLandedHit + 1,
+    item: placement.item,
+    // The effect from before the tick counts down; a hit on this tick starts a new one in its place.
+    effect: inflicted === null ? countDown(bot.effect) : newEffect(inflicted),
   };
 }
 

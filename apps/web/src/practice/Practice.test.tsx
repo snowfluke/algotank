@@ -81,15 +81,17 @@ describe("ReplayControls", () => {
 });
 
 describe("LegendDialog", () => {
-  test("names the six marks of the board with a picture each, in both languages", () => {
+  test("names the six marks of the board and the items with their two effects, with a picture each, in both languages", () => {
     const html = renderToStaticMarkup(<LegendDialog onClose={() => {}} />);
-    expect(count(html, "data-legend-term")).toBe(6);
+    expect(count(html, "data-legend-term")).toBe(13);
     // One picture per entry, plus the close icon.
-    expect(count(html, "<svg")).toBe(7);
+    expect(count(html, "<svg")).toBe(14);
     expect(html).toContain("Water gauge");
+    expect(html).toContain("Umbrella");
     expect(html).toContain('aria-label="Close"');
     const idHtml = inIndonesian(<LegendDialog onClose={() => {}} />);
     expect(idHtml).toContain("Takaran air");
     expect(idHtml).toContain("Mahkota");
+    expect(idHtml).toContain("Bola lumpur");
   });
 });

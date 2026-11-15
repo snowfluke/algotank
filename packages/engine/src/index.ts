@@ -32,6 +32,9 @@ export type { AttributeId } from "./combat/combat.ts";
 export { RULE_SETS, RULE_SET_IDS, STANDARD_RULE_SET_ID, isRuleSetId, ruleSet, rulesOf } from "./combat/rule-sets.ts";
 export type { RoundRules, RuleSetId } from "./combat/rule-sets.ts";
 
+// items/ owns the items on the board: when they appear, who takes them, what they do.
+export { ITEM_RULES, itemCap } from "./items/items.ts";
+
 // strategy/ owns what a player can configure: the vocabulary tables, the
 // validator, the presets, and the function that picks a bot's move.
 export { CONDITIONS, TARGET_SELECTORS, ACTIONS, CONDITION_IDS, TARGET_IDS, ACTION_IDS } from "./strategy/vocabulary.ts";
@@ -43,7 +46,7 @@ export { decide } from "./strategy/decide.ts";
 // A rule's sequence of steps: which actions can be steps, and how to tell a sequence from one action.
 export { STEP_ACTION_IDS, isSequence, isStepAction } from "./strategy/sequence.ts";
 export type { StepActionId } from "./strategy/sequence.ts";
-export { PRESETS, PRESET_IDS, DEFAULT_PRESET_ID } from "./strategy/presets.ts";
+export { PRESETS, PRESET_IDS, DEFAULT_PRESET_ID, PICKER_ORDER } from "./strategy/presets.ts";
 export type { PresetId } from "./strategy/presets.ts";
 // stats/ owns a tank's statistics: running totals of fixed size, read from turn results.
 export { EMPTY_NUMBERS, EMPTY_STATS, addNumbers, addTurn, statsNumbers, statsOfRound, statsView, turnsOf } from "./stats/stats.ts";

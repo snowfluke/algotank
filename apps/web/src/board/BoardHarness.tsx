@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { PublicSnapshot } from "@game/arena";
 import { isFinalRound, survivorCount } from "@game/arena";
 import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, STANDARD_RULE_SET_ID, runRound } from "@game/engine";
-import type { BotId, Direction, RuleSetId, ThrowEvent, TickResult } from "@game/engine";
+import type { BoardItem, BotId, Direction, ItemKind, RuleSetId, TankEffect, ThrowEvent, TickResult } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { Practice } from "../practice/Practice.tsx";
 import { AppHeader } from "../ui/AppHeader.tsx";
@@ -45,6 +45,7 @@ function harnessRound(players: number, ruleSetId: RuleSetId, tankName: (n: numbe
     ruleSetId,
     ticksTotal: TURNS,
     survivorsAfterRound: isFinalRound(players) ? null : survivorCount(players),
+    items: true,
     players: ids.map((id, i) => {
       const preset = PRESETS[i % PRESETS.length];
       if (preset === undefined) throw new Error("The engine has no play styles.");
@@ -56,12 +57,14 @@ function harnessRound(players: number, ruleSetId: RuleSetId, tankName: (n: numbe
 }
 
 /**
- * One turn laid out by hand on an 8 by 6 floor: a hit, a miss, a dry shot and a shot into
- * nothing, all along diagonals so the kit shows how a diagonal jet and splash look,
- * and one tank facing straight north for comparison.
+ * One turn laid out by hand on an 8 by 6 floor: a hit with a bucket ("+2"), a throw an
+ * umbrella blocks, a dry shot and a shot into nothing, all along diagonals so the kit shows
+ * how a diagonal jet, splash and open umbrella look, and one tank facing straight north for
+ * comparison. Every item lies on the floor once (the umbrella in its last turns), three tanks
+ * hold one, one tank is dizzy and one is stuck (84-items.md).
  */
 function pausedTurn(tankName: (n: number) => string): { snapshot: PublicSnapshot; throws: ThrowEvent[]; names: Record<BotId, string> } {
-  const place = (id: string, x: number, y: number, direction: Direction, score: number, water: number) => ({
+  const place = (id: string, x: number, y: number, direction: Direction, score: number, water: number, item: ItemKind | null = null, effect: TankEffect | null = null) => ({
     id,
     x,
     y,
@@ -72,25 +75,33 @@ function pausedTurn(tankName: (n: number) => string): { snapshot: PublicSnapshot
     build: {},
     hitsLanded: 0,
     hitsTaken: 0,
+    item,
+    effect,
   });
   const bots = [
     place("p1", 1, 1, "SE", 4, 6),
     place("p2", 3, 3, "NW", 1, 9),
     place("p3", 6, 0, "SW", 2, 6),
-    place("p4", 4, 2, "NE", 0, 9),
-    place("p5", 7, 5, "NW", 1, 1),
-    place("p6", 6, 4, "SE", 2, 7),
-    place("p7", 2, 5, "NE", 0, 6),
-    place("p8", 0, 3, "N", 1, 9),
+    place("p4", 4, 2, "NE", 0, 9, null, { kind: "dizzy", turnsLeft: 2 }),
+    place("p5", 7, 5, "NW", 1, 1, "mudBall"),
+    place("p6", 6, 4, "SE", 2, 7, null, { kind: "stuck", turnsLeft: 1 }),
+    place("p7", 2, 5, "NE", 0, 6, "pinwheel"),
+    place("p8", 0, 3, "N", 1, 9, "umbrella"),
+  ];
+  const items: BoardItem[] = [
+    { kind: "bucket", x: 0, y: 0, turnsLeft: 22 },
+    { kind: "umbrella", x: 2, y: 1, turnsLeft: 3 },
+    { kind: "pinwheel", x: 5, y: 3, turnsLeft: 18 },
+    { kind: "mudBall", x: 7, y: 2, turnsLeft: 25 },
   ];
   const throws: ThrowEvent[] = [
-    { throwerId: "p1", outcome: "hit", targetId: "p2", distance: 2, hitChance: 60 },
-    { throwerId: "p3", outcome: "miss", targetId: "p4", distance: 2, hitChance: 60 },
+    { throwerId: "p1", outcome: "hit", targetId: "p2", distance: 2, hitChance: 60, bucket: true },
+    { throwerId: "p3", outcome: "blocked", targetId: "p4", distance: 2, hitChance: 60 },
     { throwerId: "p5", outcome: "dry", targetId: "p6", distance: 1 },
     { throwerId: "p7", outcome: "empty" },
   ];
   const names = Object.fromEntries(bots.map((bot, i) => [bot.id, bot.id === OWN_ID ? "Ayu" : tankName(i + 1)]));
-  return { snapshot: { width: 8, height: 6, tick: 37, ticksTotal: TURNS, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, bots }, throws, names };
+  return { snapshot: { width: 8, height: 6, tick: 37, ticksTotal: TURNS, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, bots, items }, throws, names };
 }
 
 export function BoardHarness() {

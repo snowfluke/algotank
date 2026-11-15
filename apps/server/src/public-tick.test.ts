@@ -3,13 +3,15 @@ import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, runRound, ruleSet } from "@ga
 import { toPublicSnapshot, toPublicTick } from "./public-tick.ts";
 
 // Sorted, so the test names the allow-list and not an order. The mode of a bot stays out.
-const PUBLIC_SNAPSHOT_KEYS = ["bots", "height", "ruleSetId", "survivorsAfterRound", "tick", "ticksTotal", "width"];
-const PUBLIC_BOT_KEYS = ["build", "direction", "hitsLanded", "hitsTaken", "id", "score", "wasHit", "water", "x", "y"];
+// Items are public: every viewer sees them on the board and on the tank that holds one (84-items.md).
+const PUBLIC_SNAPSHOT_KEYS = ["bots", "height", "items", "ruleSetId", "survivorsAfterRound", "tick", "ticksTotal", "width"];
+const PUBLIC_BOT_KEYS = ["build", "direction", "effect", "hitsLanded", "hitsTaken", "id", "item", "score", "wasHit", "water", "x", "y"];
 
 const strategy = PRESETS.find((preset) => preset.id === DEFAULT_PRESET_ID)!.strategy;
 const { spawn, ticks } = runRound({
   seed: 5,
   ticksTotal: 12,
+  items: true,
   survivorsAfterRound: null,
   ruleSetId: "dry-spell",
   players: ["a", "b", "c"].map((id) => ({ id, strategy })),
@@ -32,7 +34,7 @@ test("a public snapshot carries exactly the allowed fields, and the rule set is 
 
 test("every rule set reaches the public snapshot unchanged", () => {
   for (const ruleSetId of RULE_SET_IDS) {
-    const round = runRound({ seed: 5, ticksTotal: 3, survivorsAfterRound: null, ruleSetId, players: ["a", "b"].map((id) => ({ id, strategy })) });
+    const round = runRound({ seed: 5, ticksTotal: 3, survivorsAfterRound: null, ruleSetId, players: ["a", "b"].map((id) => ({ id, strategy })), items: true });
     expect(toPublicSnapshot(round.spawn).ruleSetId).toBe(ruleSetId);
   }
 });

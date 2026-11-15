@@ -40,6 +40,12 @@ describe("parseStreamMessage", () => {
     expect(parseStreamMessage("arena", json({ type: "arena", arena: { ...arena, settings: { ...arena.settings, kind: "public" } } })).ok).toBe(false);
   });
 
+  test("a dizzy turn of the player's own tank is read, and any other dizzy value is not", () => {
+    const own = { botId: "p", modeId: "m", ruleId: null, actionId: "throw", move: "T", nextModeId: "m" };
+    expect(parseStreamMessage("tick", json({ type: "tick", round: 1, tick: emptyCompactTick(0), own: { ...own, dizzy: true } })).ok).toBe(true);
+    expect(parseStreamMessage("tick", json({ type: "tick", round: 1, tick: emptyCompactTick(0), own: { ...own, dizzy: "yes" } })).ok).toBe(false);
+  });
+
   test("a tick for a viewer has own = null", () => {
     const tick = parseStreamMessage("tick", json({ type: "tick", round: 1, tick: emptyCompactTick(0), own: null }));
     expect(tick.ok).toBe(true);
@@ -115,9 +121,11 @@ describe("parseStreamMessage", () => {
   });
 
   test("accepts a compact turn and rejects one whose lists are not rows of numbers", () => {
-    const compact = { tick: 0, bots: [[1, 2, 0, 0, 10, 0, 0, 0]], moves: [[0, 0]], throws: [[0, 0, -1, -1, -1]] };
+    const compact = { tick: 0, bots: [[1, 2, 0, 0, 10, 0, 0, 0]], moves: [[0, 0]], throws: [[0, 0, -1, -1, -1]], items: [[0, 3, 3, 30]], pickups: [] };
     expect(parseStreamMessage("tick", json({ type: "tick", round: 1, tick: compact, own: null })).ok).toBe(true);
-    for (const bad of [{ ...compact, bots: [{ x: 1 }] }, { ...compact, moves: [["0", 0]] }, { ...compact, throws: null }, { ...compact, tick: "0" }]) {
+    // A server from before items sends no item lists.
+    const { items: _items, pickups: _pickups, ...beforeItems } = compact;
+    for (const bad of [{ ...compact, bots: [{ x: 1 }] }, { ...compact, moves: [["0", 0]] }, { ...compact, throws: null }, { ...compact, tick: "0" }, beforeItems, { ...compact, items: [["bucket"]] }]) {
       expect(parseStreamMessage("tick", json({ type: "tick", round: 1, tick: bad, own: null })).ok).toBe(false);
     }
   });

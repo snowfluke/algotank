@@ -11,6 +11,7 @@
 // | Sneak          | the same refill, then you creep round behind a tank that faces away        |
 // | Charger        | you drive straight at the tank ahead, shooting all the way                |
 // | Wanderer       | you turn and roll about; when a tank happens to be in front, you shoot     |
+// | Item hunter    | you drive onto the bucket beside you, it pops away, then you charge and shoot |
 //
 // The markup is the still frame (the moment of the shot), as the scenes were before they
 // moved. Motion is added only to the one scene marked `live` (the card under the pointer
@@ -57,6 +58,8 @@ const SCENE_CSS = `
   .ps-live .ps-charger-jet { animation-name: ps-charger-jet; }
   .ps-live .ps-wander { animation-name: ps-wander; }
   .ps-live .ps-wander-turn { animation-name: ps-wander-turn; }
+  .ps-live .ps-grab { animation-name: ps-grab; }
+  .ps-live .ps-taken { animation-name: ps-taken; }
 }
 @keyframes ps-jet { 0%, 44% { opacity: 0; stroke-dashoffset: var(--len); } 46% { opacity: 1; } 54% { opacity: 1; stroke-dashoffset: 0; } 64% { opacity: 1; } 72%, 100% { opacity: 0; stroke-dashoffset: 0; } }
 @keyframes ps-splash { 0%, 52% { opacity: 0; transform: scale(0.3); } 58% { opacity: 1; transform: scale(1); } 74%, 100% { opacity: 0; transform: scale(1.35); } }
@@ -74,6 +77,8 @@ const SCENE_CSS = `
 @keyframes ps-charger { 0% { transform: translate(-20px, 0); } 70%, 90% { transform: none; } 100% { transform: translate(-20px, 0); } }
 @keyframes ps-charger-jet { 0%, 8% { opacity: 0; } 12%, 20% { opacity: 1; } 26%, 36% { opacity: 0; } 40%, 48% { opacity: 1; } 54%, 64% { opacity: 0; } 68%, 82% { opacity: 1; } 88%, 100% { opacity: 0; } }
 @keyframes ps-wander { 0% { transform: translate(-10px, 10px); } 14% { transform: translate(-10px, 0); } 26% { transform: translate(-10px, -10px); } 38%, 44% { transform: translate(0, -10px); } 50%, 84% { transform: none; } 100% { transform: translate(-10px, 10px); } }
+@keyframes ps-grab { 0%, 6% { transform: translate(-10px, 10px); } 30%, 40% { transform: translate(-10px, 0); } 52%, 90% { transform: none; } 100% { transform: translate(-10px, 10px); } }
+@keyframes ps-taken { 0%, 28% { opacity: 1; transform: none; } 36%, 94% { opacity: 0; transform: scale(0.3); } 100% { opacity: 1; transform: none; } }
 @keyframes ps-wander-turn { 0%, 8% { transform: rotate(-90deg); } 18%, 30% { transform: rotate(-90deg); } 34%, 40% { transform: rotate(0deg); } 46% { transform: rotate(90deg); } 52%, 84% { transform: rotate(0deg); } 92% { transform: rotate(90deg); } 100% { transform: rotate(-90deg); } }
 `;
 
@@ -120,6 +125,19 @@ function TankGauge({ x, y, water, move, fill, blink }: { readonly x: number; rea
           {/* Under the tank, or above it on the bottom row, so it stays inside the drawing. */}
           <Gauge x={0} y={y === ROWS - 1 ? -6.2 : 4.4} water={water} {...(fill === true ? { fillClassName: "ps-fill" } : {})} />
         </g>
+      </g>
+    </g>
+  );
+}
+
+/** The bucket of the item hunter's scene: the item the board draws, in the scene's small size. */
+function Bucket({ x, y, className }: { readonly x: number; readonly y: number; readonly className?: string }) {
+  return (
+    <g transform={`translate(${centre(x)} ${centre(y)})`}>
+      <g className={className}>
+        <path d="M -2.6 -2.2 Q 0 -5.2 2.6 -2.2" fill="none" strokeWidth={0.6} strokeLinecap="round" style={{ stroke: "var(--color-tank-outline)" }} />
+        <path d="M -3 -1.8 L 3 -1.8 L 2.2 2.8 L -2.2 2.8 Z" strokeWidth={0.5} strokeLinejoin="round" style={{ fill: "var(--color-water)", stroke: "var(--color-tank-outline)" }} />
+        <ellipse cx={0} cy={-1.8} rx={3} ry={0.8} strokeWidth={0.4} style={{ fill: "var(--color-water-deep)", stroke: "var(--color-tank-outline)" }} />
       </g>
     </g>
   );
@@ -218,6 +236,15 @@ function scene(style: PresetId, look: TankLook): ReactElement {
             </g>
           </g>
           <Tank x={2} y={1} angle={0} look={look} move="ps-charger" />
+        </>
+      );
+    case "item-hunter":
+      return (
+        <>
+          <Tank x={4} y={1} angle={180} colour={a ?? 2} hit phase={LATE_SHOT_MS} />
+          <Bucket x={1} y={1} className="ps-anim ps-taken" />
+          <Shot from={[2, 1]} to={[4, 1]} phase={LATE_SHOT_MS} />
+          <Tank x={2} y={1} angle={0} look={look} move="ps-grab" />
         </>
       );
     case "random-walker":

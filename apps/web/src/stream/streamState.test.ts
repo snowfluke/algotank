@@ -39,12 +39,12 @@ describe("reduceStream", () => {
   });
 
   test("the feed keeps what the player's own throw did, and nothing for another bot's throw", () => {
-    const tank = (id: string, x: number) => ({ id, x, y: 0, direction: "E" as const, score: 0, wasHit: false, build: {}, hitsLanded: 0, hitsTaken: 0, water: 9 });
+    const tank = (id: string, x: number) => ({ id, x, y: 0, direction: "E" as const, score: 0, wasHit: false, build: {}, hitsLanded: 0, hitsTaken: 0, water: 9, item: null, effect: null });
     const spawn = { ...snapshotAt(0), bots: [tank("p1", 0), tank("p2", 1)] };
     const start = { kind: "message", message: { type: "roundStart", round: 1, snapshot: spawn, startsInMs: 0 }, receivedAt: 0 } as const;
     // Compact throws: [thrower, outcome (0 empty, 1 dry), target, distance, hit chance].
     const withThrows = (n: number, throws: readonly (readonly number[])[]) => {
-      const tick: CompactTick = { tick: n, bots: [[0, 0, 2, 0, 9, 0, 0, 0], [1, 0, 2, 0, 9, 0, 0, 0]], moves: [[0, 0], [1, 0]], throws };
+      const tick: CompactTick = { tick: n, bots: [[0, 0, 2, 0, 9, 0, 0, 0], [1, 0, 2, 0, 9, 0, 0, 0]], moves: [[0, 0], [1, 0]], throws, items: [], pickups: [] };
       return { kind: "message", message: { type: "tick", round: 1, tick, own: decision(`r${n}`) }, receivedAt: 0 } as const;
     };
     const next = apply(INITIAL_STREAM_STATE, start, withThrows(0, [[1, 0, -1, -1, -1], [0, 1, 1, 1, -1]]), withThrows(1, [[1, 0, -1, -1, -1]]));

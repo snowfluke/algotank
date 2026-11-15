@@ -82,6 +82,8 @@ const bot = (id: string, score: number, water = 9) => ({
   hitsLanded: score + 2,
   hitsTaken: 1,
   water,
+  item: null,
+  effect: null,
 });
 
 describe("live ranking", () => {

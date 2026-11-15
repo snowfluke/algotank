@@ -18,6 +18,7 @@ function config(count: number, seed: number, ticksTotal = 40, ruleSetId: RuleSet
     ticksTotal,
     survivorsAfterRound: null,
     ruleSetId,
+    items: false,
     players: Array.from({ length: count }, (_, i) => ({
       id: `p${i}`,
       strategy: (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy,

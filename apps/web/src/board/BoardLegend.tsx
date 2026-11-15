@@ -1,5 +1,6 @@
 // The legend for what a first-time viewer cannot guess on the board: the water
-// gauge, a hit, a miss, a dry shot, "you" and the crown. Each entry is drawn with
+// gauge, a hit, a miss, a dry shot, "you", the crown, and the items with the two
+// effects they cause (84-items.md). Each entry is drawn with
 // the board's own shapes. It opens as a dialog from a help button next to the
 // board, so it never takes room from the board in a pane that does not scroll.
 // The dialog pages its entries when they do not fit its height (a small phone in Indonesian).
@@ -14,6 +15,7 @@ import { IconButton } from "../ui/IconButton.tsx";
 import { Pager } from "../ui/Pager.tsx";
 import type { Jet } from "./boardHelpers.ts";
 import { Crown, DryDrops, JetShape, Puff, Splash } from "./boardShapes.tsx";
+import { DizzyStars, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import { WaterGauge } from "./WaterGauge.tsx";
 
 const STANDARD = ruleSet(STANDARD_RULE_SET_ID);
@@ -28,6 +30,18 @@ function Picture({ children, width = 34 }: { children: ReactNode; width?: number
 
 const HIT_JET: Jet = { from: { x: 4, y: 0 }, control: { x: 12, y: -0.6 }, to: { x: 20, y: 0 } };
 const MISS_JET: Jet = { from: { x: 4, y: 0 }, control: { x: 13, y: -5 }, to: { x: 26, y: 1 } };
+const BLOCKED_JET: Jet = { from: { x: 4, y: 0 }, control: { x: 9, y: -0.4 }, to: { x: 14.5, y: 0 } };
+
+/** An item alone, as it lies on its square. */
+function ItemPicture({ kind }: { kind: "bucket" | "pinwheel" | "mudBall" }) {
+  return (
+    <Picture width={12}>
+      <g transform="translate(1 -0.4) scale(1.1)">
+        <ItemShape kind={kind} />
+      </g>
+    </Picture>
+  );
+}
 
 function Tank({ x = 0, angle = 0, self = false, colour = 1 as const }: { x?: number; angle?: number; self?: boolean; colour?: 1 | 2 }) {
   return (
@@ -120,6 +134,67 @@ function useLegendEntries(): readonly LegendEntry[] {
           <Tank colour={2} />
           <g transform="translate(0 -4.4)">
             <Crown />
+          </g>
+        </Picture>
+      ),
+    },
+    {
+      key: "items",
+      term: l.items.term,
+      body: l.items.body,
+      picture: (
+        <Picture width={24}>
+          <Tank />
+          <g transform="translate(13 -0.4)">
+            <ItemShape kind="bucket" />
+          </g>
+        </Picture>
+      ),
+    },
+    { key: "bucket", term: l.bucket.term, body: l.bucket.body, picture: <ItemPicture kind="bucket" /> },
+    {
+      key: "umbrella",
+      term: l.umbrella.term,
+      body: l.umbrella.body,
+      picture: (
+        <Picture>
+          <JetShape jet={BLOCKED_JET} />
+          <Tank />
+          <Tank x={23} angle={180} colour={2} />
+          {/* The dome faces the jet, as on the board. */}
+          <g transform="translate(19 0) rotate(-90) scale(0.75)">
+            <OpenUmbrella />
+          </g>
+        </Picture>
+      ),
+    },
+    { key: "pinwheel", term: l.pinwheel.term, body: l.pinwheel.body, picture: <ItemPicture kind="pinwheel" /> },
+    { key: "mudBall", term: l.mudBall.term, body: l.mudBall.body, picture: <ItemPicture kind="mudBall" /> },
+    {
+      key: "dizzy",
+      term: l.dizzy.term,
+      body: l.dizzy.body,
+      picture: (
+        <Picture width={12}>
+          <Tank colour={2} />
+          <g transform="scale(0.8)">
+            <DizzyStars />
+          </g>
+        </Picture>
+      ),
+    },
+    {
+      key: "stuck",
+      term: l.stuck.term,
+      body: l.stuck.body,
+      picture: (
+        <Picture width={12}>
+          <g transform="translate(0 0.4)">
+            <MudPuddle />
+          </g>
+          <Tank colour={2} />
+          <g transform="scale(0.8)">
+            <MudSplats />
           </g>
         </Picture>
       ),

@@ -87,7 +87,7 @@ export const RESHUFFLE_TURNS = 333;
 /** The empty board of a league: sized for MONTHLY_SEATS tanks, like every day round. */
 function emptyBoard(ticksTotal: number): Snapshot {
   const { width, height } = arenaSize(MONTHLY_SEATS, ruleSet(STANDARD_RULE_SET_ID));
-  return { width, height, tick: 0, ticksTotal, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, bots: [] };
+  return { width, height, tick: 0, ticksTotal, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, bots: [], items: [] };
 }
 
 export class LeagueDay {
@@ -107,7 +107,7 @@ export class LeagueDay {
   seat(tank: DayTank, points: number, counts: boolean, ticksLeft: number, stats: TankStats = EMPTY_STATS): void {
     if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
     const fresh = this.round === null;
-    this.round ??= createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS });
+    this.round ??= createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS, items: true });
     joinRound(this.round, { id: tank.id, strategy: tank.strategy }, points);
     this.seated.set(tank.id, { tank, counts, stats });
     if (fresh) this.drawBots();
@@ -214,7 +214,7 @@ export class LeagueDay {
   start(tanks: readonly { readonly tank: DayTank; readonly points: number; readonly counts: boolean; readonly stats: TankStats | undefined }[], ticksLeft: number): void {
     if (this.round !== null) throw new Error(`League ${this.league} already has a round.`);
     if (tanks.length === 0) return;
-    const round = createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS });
+    const round = createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS, items: true });
     this.round = round;
     for (const { tank, points, counts, stats } of tanks) {
       if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);

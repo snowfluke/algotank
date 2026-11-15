@@ -62,6 +62,9 @@ export const en = {
     miss: "My shot missed.",
     nothing: "My shot hit nothing.",
     dry: "My water was too low, so nothing came out.",
+    blocked: "An umbrella stopped my shot.",
+    bucketHit: "My bucket shot hit, worth 2 points.",
+    dizzy: "I was dizzy, so I checked my rules from the bottom up.",
   },
 };
 
@@ -114,5 +117,8 @@ export const id: typeof en = {
     miss: "Tembakanku meleset.",
     nothing: "Tembakanku tidak mengenai apa pun.",
     dry: "Airku kurang, jadi tidak ada air yang keluar.",
+    blocked: "Tembakanku ditahan payung.",
+    bucketHit: "Tembakan emberku kena dan bernilai 2 poin.",
+    dizzy: "Aku sedang pusing, jadi aturanku kubaca dari bawah.",
   },
 };

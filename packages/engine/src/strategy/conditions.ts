@@ -43,11 +43,14 @@ import {
   textValue,
 } from "./define.ts";
 import { cutMargin } from "./score.ts";
+import { nearestItem } from "../items/items.ts";
+import { effectParam, effectValue, holds, itemParam, itemValue } from "../items/params.ts";
 import { pickTarget } from "./targets.ts";
 
 const BOTS = "Other bots";
 const TARGET = "The target";
 const ME = "About me";
+const ITEMS = "Items";
 const WALLS = "Walls and space";
 const ROUND = "The round";
 
@@ -247,6 +250,14 @@ const defs = withLiteralIds<ConditionDef>()([
     // The default is one unit short of a standard throw, so it means "the target cannot throw on this tick" under the standard set.
     test: (ctx, params) => targetWith(ctx, params, (target) => compares(params, target.water, intValue(params, "n"))),
   },
+  {
+    id: "targetItem",
+    group: TARGET,
+    label: "The target ({target}) holds {item}",
+    params: [targetParam(), itemParam()],
+    // Lets a rule skip a tank whose umbrella would stop the throw.
+    test: (ctx, params) => targetWith(ctx, params, (target) => holds(target.item, itemValue(params))),
+  },
 
   // --- About me -----------------------------------------------------------
   {
@@ -301,6 +312,33 @@ const defs = withLiteralIds<ConditionDef>()([
     test: (ctx, params) => ctx.self.score >= intValue(params, "n"),
   },
 
+
+  // --- Items (items/items.ts) ---------------------------------------------
+  {
+    id: "itemNear",
+    group: ITEMS,
+    label: "An item ({item}) is within a {n}-cell distance",
+    params: [itemParam(), cellsParam("n", 4)],
+    test: (ctx, params) => {
+      const nearest = nearestItem(ctx.snapshot, ctx.self, itemValue(params));
+      return nearest !== undefined && chebyshev(ctx.self, nearest) <= intValue(params, "n");
+    },
+  },
+  {
+    id: "myItem",
+    group: ITEMS,
+    label: "My tank holds {item}",
+    params: [itemParam()],
+    test: (ctx, params) => holds(ctx.self.item, itemValue(params)),
+  },
+  {
+    id: "myEffect",
+    group: ITEMS,
+    label: "My tank is {effect}",
+    params: [effectParam()],
+    // A dizzy tank checks its rules from the bottom up, so a rule with "dizzy" acts first at the bottom of the list.
+    test: (ctx, params) => ctx.self.effect?.kind === effectValue(params),
+  },
   // --- Walls and space ----------------------------------------------------
   {
     id: "wallAhead",

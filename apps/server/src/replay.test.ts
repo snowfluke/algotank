@@ -28,6 +28,7 @@ function completedRecord(): { store: Store; record: ArenaRecord; config: RoundCo
   const config: RoundConfig = {
     seed: 11,
     ticksTotal: 20,
+    items: true,
     survivorsAfterRound: null,
     ruleSetId: "open-field",
     players: ["a", "b", "c"].map((id) => ({ id, strategy })),

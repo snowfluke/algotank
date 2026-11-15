@@ -2,7 +2,10 @@
 // toward the targets in docs/decisions and docs/specs/revamp/62-diagonal.md: no
 // preset wins more than 40% of the mixed field, where pure luck is 12.5%.
 //
-// Usage: bun packages/engine/scripts/simulate.ts [finals=1000] [ticks=150] [matrixFinals=400] [--rules=standard] [--lineup=id,id,...]
+// Usage: bun packages/engine/scripts/simulate.ts [finals=1000] [ticks=150] [matrixFinals=400] [--rules=standard] [--lineup=id,id,...] [--items=off]
+//
+// Items are on, as in every arena. --items=off plays the same seeds without items, so the
+// two runs side by side show what the items change (docs/specs/revamp/84-items.md).
 //
 // Tables 1 to 4 play under one rule set: the --rules id, or "standard". Table 5
 // always plays every rule set. Under "standard" the numbers are the ones the game
@@ -51,7 +54,8 @@
 //
 // DEFAULT_PRESET_ID (presets.ts) is the designed preset whose win rate in Table 1
 // is closest to 12.5%: the preset that a new player starts from should be neither
-// a sure win nor a sure loss.
+// a sure win nor a sure loss. PICKER_ORDER is measured at the length of a practice round:
+// pass ticks=60 for that line to name the right preset.
 
 import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, RULE_SETS, STANDARD_RULE_SET_ID, isDiagonal, isRuleSetId, runRound } from "../src/index.ts";
 import type { Preset, RoundPlayer, RuleSetId, Snapshot } from "../src/index.ts";
@@ -64,6 +68,7 @@ const TARGET_HIGH = 40;
 
 const RULES_FLAG = "--rules=";
 const LINEUP_FLAG = "--lineup=";
+const ITEMS_OFF_FLAG = "--items=off";
 const flags = process.argv.slice(2).filter((arg) => arg.startsWith("--"));
 const numbers = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const finals = Number(numbers[0] ?? 1000);
@@ -74,9 +79,10 @@ if (![finals, ticksTotal, matrixFinals].every((n) => Number.isInteger(n) && n >=
 }
 const rulesArg = flags.find((flag) => flag.startsWith(RULES_FLAG))?.slice(RULES_FLAG.length) ?? STANDARD_RULE_SET_ID;
 if (!isRuleSetId(rulesArg)) throw new Error(`unknown rule set "${rulesArg}". Known ids: ${RULE_SET_IDS.join(", ")}`);
-if (flags.some((flag) => !flag.startsWith(RULES_FLAG) && !flag.startsWith(LINEUP_FLAG))) {
-  throw new Error(`unknown option. Use ${RULES_FLAG}<id> or ${LINEUP_FLAG}<id>,<id>,...`);
+if (flags.some((flag) => !flag.startsWith(RULES_FLAG) && !flag.startsWith(LINEUP_FLAG) && flag !== ITEMS_OFF_FLAG)) {
+  throw new Error(`unknown option. Use ${RULES_FLAG}<id>, ${LINEUP_FLAG}<id>,<id>,... or ${ITEMS_OFF_FLAG}`);
 }
+const items = !flags.includes(ITEMS_OFF_FLAG);
 const lineupIds = flags.find((flag) => flag.startsWith(LINEUP_FLAG))?.slice(LINEUP_FLAG.length).split(",") ?? null;
 /** The rule set of Tables 1 to 4. */
 const ruleSetId: RuleSetId = rulesArg;
@@ -147,7 +153,7 @@ function playFinal(
   shape?: Shape,
 ): void {
   const players: RoundPlayer[] = seatPresets.map((preset, seat) => ({ id: `seat${seat}`, strategy: preset.strategy }));
-  const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId: rules, players });
+  const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId: rules, players, items });
   const last = result.ticks[result.ticks.length - 1]?.snapshot;
   if (last === undefined) throw new Error("a round has at least one tick");
   const hitsOf = new Map(last.bots.map((bot) => [bot.id, bot.hitsLanded]));

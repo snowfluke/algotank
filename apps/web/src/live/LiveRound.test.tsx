@@ -29,6 +29,8 @@ const bot = (id: string, score: number) => ({
   hitsLanded: 0,
   hitsTaken: 0,
   water: 6,
+  item: null,
+  effect: null,
 });
 
 function arena(mode: RuleSetMode): PublicArena {

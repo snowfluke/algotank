@@ -209,6 +209,10 @@ export const en: VocabularyText = {
       not: "fewer than {percent} of the other tanks have {attribute} at level {level} or higher",
       units: { percent: "percent" },
     },
+    itemNear: { name: "An item close to me", text: "{item} is at most {n} away", not: "{item} is not within {n} of me", units: { n: "squares" } },
+    myItem: { name: "The item I hold", text: "I hold {item}", not: "I do not hold {item}" },
+    myEffect: { name: "An item's effect on me", text: "I am {effect}", not: "I am not {effect}" },
+    targetItem: { name: "A chosen tank holds an item", text: "{target} holds {item}", not: "{target} does not hold {item}" },
   },
   conditionGroups: {
     otherTanks: "Other tanks",
@@ -216,6 +220,7 @@ export const en: VocabularyText = {
     me: "About me",
     walls: "Walls and space",
     round: "The round",
+    items: "Items",
   },
   actions: {
     throw: { name: "Shoot", text: "shoot", done: "shot" },
@@ -231,12 +236,14 @@ export const en: VocabularyText = {
     turn: { name: "Turn", text: "turn {way}", done: "turned {way}" },
     wander: { name: "Wander", text: "wander around at random", done: "wandered around at random" },
     wait: { name: "Wait", text: "wait", done: "waited" },
+    goToItem: { name: "Go get an item", text: "drive to the nearest square with {item}", done: "drove to the nearest square with {item}" },
   },
   actionGroups: {
     attack: "Attack",
     chase: "Chase and flee",
     position: "Go to a place",
     basic: "Basic moves",
+    items: "Items",
   },
   steps: {
     forward: { name: "Forward", text: "move one square forward" },
@@ -289,6 +296,8 @@ export const en: VocabularyText = {
     round: { cut: "a knockout round", final: "the final" },
     place: { middle: "the middle of the arena", corner: "the nearest corner" },
     way: { left: "left", right: "right", slightLeft: "slightly left", slightRight: "slightly right" },
+    item: { any: "an item", bucket: "a bucket", umbrella: "an umbrella", pinwheel: "a pinwheel", mudBall: "a mud ball" },
+    effect: { dizzy: "dizzy", stuck: "stuck in mud" },
   },
   units: {
     squares: { word: plural("square", "squares"), gap: " " },
@@ -311,6 +320,7 @@ export const en: VocabularyText = {
     backstabber: { name: "Sneak", summary: "Refills, then sneaks up from behind." },
     charger: { name: "Charger", summary: "Drives at the nearest tank, shooting ahead." },
     "random-walker": { name: "Wanderer", summary: "Wanders about and shoots what is in front." },
+    "item-hunter": { name: "Item hunter", summary: "Grabs items nearby, then charges the nearest tank." },
   },
   modeNames: {
     evade: "Evade",
@@ -478,6 +488,10 @@ export const id: VocabularyText = {
       not: "kurang dari {percent} tank lain punya {attribute} level {level} atau lebih",
       units: { percent: "percent" },
     },
+    itemNear: { name: "Item di dekatku", text: "ada {item} dalam jarak {n}", not: "tidak ada {item} dalam jarak {n}", units: { n: "squares" } },
+    myItem: { name: "Item yang kupegang", text: "aku memegang {item}", not: "aku tidak memegang {item}" },
+    myEffect: { name: "Efek item padaku", text: "aku sedang {effect}", not: "aku tidak sedang {effect}" },
+    targetItem: { name: "Tank pilihan memegang item", text: "{target} memegang {item}", not: "{target} tidak memegang {item}" },
   },
   conditionGroups: {
     otherTanks: "Tank lain",
@@ -485,6 +499,7 @@ export const id: VocabularyText = {
     me: "Tentang aku",
     walls: "Dinding dan ruang",
     round: "Ronde ini",
+    items: "Item",
   },
   actions: {
     throw: { name: "Tembak", text: "tembak", done: "menembak" },
@@ -500,12 +515,14 @@ export const id: VocabularyText = {
     turn: { name: "Belok", text: "belok {way}", done: "berbelok {way}" },
     wander: { name: "Jalan acak", text: "jalan-jalan ke arah acak", done: "jalan-jalan ke arah acak" },
     wait: { name: "Tunggu", text: "tunggu", done: "menunggu" },
+    goToItem: { name: "Ambil item", text: "pergi ke {item} terdekat", done: "pergi ke {item} terdekat" },
   },
   actionGroups: {
     attack: "Serang",
     chase: "Kejar dan kabur",
     position: "Pergi ke suatu tempat",
     basic: "Gerakan dasar",
+    items: "Item",
   },
   steps: {
     forward: { name: "Maju", text: "maju satu petak" },
@@ -558,6 +575,8 @@ export const id: VocabularyText = {
     round: { cut: "ronde penyisihan", final: "final" },
     place: { middle: "tengah arena", corner: "sudut terdekat" },
     way: { left: "kiri", right: "kanan", slightLeft: "sedikit ke kiri", slightRight: "sedikit ke kanan" },
+    item: { any: "item", bucket: "ember", umbrella: "payung", pinwheel: "kincir", mudBall: "bola lumpur" },
+    effect: { dizzy: "pusing", stuck: "terjebak lumpur" },
   },
   units: {
     squares: { word: () => "petak", gap: " " },
@@ -580,6 +599,7 @@ export const id: VocabularyText = {
     backstabber: { name: "Penyelinap", summary: "Mengisi air, lalu menyergap dari belakang." },
     charger: { name: "Penyeruduk", summary: "Menyeruduk tank terdekat sambil menembak." },
     "random-walker": { name: "Pengembara", summary: "Jalan acak dan menembak tank di depannya." },
+    "item-hunter": { name: "Pemburu Item", summary: "Memungut item di dekatnya, lalu menyeruduk tank terdekat." },
   },
   modeNames: {
     evade: "Menghindar",

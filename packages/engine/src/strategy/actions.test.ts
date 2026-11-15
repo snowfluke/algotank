@@ -53,7 +53,9 @@ describe("every action returns a legal move that never walks into a wall or off 
             for (const direction of directions) {
               if (others.some((other) => other.x === x && other.y === y)) continue;
               const me = bot("me", x, y, direction, { lastHitBy: others[0]?.id ?? null });
-              const snapshot = snapshotOf([me, ...others], arena);
+              // A bucket in the far corner, except under the tank itself: a tank on an item has taken it.
+              const items = x === 4 && y === 3 ? [] : [{ kind: "bucket" as const, x: 4, y: 3, turnsLeft: 5 }];
+              const snapshot = snapshotOf([me, ...others], { ...arena, items });
               for (const target of targetIds) {
                 for (const rngInt of [0, 1, 2, 3, 4, 5, 6, 7]) {
                   const params = defaultsOf(action.params, target);
@@ -64,7 +66,8 @@ describe("every action returns a legal move that never walks into a wall or off 
                     // null is allowed only when there is nothing to act on.
                     const nothingToAct = needsTarget
                       ? TARGET_SELECTORS[target]?.pick(ctx) === null
-                      : actionId === "stepOutOfLine" && botsThatCanHit(snapshot, me).length === 0;
+                      : (actionId === "stepOutOfLine" && botsThatCanHit(snapshot, me).length === 0) ||
+                        (actionId === "goToItem" && snapshot.items.length === 0);
                     expect(nothingToAct, where).toBe(true);
                     continue;
                   }

@@ -148,6 +148,7 @@ import type {
   BotState,
   Decision,
   Move,
+  Pickup,
   RuleSetId,
   Snapshot,
   Standing,
@@ -568,7 +569,7 @@ export interface PublicArena {
  */
 export type PublicBot = Pick<
   BotState,
-  "id" | "x" | "y" | "direction" | "score" | "wasHit" | "build" | "hitsLanded" | "hitsTaken" | "water"
+  "id" | "x" | "y" | "direction" | "score" | "wasHit" | "build" | "hitsLanded" | "hitsTaken" | "water" | "item" | "effect"
 >;
 
 /**
@@ -577,7 +578,7 @@ export type PublicBot = Pick<
  * from @game/engine gives the numbers.
  */
 export interface PublicSnapshot
-  extends Pick<Snapshot, "width" | "height" | "tick" | "ticksTotal" | "survivorsAfterRound" | "ruleSetId"> {
+  extends Pick<Snapshot, "width" | "height" | "tick" | "ticksTotal" | "survivorsAfterRound" | "ruleSetId" | "items"> {
   readonly bots: readonly PublicBot[];
 }
 
@@ -587,6 +588,8 @@ export interface PublicTick {
   readonly order: readonly PlayerId[];
   readonly moves: readonly { readonly botId: PlayerId; readonly move: Move }[];
   readonly throws: readonly ThrowEvent[];
+  /** Items taken on this tick (docs/specs/revamp/84-items.md). Every viewer sees an item on the board and on its tank. */
+  readonly pickups: readonly Pickup[];
   readonly snapshot: PublicSnapshot;
 }
 

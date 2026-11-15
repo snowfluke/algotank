@@ -91,6 +91,8 @@ export function runPractice(settings: PracticeSettings): PracticeRun {
   const playerCount = opponents.length + 1;
   const config: RoundConfig = {
     seed: settings.seed,
+    // The Try it match plays like an arena round, items included (84-items.md).
+    items: true,
     ruleSetId: settings.ruleSetId,
     ticksTotal: settings.ticks,
     // The cut-line conditions read this, so it follows the arena's own rule.

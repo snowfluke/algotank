@@ -7,18 +7,29 @@
 // Aim and Dodge cost 1 per level (0 to 3). Seven builds spend all of it.
 // Charger is the benchmark: scripts/simulate.ts measures every other preset against it.
 //
-// The order is the order players see. Keep the ids "charger" and "random-walker":
-// scripts/simulate.ts reads them as the benchmark and the baseline.
+// PICKER_ORDER, not this table, is the order players see. Keep the ids "charger" and
+// "random-walker": scripts/simulate.ts reads them as the benchmark and the baseline.
+// Append new presets, so the recorded fixtures keep their seats.
 
 import type { ActionRef, Build, ConditionRef, Mode, ParamValues, Preset, Rule, StrategyInput } from "../types.ts";
 import { withLiteralIds } from "./define.ts";
 import { parseStrategy } from "./parse.ts";
 
-// The designed preset whose win rate in the mixed field of scripts/simulate.ts is
-// closest to luck (12.5%). Eight directions, 1000 finals at 90 ticks: evader 12.7%,
-// backstabber 11.8%. Pick it again after a rule change, and check that it still wins
-// at least 12% alone against the server's bot lineup (simulate.ts --lineup=).
-export const DEFAULT_PRESET_ID = "evader";
+// The order of the play style picker: the designed presets by how far their win rate in the
+// mixed field of scripts/simulate.ts is from luck (12.5%), the closest first, so the first card
+// a player sees is neither a sure win nor a sure loss. A tie puts the lower win rate first. The
+// Random walker, the baseline, is always last. The Charger is not shown: it stays a preset for
+// the bots and the scripts, and the Item hunter took its card (docs/specs/revamp/84-items.md).
+// Measured 2026-11-15, items on, 800 finals of 60 turns (a practice round, so run
+// simulate.ts with ticks=60), +/- 1.3: item-hunter 13.8, backstabber 14.6, picker 15.8,
+// dry-hunter 8.4, evader 16.6, leader-chaser 17.9, ambusher 21.7, random-walker 1.8.
+// The numbers support the first card and the last two; places 2 to 6 are within noise of
+// each other. Measure again after a rule change.
+export const PICKER_ORDER = ["item-hunter", "backstabber", "picker", "dry-hunter", "evader", "leader-chaser", "ambusher", "random-walker"] as const;
+
+// The first card of the picker, the play style a new player starts from. It must win at least
+// 12% alone against the server's bot lineup (simulate.ts --lineup=): 17.8% at 60 turns.
+export const DEFAULT_PRESET_ID = PICKER_ORDER[0];
 
 function when(condition: string, params: ParamValues = {}, negate = false): ConditionRef {
   return { condition, params, negate };
@@ -211,9 +222,30 @@ const sources = withLiteralIds<PresetSource>()([
       modes: [mode("wander", "Wander", [rule("throw-ahead", [THROW_AHEAD], act("throw"))], act("wander"))],
     },
   },
+  {
+    // The Charger with one rule on top (docs/specs/revamp/84-items.md). Measured 2026-11-15 with
+    // items on, 800 finals: 14.0% of the mixed field at 60 turns and 15.3% at 150 (the Charger
+    // alone: 0.3%), and 17.8% alone against the server's bot lineup at 60 turns.
+    id: "item-hunter",
+    name: "Item hunter",
+    summary: "Drives to an item within 5 cells first, throws when a bot is in range, and otherwise walks toward the nearest bot.",
+    strategy: {
+      build: build(0, 3, 3),
+      modes: [
+        mode(
+          "hunt",
+          "Hunt",
+          [rule("grab", [when("itemNear", { item: "any", n: 5 })], act("goToItem", { item: "any" })), rule("throw-ahead", [THROW_AHEAD], act("throw"))],
+          actOn("moveToward", "nearest"),
+        ),
+      ],
+    },
+  },
 ]);
 
 export type PresetId = (typeof sources)[number]["id"];
+// A picker id that is not a preset fails here at compile time.
+PICKER_ORDER satisfies readonly PresetId[];
 
 /** Every preset id, in the order of PRESETS. */
 export const PRESET_IDS: readonly PresetId[] = sources.map((source) => source.id);
@@ -231,6 +263,6 @@ export const PRESETS: readonly (Preset & { readonly id: PresetId })[] = sources.
 if (new Set(PRESETS.map((preset) => preset.id)).size !== PRESETS.length) {
   throw new Error("Two presets share an id.");
 }
-if (!PRESETS.some((preset) => preset.id === DEFAULT_PRESET_ID)) {
-  throw new Error(`DEFAULT_PRESET_ID "${DEFAULT_PRESET_ID}" is not a preset.`);
+for (const id of PICKER_ORDER) {
+  if (!PRESETS.some((preset) => preset.id === id)) throw new Error(`PICKER_ORDER names "${id}", which is not a preset.`);
 }

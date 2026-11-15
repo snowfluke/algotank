@@ -7,7 +7,7 @@ import { arenaSize } from "./grid.ts";
 import { createOpenRound, joinRound, leaveRound, roundHoldings, standings, stepRound } from "./round.ts";
 
 const strategyAt = (i: number): Strategy => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
-const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16 });
+const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false });
 
 describe("an open round", () => {
   test("starts with no tank on a board sized for 16 that keeps its size", () => {

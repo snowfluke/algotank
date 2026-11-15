@@ -11,6 +11,9 @@
 // A rule with a sequence of steps always acts: its first step is one move
 // (strategy/sequence.ts). The steps after it run in the turn loop, not here.
 //
+// A dizzy tank (an item effect, items/items.ts) checks its rules from the bottom up; the
+// fallback is still last. A running sequence is not affected: its steps never read rules.
+//
 // A fallback that cannot act makes the bot throw ahead. A throw keeps the bot in
 // place and spends water only when a bot stands in the line, and every mode must
 // answer (see types.ts).
@@ -61,8 +64,14 @@ function currentMode(ctx: DecisionContext, strategy: Strategy): Mode {
 }
 
 export function decide(ctx: DecisionContext, strategy: Strategy, rng: Rng): Decision {
+  const decision = decideInOrder(ctx, strategy, rng);
+  return ctx.self.effect?.kind === "dizzy" ? { ...decision, dizzy: true } : decision;
+}
+
+function decideInOrder(ctx: DecisionContext, strategy: Strategy, rng: Rng): Decision {
   const mode = currentMode(ctx, strategy);
-  for (const rule of mode.rules) {
+  const rules = ctx.self.effect?.kind === "dizzy" ? [...mode.rules].reverse() : mode.rules;
+  for (const rule of rules) {
     if (!ruleConditionsHold(ctx, rule)) continue;
     if (rule.chance < CERTAIN && !rng.chance(rule.chance)) continue;
     if (isSequence(rule.action)) return stepDecision(ctx, mode.id, { ...rule, action: rule.action }, 0, rng);

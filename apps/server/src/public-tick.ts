@@ -17,6 +17,8 @@ function toPublicBot(bot: BotState): PublicBot {
     hitsLanded: bot.hitsLanded,
     hitsTaken: bot.hitsTaken,
     water: bot.water,
+    item: bot.item,
+    effect: bot.effect,
   };
 }
 
@@ -30,6 +32,7 @@ export function toPublicSnapshot(snapshot: Snapshot): PublicSnapshot {
     survivorsAfterRound: snapshot.survivorsAfterRound,
     ruleSetId: snapshot.ruleSetId,
     bots: snapshot.bots.map(toPublicBot),
+    items: snapshot.items,
   };
 }
 
@@ -40,6 +43,7 @@ export function toPublicTick(result: TickResult): PublicTick {
     order: result.order,
     moves: result.decisions.map((d) => ({ botId: d.botId, move: d.move })),
     throws: result.throws,
+    pickups: result.pickups,
     snapshot: toPublicSnapshot(result.snapshot),
   };
 }

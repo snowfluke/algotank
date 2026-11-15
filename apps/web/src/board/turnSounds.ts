@@ -6,7 +6,8 @@ import type { SoundName } from "../sound/sounds.ts";
 
 /**
  * The sounds of one turn, at most three, strongest last: the shot, then a splash
- * for a hit or the miss sound, then the dry sound when a tank shot with too little water.
+ * for a hit or the miss sound (a miss, a shot into nothing or a blocked throw), then the
+ * dry sound when a tank shot with too little water.
  *
  * Whose events count (60-no-scroll.md, "Sound only for the viewer's own tank"):
  *
@@ -22,9 +23,10 @@ export function turnSounds(throws: readonly ThrowEvent[], ownId: BotId | null): 
   const outcomes = new Set(fired.map((event) => event.outcome));
   const hitOwn = ownId !== null && throws.some((event) => event.outcome === "hit" && event.targetId === ownId);
   const sounds: SoundName[] = [];
-  if (outcomes.has("hit") || outcomes.has("miss") || outcomes.has("empty")) sounds.push("shot");
+  // A throw an umbrella blocked (84-items.md) is a shot whose water lands nowhere: the miss sound, never the splash.
+  if (outcomes.has("hit") || outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked")) sounds.push("shot");
   if (outcomes.has("hit") || hitOwn) sounds.push("splash");
-  else if (outcomes.has("miss") || outcomes.has("empty")) sounds.push("miss");
+  else if (outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked")) sounds.push("miss");
   if (outcomes.has("dry")) sounds.push("dry");
   return sounds;
 }

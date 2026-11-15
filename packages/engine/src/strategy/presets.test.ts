@@ -3,7 +3,7 @@ import { BUILD_BUDGET, buildCost } from "../combat/combat.ts";
 import { RULE_SET_IDS, STANDARD_RULE_SET_ID } from "../combat/rule-sets.ts";
 import { MOVES } from "../types.ts";
 import { runRound } from "../round/round.ts";
-import { DEFAULT_PRESET_ID, PRESETS } from "./presets.ts";
+import { DEFAULT_PRESET_ID, PICKER_ORDER, PRESETS } from "./presets.ts";
 import { parseStrategy } from "./parse.ts";
 import { decide } from "./decide.ts";
 import { STANDARD, bot, contextFor, snapshotOf, stubRng } from "./test-helpers.ts";
@@ -28,6 +28,7 @@ describe("presets", () => {
       ["backstabber", "Backstabber"],
       ["charger", "Charger"],
       ["random-walker", "Random walker"],
+      ["item-hunter", "Item hunter"],
     ]);
   });
 
@@ -43,6 +44,12 @@ describe("presets", () => {
     // The Charger is the benchmark and the walker the baseline, so neither is what a new player starts from.
     expect(PRESETS.some((p) => p.id === DEFAULT_PRESET_ID)).toBe(true);
     expect(["charger", "random-walker"]).not.toContain(DEFAULT_PRESET_ID);
+  });
+
+  test("the picker shows every preset but the Charger once, the default first and the Random walker last", () => {
+    expect(PICKER_ORDER[0]).toBe(DEFAULT_PRESET_ID);
+    expect(PICKER_ORDER.at(-1)).toBe("random-walker");
+    expect([...PICKER_ORDER].sort()).toEqual(PRESETS.map((p) => p.id).filter((id) => id !== "charger").sort());
   });
 
   test("every preset parses again from its own data, and its build is within the budget", () => {
@@ -82,7 +89,7 @@ describe("presets", () => {
     for (let seed = 1; seed <= seeds; seed++) {
       const seat = seed % 8;
       const players = Array.from({ length: 8 }, (_, i) => ({ id: `seat${i}`, strategy: (i === seat ? hunter : charger).strategy }));
-      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players });
+      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players, items: false });
       total += result.standings.find((s) => s.botId === `seat${seat}`)?.score ?? 0;
     }
     // The measured mean over 1000 finals is about +18. The charger's mean against itself is 0 by symmetry.
@@ -93,7 +100,7 @@ describe("presets", () => {
     const strategies = PRESETS.map((p) => ({ id: p.id, strategy: p.strategy }));
     let wins = 0;
     for (let seed = 1; seed <= 60; seed++) {
-      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: strategies });
+      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: strategies, items: true });
       if (result.standings[0]?.botId === DEFAULT_PRESET_ID) wins += 1;
     }
     expect(wins).toBeGreaterThan(0);
@@ -162,7 +169,7 @@ describe("presets", () => {
     const landed = new Map<string, number>(designed.map((p) => [p.id, 0]));
     for (let seed = 1; seed <= 6; seed++) {
       const players = PRESETS.map((p, i) => ({ id: `${p.id}`, strategy: p.strategy, seat: i }));
-      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: id, players });
+      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: id, players, items: false });
       const last = result.ticks[result.ticks.length - 1]?.snapshot;
       if (!last) throw new Error("test setup");
       for (const b of last.bots) if (landed.has(b.id)) landed.set(b.id, (landed.get(b.id) ?? 0) + b.hitsLanded);

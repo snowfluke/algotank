@@ -25,7 +25,7 @@ Played on phones and laptops, alone against bots (practice arena), in a public t
 ## Capabilities and Constraints
 
 - Arenas: practice, tournament, monthly league, private, presenter (`docs/arenas.md`).
-- Rules: each turn the tank does the first rule from the top that fits. Upgrade points go to Range, Aim and Dodge. A hit moves 1 point from the hit tank to the shooter. A shot uses water that refills over time.
+- Rules: each turn the tank does the first rule from the top that fits. Upgrade points go to Range, Aim and Dodge. A hit moves 1 point from the hit tank to the shooter. A shot uses water that refills over time. Items on the floor (bucket, umbrella, pinwheel, mud ball) change one hit each; a bucket's hit moves 2 points (`docs/items.md`).
 - The landing page is a standalone static page. Its source is in `apps/web/landing/` so it can reuse the game's drawings, tokens, copy and engine, and `bun run build:landing` writes the static files to `apps/web/landing/dist/`. Its buttons point to the game at `GAME_URL` in `apps/web/landing/build.tsx` (https://algotank.awala.my.id), and `.github/workflows/landing.yml` publishes it to GitHub Pages.
 
 ## Brand Commitments

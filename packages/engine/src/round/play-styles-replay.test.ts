@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { PRESETS, RULE_SET_IDS, createRound, standings, stepRound } from "../index.ts";
 import type { RuleSetId } from "../index.ts";
-import { canonical } from "../../scripts/large-round.ts";
+import { RECORDED_STYLES, canonical } from "../../scripts/large-round.ts";
 
 // Recorded on 2026-11-13 before the sequence action (docs/specs/revamp/76-email-and-sequences.md, S3)
 // touched the turn loop. A stored strategy with one action per rule must play exactly as before:
@@ -55,9 +55,15 @@ const RECORDED = [
   },
 ] as const;
 
+const recordedPlayers = RECORDED_STYLES.map((id) => {
+  const preset = PRESETS.find((p) => p.id === id);
+  if (preset === undefined) throw new Error(`no play style ${id}`);
+  return { id: preset.id, strategy: preset.strategy };
+});
+
 function replay(seed: number, index: number) {
   const ruleSetId = RULE_SET_IDS[(index * 2) % RULE_SET_IDS.length] as RuleSetId;
-  const state = createRound({ seed, ticksTotal: 90, survivorsAfterRound: 4, ruleSetId, players: PRESETS.map((p) => ({ id: p.id, strategy: p.strategy })) });
+  const state = createRound({ seed, ticksTotal: 90, survivorsAfterRound: 4, ruleSetId, players: recordedPlayers, items: false });
   const hasher = new Bun.CryptoHasher("sha256");
   hasher.update(canonical(state.snapshot));
   while (!state.isOver) hasher.update(canonical(stepRound(state)));

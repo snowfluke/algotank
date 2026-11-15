@@ -5,9 +5,9 @@
 // change from round to round, so they stay here.
 //
 // Two relations hold whatever the numbers are, and the tests check them as
-// relations: a hit moves exactly POINTS_PER_HIT between two bots, so the scores
-// of a round sum to 0, and closer than a set's first skill distance the chance
-// does not depend on the builds.
+// relations: a hit moves exactly POINTS_PER_HIT between two bots (ITEM_RULES.bucketHitPoints
+// for a holder of a bucket, items/items.ts), so the scores of a round sum to 0, and closer
+// than a set's first skill distance the chance does not depend on the builds.
 
 import type { AttributeDef, Build } from "../types.ts";
 import { RULE_SETS } from "./rule-sets.ts";

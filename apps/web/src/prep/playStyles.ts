@@ -4,7 +4,7 @@
 // Traits are read from the rules, not written per style, so they stay true when the
 // rules change.
 
-import { PRESET_IDS, PRESETS, isSequence } from "@game/engine";
+import { PICKER_ORDER, PRESET_IDS, PRESETS, isSequence } from "@game/engine";
 import type { ActionRef, ConditionRef, PresetId, StrategyInput } from "@game/engine";
 import { matchingPreset } from "../editor/compare.ts";
 import { isOneOf } from "../vocabulary/ids.ts";
@@ -62,10 +62,15 @@ export interface PlayStyle {
   readonly strategy: StrategyInput;
 }
 
-/** The 8 play styles in the engine's order. */
-export const PLAY_STYLES: readonly PlayStyle[] = PRESETS.flatMap((preset) =>
-  isOneOf(PRESET_IDS, preset.id) ? [{ id: preset.id, strategy: preset.strategy }] : [],
-);
+/**
+ * The 8 cards of the picker, in PICKER_ORDER: the most balanced play style first (presets.ts says how
+ * it is measured). The Charger has no card; a saved Charger strategy still plays, and no card shows it as chosen.
+ */
+export const PLAY_STYLES: readonly PlayStyle[] = PICKER_ORDER.map((id) => {
+  const preset = PRESETS.find((candidate) => candidate.id === id);
+  if (preset === undefined) throw new Error(`PICKER_ORDER names "${id}", which is not a preset.`);
+  return { id: preset.id, strategy: preset.strategy };
+});
 
 /** The play style the strategy is, or null when the player changed it by hand. */
 export function currentPlayStyle(strategy: StrategyInput): PresetId | null {

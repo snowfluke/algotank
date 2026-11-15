@@ -36,6 +36,8 @@ function bot(id: string, score: number, over: Partial<BotState> = {}): BotState 
     hitsLanded: 0,
     hitsTaken: 0,
     ticksSinceLandedHit: null,
+    item: null,
+    effect: null,
     ...over,
   };
 }

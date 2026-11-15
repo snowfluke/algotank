@@ -3,8 +3,8 @@ import { compactTick, plainTankLook, type LeagueLive, type PublicSnapshot } from
 import { STANDARD_RULE_SET_ID } from "@game/engine";
 import { nextLeagueLoad, parseLeagueMessage } from "./leagueLive.ts";
 
-const bot = (id: string, x: number) => ({ id, x, y: 1, direction: "N" as const, score: 0, wasHit: false, build: {}, hitsLanded: 0, hitsTaken: 0, water: 10 });
-const board: PublicSnapshot = { width: 12, height: 9, tick: 0, ticksTotal: 100, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, bots: [bot("a", 1), bot("b", 3)] };
+const bot = (id: string, x: number) => ({ id, x, y: 1, direction: "N" as const, score: 0, wasHit: false, build: {}, hitsLanded: 0, hitsTaken: 0, water: 10, item: null, effect: null });
+const board: PublicSnapshot = { width: 12, height: 9, tick: 0, ticksTotal: 100, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, bots: [bot("a", 1), bot("b", 3)], items: [] };
 const live: LeagueLive = {
   league: 1,
   month: "2026-11",
@@ -19,7 +19,7 @@ const live: LeagueLive = {
   board,
 };
 const next: PublicSnapshot = { ...board, tick: 1, bots: [{ ...bot("a", 2), score: 1 }, { ...bot("b", 3), score: -1 }] };
-const tick = compactTick({ tick: 0, order: ["a", "b"], moves: [{ botId: "a", move: "F" }, { botId: "b", move: "W" }], throws: [], snapshot: next }, ["a", "b"]);
+const tick = compactTick({ tick: 0, order: ["a", "b"], moves: [{ botId: "a", move: "F" }, { botId: "b", move: "W" }], throws: [], pickups: [], snapshot: next }, ["a", "b"]);
 
 describe("a league's live state", () => {
   test("a state message sets the board; a turn moves it; a turn before any state is skipped", () => {

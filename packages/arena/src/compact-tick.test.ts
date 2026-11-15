@@ -24,7 +24,10 @@ function publicSnapshot(s: Snapshot): PublicSnapshot {
       hitsLanded: b.hitsLanded,
       hitsTaken: b.hitsTaken,
       water: b.water,
+      item: b.item,
+      effect: b.effect,
     })),
+    items: s.items,
   };
 }
 
@@ -34,6 +37,7 @@ function publicTick(r: TickResult): PublicTick {
     order: r.order,
     moves: r.decisions.map((d) => ({ botId: d.botId, move: d.move })),
     throws: r.throws,
+    pickups: r.pickups,
     snapshot: publicSnapshot(r.snapshot),
   };
 }
@@ -43,7 +47,7 @@ function playRound(ruleSetId: (typeof RULE_SET_IDS)[number], seed: number) {
     id: `p${i}`,
     strategy: (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy,
   }));
-  const { spawn, ticks } = runRound({ seed, ticksTotal: 60, survivorsAfterRound: 12, ruleSetId, players });
+  const { spawn, ticks } = runRound({ seed, ticksTotal: 60, survivorsAfterRound: 12, ruleSetId, players, items: true });
   return { spawn: publicSnapshot(spawn), ticks: ticks.map(publicTick) };
 }
 
@@ -68,9 +72,24 @@ describe("compactTick and expandTick", () => {
   test("every outcome of the table is reached in some rule set, so each branch of the format is covered", () => {
     const seen = new Set<string>();
     for (const ruleSetId of RULE_SET_IDS) {
-      for (const tick of playRound(ruleSetId, 11).ticks) for (const t of tick.throws) seen.add(t.outcome);
+      for (const tick of playRound(ruleSetId, 11).ticks) for (const t of tick.throws) seen.add(t.outcome === "hit" && t.bucket === true ? "bucketHit" : t.outcome);
     }
     expect([...seen].sort()).toEqual([...COMPACT_OUTCOMES].sort());
+  });
+
+  test("items, pickups, held items and both effects take part in the round trips above", () => {
+    const seen = new Set<string>();
+    for (const ruleSetId of RULE_SET_IDS) {
+      for (const tick of playRound(ruleSetId, 7).ticks) {
+        if (tick.snapshot.items.length > 0) seen.add("items");
+        if (tick.pickups.length > 0) seen.add("pickups");
+        for (const bot of tick.snapshot.bots) {
+          if (bot.item !== null) seen.add(`holds ${bot.item}`);
+          if (bot.effect !== null) seen.add(bot.effect.kind);
+        }
+      }
+    }
+    expect([...seen].sort()).toEqual(["dizzy", "holds bucket", "holds mudBall", "holds pinwheel", "holds umbrella", "items", "pickups", "stuck"]);
   });
 
   test("a compact turn of 24 tanks is far smaller than the public turn", () => {

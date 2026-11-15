@@ -15,6 +15,8 @@ test("encodeTickMessage gives the same bytes as encoding the typed message", () 
     bots: [[1, 2, 0, 0, 9, 0, 0, 0], [3, 2, 6, 0, 6, 0, 1, 0]],
     moves: [[1, 5], [0, 0]],
     throws: [[1, 3, 0, 2, 60]],
+    items: [[0, 4, 4, 12]],
+    pickups: [[0, 1]],
   };
   const own = { botId: "a", modeId: "m", ruleId: null, actionId: "x", move: "F" as const, nextModeId: "m" };
   for (const decision of [own, null]) {

@@ -87,7 +87,8 @@ describe("a player's statistics in an arena", () => {
     // The replay is the same round computed again from its seed: its public throws give A's shots, hits and times hit.
     const replay = (await (await t.api(`/api/arenas/${arenaId}/rounds/1/replay`)).json()) as ReplayResponse;
     const throws = replay.ticks.flatMap((tick) => expandTick(tick, replay.spawn).throws);
-    const mine = throws.filter((e) => e.throwerId === a.playerId && (e.outcome === "hit" || e.outcome === "miss"));
+    // A throw an umbrella stopped is a shot that hit nobody (84-items.md), so it counts like a miss.
+    const mine = throws.filter((e) => e.throwerId === a.playerId && (e.outcome === "hit" || e.outcome === "miss" || e.outcome === "blocked"));
     expect(own.last).toMatchObject({
       turns: TICKS,
       shots: mine.length,

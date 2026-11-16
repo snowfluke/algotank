@@ -37,6 +37,7 @@ import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
 import { MonthlyBoard, type BoardRow, type FollowSwitch } from "./MonthlyBoard.tsx";
 import { formatDayClock, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
 import type { LeagueConnection } from "./useLeagueLive.ts";
+import { useNow } from "./useNow.ts";
 
 export type MonthlySeat = NonNullable<MonthlyMeResponse["seat"]>;
 /** The phone's tabs; "mine" only for a seated owner. */
@@ -55,8 +56,8 @@ export interface MonthlyViewProps {
   readonly load: LeagueLiveLoad;
   readonly connection: LeagueConnection;
   onRetry(): void;
-  /** Date.now() of this render, for the day's clock. */
-  readonly now: number;
+  /** A fixed Date.now() for the day's clock, for tests and the kit's still pictures. The page leaves it out: the clock then ticks by itself. */
+  readonly now?: number;
   readonly ranking: LeagueRankingResponse | null;
   /** This month's finished days of the shown league, newest first. */
   readonly days: readonly LeagueDayRecord[];
@@ -122,11 +123,15 @@ function LeagueSwitch({ league, leagues, ownLeague, onLeague }: { league: number
   );
 }
 
-/** `short`: the phone's line, which has the arena condition beside it. */
-function DayClock({ board, now, dayChange, short }: { board: LeagueBoard | null; now: number; dayChange: DayChange | null; short: boolean }) {
+/**
+ * Ticks by itself, so a second renders this line and not the page. `fixedNow` stops it at one time,
+ * for tests and the kit's still pictures. `short`: the phone's line, which has the arena condition beside it.
+ */
+function DayClock({ board, fixedNow, dayChange, short }: { board: LeagueBoard | null; fixedNow: number | undefined; dayChange: DayChange | null; short: boolean }) {
   const m = useMessages();
+  const ticking = useNow();
   if (board === null) return null;
-  const left = board.dayEndsAt - now;
+  const left = board.dayEndsAt - (fixedNow ?? ticking);
   const closing = dayChange?.kind === "closing" || board.live.phase === "closing" || left <= 0;
   return (
     <p data-day-clock="" className="min-w-0 font-display font-semibold tabular-nums [overflow-wrap:anywhere]" aria-live="off">
@@ -437,7 +442,7 @@ function PresenterLayout(props: MonthlyViewProps) {
               {leagueTitle}
             </span>
           </h1>
-          <DayClock board={board} now={props.now} dayChange={props.dayChange} short={false} />
+          <DayClock board={board} fixedNow={props.now} dayChange={props.dayChange} short={false} />
           <ConditionLine board={board} short={false} />
         </div>
         <LeagueSwitch league={league} leagues={leagues} ownLeague={seat?.league ?? null} onLeague={props.onLeague} />
@@ -599,7 +604,7 @@ function PhoneLayout(props: MonthlyViewProps) {
           so a longer condition name at a reshuffle is cut short instead of moving the page. */}
       <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-4">
         <div className="shrink-0">
-          <DayClock board={board} now={props.now} dayChange={props.dayChange} short />
+          <DayClock board={board} fixedNow={props.now} dayChange={props.dayChange} short />
         </div>
         <ConditionLine board={board} short />
       </div>

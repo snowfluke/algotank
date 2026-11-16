@@ -15,7 +15,7 @@
 // A tank's flag (tank/TankFlag.tsx) turns with its hull; a crowd leaves the flags out.
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { useEffect, useId, useMemo, useRef } from "react";
+import { memo, useEffect, useId, useMemo, useRef } from "react";
 import type { PublicBot } from "@game/arena";
 import { canThrow, rulesOf } from "@game/engine";
 import type { BotId, ThrowEvent } from "@game/engine";
@@ -144,7 +144,11 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
   return cellPx === null || cellPx <= 0 ? base : Math.max(base, (minPx * CELL) / cellPx);
 }
 
-export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null }: ArenaBoardProps) {
+/**
+ * Memoised: a parent that renders for another reason (the ranking's poll, a notice) leaves the board alone. A turn gives
+ * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
+ */
+export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null }: ArenaBoardProps) {
   const m = useMessages();
   // The water a tank holds and the cost of a shot differ between rule sets, so the board reads the set of the snapshot.
   const rules = rulesOf(snapshot);
@@ -441,7 +445,7 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
       ) : null}
     </div>
   );
-}
+});
 
 function Floor({ width, height }: { width: number; height: number }) {
   const w = width * CELL;

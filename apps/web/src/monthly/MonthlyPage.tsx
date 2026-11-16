@@ -37,6 +37,7 @@ import { NameStep, TankStep, useMonthlyStrategy } from "./JoinSteps.tsx";
 import { leagueToShow } from "./monthlyParts.ts";
 import { MonthlyPhoneBar, MonthlyView, type DayChange, type MonthlySide, type MonthlyTab } from "./MonthlyView.tsx";
 import { useLeagueLive } from "./useLeagueLive.ts";
+import { useNowUntil } from "./useNow.ts";
 import { useMonthlyData } from "./useMonthlyData.ts";
 
 /** How long the finished day's notice stays over the board after midnight. */
@@ -46,17 +47,6 @@ const RESHUFFLE_NOTICE_MS = 2_500;
 
 /** Name problems send the viewer back to the name step. */
 const NAME_CODES: ReadonlySet<string> = new Set(["name_taken", "name_invalid", "name_blocked", "monthly_name_fixed"]);
-
-/** Date.now(), once a second while `on`. */
-function useNow(on: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!on) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [on]);
-  return now;
-}
 
 /** True when the address asks for the join step (the sign-in page returns to paths.monthlyJoin()). */
 function askedToJoin(): boolean {
@@ -135,7 +125,8 @@ export function MonthlyPage() {
     seenReshuffles.current = reshuffles;
     if (before !== null && reshuffles !== null && reshuffles > before) setReshuffledUntil(Date.now() + RESHUFFLE_NOTICE_MS);
   }, [reshuffles]);
-  const now = useNow(board !== null);
+  // The clock of the notices only: the day's clock ticks inside MonthlyView.tsx, so a second does not render the board.
+  const now = useNowUntil(Math.max(dayChange?.until ?? 0, reshuffledUntil));
   const shownDayChange: DayChange | null =
     dayChange !== null && now < dayChange.until ? { kind: "done", day: dayChange.day, winner: data.days.data?.days.find((d) => d.day === dayChange.day) ?? null } : null;
 
@@ -321,7 +312,6 @@ export function MonthlyPage() {
         load={live.load}
         connection={live.connection}
         onRetry={live.retry}
-        now={now}
         ranking={data.ranking.data?.league === league ? data.ranking.data : null}
         days={data.days.data?.days.filter((d) => d.league === league) ?? []}
         seat={seat}

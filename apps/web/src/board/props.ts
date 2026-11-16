@@ -36,7 +36,12 @@ export interface ArenaBoardProps {
    * The board then fills its box at that window and draws only the tanks near it.
    */
   readonly camera?: CameraWindow | null;
-  /** A tap on a tank, after its name tag shows: the monthly board's zoomed view follows that tank (monthly/MonthlyBoard.tsx). */
+  /**
+   * The tank the zoomed view follows (monthly/MonthlyBoard.tsx), or null. The other tanks and their
+   * gauges are drawn a little dimmer; the viewer's own tank never is (owner, 2026-11-17).
+   */
+  readonly focusId?: BotId | null;
+  /** A tap on the drawing of a tank (not the square it glides to), after its name tag shows: the monthly board's zoomed view follows that tank (monthly/MonthlyBoard.tsx). */
   readonly onTankTap?: (id: BotId) => void;
 }
 

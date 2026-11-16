@@ -11,7 +11,7 @@
 //   No map of the whole arena is drawn: it would sit over the window's corner, and "Whole arena"
 //   is one tap away.
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { PublicSnapshot } from "@game/arena";
 import type { BotId, ThrowEvent } from "@game/engine";
@@ -27,6 +27,14 @@ import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { useBoxSize } from "../ui/useBoxSize.ts";
 
 type Choice = "follow" | "whole";
+
+/** Longest name the switch shows in full: a longer one wrapped in its segment and made the switch taller. */
+const SWITCH_NAME_CHARS = 10;
+
+function shortName(name: string): string {
+  const chars = [...name];
+  return chars.length <= SWITCH_NAME_CHARS ? name : `${chars.slice(0, SWITCH_NAME_CHARS - 1).join("")}…`;
+}
 
 /**
  * The switch between the whole arena and the zoomed view. Its choice lives in the page
@@ -92,6 +100,13 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
     setFocusId(null);
     row.follow.onChoice(next);
   };
+  // While another tank is followed, the switch names it, and a tap on that segment goes back to the owner's tank
+  // (the leader for a visitor): a radio that is already chosen sends no change, so the click is caught here.
+  const followsOther = focused !== undefined && focused.id !== highlightId;
+  const onSwitchClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (followsOther && event.target instanceof Element && event.target.closest("label")?.querySelector('input[value="follow"]')) setFocusId(null);
+  };
+  const followLabel = followsOther ? shortName(names[focused.id] ?? focused.id) : follows === "mine" ? m.board.camera.mine : m.board.camera.leader;
 
   const ratio = boardAspect(arena.width, arena.height);
   const whole = camera === null && fit && box !== null ? fittedSize(box, ratio) : null;
@@ -103,7 +118,7 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
         : { aspectRatio: `${ratio}`, width: fit ? "100%" : `min(100%, calc(80dvh * ${ratio}))` };
 
   const cameraSwitch = offered ? (
-    <div data-camera-switch="" className="shrink-0">
+    <div data-camera-switch="" data-follows-other={followsOther ? "true" : undefined} className="shrink-0" onClick={onSwitchClick}>
       <SegmentedControl
         legend={m.board.camera.legend}
         hideLegend
@@ -112,7 +127,7 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
         onChange={onChoice}
         options={[
           { value: "whole", label: m.monthly.wholeArena },
-          { value: "follow", label: follows === "mine" ? m.board.camera.mine : m.board.camera.leader },
+          { value: "follow", label: followLabel },
         ]}
       />
     </div>
@@ -140,7 +155,7 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
       >
         <div className="relative min-w-0" style={boardStyle}>
           {/* A new orientation starts a new board: tanks would otherwise glide across it and spin a quarter. */}
-          <ArenaBoard key={orientation} snapshot={shown} throws={throws} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} {...(zoomed ? { onTankTap } : {})} />
+          <ArenaBoard key={orientation} snapshot={shown} throws={throws} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
         </div>
         {/* Over the board's whole area, not only the board: a small board on a short phone cut the midnight notice. */}
         {overlay}

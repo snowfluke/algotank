@@ -50,6 +50,29 @@
   /* The arena */
   --color-arena-floor: #efe6d0;
   --color-arena-grid: #dccfb0;
+  /* The ground of each round condition (board/arenaGround.ts). Every floor stays light, so the
+     tanks' ink outline and the orange "You" ring read on it; marks are a step darker than the grid. */
+  --color-arena-sand-mark: #d6c7a1; /* standard: sand; the floor, grid and wall are the tokens above */
+  --color-arena-clay-floor: #f1dcbb; /* dry spell: dry clay */
+  --color-arena-clay-grid: #e2c79f;
+  --color-arena-clay-wall: #b68d66;
+  --color-arena-clay-mark: #c79e74;
+  --color-arena-meadow-floor: #e5ecca; /* open field: meadow */
+  --color-arena-meadow-grid: #d0dcae;
+  --color-arena-meadow-wall: #93a874;
+  --color-arena-meadow-mark: #a9bd80;
+  --color-arena-court-floor: #ebe8e1; /* arm's length: stone courtyard; the grid is its paving joints */
+  --color-arena-court-grid: #d3cdc1;
+  --color-arena-court-wall: #a39d91;
+  --color-arena-court-mark: #e2ded5; /* the darker slabs */
+  --color-arena-range-floor: #eef0ee; /* sharp eyes: firing range */
+  --color-arena-range-grid: #d5dad9;
+  --color-arena-range-wall: #96a1a8;
+  --color-arena-range-mark: #a9b4ba;
+  --color-arena-wet-floor: #e4dfd1; /* downpour (rooms): wet sand */
+  --color-arena-wet-grid: #cdc6b1;
+  --color-arena-wet-wall: #a59f90;
+  --color-arena-wet-mark: #c4bca7;
   --color-tank-outline: #1b2733;
 
   /* Tank colours (12), for the hull, the pattern and the plate. Ordered so neighbours

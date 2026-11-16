@@ -1,4 +1,5 @@
-// The arena: a sandy floor inside a wall, one toy tank per player, and the shots
+// The arena: a floor inside a wall, whose ground follows the round's condition
+// (arenaGround.ts: sand, dry clay, meadow, stone courtyard, firing range, wet sand), one toy tank per player, and the shots
 // of the turn as water jets. A hit splashes the target, shakes it and pops a "+1"
 // over the shooter; a miss is a lob that lands in a puff past the target; a dry
 // shot is three drops at the nozzle. Every effect is keyed by the turn, so it plays
@@ -18,7 +19,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { memo, useEffect, useId, useMemo, useRef } from "react";
 import type { PublicBot } from "@game/arena";
 import { canThrow, rulesOf } from "@game/engine";
-import type { BotId, ThrowEvent } from "@game/engine";
+import type { BotId, RuleSetId, ThrowEvent } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { duckMusicUnder } from "../sound/music.ts";
 import { playSound } from "../sound/player.ts";
@@ -27,6 +28,7 @@ import { TankHatch, TankPlate, TankShape, TURRET_X, hatchContent } from "../tank
 import { Countdown } from "../ui/Countdown.tsx";
 import { ARENA_MOTION_CSS } from "./arenaMotion.ts";
 import { botLabels } from "./botLabels.ts";
+import { ARENA_GROUNDS, groundMarksPath, marksFilled } from "./arenaGround.ts";
 import { CULL_MARGIN, inWindow } from "./camera.ts";
 import {
   CELL,
@@ -52,6 +54,12 @@ import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
 import { botAtPoint, nameTagSpot, useTankPeek, type BoardView } from "./tankPeek.ts";
 import { useCellPixels } from "./useCellPixels.ts";
 import { WaterGauge } from "./WaterGauge.tsx";
+
+/**
+ * Opacity of a tank the zoomed view does not follow: a little dimmer, and brighter than a fading
+ * item (0.6). At 0.7 the floor's marks showed through a tank.
+ */
+const DIM_OPACITY = 0.8;
 
 /** Thickness of the wall around the floor, in board units (a square is 10). */
 export const WALL = 3;
@@ -148,7 +156,9 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
  * Memoised: a parent that renders for another reason (the ranking's poll, a notice) leaves the board alone. A turn gives
  * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
  */
-export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, onTankTap }: ArenaBoardProps) {
+export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, onTankTap }: ArenaBoardProps) {
+  // The zoomed view's other tanks, a little dimmer than the followed tank and the viewer's own (props.ts, focusId).
+  const dimmed = (id: BotId) => focusId !== null && id !== focusId && id !== highlightId;
   const m = useMessages();
   // The water a tank holds and the cost of a shot differ between rule sets, so the board reads the set of the snapshot.
   const rules = rulesOf(snapshot);
@@ -243,10 +253,13 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           const id = tankUnder(event);
           if (id !== null) showName(id);
         }}
-        onPointerDown={(event) => {
-          const id = tankUnder(event);
-          showName(id);
-          if (id !== null) onTankTap?.(id);
+        onPointerDown={(event) => showName(tankUnder(event))}
+        // Following waits for a whole tap (a click), not the start of a touch: a swipe or a pinch that began on a tank
+        // made the zoomed view follow it (owner, 2026-11-17). It takes the tank drawn under the finger, not the square
+        // tankUnder reads, which a tank only reaches at the end of its glide.
+        onClick={(event) => {
+          const hit = event.target instanceof Element ? event.target.closest("[data-bot-id]")?.getAttribute("data-bot-id") : null;
+          if (hit !== null && hit !== undefined) onTankTap?.(hit);
         }}
       >
         <style>{ARENA_MOTION_CSS}</style>
@@ -257,7 +270,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           className={camera === null ? undefined : "ab-move"}
           style={camera === null ? undefined : { transform: `translate(${-camera.x * CELL}px, ${-camera.y * CELL}px)` }}
         >
-        <Floor width={width} height={height} />
+        <Floor width={width} height={height} ruleSetId={snapshot.ruleSetId} />
         {crowd ? (
           <defs>
             {crowdSymbols.map((paint) => (
@@ -317,6 +330,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
                 key={`crowd-${bot.id}`}
                 className="ab-move"
                 data-bot-id={bot.id}
+                opacity={dimmed(bot.id) ? DIM_OPACITY : undefined}
                 style={{ transform: `translate(${centre.x}px, ${centre.y - TANK_LIFT}px) scale(${TANK_SCALE}) rotate(${angle}deg)` }}
               >
                 <g key={reaction === undefined ? "rest" : `react-${tick}`} className={reaction}>
@@ -331,6 +345,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
               className="ab-move"
               data-bot-id={bot.id}
               data-self={isSelf ? "true" : undefined}
+              opacity={dimmed(bot.id) ? DIM_OPACITY : undefined}
               style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}
             >
               <title>{m.board.tankTitle(displayName(names, bot.id), bot.water, rules.waterCapacity, canThrow(bot.water, rules))}</title>
@@ -393,7 +408,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           if (!gauge && bot.id !== leader) return null;
           const centre = cellCenter(bot.x, bot.y);
           return (
-            <g key={bot.id} className="ab-move" style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
+            <g key={bot.id} className="ab-move" opacity={dimmed(bot.id) ? DIM_OPACITY : undefined} style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
               {gauge ? <WaterGauge water={bot.water} rules={rules} small={!detail.labels} /> : null}
               {bot.id === leader ? (
                 <g transform={`translate(0 ${-CELL / 2 + 0.6})`} data-leader="true">
@@ -453,18 +468,28 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
   );
 });
 
-function Floor({ width, height }: { width: number; height: number }) {
+/** The ground of the round's condition (arenaGround.ts). Memoised: its marks change only with the board's size or condition. */
+const Floor = memo(function Floor({ width, height, ruleSetId }: { width: number; height: number; ruleSetId: RuleSetId }) {
   const w = width * CELL;
   const h = height * CELL;
+  const ground = ARENA_GROUNDS[ruleSetId];
+  const marks = useMemo(() => groundMarksPath(width, height, ruleSetId), [width, height, ruleSetId]);
+  const filled = marksFilled(ground.marks);
   return (
-    <g>
+    <g data-ground={ground.marks}>
       {/* The wall: a darker rim around the floor, so the arena reads as a closed place. */}
-      <rect x={-WALL} y={-WALL} width={w + 2 * WALL} height={h + 2 * WALL} rx={WALL + 2} style={{ fill: "var(--color-line-strong)" }} />
-      <rect width={w} height={h} rx={2} style={{ fill: "var(--color-arena-floor)" }} />
-      <path d={gridLinePath(width, height)} strokeWidth={0.4} fill="none" style={{ stroke: "var(--color-arena-grid)" }} />
+      <rect x={-WALL} y={-WALL} width={w + 2 * WALL} height={h + 2 * WALL} rx={WALL + 2} style={{ fill: ground.wall }} />
+      <rect width={w} height={h} rx={2} style={{ fill: ground.floor }} />
+      {/* The wall's shadow on the floor along the top and left edges, so the floor lies below the wall. */}
+      <path d={`M0 0H${w}V1.6H1.6V${h}H0Z`} style={{ fill: ground.wall }} opacity={0.35} />
+      {/* Marks under the grid, so the courtyard's joints run over its slabs. */}
+      {marks === "" ? null : (
+        <path d={marks} strokeWidth={filled ? undefined : 0.4} strokeLinecap="round" strokeLinejoin="round" style={filled ? { fill: ground.mark } : { fill: "none", stroke: ground.mark }} />
+      )}
+      <path d={gridLinePath(width, height)} strokeWidth={ground.gridWidth} fill="none" style={{ stroke: ground.grid }} />
     </g>
   );
-}
+});
 
 /** What the shot left: a splash on the tank that was hit, a puff where a jet landed, or the drops of a dry shot. */
 function ShotMark({ shape }: { shape: ShotShape }) {

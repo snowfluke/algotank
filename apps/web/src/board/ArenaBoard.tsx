@@ -308,7 +308,9 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
             // The same transform as the nested groups below in one list, so one transition moves and turns the tank.
             return (
               <g
-                key={bot.id}
+                // Its own key: the full drawing below keeps the turn on an inner group, and the browser glided between
+                // the two transforms, turning a tank's day of turns (rotate(3600deg)) back to 0 in one glide (2026-11-17).
+                key={`crowd-${bot.id}`}
                 className="ab-move"
                 data-bot-id={bot.id}
                 style={{ transform: `translate(${centre.x}px, ${centre.y - TANK_LIFT}px) scale(${TANK_SCALE}) rotate(${angle}deg)` }}

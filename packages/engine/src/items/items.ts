@@ -31,8 +31,14 @@ export const ITEM_RULES = {
   weights: { bucket: 3, umbrella: 3, pinwheel: 2, mudBall: 2 } satisfies Record<ItemKind, number>,
   /** Points a hit from a tank with a bucket moves, instead of POINTS_PER_HIT. */
   bucketHitPoints: 2,
-  /** Turns an effect lasts after the hit, or the backfire, that caused it. */
-  effectTurns: { dizzy: 3, stuck: 2 } satisfies Record<TankEffectKind, number>,
+  /**
+   * Times a held item acts before it is used up: a bucket's hits, an umbrella's blocks, a
+   * pinwheel's or a mud ball's hit. Owner, 2026-11-16: every item twice as strong, "bucket is +2
+   * for 2 times, umbrella last 2 times more, dizzy 2 times more long" (was 1 each).
+   */
+  uses: { bucket: 2, umbrella: 2, pinwheel: 1, mudBall: 1 } satisfies Record<ItemKind, number>,
+  /** Turns an effect lasts after the hit, or the backfire, that caused it. Doubled on 2026-11-16 (was dizzy 3, stuck 2). */
+  effectTurns: { dizzy: 6, stuck: 4 } satisfies Record<TankEffectKind, number>,
   /**
    * Percent chance that a pinwheel or a mud ball backfires when a tank takes it: its effect lands
    * on the tank that took it, and the item is used up. Owner, 2026-11-16: "20% chance the item
@@ -85,6 +91,16 @@ export interface Carrier {
   readonly x: number;
   readonly y: number;
   item: ItemKind | null;
+  itemUses: number;
+}
+
+/** A held item after it acted once: one use less, and gone after the last. */
+export function useOnce(holder: { item: ItemKind | null; itemUses: number }): void {
+  holder.itemUses -= 1;
+  if (holder.itemUses <= 0) {
+    holder.item = null;
+    holder.itemUses = 0;
+  }
 }
 
 export interface PickupResult {
@@ -117,7 +133,10 @@ export function pickUp(items: readonly BoardItem[], carriers: readonly Carrier[]
     pickups.push({ botId: carrier.id, item: item.kind });
     const effect = EFFECT_OF_ITEM[item.kind];
     if (effect !== null && rng.chance(ITEM_RULES.backfirePercent)) backfires.set(carrier.id, effect);
-    else carrier.item = item.kind;
+    else {
+      carrier.item = item.kind;
+      carrier.itemUses = ITEM_RULES.uses[item.kind];
+    }
   }
   return { items: left, pickups, backfires };
 }

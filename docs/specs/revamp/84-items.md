@@ -8,10 +8,10 @@ Items give a rule list a new choice that the player can see on the board: drive 
 
 | Item (en / id) | Drawing | When it acts | Effect |
 |----------------|---------|--------------|--------|
-| Bucket / Ember | A blue bucket of water; on the tank, a small one over the hatch | On the holder's next hit | The hit moves 2 points instead of 1. The bucket is used up. |
-| Umbrella / Payung | A closed umbrella; on the tank, a small one over the hatch | When a throw would hit the holder | The throw rolls as usual. On a hit the umbrella opens, the throw is `blocked`: no point moves, and the umbrella is used up. A miss leaves it. |
-| Pinwheel / Kincir | A four-blade toy that turns | On the holder's next hit | The tank that was hit is **dizzy** for 3 turns: its rules are checked from the bottom up. The pinwheel is used up. |
-| Mud ball / Bola lumpur | A brown ball | On the holder's next hit | The tank that was hit is **stuck** for 2 turns: it cannot drive or turn, and it can still throw straight ahead. The mud ball is used up. |
+| Bucket / Ember | A blue bucket of water; on the tank, a small one over the hatch | On the holder's next 2 hits (1 until 2026-11-16) | Each hit moves 2 points instead of 1. The bucket is used up after the second. |
+| Umbrella / Payung | A closed umbrella; on the tank, a small one over the hatch | When a throw would hit the holder | The throw rolls as usual. On a hit the umbrella opens, the throw is `blocked`: no point moves. The umbrella is used up after 2 blocks (1 until 2026-11-16). A miss leaves it. |
+| Pinwheel / Kincir | A four-blade toy that turns | On the holder's next hit | The tank that was hit is **dizzy** for 6 turns (3 until 2026-11-16): its rules are checked from the bottom up. The pinwheel is used up. |
+| Mud ball / Bola lumpur | A brown ball | On the holder's next hit | The tank that was hit is **stuck** for 4 turns (2 until 2026-11-16): it cannot drive or turn, and it can still throw straight ahead. The mud ball is used up. |
 
 The first draft had a water can that filled the tank on pickup. Measured on 2026-11-15 (600 finals of 60 turns, only that item on the board), a tank that went for water cans won 4.2% where the same rules without the item rule won 13.0%: water refills by 1 a turn anyway, so a full tank was worth less than the drive to it. The bucket gives the holder a point directly. Mud first let the tank turn. Not turning is a design choice toward the owner's "paralyzer", not a measured gain: a tank that went for mud balls won no more with either version (12.7% and 12.7% against 13.3% and 12.3% without the item rule). A stuck tank still answers a tank in front of it.
 

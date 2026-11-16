@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 import type { BoardItem, BotState, ItemKind, RoundState, Snapshot, Strategy } from "../types.ts";
 import { STANDARD_RULE_SET_ID } from "../combat/rule-sets.ts";
 import { decide } from "../strategy/decide.ts";
-import { act, bot, mode, rule, snapshotOf, strategyOf, stubRng, when } from "../strategy/test-helpers.ts";
+import { act, bot, holding, mode, rule, snapshotOf, strategyOf, stubRng, when } from "../strategy/test-helpers.ts";
 import { resolveTick } from "../round/resolve.ts";
 import { createOpenRound, createRound, joinRound, stepRound } from "../round/round.ts";
 import { createRng } from "../round/rng.ts";
 import { PRESETS } from "../strategy/presets.ts";
-import { ITEM_RULES, ageItems, itemCap, pickUp, spawnItems, spawnTiming } from "./items.ts";
+import { ITEM_RULES, ageItems, itemCap, pickUp, spawnItems, spawnTiming, useOnce } from "./items.ts";
 
 const waiter: Strategy = strategyOf([mode("main", [], act("wait"))]);
 const driver: Strategy = strategyOf([mode("main", [], act("stepForward"))]);
@@ -39,45 +39,65 @@ describe("a hit with an item", () => {
     { botId: "b", move: "W" as const },
   ];
 
-  test("an umbrella turns a hit into a block: no point moves, and the umbrella is used up", () => {
-    const result = resolveTick(snapshotOf([a, { ...b, item: "umbrella" }]), moves, ["a", "b"], stubRng({ chance: [true] }));
+  test("an umbrella turns a hit into a block: no point moves, and one of its two blocks is used", () => {
+    const result = resolveTick(snapshotOf([a, holding(b, "umbrella")]), moves, ["a", "b"], stubRng({ chance: [true] }));
     expect(result.throws[0]?.outcome).toBe("blocked");
-    expect(result.placements.map((p) => [p.id, p.score, p.item])).toEqual([
-      ["a", 0, null],
-      ["b", 0, null],
+    expect(result.placements.map((p) => [p.id, p.score, p.item, p.itemUses])).toEqual([
+      ["a", 0, null, 0],
+      ["b", 0, "umbrella", 1],
     ]);
   });
 
+  test("an umbrella blocks two hits on one turn, and the third hit lands", () => {
+    const c = bot("c", 2, 1, "W");
+    const d = bot("d", 1, 0, "S");
+    const three = [...moves, { botId: "c", move: "T" as const }, { botId: "d", move: "T" as const }];
+    const result = resolveTick(snapshotOf([a, holding(b, "umbrella"), c, d]), three, ["a", "c", "d", "b"], stubRng({ chance: [true, true, true] }));
+    expect(result.throws.map((t) => [t.throwerId, t.outcome])).toEqual([
+      ["a", "blocked"],
+      ["c", "blocked"],
+      ["d", "hit"],
+    ]);
+    expect(result.placements.find((p) => p.id === "b")).toMatchObject({ item: null, itemUses: 0, score: -1 });
+  });
+
   test("a miss leaves the umbrella", () => {
-    const result = resolveTick(snapshotOf([a, { ...b, item: "umbrella" }]), moves, ["a", "b"], stubRng({ chance: [false] }));
+    const result = resolveTick(snapshotOf([a, holding(b, "umbrella")]), moves, ["a", "b"], stubRng({ chance: [false] }));
     expect(result.throws[0]?.outcome).toBe("miss");
     expect(result.placements[1]?.item).toBe("umbrella");
   });
 
   test("a mud ball or a pinwheel acts on the holder's hit and is used up", () => {
     for (const [item, effect] of [["mudBall", "stuck"], ["pinwheel", "dizzy"]] as const) {
-      const result = resolveTick(snapshotOf([{ ...a, item }, b]), moves, ["a", "b"], stubRng({ chance: [true] }));
+      const result = resolveTick(snapshotOf([holding(a, item), b]), moves, ["a", "b"], stubRng({ chance: [true] }));
       expect(result.throws[0]?.outcome).toBe("hit");
       expect(result.inflicted.get("b")).toBe(effect);
       expect(result.placements[0]?.item).toBeNull();
     }
   });
 
-  test("a bucket makes the holder's hit move 2 points, and is used up", () => {
-    const result = resolveTick(snapshotOf([{ ...a, item: "bucket" }, b]), moves, ["a", "b"], stubRng({ chance: [true] }));
-    expect(result.throws[0]).toMatchObject({ outcome: "hit", bucket: true });
-    expect(result.placements.map((p) => [p.score, p.item])).toEqual([
-      [ITEM_RULES.bucketHitPoints, null],
-      [-ITEM_RULES.bucketHitPoints, null],
-    ]);
+  test("a bucket makes each of the holder's next two hits move 2 points, then a hit moves 1", () => {
+    let shooter: BotState = holding(a, "bucket");
+    let target: BotState = b;
+    const gains: number[] = [];
+    for (let turn = 0; turn < 3; turn++) {
+      const result = resolveTick(snapshotOf([shooter, target]), moves, ["a", "b"], stubRng({ chance: [true] }));
+      const [after, hit] = result.placements;
+      if (after === undefined || hit === undefined) throw new Error("test setup");
+      gains.push(after.score - shooter.score);
+      shooter = { ...shooter, score: after.score, item: after.item, itemUses: after.itemUses, water: shooter.water };
+      target = { ...target, score: hit.score };
+    }
+    expect(gains).toEqual([ITEM_RULES.bucketHitPoints, ITEM_RULES.bucketHitPoints, 1]);
+    expect([shooter.item, shooter.itemUses]).toEqual([null, 0]);
   });
 
   test("an umbrella blocks a bucket's hit too, and the bucket stays for the next one", () => {
-    const result = resolveTick(snapshotOf([{ ...a, item: "bucket" }, { ...b, item: "umbrella" }]), moves, ["a", "b"], stubRng({ chance: [true] }));
+    const result = resolveTick(snapshotOf([holding(a, "bucket"), holding(b, "umbrella")]), moves, ["a", "b"], stubRng({ chance: [true] }));
     expect(result.throws[0]?.outcome).toBe("blocked");
-    expect(result.placements.map((p) => [p.score, p.item])).toEqual([
-      [0, "bucket"],
-      [0, null],
+    expect(result.placements.map((p) => [p.score, p.item, p.itemUses])).toEqual([
+      [0, "bucket", 2],
+      [0, "umbrella", 1],
     ]);
   });
 
@@ -99,7 +119,7 @@ describe("a hit with an item", () => {
 });
 
 describe("how long an effect lasts", () => {
-  test("a tank hit on turn t cannot drive on t+1 and t+2, and drives again on t+3", () => {
+  test("a tank hit on turn t cannot drive for ITEM_RULES.effectTurns.stuck turns, and drives again after them", () => {
     // Find a seed whose first throw hits, so the effect comes from a real hit in the round.
     for (let seed = 1; seed < 100; seed++) {
       const state = roundWith(
@@ -121,11 +141,12 @@ describe("how long an effect lasts", () => {
         bots: state.snapshot.bots.map((t) => (t.id === "b" ? { ...t, direction: "S" as const } : { ...t, item: null })),
       };
       const rows: number[] = [];
-      for (let turn = 0; turn < 3; turn++) {
+      const stuck = ITEM_RULES.effectTurns.stuck;
+      for (let turn = 0; turn <= stuck; turn++) {
         stepRound(state);
         rows.push(tank(state, "b").y);
       }
-      expect(rows).toEqual([0, 0, 1]);
+      expect(rows).toEqual([...Array.from({ length: stuck }, () => 0), 1]);
       expect(tank(state, "b").effect).toBeNull();
       return;
     }
@@ -146,9 +167,9 @@ describe("how long an effect lasts", () => {
 
 describe("picking up", () => {
   test("an empty hand takes the item on its square, and a full hand leaves it on the board", () => {
-    const carriers: { id: string; x: number; y: number; item: ItemKind | null }[] = [
-      { id: "a", x: 1, y: 1, item: null },
-      { id: "b", x: 3, y: 3, item: "pinwheel" },
+    const carriers: { id: string; x: number; y: number; item: ItemKind | null; itemUses: number }[] = [
+      { id: "a", x: 1, y: 1, item: null, itemUses: 0 },
+      { id: "b", x: 3, y: 3, item: "pinwheel", itemUses: 1 },
     ];
     // stubRng fails on any draw: taking a bucket draws nothing, and a full hand takes nothing.
     const { items, pickups } = pickUp([bucketAt(1, 1), { kind: "umbrella", x: 3, y: 3, turnsLeft: 9 }], carriers, stubRng());
@@ -159,18 +180,18 @@ describe("picking up", () => {
 
   test("a pinwheel or a mud ball backfires on its taker when the roll says so, and is used up", () => {
     for (const [kind, effect] of [["pinwheel", "dizzy"], ["mudBall", "stuck"]] as const) {
-      const carriers: { id: string; x: number; y: number; item: ItemKind | null }[] = [{ id: "a", x: 1, y: 1, item: null }];
+      const carriers: { id: string; x: number; y: number; item: ItemKind | null; itemUses: number }[] = [{ id: "a", x: 1, y: 1, item: null, itemUses: 0 }];
       const rng = stubRng({ chance: [true] });
       const backfired = pickUp([{ kind, x: 1, y: 1, turnsLeft: 9 }], carriers, rng);
       expect(rng.calls).toEqual([`chance:${ITEM_RULES.backfirePercent}`]);
       expect([carriers[0]?.item, backfired.backfires.get("a"), backfired.pickups, backfired.items]).toEqual([null, effect, [{ botId: "a", item: kind }], []]);
-      const kept = [{ id: "a", x: 1, y: 1, item: null as ItemKind | null }];
+      const kept = [{ id: "a", x: 1, y: 1, item: null as ItemKind | null, itemUses: 0 }];
       expect(pickUp([{ kind, x: 1, y: 1, turnsLeft: 9 }], kept, stubRng({ chance: [false] })).backfires.size).toBe(0);
       expect(kept[0]?.item).toBe(kind);
     }
   });
 
-  test("a backfire at the end of turn t makes the taker dizzy on turns t+1 to t+3, like a hit", () => {
+  test("a backfire at the end of turn t makes the taker dizzy for ITEM_RULES.effectTurns.dizzy turns, like a hit", () => {
     for (let seed = 1; seed < 200; seed++) {
       const state = roundWith(
         [
@@ -184,11 +205,25 @@ describe("picking up", () => {
       stepRound(state);
       if (tank(state, "a").item !== null) continue;
       expect(tank(state, "a").effect).toEqual({ kind: "dizzy", turnsLeft: ITEM_RULES.effectTurns.dizzy });
-      const dizzyTurns = Array.from({ length: 4 }, () => stepRound(state).decisions.find((d) => d.botId === "a")?.dizzy === true);
-      expect(dizzyTurns).toEqual([true, true, true, false]);
+      const dizzy = ITEM_RULES.effectTurns.dizzy;
+      const dizzyTurns = Array.from({ length: dizzy + 1 }, () => stepRound(state).decisions.find((d) => d.botId === "a")?.dizzy === true);
+      expect(dizzyTurns).toEqual([...Array.from({ length: dizzy }, () => true), false]);
       return;
     }
     throw new Error("no seed in 1 to 199 backfired");
+  });
+
+  test("items are twice as strong (owner, 2026-11-16): two buckets' hits, two umbrella blocks, double effects", () => {
+    expect(ITEM_RULES.uses).toEqual({ bucket: 2, umbrella: 2, pinwheel: 1, mudBall: 1 });
+    expect(ITEM_RULES.effectTurns).toEqual({ dizzy: 6, stuck: 4 });
+    const holder = { item: "bucket" as ItemKind | null, itemUses: ITEM_RULES.uses.bucket };
+    useOnce(holder);
+    expect(holder).toEqual({ item: "bucket", itemUses: 1 });
+    useOnce(holder);
+    expect(holder).toEqual({ item: null, itemUses: 0 });
+    const carriers: { id: string; x: number; y: number; item: ItemKind | null; itemUses: number }[] = [{ id: "a", x: 1, y: 1, item: null, itemUses: 0 }];
+    pickUp([{ kind: "umbrella", x: 1, y: 1, turnsLeft: 9 }], carriers, stubRng());
+    expect(carriers[0]).toMatchObject({ item: "umbrella", itemUses: 2 });
   });
 
   test("a tank that drives onto an item takes it at the end of the turn", () => {

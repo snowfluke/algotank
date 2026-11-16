@@ -6,12 +6,12 @@ Items are toys on the arena floor. A tank takes an item when it drives onto the 
 
 | Item (English / Indonesian) | When it acts | What it does |
 |-----------------------------|--------------|--------------|
-| Bucket / Ember | On the next hit of the tank that holds it | The hit moves 2 points instead of 1. Then the bucket is gone. |
-| Umbrella / Payung | When a shot hits the tank that holds it | The umbrella stops the shot, and no point moves. Then the umbrella is gone. A shot that misses does not use the umbrella. |
-| Pinwheel / Kincir | On the next hit of the tank that holds it | The tank that the shot hits becomes dizzy for 3 turns. Then the pinwheel is gone. |
-| Mud ball / Bola lumpur | On the next hit of the tank that holds it | The tank that the shot hits becomes stuck for 2 turns. Then the mud ball is gone. |
+| Bucket / Ember | On the next 2 hits of the tank that holds it | Each of the 2 hits moves 2 points instead of 1. Then the bucket is gone. |
+| Umbrella / Payung | When a shot hits the tank that holds it | The umbrella stops the shot, and no point moves. After 2 stopped shots, the umbrella is gone. A shot that misses does not use the umbrella. |
+| Pinwheel / Kincir | On the next hit of the tank that holds it | The tank that the shot hits becomes dizzy for 6 turns. Then the pinwheel is gone. |
+| Mud ball / Bola lumpur | On the next hit of the tank that holds it | The tank that the shot hits becomes stuck for 4 turns. Then the mud ball is gone. |
 
-A pinwheel or a mud ball can backfire. When a tank takes one, there is a 1 in 5 chance that the item's effect goes to that tank: it becomes dizzy for 3 turns (pinwheel) or stuck for 2 turns (mud ball), and the item is gone. The bucket and the umbrella never backfire.
+A pinwheel or a mud ball can backfire. When a tank takes one, there is a 1 in 5 chance that the item's effect goes to that tank: it becomes dizzy for 6 turns (pinwheel) or stuck for 4 turns (mud ball), and the item is gone. The bucket and the umbrella never backfire.
 
 A shot at a tank with an umbrella stops at the umbrella, also when the shooter holds a bucket, a pinwheel or a mud ball. The shooter then keeps its item for the next hit.
 
@@ -21,7 +21,7 @@ A dizzy tank reads its rules from the bottom of the list to the top. The rule th
 
 A stuck tank cannot drive and cannot turn. It can shoot straight ahead, so it can still hit a tank in front of it.
 
-A tank has one effect at a time. A new effect replaces the old effect. A tank that a shot hits on turn 10 is dizzy on turns 11, 12 and 13, or stuck on turns 11 and 12.
+A tank has one effect at a time. A new effect replaces the old effect. A tank that a shot hits on turn 10 is dizzy on turns 11 to 16, or stuck on turns 11 to 14.
 
 ## How items appear, stay and go
 
@@ -31,7 +31,7 @@ A tank has one effect at a time. A new effect replaces the old effect. A tank th
 - An item appears on a square that has no tank and no item.
 - An item that no tank takes goes away after 30 turns. Then a new item can appear on a different square.
 - A tank holds one item at a time. A tank that holds an item drives over other items and does not take them.
-- A tank takes an item at the end of the turn. A tank that takes an umbrella on turn 10 is safe from the first hit on turn 11.
+- A tank takes an item at the end of the turn. A tank that takes an umbrella on turn 10 is safe from the first 2 hits from turn 11.
 - In the monthly league, a new start every 5 minutes makes a new round. The new round has no items, and no tank holds an item or has an effect. The points of the day stay.
 
 ## Rules that use items

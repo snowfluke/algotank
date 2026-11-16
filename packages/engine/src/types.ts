@@ -291,6 +291,8 @@ export interface BotState {
   readonly water: number;
   /** The item the tank holds, or null. */
   readonly item: ItemKind | null;
+  /** Uses left of the held item (ITEM_RULES.uses); 0 when it holds none. Not sent to the pages. */
+  readonly itemUses: number;
   /** What an item did to the tank, while it lasts, or null. */
   readonly effect: TankEffect | null;
   /**

@@ -6,13 +6,13 @@ import { POINTS_PER_HIT, canThrow, hitChancePercent, throwRange, waterAfterTick 
 import { rulesOf } from "../combat/rule-sets.ts";
 import type { RoundRules } from "../combat/rule-sets.ts";
 import type { BotId, BotState, Build, Move, Rng, Snapshot, TankEffectKind, ThrowEvent } from "../types.ts";
-import { ITEM_RULES, actsOnOwnHit, effectOfHit, holderBlocks } from "../items/items.ts";
+import { ITEM_RULES, actsOnOwnHit, effectOfHit, holderBlocks, useOnce } from "../items/items.ts";
 import { TURN_EIGHTHS, rotate } from "../directions.ts";
 import { cellAhead, cellKey, isInside } from "./grid.ts";
 import type { ArenaSize } from "./grid.ts";
 
 /** The fields of a bot that a tick changes through its own move or through throws. `item` loses an item that acted. */
-export type Placement = Pick<BotState, "id" | "x" | "y" | "direction" | "score" | "water" | "item">;
+export type Placement = Pick<BotState, "id" | "x" | "y" | "direction" | "score" | "water" | "item" | "itemUses">;
 
 export interface TickMove {
   readonly botId: BotId;
@@ -72,7 +72,7 @@ export function resolveTick(
     if (move === undefined) throw new Error(`no move for bot "${bot.id}"`);
     if (slots.has(bot.id)) throw new Error(`snapshot has two bots with id "${bot.id}"`);
     slots.set(bot.id, {
-      place: { id: bot.id, x: bot.x, y: bot.y, direction: bot.direction, score: bot.score, water: bot.water, item: bot.item },
+      place: { id: bot.id, x: bot.x, y: bot.y, direction: bot.direction, score: bot.score, water: bot.water, item: bot.item, itemUses: bot.itemUses },
       build: bot.build,
       move,
       spent: false,
@@ -144,9 +144,9 @@ function resolveThrow(
     const target = slots.get(targetId) as Slot;
     const hitChance = hitChancePercent(thrower.build, target.build, distance, rules);
     if (!rng.chance(hitChance)) return { throwerId: me.id, outcome: "miss", targetId, distance, hitChance };
-    // The roll hit. An umbrella turns it into a block and is used up, so a second hit on this tick lands.
+    // The roll hit. An umbrella turns it into a block and uses one block; after its last, a second hit on this tick lands.
     if (holderBlocks(target.place)) {
-      target.place.item = null;
+      useOnce(target.place);
       return { throwerId: me.id, outcome: "blocked", targetId, distance, hitChance };
     }
     // The same amount leaves one bot and reaches the other, so scores sum to 0.
@@ -156,7 +156,7 @@ function resolveThrow(
     target.place.score -= points;
     const effect = effectOfHit(me);
     if (effect !== null) inflicted.set(targetId, effect);
-    if (actsOnOwnHit(me.item)) me.item = null;
+    if (actsOnOwnHit(me.item)) useOnce(me);
     return bucket ? { throwerId: me.id, outcome: "hit", targetId, distance, hitChance, bucket } : { throwerId: me.id, outcome: "hit", targetId, distance, hitChance };
   }
   return { throwerId: me.id, outcome: "empty" };

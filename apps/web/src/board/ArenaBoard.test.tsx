@@ -31,6 +31,7 @@ function bot(i: number, over: Partial<BotState> = {}): BotState {
     hitsTaken: 0,
     ticksSinceLandedHit: null,
     item: null,
+    itemUses: 0,
     effect: null,
     ...over,
   };

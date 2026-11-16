@@ -64,12 +64,20 @@ const recordedPlayers = RECORDED_STYLES.map((id) => {
   return { id, strategy: parsed.strategy };
 });
 
+/**
+ * A turn without the keys added after the recording: itemUses (2026-11-16, items used twice).
+ * These rounds play without items, so the key is always 0 and changes nothing they play.
+ */
+function asRecorded(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value), (key, inner: unknown) => (key === "itemUses" ? undefined : inner));
+}
+
 function replay(seed: number, index: number) {
   const ruleSetId = RULE_SET_IDS[(index * 2) % RULE_SET_IDS.length] as RuleSetId;
   const state = createRound({ seed, ticksTotal: 90, survivorsAfterRound: 4, ruleSetId, players: recordedPlayers, items: false });
   const hasher = new Bun.CryptoHasher("sha256");
-  hasher.update(canonical(state.snapshot));
-  while (!state.isOver) hasher.update(canonical(stepRound(state)));
+  hasher.update(canonical(asRecorded(state.snapshot)));
+  while (!state.isOver) hasher.update(canonical(asRecorded(stepRound(state))));
   return {
     seed,
     ruleSetId,

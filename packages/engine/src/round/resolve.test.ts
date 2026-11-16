@@ -34,6 +34,7 @@ function bot(id: string, x: number, y: number, direction: Direction, extra: Part
     ticksSinceLandedHit: null,
     water: WATER_CAPACITY,
     item: null,
+    itemUses: 0,
     effect: null,
     ...extra,
   };

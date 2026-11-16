@@ -30,7 +30,7 @@ import { parseStrategy } from "./parse.ts";
 export const PICKER_ORDER = ["item-hunter", "backstabber", "picker", "dry-hunter", "evader", "leader-chaser", "ambusher", "random-walker"] as const;
 
 // The first card of the picker, the play style a new player starts from. It must win at least
-// 12% alone against the server's bot lineup (simulate.ts --lineup=): 24.3% at 60 turns (2026-11-16).
+// 12% alone against the server's bot lineup (simulate.ts --lineup=): 27.0% at 60 turns (2026-11-16, items twice as strong).
 export const DEFAULT_PRESET_ID = PICKER_ORDER[0];
 
 function when(condition: string, params: ParamValues = {}, negate = false): ConditionRef {
@@ -106,7 +106,9 @@ const targetCannotThrow = (target: string) => when("targetWater", { target, comp
  * 333 turns), 7 designed presets x 4 tanks, 4 days of 96,000 turns, points per tank per day
  * (field mean 139, day-to-day sd 9 to 44): ambusher +31, item-hunter +26, dry-hunter +5,
  * backstabber -3, leader-chaser -8, picker -23, evader -28. Before: a spread of 7,774 points
- * a day, from ambusher +2,603 to item-hunter -5,171 in the same field.
+ * a day, from ambusher +2,603 to item-hunter -5,171 in the same field. Measured again after the
+ * items became twice as strong (items.ts ITEM_RULES.uses, effectTurns), the same field: item-hunter
+ * +29, ambusher +24, leader-chaser +5, picker -2, backstabber -15, evader -19, dry-hunter -22.
  */
 function burstAndRetreat(chase: string, extraStrikeRules: readonly Rule[] = [], extraRestRules: readonly Rule[] = []): StrategyInput {
   return {

@@ -6,6 +6,7 @@ import type {
   ConditionRef,
   DecisionContext,
   Direction,
+  ItemKind,
   Mode,
   ParamValues,
   Rng,
@@ -15,6 +16,7 @@ import type {
   Strategy,
 } from "../types.ts";
 import { STANDARD_RULE_SET_ID, ruleSet } from "../combat/rule-sets.ts";
+import { ITEM_RULES } from "../items/items.ts";
 import { parseStrategy } from "./parse.ts";
 
 const ZERO_BUILD = { reach: 0, aim: 0, dodge: 0 } as const;
@@ -41,9 +43,17 @@ export function bot(id: string, x: number, y: number, direction: Direction, over
     ticksSinceLandedHit: null,
     water: STANDARD.waterCapacity,
     item: null,
+    itemUses: 0,
     effect: null,
     ...overrides,
+    // A tank given an item holds its full uses, as after a pick-up, unless the test sets them.
+    ...(overrides.item != null && overrides.itemUses === undefined ? { itemUses: ITEM_RULES.uses[overrides.item] } : {}),
   };
+}
+
+/** The tank holding `item` with its full uses, as after a pick-up. */
+export function holding(tank: BotState, item: ItemKind): BotState {
+  return { ...tank, item, itemUses: ITEM_RULES.uses[item] };
 }
 
 /** A 9 x 7 arena under the standard set. */

@@ -147,6 +147,7 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
     ticksSinceLandedHit: null,
     water,
     item: null,
+    itemUses: 0,
     effect: null,
   };
 }
@@ -323,6 +324,7 @@ function nextBotState(
     ticksSinceLandedHit:
       landedNow > 0 ? 0 : bot.ticksSinceLandedHit === null ? null : bot.ticksSinceLandedHit + 1,
     item: placement.item,
+    itemUses: placement.itemUses,
     // The effect from before the tick counts down; a hit on this tick starts a new one in its place.
     effect: inflicted === null ? countDown(bot.effect) : newEffect(inflicted),
   };

@@ -2,7 +2,7 @@
  {
   "seed": 1000,
   "ruleSetId": "standard",
-  "ticksSha256": "c8b724f62485e515fae915dd866b293f18d9b317c2a8820748e1087dd7b26254",
+  "ticksSha256": "b0d797a7b58db4e3245d1a18e640f2726a32bb62b0e90cea421b703665110fbe",
   "standings": [
    {
     "botId": "seat-060",
@@ -457,7 +457,7 @@
  {
   "seed": 8919,
   "ruleSetId": "arms-length",
-  "ticksSha256": "1965bff321c34b46273f8405fe598c5883b9736936f91465703f714a379d3732",
+  "ticksSha256": "58c4f3ba62f89d031e9b5e763084ae0f37ce6e1abc2a716f2df1e96ec67c14fa",
   "standings": [
    {
     "botId": "seat-052",
@@ -912,7 +912,7 @@
  {
   "seed": 16838,
   "ruleSetId": "dry-spell",
-  "ticksSha256": "48d387dcacd6e7f97d10ecb6604a2439fc434b53c98200fd1a50f9dde3b85fac",
+  "ticksSha256": "433c78ea667bbeb66ec575179f005232554144cd161f945185d7e668f950e031",
   "standings": [
    {
     "botId": "seat-032",
@@ -1367,7 +1367,7 @@
  {
   "seed": 24757,
   "ruleSetId": "downpour",
-  "ticksSha256": "bc62d8f42ab7f1df7eb1cad0b7eb239a222b4f2e4f91f91ac1d82f0b024643f4",
+  "ticksSha256": "20db8a039dc00412281910c5383aefd7d8a2d91e8c267ab345b84994485aa750",
   "standings": [
    {
     "botId": "seat-018",
@@ -1822,7 +1822,7 @@
  {
   "seed": 32676,
   "ruleSetId": "open-field",
-  "ticksSha256": "d45d03437f41fc294c1450844ad47f2a4c619d771b317fd0f9e22f1dd206418e",
+  "ticksSha256": "f30d49c01054819e1f6b0235178967f8303347cf7eba80f2293410119abaf896",
   "standings": [
    {
     "botId": "seat-060",
@@ -2277,7 +2277,7 @@
  {
   "seed": 40595,
   "ruleSetId": "sharp-eyes",
-  "ticksSha256": "635034ad2b6a755d48abc970f11c472ef26c907d20882cfdd0f1916846f8432a",
+  "ticksSha256": "828ffb8f65b73ac177536119a9dbe2a5b2f54ce5add129f44f84980e23881680",
   "standings": [
    {
     "botId": "seat-061",
@@ -2732,7 +2732,7 @@
  {
   "seed": 48514,
   "ruleSetId": "standard",
-  "ticksSha256": "45ab684b29b225412b608abc865143db763bd343257b8b41fa8c33932aa738e4",
+  "ticksSha256": "7e8cbbc3c673b042e5f18f4a37a037c7d27465e5136b806dfe6c6db897263389",
   "standings": [
    {
     "botId": "seat-051",
@@ -3187,7 +3187,7 @@
  {
   "seed": 56433,
   "ruleSetId": "arms-length",
-  "ticksSha256": "c01e91387268c1ad58636fba7f1158ce38a2dc24fc03838017390c004c64dfed",
+  "ticksSha256": "55f3b7d4274987c253443a709398d965194671301bf40192e990c4e34151a0de",
   "standings": [
    {
     "botId": "seat-058",
@@ -3642,7 +3642,7 @@
  {
   "seed": 64352,
   "ruleSetId": "dry-spell",
-  "ticksSha256": "57f9d2606458f7267fc76e22bf2077f792f622c99a3fc3037415b5f041b7d0c4",
+  "ticksSha256": "7e16d7e22b61ca9ddf7a9945c5124f291bbdb95a981e086b95592b4128c1f5fc",
   "standings": [
    {
     "botId": "seat-030",
@@ -4097,7 +4097,7 @@
  {
   "seed": 72271,
   "ruleSetId": "downpour",
-  "ticksSha256": "5b5a2aa768597630d35f15d58ee1ed2c38c2efcb3745bf686a406edfdb398e75",
+  "ticksSha256": "f7edcef16f24c362c98f7cd1c20d57bf0cdb6745d98aa1d1d72dd6a8c451c9a0",
   "standings": [
    {
     "botId": "seat-043",
@@ -4552,7 +4552,7 @@
  {
   "seed": 80190,
   "ruleSetId": "open-field",
-  "ticksSha256": "9c13bb70f265581dd5d847375542f4793e8e575fc8253e3a4de2b25002781c6d",
+  "ticksSha256": "12aa87cc683f9c0bd72ff822b5cdea5d0d4580cdef942cd8da214d8bd9dc0ca3",
   "standings": [
    {
     "botId": "seat-036",
@@ -5007,7 +5007,7 @@
  {
   "seed": 88109,
   "ruleSetId": "sharp-eyes",
-  "ticksSha256": "356e7adac439fc43afdee242528e1f1a6df1fc64d1c4b80789463da609c12910",
+  "ticksSha256": "77afc3811cad65d91fb5e94d6b2caa5d76dd79e3846f15f34b7043a083ab8d5e",
   "standings": [
    {
     "botId": "seat-043",
@@ -5462,7 +5462,7 @@
  {
   "seed": 96028,
   "ruleSetId": "standard",
-  "ticksSha256": "4178400f25f86f21baa25f4821828825c31262c6399938a90d9eb4906d7f27e3",
+  "ticksSha256": "074f6708575299047cfb90b5e3b804f3f1f07acefd13c387a29ea43041ad9969",
   "standings": [
    {
     "botId": "seat-000",
@@ -5917,7 +5917,7 @@
  {
   "seed": 103947,
   "ruleSetId": "arms-length",
-  "ticksSha256": "1524ff45b279cc608ed915559db57a61de35c91a9e575980fc4d741fc112eb0c",
+  "ticksSha256": "889c0d814042a8617beb8e16c2580b51db7eeaac347f7e6e32a1976817fa95ce",
   "standings": [
    {
     "botId": "seat-058",
@@ -6372,7 +6372,7 @@
  {
   "seed": 111866,
   "ruleSetId": "dry-spell",
-  "ticksSha256": "1baab6016a0232bdc72d6256ee00b591c4f251ed8ef5715f2a46c1a72ccbaee4",
+  "ticksSha256": "c813c3c98007e12f515a5cbd478626ab2d7d9af7e8804e2bdfa4cd7ed1a4f313",
   "standings": [
    {
     "botId": "seat-053",
@@ -6827,7 +6827,7 @@
  {
   "seed": 119785,
   "ruleSetId": "downpour",
-  "ticksSha256": "03f915ecb19cd259f2863e07e6b0e97e4fa51941c7a6916c9842479dca902ae3",
+  "ticksSha256": "9646efee0f2830252de9bcdf49f18e5f2940898a3e2a95b212f64390b17b4f1e",
   "standings": [
    {
     "botId": "seat-048",
@@ -7282,7 +7282,7 @@
  {
   "seed": 127704,
   "ruleSetId": "open-field",
-  "ticksSha256": "7ba1f3b0733759dea0571b5a6ad2fa105986ef65fc6c17693b555ce45daa18bb",
+  "ticksSha256": "33440efd77bad5b733413f4e87ca760bbea096584dce07881c6ede2adc30cb56",
   "standings": [
    {
     "botId": "seat-014",
@@ -7737,7 +7737,7 @@
  {
   "seed": 135623,
   "ruleSetId": "sharp-eyes",
-  "ticksSha256": "402514dce4cce283900d8d7dacefee12e3d6c59f9109772b0ee810ad5245915f",
+  "ticksSha256": "61e69a4237b5a7999ea0a95a06214014960d5b19d7705b40fe9557b253b450b0",
   "standings": [
    {
     "botId": "seat-020",
@@ -8192,7 +8192,7 @@
  {
   "seed": 143542,
   "ruleSetId": "standard",
-  "ticksSha256": "b43eea2ad46eb7502838fb95ce744fb51765ca136936c8903a3fddfcc8897941",
+  "ticksSha256": "b7027d0527fbcdb43417249ee30e93543dd7433389576da27286005dfd190002",
   "standings": [
    {
     "botId": "seat-006",
@@ -8647,7 +8647,7 @@
  {
   "seed": 151461,
   "ruleSetId": "arms-length",
-  "ticksSha256": "02b2d8363905947afc21fdd435fa3cdeb45323b17bab1dffce9f904e6b48f4f0",
+  "ticksSha256": "14788933d795272ec0e764d60cdc4716741eb15dffdd882aa6d1cfd80aa181ab",
   "standings": [
    {
     "botId": "seat-056",

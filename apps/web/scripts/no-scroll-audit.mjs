@@ -1099,7 +1099,7 @@ STATES.push(
   monthlyKit("crowd", "case=crowd"),
   monthlyKit("crowd-ranking", "case=crowd&tab=ranking"),
   // The longest own pane (a place in the month and a full feed), 2026-11-16: on a short phone the feed's
-  // buttons once covered the quit button; the feed now leaves when it cannot fit (MonthlyView.tsx, OwnFeed).
+  // buttons once covered the quit button; the pane has no turn feed since 2026-11-16.
   monthlyKit("ranked-mine", "case=ranked&tab=mine&side=mine", { sizes: [...MONTHLY_SIZES, "400x620"] }),
   // The information list and the board legend (84-items.md): both are dialogs that must fit without scrolling.
   monthlyKit("about", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-monthly-about-open]" }, { wait: "dialog[data-monthly-about][open]" }] }),

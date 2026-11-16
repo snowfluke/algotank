@@ -1,7 +1,7 @@
 // The bot draw of a league's day round (league-day.ts, "Bot rule"), through its public methods.
 import { describe, expect, test } from "bun:test";
 import { plainTankLook } from "@game/arena";
-import { PRESETS } from "@game/engine";
+import { PRESETS, RULE_SET_IDS, type RuleSetId } from "@game/engine";
 import { LeagueDay, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
@@ -41,5 +41,34 @@ describe("the league's bots", () => {
     day.rebuild(4000);
     expect(botsOf(day)).toHaveLength(0);
     expect(pointsById()).toEqual(points);
+  });
+});
+
+describe("the arena condition", () => {
+  const two = [tank(1), tank(2)].map((t) => ({ tank: t, points: 0, counts: true, stats: undefined }));
+  const conditionWith = (draw: number) => {
+    const day = new LeagueDay(1, () => draw);
+    day.start(two, 1000);
+    return day.view(1000).board;
+  };
+
+  test("each new round draws its round rules from the league's random source, each one as likely", () => {
+    expect(conditionWith(0).ruleSetId).toBe(RULE_SET_IDS[0] as RuleSetId);
+    expect(conditionWith(0.99).ruleSetId).toBe(RULE_SET_IDS[RULE_SET_IDS.length - 1] as RuleSetId);
+    const drawn = new Set(RULE_SET_IDS.map((_, i) => conditionWith((i + 0.5) / RULE_SET_IDS.length).ruleSetId));
+    expect(drawn.size).toBe(RULE_SET_IDS.length);
+  });
+
+  test("open-field makes a larger board, and a rebuild draws again", () => {
+    const standard = conditionWith(RULE_SET_IDS.indexOf("standard") / RULE_SET_IDS.length + 0.01);
+    const open = conditionWith(RULE_SET_IDS.indexOf("open-field") / RULE_SET_IDS.length + 0.01);
+    expect([standard.ruleSetId, open.ruleSetId]).toEqual(["standard", "open-field"]);
+    expect(open.width * open.height).toBeGreaterThan(standard.width * standard.height);
+    let draw = 0.01;
+    const day = new LeagueDay(1, () => draw);
+    day.start(two, 1000);
+    draw = 0.99;
+    day.rebuild(1000);
+    expect(day.view(1000).board.ruleSetId).toBe(RULE_SET_IDS[RULE_SET_IDS.length - 1] as RuleSetId);
   });
 });

@@ -19,12 +19,10 @@ import { useMemo, useState, type ReactNode } from "react";
 import { MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
-import type { StrategyInput } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
 import { boardAspect, FittedBoard } from "../board/FittedBoard.tsx";
 import type { TankInfo } from "../board/props.ts";
 import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
-import { DecisionFeed } from "../player/DecisionFeed.tsx";
 import { SCREEN_SCALE_STYLE } from "../screen/screenScale.ts";
 import { PagedRanking } from "../standings/StandingsTable.tsx";
 import { tankLetters } from "../tank/look.ts";
@@ -32,7 +30,6 @@ import { TankBadge } from "../tank/TankBadge.tsx";
 import { BottomTabs, tabPanelProps } from "../ui/BottomTabs.tsx";
 import { Button } from "../ui/Button.tsx";
 import { useFitLayout, useLaptopLayout } from "../ui/layout.ts";
-import { useBoxSize } from "../ui/useBoxSize.ts";
 import { Picker } from "../ui/Picker.tsx";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
@@ -179,9 +176,10 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled }: { board: Lea
     );
   } else if (reshuffled && live.tanks.length > 0) {
     notice = (
-      <p data-reshuffled="" className="font-display text-display font-semibold">
-        {t.reshuffled}
-      </p>
+      <div data-reshuffled="" className="flex flex-col items-center gap-1 text-center">
+        <p className="font-display text-display font-semibold">{t.reshuffled}</p>
+        <p className="text-title font-semibold">{t.condition(m.vocabulary.roundRules[board.snapshot.ruleSetId].name)}</p>
+      </div>
     );
   } else if (live.tanks.length === 0) {
     notice = (
@@ -195,6 +193,12 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled }: { board: Lea
     <section aria-label={t.board(live.league)} className="flex min-h-0 min-w-0 flex-1 flex-col">
     <FittedBoard ratio={boardAspect(board.snapshot.width, board.snapshot.height)} dataAttributes={{ "data-monthly-board": "" }}>
       <ArenaBoard snapshot={board.snapshot} throws={board.throws} names={names} highlightId={ownSeatId} tickMs={live.tickMs} tanks={tanks} />
+      {/* The round's arena condition, drawn at each new round. Over the corner, so it takes no row on a phone; a tap goes through. */}
+      {live.tanks.length === 0 ? null : (
+        <p data-arena-condition={board.snapshot.ruleSetId} className="pointer-events-none absolute top-[2%] left-[2%] m-0 max-w-[90%] truncate rounded-full bg-panel/90 px-3 py-1 text-caption font-semibold shadow-[var(--shadow-raised)]">
+          {t.condition(m.vocabulary.roundRules[board.snapshot.ruleSetId].name)}
+        </p>
+      )}
       {notice === null ? null : (
         // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-[4%]">
@@ -266,24 +270,6 @@ function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; rankin
   );
 }
 
-/**
- * Height in CSS px the turn feed needs to be useful: its heading, one turn of two lines and the
- * pager's row of buttons (measured: 180 still cut a turn of two lines). Below it the pager would draw its buttons over the quit button (a phone
- * whose browser bars take height, 2026-11-16), so the pane leaves the feed out instead.
- */
-const FEED_MIN_PX = 220;
-
-/** The turn feed where it fits; nothing where it does not, so the quit button under it stays clear. */
-function OwnFeed({ decisions, strategy }: { decisions: LeagueBoard["own"]; strategy: StrategyInput }) {
-  const { ref, box } = useBoxSize<HTMLDivElement>();
-  // Before the first measurement (a server render) the feed shows, as the Pager lists every item then.
-  const fits = box === null || box.height >= FEED_MIN_PX;
-  return (
-    <div ref={ref} data-own-feed={fits ? "shown" : "hidden"} className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {fits ? <DecisionFeed decisions={decisions} strategy={strategy} /> : null}
-    </div>
-  );
-}
 
 /** "League 1 · 15 players": the league shown and its seated tanks, or the league alone before the count arrives. */
 function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: number, leagues: MonthlyViewProps["leagues"]): string {
@@ -292,14 +278,12 @@ function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: num
 }
 
 /** The owner's tank: today, the counted days, the turns, and the way out. */
-function OwnPane({ seat, league, board, ranking, onLeague, onQuit, strategy }: {
+function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
   seat: MonthlySeat;
   league: number;
-  board: LeagueBoard | null;
   ranking: LeagueRankingResponse | null;
   onLeague(next: number): void;
   onQuit(): void;
-  strategy: StrategyInput;
 }) {
   const m = useMessages();
   const t = m.monthly.own;
@@ -352,7 +336,8 @@ function OwnPane({ seat, league, board, ranking, onLeague, onQuit, strategy }: {
             ) : null}
             <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score, seat.countedDays)}</p>
           </div>
-          {here && board !== null ? <OwnFeed decisions={board.own} strategy={strategy} /> : <div className="min-h-0 flex-1" />}
+          {/* No live turn text here: it changed every 0.9 s, faster than a player reads (owner, 2026-11-16). The Statistik tab counts the rules instead. */}
+          <div className="min-h-0 flex-1" />
         </>
       )}
       {/* Change rules and Change look sit in the phone's bar and the laptop's header; this pane keeps the way out. */}
@@ -473,7 +458,7 @@ function PresenterLayout(props: MonthlyViewProps) {
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
           </div>
           {side === "mine" && seat !== null ? (
-            <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} strategy={seat.strategy} />
+            <OwnPane seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />
           ) : (
             <Ranking part={side === "month" ? "month" : "today"} ranking={props.ranking} ownSeatId={ownSeatId} />
           )}
@@ -536,7 +521,7 @@ function PhoneLayout(props: MonthlyViewProps) {
   const leagueTitle = leagueTitleOf(t, league, leagues);
   let pane: ReactNode;
   if (tab === "mine" && seat !== null) {
-    pane = <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} strategy={seat.strategy} />;
+    pane = <OwnPane seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />;
   } else if (tab === "ranking") {
     pane = (
       <section aria-label={t.ranking.label} className={PANE}>

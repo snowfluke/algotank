@@ -151,6 +151,14 @@ describe("the monthly page", () => {
   });
 });
 
+describe("the arena condition", () => {
+  test("names the round's rules over the board's corner, and the reshuffle names the new one", () => {
+    expect(render(props())).toContain(">Arena condition: Standard<");
+    expect(render(props(), "id")).toContain(">Kondisi arena: Standar<");
+    expect(render(props({ reshuffled: true }), "id")).toMatch(/data-reshuffled[\s\S]*>Diacak ulang<[\s\S]*>Kondisi arena: Standar</);
+  });
+});
+
 describe("a reshuffle", () => {
   test("says Reshuffled over the board in both languages, and nothing without one", () => {
     expect(render(props({ reshuffled: true }))).toContain(">Reshuffled<");

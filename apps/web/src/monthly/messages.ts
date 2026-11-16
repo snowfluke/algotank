@@ -52,6 +52,8 @@ export const en = {
   newDay: "A new round has started, and every tank starts again at 0 points.",
   /** Over the board for a moment after a reshuffle put every tank on a new square. */
   reshuffled: "Reshuffled",
+  /** Over the board's corner: the round rules the league drew for this round (server league-day.ts newRound). */
+  condition: (name: string) => `Arena condition: ${name}`,
   own: {
     heading: "Your tank",
     /** `place` is today's place in the league. */
@@ -101,7 +103,7 @@ export const en = {
     round: "Each round lasts one day, and every tank in a league plays it by itself.",
     playsAlone: "Your tank plays every day until you leave the arena, so you can close this page and come back any time.",
     /** The server's RESHUFFLE_TURNS: said without a number, so the text cannot drift from it. */
-    reshuffle: "Every few minutes the tanks start again on new squares and keep their points.",
+    reshuffle: "Every few minutes the tanks start again on new squares under a new arena condition, and they keep their points.",
     /** Names the board legend's button (board/messages.ts, legend.button), which lists the items. */
     items: "Items appear on the board, and Help says what each one does.",
     /** `days` is MONTHLY_RANKED_DAYS. The monthly points rule comes from publicplay/messages.ts. */
@@ -162,6 +164,7 @@ export const id: typeof en = {
   dayDone: (date) => `Ronde ${date} sudah selesai.`,
   newDay: "Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.",
   reshuffled: "Diacak ulang",
+  condition: (name) => `Kondisi arena: ${name}`,
   own: {
     heading: "Tank kamu",
     today: (place, score) => `Tank kamu di peringkat ${place} hari ini dengan ${score} poin.`,
@@ -201,7 +204,7 @@ export const id: typeof en = {
     heading: "Cara kerja arena bulanan",
     round: "Satu ronde berlangsung sehari, dan setiap tank memainkannya sendiri.",
     playsAlone: "Tank kamu main setiap hari sampai kamu keluar dari arena, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
-    reshuffle: "Setiap beberapa menit, semua tank mulai lagi di petak baru dengan poin yang tetap.",
+    reshuffle: "Setiap beberapa menit, semua tank mulai lagi di petak baru dengan kondisi arena baru, dan poinnya tetap.",
     items: "Item muncul di arena, dan tombol Bantuan menjelaskan gunanya.",
     rankedDays: (days) => (days === 1 ? "Tank masuk peringkat bulan ini setelah main sehari penuh." : `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`),
     leagues: "Di akhir bulan, separuh bawah tiap liga bertukar tempat dengan separuh atas liga di bawahnya.",

@@ -49,7 +49,7 @@
 
 import { plainTankLook, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, ruleSet, STANDARD_RULE_SET_ID, stepRound, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS } from "@game/arena";
 
@@ -138,10 +138,16 @@ export class LeagueDay {
     else if (this.seated.size > this.boardFor * BOARD_GROWTH) this.rebuild(ticksLeft);
   }
 
-  /** A round on a board for `tanks` tanks (boardTanksFor). */
+  /**
+   * A round on a board for `tanks` tanks (boardTanksFor), under an arena condition (round rules)
+   * drawn for it, each one as likely: owner, 2026-11-16, "randomize the arena condition each
+   * reshuffle". The draw comes first, before the seating order and the bots. "open-field" makes
+   * the board about twice as large (engine arenaSize).
+   */
   private newRound(tanks: number, ticksLeft: number): RoundState {
     this.boardFor = boardTanksFor(tanks);
-    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: this.boardFor, items: true });
+    const ruleSetId = RULE_SET_IDS[Math.floor(this.random() * RULE_SET_IDS.length)] ?? STANDARD_RULE_SET_ID;
+    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true });
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */

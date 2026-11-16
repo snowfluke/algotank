@@ -4,7 +4,10 @@
 //   bun run build:landing
 //
 // The output is plain static files with relative links, so any static host serves it,
-// also under a sub-path; Cloudflare Pages serves it (.github/workflows/landing.yml). Every
+// also under a sub-path. Cloudflare Pages (project "algotank-landing", tank.awala.my.id) builds
+// it from the repository with this script and serves dist; its build settings live in the
+// Cloudflare dashboard: build command "bun install --frozen-lockfile && bun run build:landing",
+// output "apps/web/landing/dist", BUN_VERSION 1.4.2, and watch paths for the inputs below. Every
 // button links into the game at GAME_URL. The page reuses the game's drawings,
 // tokens, fonts, copy and engine; the build records the demo rounds and fails when
 // they stop showing that the order of the rules matters (demo-round.ts).

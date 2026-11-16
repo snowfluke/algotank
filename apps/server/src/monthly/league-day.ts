@@ -49,7 +49,7 @@
 
 import { plainTankLook, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS } from "@game/arena";
 
@@ -101,6 +101,13 @@ export const RESHUFFLE_TURNS = 333;
 export const BOARD_GROWTH = 1.5;
 
 /** The tanks a new round's board is sized for: the seated tanks, and at least MONTHLY_BOARD_MIN_TANKS. */
+/**
+ * The arena conditions a monthly round draws from. Open field is left out (owner, 2026-11-16): its
+ * board, twice as large, drew a square about 14 px wide on a phone. It comes back when the board
+ * turns upright on a tall phone.
+ */
+export const MONTHLY_CONDITIONS: readonly RuleSetId[] = RULE_SET_IDS.filter((id) => id !== "open-field");
+
 export function boardTanksFor(seated: number): number {
   return Math.max(MONTHLY_BOARD_MIN_TANKS, seated);
 }
@@ -146,7 +153,7 @@ export class LeagueDay {
    */
   private newRound(tanks: number, ticksLeft: number): RoundState {
     this.boardFor = boardTanksFor(tanks);
-    const ruleSetId = RULE_SET_IDS[Math.floor(this.random() * RULE_SET_IDS.length)] ?? STANDARD_RULE_SET_ID;
+    const ruleSetId = MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
     return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true });
   }
 

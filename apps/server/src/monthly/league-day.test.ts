@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { plainTankLook } from "@game/arena";
 import { PRESETS, RULE_SET_IDS, type RuleSetId } from "@game/engine";
-import { LeagueDay, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
+import { LeagueDay, MONTHLY_CONDITIONS, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
 const botsOf = (day: LeagueDay) => day.view(1000).tanks.filter((t) => t.isBot);
@@ -52,23 +52,20 @@ describe("the arena condition", () => {
     return day.view(1000).board;
   };
 
-  test("each new round draws its round rules from the league's random source, each one as likely", () => {
-    expect(conditionWith(0).ruleSetId).toBe(RULE_SET_IDS[0] as RuleSetId);
-    expect(conditionWith(0.99).ruleSetId).toBe(RULE_SET_IDS[RULE_SET_IDS.length - 1] as RuleSetId);
-    const drawn = new Set(RULE_SET_IDS.map((_, i) => conditionWith((i + 0.5) / RULE_SET_IDS.length).ruleSetId));
-    expect(drawn.size).toBe(RULE_SET_IDS.length);
+  test("each new round draws one of the monthly conditions, each one as likely, and never open field", () => {
+    const drawn = MONTHLY_CONDITIONS.map((_, i) => conditionWith((i + 0.5) / MONTHLY_CONDITIONS.length).ruleSetId);
+    expect(drawn).toEqual([...MONTHLY_CONDITIONS]);
+    expect(MONTHLY_CONDITIONS).toEqual(RULE_SET_IDS.filter((id) => id !== "open-field"));
+    expect(conditionWith(0.99).ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
   });
 
-  test("open-field makes a larger board, and a rebuild draws again", () => {
-    const standard = conditionWith(RULE_SET_IDS.indexOf("standard") / RULE_SET_IDS.length + 0.01);
-    const open = conditionWith(RULE_SET_IDS.indexOf("open-field") / RULE_SET_IDS.length + 0.01);
-    expect([standard.ruleSetId, open.ruleSetId]).toEqual(["standard", "open-field"]);
-    expect(open.width * open.height).toBeGreaterThan(standard.width * standard.height);
+  test("a rebuild draws again", () => {
     let draw = 0.01;
     const day = new LeagueDay(1, () => draw);
     day.start(two, 1000);
+    expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[0] as RuleSetId);
     draw = 0.99;
     day.rebuild(1000);
-    expect(day.view(1000).board.ruleSetId).toBe(RULE_SET_IDS[RULE_SET_IDS.length - 1] as RuleSetId);
+    expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
   });
 });

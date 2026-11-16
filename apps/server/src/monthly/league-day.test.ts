@@ -52,9 +52,9 @@ describe("the arena condition", () => {
     return day.view(1000).board;
   };
 
-  test("each new round draws Standard, Sharp eyes or Dry spell, each one as likely", () => {
+  test("each new round draws Standard, Sharp eyes, Dry spell, Arm's length or Open field, each one as likely", () => {
     const drawn = MONTHLY_CONDITIONS.map((_, i) => conditionWith((i + 0.5) / MONTHLY_CONDITIONS.length).ruleSetId);
-    expect(drawn).toEqual(["standard", "sharp-eyes", "dry-spell"]);
+    expect(drawn).toEqual(["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field"]);
     expect(MONTHLY_CONDITIONS.every((id) => RULE_SET_IDS.includes(id))).toBe(true);
     expect(conditionWith(0.99).ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
   });

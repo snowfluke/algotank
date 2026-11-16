@@ -164,6 +164,28 @@ describe("presets", () => {
     expect(decide(contextFor(snapshot, "me"), hunter.strategy, stubRng())).toMatchObject({ ruleId: "free-hit", move: "T" });
   });
 
+  describe("items", () => {
+    const itemAt = (kind: "bucket" | "umbrella", x: number) => ({ kind, x, y: 3, turnsLeft: 20 });
+    const far = bot("far", 8, 0, "S");
+
+    test("the Evader walks to an item within 3 cells, and not under dry-spell", () => {
+      const evader = presetOf("evader");
+      const me = bot("me", 1, 3, "E", { modeId: "evade", build: evader.strategy.build });
+      const withItem = (ruleSetId: "standard" | "dry-spell") => snapshotOf([me, far], { ruleSetId, items: [itemAt("umbrella", 4)] });
+      expect(decide(contextFor(withItem("standard"), "me"), evader.strategy, stubRng())).toMatchObject({ ruleId: "grab", move: "F" });
+      expect(decide(contextFor(withItem("dry-spell"), "me"), evader.strategy, stubRng()).ruleId).toBeNull();
+    });
+
+    test("the Item hunter drives to a bucket within 5 cells while it refills, and ignores an umbrella and dry-spell", () => {
+      const hunter = presetOf("item-hunter");
+      const me = bot("me", 1, 3, "E", { modeId: "rest", build: hunter.strategy.build, water: 0 });
+      const board = (kind: "bucket" | "umbrella", ruleSetId: "standard" | "dry-spell") => snapshotOf([me, far], { ruleSetId, items: [itemAt(kind, 6)] });
+      expect(decide(contextFor(board("bucket", "standard"), "me"), hunter.strategy, stubRng())).toMatchObject({ ruleId: "grab", move: "F" });
+      expect(decide(contextFor(board("umbrella", "standard"), "me"), hunter.strategy, stubRng()).ruleId).toBeNull();
+      expect(decide(contextFor(board("bucket", "dry-spell"), "me"), hunter.strategy, stubRng()).ruleId).toBeNull();
+    });
+  });
+
   test.each(RULE_SET_IDS)("under %s, every designed preset lands hits", (id) => {
     const designed = PRESETS.filter((p) => p.id !== "random-walker" && p.id !== "charger");
     const landed = new Map<string, number>(designed.map((p) => [p.id, 0]));

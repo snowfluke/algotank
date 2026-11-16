@@ -417,6 +417,17 @@ describe("the month close", () => {
     expect(seatOf(l, owners[0] ?? "")).toMatchObject({ countedDays: 0, countsToday: true });
   });
 
+  test("with one league every seated tank still gets the month close's notice, as 'stayed'", () => {
+    const l = startLeague({ at: Date.parse("2026-11-29T20:00:00Z") });
+    const ada = newAccount();
+    take(l, ada);
+    take(l, newAccount());
+    nextDay(l);
+    nextDay(l);
+    expect(l.monthly.live(1).month).toBe("2026-12");
+    expect(l.monthly.me(ada).move).toEqual({ month: "2026-11", from: 1, to: 1, kind: "stayed" });
+  });
+
   test("a month without a tank of 7 counted days records no champion", () => {
     const l = startLeague({ at: Date.parse("2026-11-29T20:00:00Z") });
     take(l, newAccount());

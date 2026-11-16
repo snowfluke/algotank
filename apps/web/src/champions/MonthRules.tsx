@@ -102,7 +102,7 @@ export function MonthRules({ month }: { readonly month: string }) {
                 items={items}
                 highlightId={null}
                 jumpLabel={null}
-                open={{ label: m.monthly.sheet.open, can: (id) => byId.has(id), onOpen: (id) => setSheet(byId.get(id) ?? null) }}
+                open={{ label: m.monthly.sheet.open, cue: () => null, can: (id) => byId.has(id), onOpen: (id) => setSheet(byId.get(id) ?? null) }}
               />
             </div>
           )}

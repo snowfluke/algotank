@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { plainTankLook, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow } from "@game/arena";
-import { dayBefore, formatDayClock, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems, withLivePoints } from "./monthlyParts.ts";
+import { dayBefore, formatDayClock, gameMastersFirst, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems, withLivePoints } from "./monthlyParts.ts";
 
 const look = plainTankLook(3);
 
@@ -42,6 +42,17 @@ describe("the monthly page's rules", () => {
     // The game master's row, last, has its badge and no place, and it does not open the "not ranked" part.
     const withGm = monthItems([row(1, 1), { ...row(null, 9), countedDays: 0, gm: true }], "not ranked", gm);
     expect(withGm.map((item) => (item.kind === "cut" ? "cut" : [item.row.place, item.row.badge?.text ?? null]))).toEqual([[1, null], [null, "GM"]]);
+  });
+});
+
+describe("the game master's row on the monthly page", () => {
+  test("comes first, and the other rows keep their order, the 'not ranked yet' line included", () => {
+    const row = (rank: number | null, i: number, gm = false): LeagueMonthRow => ({ rank, seatId: `s${i}`, name: `T${i}`, look, score: 10 - i, countedDays: rank === null ? 2 : 8, gm });
+    const gm = { text: "GM", title: "Game master" };
+    const items = monthItems([row(1, 1), row(null, 2), row(null, 9, true)], "not ranked", gm);
+    const pinned = gameMastersFirst(items, new Set(["s9"]));
+    expect(pinned.map((item) => (item.kind === "cut" ? "cut" : item.row.tank.playerId))).toEqual(["s9", "s1", "cut", "s2"]);
+    expect(gameMastersFirst(items, new Set())).toEqual(items);
   });
 });
 

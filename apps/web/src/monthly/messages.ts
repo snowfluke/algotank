@@ -69,6 +69,9 @@ export const en = {
    */
   sheet: {
     open: (name: string) => `Show the tank ${name}`,
+    /** The GM's row: its rules are open, so the row says so instead of a bare chevron. */
+    openRules: (name: string) => `Show the rules of ${name}`,
+    rulesCue: "See rules",
     rules: "Rules",
     upgrades: (list: string) => `Upgrades: ${list}.`,
     gm: "This is the organizer's tank, so everyone can read its rules.",
@@ -207,6 +210,8 @@ export const id: typeof en = {
   gm: { text: "GM", title: "Game master: tank penyelenggara, yang tidak masuk peringkat" },
   sheet: {
     open: (name) => `Lihat tank ${name}`,
+    openRules: (name) => `Lihat aturan ${name}`,
+    rulesCue: "Lihat aturan",
     rules: "Aturan",
     upgrades: (list) => `Peningkatan: ${list}.`,
     gm: "Ini tank penyelenggara, jadi semua orang boleh membaca aturannya.",

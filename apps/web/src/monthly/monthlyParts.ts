@@ -81,6 +81,17 @@ export function monthItems(rows: readonly LeagueMonthRow[], notRankedLabel: stri
 
 
 /**
+ * The game master's rows first (owner, 2026-11-17: players could not find the GM's open rules,
+ * because the GM's row sat at the end of the ranking by its points and last in the month's). The
+ * other items keep their order, "not ranked yet" line included. The monthly page only; the
+ * champions page keeps the server's order.
+ */
+export function gameMastersFirst(items: readonly RankingItem[], gameMasters: ReadonlySet<string>): RankingItem[] {
+  const isGm = (item: RankingItem) => item.kind === "row" && gameMasters.has(item.row.tank.playerId);
+  return [...items.filter(isGm), ...items.filter((item) => !isGm(item))];
+}
+
+/**
  * Today's ranking with each seated tank's points from the stream's latest turn, sorted again. The
  * page reads the ranking every few seconds (useMonthlyData.ts), but the board moves every turn, so
  * without this the ranking trailed the tanks by up to one poll. Only a ranking and a board of the

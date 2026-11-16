@@ -34,8 +34,11 @@ export interface RankingRowProps {
   readonly badge?: { readonly text: string; readonly title: string };
   /** "li" in a list of rows (default); "div" inside a Pager, which wraps each item in its own `li`. */
   readonly element?: "li" | "div";
-  /** A button over the whole row that opens the tank (monthly/TankSheet.tsx), named by `label`. */
-  readonly open?: { readonly label: string; onOpen(): void } | undefined;
+  /**
+   * A button over the whole row that opens the tank (monthly/TankSheet.tsx), named by `label`. The
+   * row ends in a chevron, or in `cue` (the GM's "See rules") when the row has more to show.
+   */
+  readonly open?: { readonly label: string; readonly cue: string | null; onOpen(): void } | undefined;
 }
 
 /** One ranked tank. board/Scoreboard.tsx draws its rows with it too, so every ranking marks "you" the same way. */
@@ -47,7 +50,7 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
     <Row
       aria-current={isSelf ? "true" : undefined}
       data-player-id={tank.playerId}
-      className={`relative grid ${open === undefined ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto]" : "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_1em]"} items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
+      className={`relative grid ${open === undefined ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto]" : open.cue === null ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_1em]" : "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_auto]"} items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
         isSelf ? "bg-self-soft" : ""
       } ${verdict !== null && !verdict.through && !isSelf ? "text-muted" : "text-ink"}`}
     >
@@ -73,7 +76,14 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
       </span>
       {note === undefined ? null : <span className={`col-start-3 col-end-5 ${ROW_LABEL_TEXT} text-muted [overflow-wrap:anywhere]`}>{note}</span>}
       {/* The chevron says the row opens; the button over the whole row is the target. */}
-      {open === undefined ? null : <ChevronRight aria-hidden className="h-[1em] w-[1em] text-muted" />}
+      {open === undefined ? null : open.cue === null ? (
+        <ChevronRight aria-hidden className="h-[1em] w-[1em] text-muted" />
+      ) : (
+        <span aria-hidden className={`flex items-center whitespace-nowrap ${ROW_LABEL_TEXT} font-semibold text-water`}>
+          {open.cue}
+          <ChevronRight className="h-[1em] w-[1em]" />
+        </span>
+      )}
       {open === undefined ? null : (
         <button
           type="button"
@@ -206,8 +216,8 @@ export function PagedRanking({
   highlightId: string | null;
   /** The button that turns to the line's page; default "to the cut line", null for none. */
   jumpLabel?: string | null;
-  /** Makes a row a button that opens its tank: `label` names it, `can` says which rows open. */
-  open?: { label(name: string): string; can(playerId: string): boolean; onOpen(playerId: string): void };
+  /** Makes a row a button that opens its tank: `label` names it, `can` says which rows open, `cue` is its words at the end or null. */
+  open?: { label(name: string, playerId: string): string; cue(playerId: string): string | null; can(playerId: string): boolean; onOpen(playerId: string): void };
 }) {
   const m = useMessages();
   const cutIndex = items.findIndex((item) => item.kind === "cut");
@@ -231,7 +241,11 @@ export function PagedRanking({
             isSelf={item.row.tank.playerId === highlightId}
             truncate
             element="div"
-            open={open !== undefined && open.can(item.row.tank.playerId) ? { label: open.label(item.row.tank.name), onOpen: () => open.onOpen(item.row.tank.playerId) } : undefined}
+            open={
+              open !== undefined && open.can(item.row.tank.playerId)
+                ? { label: open.label(item.row.tank.name, item.row.tank.playerId), cue: open.cue(item.row.tank.playerId), onOpen: () => open.onOpen(item.row.tank.playerId) }
+                : undefined
+            }
           />
         )
       }

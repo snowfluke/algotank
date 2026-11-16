@@ -46,7 +46,7 @@ export class Disclosure {
   private readonly selectTanks: Statement<MonthTankRow, [string]>;
   private readonly selectRules: Statement<{ readonly strategy_json: string }, [string, string]>;
 
-  constructor(db: Database) {
+  constructor(private readonly db: Database) {
     this.upsertNumbers = db.prepare(
       `INSERT INTO league_day_numbers (day, seat_id, turns, shots, hits, times_hit, squares_moved) VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (seat_id, day) DO UPDATE SET turns = excluded.turns, shots = excluded.shots, hits = excluded.hits,
@@ -69,7 +69,9 @@ export class Disclosure {
 
   /** Each tank's numbers of `day`. Safe to repeat: a later write of the same day replaces the numbers. */
   writeDayNumbers(day: string, tanks: readonly { readonly seatId: PlayerId; readonly numbers: DayNumbers }[]): void {
-    for (const { seatId, numbers: n } of tanks) this.upsertNumbers.run(day, seatId, n.turns, n.shots, n.hits, n.timesHit, n.squaresMoved);
+    this.db.transaction(() => {
+      for (const { seatId, numbers: n } of tanks) this.upsertNumbers.run(day, seatId, n.turns, n.shots, n.hits, n.timesHit, n.squaresMoved);
+    }).immediate();
   }
 
   /** The tank's numbers of its newest day before `today`, or null when it has none. */
@@ -81,7 +83,9 @@ export class Disclosure {
 
   /** The month's copy, written once: a second call for the same month adds nothing. */
   writeMonthRules(month: string, tanks: readonly MonthRulesRow[]): void {
-    for (const t of tanks) this.insertRules.run(month, t.seatId, t.league, t.rank, t.name, JSON.stringify(t.look), t.gm ? 1 : 0, JSON.stringify(t.strategy));
+    this.db.transaction(() => {
+      for (const t of tanks) this.insertRules.run(month, t.seatId, t.league, t.rank, t.name, JSON.stringify(t.look), t.gm ? 1 : 0, JSON.stringify(t.strategy));
+    }).immediate();
   }
 
   publishedMonths(): readonly string[] {

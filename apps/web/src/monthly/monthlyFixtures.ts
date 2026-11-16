@@ -88,6 +88,12 @@ export function fixtureRanking(live: LeagueLive): LeagueRankingResponse {
   // A tank that quit today keeps its row, last here, with its points at the quit.
   if (today.length > 0) today.push({ rank: today.length + 1, seatId: "seat-left", name: "Rangga", look: fixtureLook(5), points: 0, counts: true, seated: false, livePoints: false, gm: false });
   const thisMonth: LeagueMonthRow[] = seated.map((tank, i) => ({ rank: i < seated.length - 3 ? i + 1 : null, seatId: tank.id, name: tank.name, look: tank.look, score: Math.round((18.4 - i) * 10) / 10, countedDays: i < seated.length - 3 ? 9 : 4, gm: false }));
+  // The game master's tank, as the server sends it: last by its points today, and last this month. The longest
+  // name (16 letters) and a five-digit negative score, so a page shows the widest GM row.
+  if (today.length > 0) {
+    today.push({ rank: 0, seatId: "seat-gm", name: "Organizer Tank X", look: fixtureLook(7), points: -12345, counts: true, seated: true, livePoints: true, gm: true });
+    thisMonth.push({ rank: null, seatId: "seat-gm", name: "Organizer Tank X", look: fixtureLook(7), score: 0, countedDays: 0, gm: true });
+  }
   return { league: live.league, month: live.month, day: live.day, today, thisMonth };
 }
 

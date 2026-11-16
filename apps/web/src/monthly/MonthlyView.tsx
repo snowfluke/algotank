@@ -36,7 +36,7 @@ import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
 import { MonthlyBoard, type BoardRow, type FollowSwitch } from "./MonthlyBoard.tsx";
-import { formatDayClock, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
+import { formatDayClock, gameMastersFirst, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
 import type { LeagueConnection } from "./useLeagueLive.ts";
 import { useNow } from "./useNow.ts";
 
@@ -278,10 +278,12 @@ function MoveNotice({ move, onSeen }: { move: MonthMove; onSeen(): void }) {
 function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; ranking: LeagueRankingResponse | null; ownSeatId: string | null }) {
   const m = useMessages();
   const t = m.monthly;
+  const gameMasters = useMemo(() => new Set((ranking?.today ?? []).filter((row) => row.gm).map((row) => row.seatId)), [ranking]);
   const items = useMemo(() => {
     if (ranking === null) return null;
-    return part === "today" ? todayItems(ranking.today, t.left, t.gm) : monthItems(ranking.thisMonth, t.notRanked(MONTHLY_RANKED_DAYS), t.gm);
-  }, [ranking, part, t]);
+    const built = part === "today" ? todayItems(ranking.today, t.left, t.gm) : monthItems(ranking.thisMonth, t.notRanked(MONTHLY_RANKED_DAYS), t.gm);
+    return gameMastersFirst(built, gameMasters);
+  }, [ranking, part, t, gameMasters]);
   // A row opens its tank's sheet (TankSheet.tsx). Not a tank that left today: its seat is gone, so it has no sheet.
   const [sheet, setSheet] = useState<SheetTank | null>(null);
   const tanks = useMemo(() => {
@@ -299,7 +301,12 @@ function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; rankin
         items={items}
         highlightId={ownSeatId}
         jumpLabel={part === "month" ? t.toNotRanked : null}
-        open={{ label: t.sheet.open, can: (id) => tanks.has(id), onOpen: (id) => setSheet(tanks.get(id) ?? null) }}
+        open={{
+          label: (name, id) => (gameMasters.has(id) ? t.sheet.openRules(name) : t.sheet.open(name)),
+          cue: (id) => (gameMasters.has(id) ? t.sheet.rulesCue : null),
+          can: (id) => tanks.has(id),
+          onOpen: (id) => setSheet(tanks.get(id) ?? null),
+        }}
       />
       <TankSheet tank={sheet} source={LIVE} onClose={() => setSheet(null)} />
     </div>

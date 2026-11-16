@@ -12,6 +12,7 @@
 // flag as from its back, as a real flag looks from the other side, with its top still on top.
 
 import { useId } from "react";
+import { useTurnPhase } from "./turnPhase.ts";
 import type { FlagCountry } from "@game/arena";
 
 const OUTLINE = "var(--color-tank-outline)";
@@ -60,10 +61,12 @@ export interface TankFlagDrawingProps {
 /** The flag in tank coordinates: draw it inside the group that turns the hull. */
 export function TankFlagDrawing({ country, heading, bold, turning = false }: TankFlagDrawingProps) {
   const clipId = `flag-${useId().replace(/:/g, "")}`;
+  // Only the editor's turning tank animates; its flip joins the hull's turn in step (turnPhase.ts).
+  const turn = useTurnPhase();
   const stroke = bold ? 0.45 : 0.3;
   return (
     <g data-flag={country} aria-hidden="true">
-      <g className={turning ? "flag-turn-flip" : undefined} transform={!turning && flagFlipped(heading) ? `translate(0 ${2 * MIDDLE_Y}) scale(1 -1)` : undefined}>
+      <g className={turning ? "flag-turn-flip" : undefined} style={turning ? turn : undefined} transform={!turning && flagFlipped(heading) ? `translate(0 ${2 * MIDDLE_Y}) scale(1 -1)` : undefined}>
         <clipPath id={clipId}>
           <path d={CLOTH} />
         </clipPath>

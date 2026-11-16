@@ -10,8 +10,10 @@
 // under and on its treads while it is stuck, and stars around it while it is dizzy. A
 // blocked throw opens the target's umbrella toward the jet, with no "+1" and no wobble,
 // and a hit with a bucket pops "+2". In a crowd only the viewer's tank shows these marks.
+//
+// A hover or a tap on a tank shows its name in a pill over it for a moment (tankPeek.ts).
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useId, useMemo, useRef } from "react";
 import type { PublicBot } from "@game/arena";
 import { canThrow, rulesOf } from "@game/engine";
@@ -46,6 +48,7 @@ import { Crown, DryDrops, JetShape, Puff, Splash } from "./boardShapes.tsx";
 import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import type { ArenaBoardProps } from "./props.ts";
 import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
+import { botAtPoint, nameTagSpot, useTankPeek, type BoardView } from "./tankPeek.ts";
 import { useCellPixels } from "./useCellPixels.ts";
 import { WaterGauge } from "./WaterGauge.tsx";
 
@@ -63,6 +66,8 @@ const PLATE_SCALE = 0.88;
 /** In a crowd (a big arena seen whole) the viewer's tank is drawn at least this many CSS px wide, so it is found at once. */
 const CROWD_SELF_MIN_PX = 20;
 const YOU_MIN_PX = 15;
+/** Smallest on-screen size of a tank's name on a hover or a tap, in CSS pixels. */
+const NAME_MIN_PX = 14;
 /** An item blinks in its last turns on the board, so a viewer sees that it is about to go. */
 const ITEM_FADE_TURNS = 5;
 /** Where the disc of a held item sits on the tank's square, and its size. */
@@ -201,6 +206,20 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
   const topEdge = camera === null ? -WALL : camera.y * CELL;
   const fxMs = Math.min(FX_MAX_MS, Math.max(FX_MIN_MS, tickMs));
   const plusSize = readableSize(5.5, PLUS_MIN_PX, cellPx);
+  // The part of the board the picture shows, in board units, so a name pill stays inside it.
+  const view: BoardView =
+    camera === null
+      ? { left: -WALL, top: -WALL, right: width * CELL + WALL, bottom: height * CELL + WALL }
+      : { left: camera.x * CELL, top: camera.y * CELL, right: (camera.x + camera.width) * CELL, bottom: (camera.y + camera.height) * CELL };
+  const { peekId, show: showName } = useTankPeek();
+  const peekBot = peekId === null ? undefined : drawn.find((bot) => bot.id === peekId);
+  /** The drawn tank on the square under the pointer. The window's picture starts at the camera, so its point moves by the camera. */
+  const tankUnder = (event: ReactPointerEvent<SVGSVGElement>): BotId | null => {
+    const toScreen = event.currentTarget.getScreenCTM();
+    if (toScreen === null) return null;
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(toScreen.inverse());
+    return botAtPoint(drawn, camera === null ? point : { x: point.x + camera.x * CELL, y: point.y + camera.y * CELL });
+  };
   const label = highlightId === null ? m.board.arenaLabel(bots.length, tick, snapshot.ticksTotal) : `${m.board.arenaLabel(bots.length, tick, snapshot.ticksTotal)} ${m.board.yourTankRing}`;
 
   return (
@@ -212,6 +231,14 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
         viewBox={camera === null ? `${-WALL} ${-WALL} ${width * CELL + 2 * WALL} ${height * CELL + 2 * WALL}` : `0 0 ${camera.width * CELL} ${camera.height * CELL}`}
         className={`block h-full w-full min-w-0 ${paused ? "" : "ab-live"}`}
         style={{ "--tick-ms": `${tickMs}ms`, "--fx-ms": `${fxMs}ms` } as CSSProperties}
+        // A mouse shows the name of the tank it is over at once (the browser's own tooltip comes late). A click,
+        // a tap or a pen shows it too, and one on the floor hides it.
+        onPointerMove={(event) => {
+          if (event.pointerType !== "mouse") return;
+          const id = tankUnder(event);
+          if (id !== null) showName(id);
+        }}
+        onPointerDown={(event) => showName(tankUnder(event))}
       >
         <style>{ARENA_MOTION_CSS}</style>
         {/* The window glides with the same transition as the tanks, so the followed tank stays still in the middle.
@@ -395,6 +422,10 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
           })}
         </g>
 
+        {peekBot === undefined ? null : (
+          <NameTag key={peekBot.id} bot={peekBot} text={displayName(names, peekBot.id)} self={peekBot.id === highlightId} cellPx={cellPx} view={view} />
+        )}
+
         {counting && highlightId !== null ? <YouMarker bot={ownBot} below={youBelow} text={m.common.you} cellPx={cellPx} /> : null}
         </g>
       </svg>
@@ -461,20 +492,38 @@ function YouMarker({ bot, below, text, cellPx }: { bot: PublicBot | undefined; b
   const size = readableSize(4.5, YOU_MIN_PX, cellPx);
   const centre = cellCenter(bot.x, bot.y);
   const y = below ? centre.y + CELL / 2 + size * 0.9 : centre.y - CELL / 2 - size * 0.9;
-  const pillWidth = size * (text.length * 0.62 + 1.2);
   return (
     <g transform={`translate(${centre.x} ${y})`} aria-hidden="true" data-you-marker="true">
-      <rect x={-pillWidth / 2} y={-size * 0.75} width={pillWidth} height={size * 1.5} rx={size * 0.75} style={{ fill: "var(--color-self-ink)" }} />
-      <text
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontFamily="var(--font-display)"
-        fontWeight={700}
-        fontSize={size}
-        style={{ fill: "var(--color-panel)" }}
-      >
+      <Pill text={text} size={size} fill="var(--color-self-ink)" />
+    </g>
+  );
+}
+
+/** The width of a pill from the length of its text: an estimate, because SVG text is measured only once it is drawn. */
+function pillSize(text: string, size: number): { width: number; height: number } {
+  return { width: size * (text.length * 0.62 + 1.2), height: size * 1.5 };
+}
+
+/** A rounded label centred on (0, 0): the "You" marker and a tank's name. */
+function Pill({ text, size, fill }: { text: string; size: number; fill: string }) {
+  const { width, height } = pillSize(text, size);
+  return (
+    <>
+      <rect x={-width / 2} y={-height / 2} width={width} height={height} rx={height / 2} style={{ fill }} />
+      <text textAnchor="middle" dominantBaseline="central" fontFamily="var(--font-display)" fontWeight={700} fontSize={size} style={{ fill: "var(--color-panel)" }}>
         {text}
       </text>
+    </>
+  );
+}
+
+/** A tank's name over it after a hover or a tap. It glides with the tank, and stays inside the view. */
+function NameTag({ bot, text, self, cellPx, view }: { bot: PublicBot; text: string; self: boolean; cellPx: number | null; view: BoardView }) {
+  const size = readableSize(4.5, NAME_MIN_PX, cellPx);
+  const spot = nameTagSpot(cellCenter(bot.x, bot.y), pillSize(text, size), view);
+  return (
+    <g className="ab-move" style={{ transform: `translate(${spot.x}px, ${spot.y}px)`, pointerEvents: "none" }} aria-hidden="true" data-name-tag={bot.id}>
+      <Pill text={text} size={size} fill={self ? "var(--color-self-ink)" : "var(--color-ink)"} />
     </g>
   );
 }

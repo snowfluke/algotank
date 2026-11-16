@@ -98,7 +98,7 @@ export interface ServerOptions {
   readonly now?: Clock;
   /** Sends the email codes (mail.ts). Not given: the server has no mail settings and sends no email. */
   readonly mail?: MailSender;
-  /** ADMIN_EMAILS, normalized: the accounts that may read the usage numbers. Nobody when not given. */
+  /** ADMIN_EMAILS, normalized: the accounts that may open the host's pages (admin.ts). Nobody when not given. */
   readonly adminEmails?: readonly string[];
   /** METRICS_TOKEN: the bearer token of GET /metrics. Not given: the route does not exist. */
   readonly metricsToken?: string;
@@ -214,11 +214,10 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   registerAccountStatsRoutes(router, { auth, stats: accountStats });
   registerPublicRoutes(router, { publicArenas, monthly, champions, winners });
   registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics, mailOn });
+  const adminGate = { auth, adminEmails: new Set(options.adminEmails ?? []), mailOn };
   registerMetricsRoutes(router, {
+    ...adminGate,
     metrics,
-    auth,
-    adminEmails: new Set(options.adminEmails ?? []),
-    mailOn,
     timeZone: leagueTimeZone,
     eventLimit: metricEvents,
     trustProxy: options.trustProxy ?? false,

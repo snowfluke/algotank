@@ -8,12 +8,12 @@
 import { BarChart3, Footprints, LineChart as LineIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { AdminMetricsResponse } from "@game/arena";
-import { paths } from "../app/route.ts";
 import { useFormat, useLanguage, useMessages } from "../i18n/I18nProvider.tsx";
 import { AppShell } from "../ui/AppShell.tsx";
 import { BottomTabs, tabPanelProps } from "../ui/BottomTabs.tsx";
-import { Button, LinkButton } from "../ui/Button.tsx";
+import { Button } from "../ui/Button.tsx";
 import { useLaptopLayout } from "../ui/layout.ts";
+import { NotFoundPage } from "../ui/NotFoundPage.tsx";
 import { Pager } from "../ui/Pager.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { LineChart } from "./LineChart.tsx";
@@ -145,19 +145,6 @@ function PathPane({ steps }: { readonly steps: readonly PathStep[] }) {
   );
 }
 
-function NotFound() {
-  const m = useMessages();
-  return (
-    <div className="flex flex-col items-start gap-4">
-      <h1 className="text-heading">{m.common.notFound.heading}</h1>
-      <p className="text-lead text-muted">{m.common.notFound.body}</p>
-      <LinkButton href={paths.home()} variant="primary" size="lg">
-        {m.common.goHome}
-      </LinkButton>
-    </div>
-  );
-}
-
 function Ready({ data, part, laptop }: { readonly data: AdminMetricsResponse; readonly part: MetricsPart; readonly laptop: boolean }) {
   const panes: Record<MetricsPart, ReactNode> = {
     today: <TodayPane rows={todayRows(data)} />,
@@ -187,9 +174,7 @@ export function AdminMetricsView({ load, part, onPart, onRetry }: { readonly loa
   const laptop = useLaptopLayout();
   if (load.kind === "notFound") {
     return (
-      <AppShell width="narrow" align="center">
-        <NotFound />
-      </AppShell>
+      <NotFoundPage />
     );
   }
   const tabs =

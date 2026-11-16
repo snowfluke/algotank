@@ -13,32 +13,16 @@ import { useMessages } from "../i18n/I18nProvider.tsx";
 import { KitPage } from "../kit/KitPage.tsx";
 import { MyTankPage } from "../mytank/MyTankPage.tsx";
 import { AdminMetricsPage } from "../metrics/AdminMetricsPage.tsx";
+import { NotFoundPage } from "../ui/NotFoundPage.tsx";
 import { useUsageCounts } from "../metrics/useUsageCounts.ts";
 import { PlayerPage } from "../player/PlayerPage.tsx";
 import { MyResultsPage } from "../results/MyResultsPage.tsx";
 import { ResultPage } from "../results/ResultPage.tsx";
 import { PlayPage } from "../publicplay/PlayPage.tsx";
 import { ScreenPage } from "../screen/ScreenPage.tsx";
-import { AppShell } from "../ui/AppShell.tsx";
-import { LinkButton } from "../ui/Button.tsx";
 import { WorkshopPage } from "../workshop/WorkshopPage.tsx";
 import { useRoute } from "./navigation.ts";
-import { paths, type Route } from "./route.ts";
-
-function NotFoundPage() {
-  const m = useMessages();
-  return (
-    <AppShell width="narrow" align="center">
-      <div className="flex flex-col items-start gap-4">
-        <h1 className="text-heading">{m.common.notFound.heading}</h1>
-        <p className="text-lead text-muted">{m.common.notFound.body}</p>
-        <LinkButton href={paths.home()} variant="primary" size="lg">
-          {m.common.goHome}
-        </LinkButton>
-      </div>
-    </AppShell>
-  );
-}
+import type { Route } from "./route.ts";
 
 function RoutePage({ route }: { route: Route }) {
   // The key restarts a page's state and its stream when the arena in the address changes.

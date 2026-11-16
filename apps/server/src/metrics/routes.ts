@@ -3,15 +3,14 @@
 // Who may call:
 // - POST /api/metrics/event: anyone, rate limited per client address. Only names and labels from
 //   the lists pass; the body carries nothing else.
-// - GET /api/admin/metrics: a signed-in account whose email is in ADMIN_EMAILS, and with email on
-//   (SMTP_HOST) only once that email is verified. Anyone else gets the same 404 as a route that
-//   does not exist, so the page tells a visitor nothing.
+// - GET /api/admin/metrics: the admin only (admin.ts requireAdmin); anyone else gets the 404 of a
+//   route that does not exist.
 // - GET /metrics: only with "Authorization: Bearer <METRICS_TOKEN>"; server.ts adds it only when
 //   the setting is there.
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { METRICS_DEFAULT_DAYS, METRICS_KEEP_DAYS, parseMetricEvent, type AdminMetricsResponse } from "@game/arena";
-import type { Auth } from "../auth/index.ts";
+import { requireAdmin, type AdminGate } from "../admin.ts";
 import { clientAddress } from "../auth/request.ts";
 import { bearerToken, HttpError, jsonResponse, noContent, readJson } from "../http.ts";
 import type { SlidingWindowLimit } from "../rate-limit.ts";
@@ -23,22 +22,13 @@ import { prometheusText, type HealthGauges } from "./prometheus.ts";
 const EVENT_BODY_MAX_BYTES = 1024;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-export interface MetricsRouteDeps {
+export interface MetricsRouteDeps extends AdminGate {
   readonly metrics: Metrics;
-  readonly auth: Auth;
-  /** ADMIN_EMAILS, normalized (auth/credentials.ts normalizeEmail). */
-  readonly adminEmails: ReadonlySet<string>;
-  /** The server sends email, so an admin's email must be verified. */
-  readonly mailOn: boolean;
   /** LEAGUE_TIME_ZONE, named in the answer. */
   readonly timeZone: string;
   /** POST /api/metrics/event per client address. */
   readonly eventLimit: SlidingWindowLimit;
   readonly trustProxy: boolean;
-}
-
-function notFound(): HttpError {
-  return new HttpError(404, "That route does not exist.");
 }
 
 function readDay(raw: string | null, name: string): string | null {
@@ -65,8 +55,7 @@ export function registerMetricsRoutes(router: Router, deps: MetricsRouteDeps): v
   });
 
   router.add("GET", "/api/admin/metrics", (ctx) => {
-    const account = deps.auth.accountOf(ctx.req);
-    if (account === null || !deps.adminEmails.has(account.email) || (deps.mailOn && !account.emailVerified)) throw notFound();
+    requireAdmin(deps, ctx.req);
     const today = metrics.today().day;
     const to = readDay(ctx.url.searchParams.get("to"), "to") ?? today;
     const from = readDay(ctx.url.searchParams.get("from"), "from") ?? shiftDay(to, 1 - METRICS_DEFAULT_DAYS);

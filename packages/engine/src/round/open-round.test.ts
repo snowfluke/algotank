@@ -5,7 +5,7 @@ import { act, bot, mode, rule, snapshotOf, strategyOf, when } from "../strategy/
 import { TARGET_SELECTORS } from "../strategy/vocabulary.ts";
 import type { RoundState, Strategy } from "../types.ts";
 import { arenaSize } from "./grid.ts";
-import { createOpenRound, createRound, joinRound, leaveRound, roundHoldings, standings, stepRound } from "./round.ts";
+import { createOpenRound, createRound, joinRound, leaveRound, replaceStrategy, roundHoldings, standings, stepRound } from "./round.ts";
 
 const strategyAt = (i: number): Strategy => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
 const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false });
@@ -133,5 +133,26 @@ describe("target ties in an open round", () => {
       return ["a", "b", "c"].map((id) => joinRound(round, { id, strategy: strategyAt(0) }).tieRank);
     };
     expect(ranks(1)).not.toEqual(ranks(2));
+  });
+});
+
+describe("new rules for a tank on the board", () => {
+  test("replaceStrategy keeps its square, facing, points, water, item and effect, and starts the new first mode", () => {
+    const round = open();
+    joinRound(round, { id: "a", strategy: strategyAt(0) });
+    joinRound(round, { id: "b", strategy: strategyAt(1) });
+    for (let i = 0; i < 30; i++) stepRound(round);
+    const before = round.snapshot.bots.find((b) => b.id === "a");
+    const next = strategyAt(2);
+    const after = replaceStrategy(round, "a", next);
+    const kept = ({ x, y, direction, score, water, item, itemUses, effect, hitsLanded, hitsTaken, lastHitBy, tieRank }: NonNullable<typeof before>) => ({ x, y, direction, score, water, item, itemUses, effect, hitsLanded, hitsTaken, lastHitBy, tieRank });
+    expect(kept(after)).toEqual(kept(before as NonNullable<typeof before>));
+    expect(after.modeId).toBe(next.modes[0]?.id ?? "");
+    expect(after.ticksInMode).toBe(0);
+    expect(after.build).toEqual(next.build);
+    expect(round.snapshot.bots.find((b) => b.id === "a")).toEqual(after);
+    expect(roundHoldings(round)).toEqual({ tanks: 2, strategies: 2, tieBreaks: 2, sequences: roundHoldings(round).sequences });
+    expect(() => stepRound(round)).not.toThrow();
+    expect(() => replaceStrategy(round, "nobody", next)).toThrow();
   });
 });

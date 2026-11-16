@@ -71,12 +71,16 @@ describe("the arena condition", () => {
 });
 
 describe("new rules for a seated tank", () => {
-  test("restrategy keeps the tank's id, today's points, today's count and its statistics, and plays the new rules", () => {
+  test("restrategy keeps the tank's id, place, water, today's points, today's count and its statistics", () => {
     const day = new LeagueDay(1, () => 0.5);
     day.start([{ tank: tank(1), points: 40, counts: true, stats: undefined }, { tank: tank(2), points: 0, counts: false, stats: undefined }], 1000);
     const stats = day.statsOf("seat-1");
     const strategy = (PRESETS[1] as (typeof PRESETS)[number]).strategy;
+    const place = day.view(1000).board.bots.find((b) => b.id === "seat-1");
     day.restrategy("seat-1", strategy);
+    const placed = day.view(1000).board.bots.find((b) => b.id === "seat-1");
+    // No escape or refill: the same square, facing and water.
+    expect([placed?.x, placed?.y, placed?.direction, placed?.water]).toEqual([place?.x, place?.y, place?.direction, place?.water]);
     expect([day.pointsOf("seat-1"), day.countsToday("seat-1"), day.statsOf("seat-1")]).toEqual([40, true, stats]);
     expect(day.view(1000).tanks.filter((t) => t.id === "seat-1")).toHaveLength(1);
     // The round goes on with it, and a reshuffle keeps the new rules' tank and its points.

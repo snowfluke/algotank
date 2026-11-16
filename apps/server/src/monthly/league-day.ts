@@ -49,7 +49,7 @@
 
 import { plainTankLook, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS } from "@game/arena";
 
@@ -160,15 +160,13 @@ export class LeagueDay {
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */
   /**
    * A seated tank's new rules ("Ubah aturan", owner 2026-11-16: the new rules play at once). It
-   * keeps its id, today's points, whether today counts, and its statistics; it takes a new free
-   * square and starts its steps again, as at a reshuffle.
+   * keeps its id, today's points, whether today counts, its statistics, and its place on the board
+   * with its water, item and effect (engine replaceStrategy), so a change is no escape or refill.
    */
   restrategy(id: PlayerId, strategy: Strategy): void {
     const seated = this.seated.get(id);
     if (seated === undefined || this.round === null) throw new Error(`Seat ${id} is not in league ${this.league}.`);
-    const points = this.pointsOf(id);
-    leaveRound(this.round, id);
-    joinRound(this.round, { id, strategy }, points);
+    replaceStrategy(this.round, id, strategy);
     this.seated.set(id, { ...seated, tank: { ...seated.tank, strategy } });
   }
 

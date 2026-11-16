@@ -218,6 +218,26 @@ export function leaveRound(state: RoundState, id: BotId): void {
   round.sequences.delete(id);
 }
 
+/**
+ * Gives a tank on the board new rules between two turns. It keeps its square, facing, points,
+ * water, item, effect and hit history, so new rules are never a way out of danger or a refill
+ * (monthly "Ubah aturan", owner 2026-11-16). It starts in the new strategy's first mode, with the
+ * new strategy's upgrades and no running step sequence. Throws when the id is not on the board.
+ */
+export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy): BotState {
+  const round = runtimeOf(state);
+  const before = round.snapshot;
+  const old = before.bots.find((bot) => bot.id === id);
+  const firstMode = strategy.modes[0];
+  if (old === undefined) throw new Error(`player "${id}" is not in the round`);
+  if (firstMode === undefined) throw new Error(`the strategy of player "${id}" has no mode`);
+  const bot: BotState = { ...old, modeId: firstMode.id, ticksInMode: 0, build: strategy.build };
+  round.strategies.set(id, strategy);
+  round.sequences.delete(id);
+  round.snapshot = { ...before, bots: before.bots.map((b) => (b.id === id ? bot : b)) };
+  return bot;
+}
+
 /** What an open round holds per tank, so a test can check that nothing grows turn by turn. Not part of the engine's interface. */
 export function roundHoldings(state: RoundState): { readonly tanks: number; readonly strategies: number; readonly tieBreaks: number; readonly sequences: number } {
   const round = runtimeOf(state);

@@ -417,6 +417,8 @@ export class MonthlyLeagues {
     const seat = this.seats.seats.get(accountId);
     if (seat === undefined) throw new HttpError(404, "Your account has no tank in the monthly arena.", { code: "no_monthly_seat" });
     if (this.closing) throw serviceBusy();
+    // The same rules again change nothing, so a save never restarts the tank's mode.
+    if (JSON.stringify(seat.strategy) === JSON.stringify(parsed.strategy)) return;
     const next: SeatsState = { ...this.seats, seats: new Map(this.seats.seats).set(accountId, { ...seat, strategy: parsed.strategy }) };
     this.options.store.writeSeats(next);
     this.seats = next;

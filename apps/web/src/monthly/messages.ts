@@ -80,6 +80,9 @@ export const en = {
       "Your tank leaves the board now. Points from earlier days stay saved, and your name stays the same. You can join again later. To stop watching only, close this page, and your tank keeps playing.",
     confirm: "Leave the arena",
   },
+  /** A seated owner's tank editor; the seated tank takes the new look at once (no quit). */
+  changeLook: "Change look",
+  changeLookFailed: "Your tank's new look was not saved, so try Change look again.",
   /** The way to new rules: a quit, then the join steps with the tank's rules (flow.ts, askChangeRules). */
   changeRules: {
     open: "Change rules",
@@ -182,6 +185,8 @@ export const id: typeof en = {
       "Tank kamu keluar dari papan sekarang. Poin dari hari-hari sebelumnya tetap tersimpan, dan namamu tetap sama. Kamu bisa masuk lagi nanti. Kalau hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
     confirm: "Keluar dari arena",
   },
+  changeLook: "Ubah penampilan",
+  changeLookFailed: "Penampilan baru tank kamu belum tersimpan, jadi coba Ubah penampilan lagi.",
   changeRules: {
     open: "Ubah aturan",
     title: "Ubah aturan tank kamu?",

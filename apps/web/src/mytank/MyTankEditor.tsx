@@ -12,8 +12,8 @@ import type { TankLook } from "../tank/look.ts";
 import { TextInput } from "../ui/Field.tsx";
 import { ChoiceGrid } from "./ChoiceGrid.tsx";
 import { LiveTank } from "./LiveTank.tsx";
-import { choose, isChosen, partChoices, TANK_PARTS, type PartChoice, type TankPart } from "./parts.ts";
-import { ColourSwatch, IconSwatch, NoneSwatch, PatternSwatch, PlateSwatch } from "./Swatches.tsx";
+import { choose, flagWith, isChosen, partChoices, partsFor, type PartChoice, type TankPart } from "./parts.ts";
+import { ColourSwatch, FlagSwatch, IconSwatch, NoneSwatch, PatternSwatch, PlateSwatch } from "./Swatches.tsx";
 
 export interface NameField {
   readonly value: string;
@@ -41,7 +41,11 @@ function Swatch({ look, choice }: { readonly look: TankLook; readonly choice: Pa
   switch (choice.part) {
     case "colour":
     case "second":
+    case "flagFirst":
+    case "flagSecond":
       return <ColourSwatch colour={choice.value} />;
+    case "flag":
+      return choice.value === null ? <NoneSwatch /> : <FlagSwatch flag={flagWith(look, choice.value)} />;
     case "skin":
       return <PatternSwatch look={{ ...look, skin: choice.value }} />;
     case "plate":
@@ -64,11 +68,19 @@ function PartPicture({ look, part }: { readonly look: TankLook; readonly part: T
       return look.plate === null ? <NoneSwatch /> : <PlateSwatch colour={look.plate} />;
     case "icon":
       return look.icon === null ? <NoneSwatch /> : <IconSwatch look={look} />;
+    case "flag":
+      return look.flag === null ? <NoneSwatch /> : <FlagSwatch flag={look.flag} />;
+    // A plain flag in the colour, so "Colour 1" and "Colour 2" read as the flag's colours.
+    case "flagFirst":
+      return look.flag === null ? <NoneSwatch /> : <FlagSwatch flag={{ pattern: "plain", first: look.flag.first, second: look.flag.second }} />;
+    case "flagSecond":
+      return look.flag === null ? <NoneSwatch /> : <FlagSwatch flag={{ pattern: "plain", first: look.flag.second, second: look.flag.first }} />;
     case "name":
       return <PenLine aria-hidden className="size-full" strokeWidth={2.2} />;
   }
 }
 
+/** Up to nine parts (the flag added three, 2026-11-16): seven fit one row on a 360 px phone at the 44 px touch size, nine wrap. */
 function PartTabs({ parts, value, onChange, look, panelId }: { readonly parts: readonly TankPart[]; readonly value: TankPart; onChange(part: TankPart): void; readonly look: TankLook; readonly panelId: string }) {
   const m = useMessages();
   const t = m.mytank;
@@ -83,7 +95,7 @@ function PartTabs({ parts, value, onChange, look, panelId }: { readonly parts: r
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-tank-part="${next}"]`)?.focus());
   }
   return (
-    <div role="tablist" aria-label={t.parts} onKeyDown={onKeyDown} className="grid shrink-0 gap-0.5" style={{ gridTemplateColumns: `repeat(${parts.length}, minmax(0, 1fr))` }}>
+    <div role="tablist" aria-label={t.parts} onKeyDown={onKeyDown} className="grid shrink-0 gap-0.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(2.75rem, 1fr))" }}>
       {parts.map((part) => {
         const selected = part === value;
         return (
@@ -115,7 +127,7 @@ export function MyTankEditor({ look, onLook, tankName, name, startPart = "colour
   const m = useMessages();
   const t = m.mytank;
   const panelId = useId();
-  const parts: readonly TankPart[] = name === null ? TANK_PARTS.filter((p) => p !== "name") : TANK_PARTS;
+  const parts = partsFor(look, name !== null);
   const [chosenPart, setPart] = useState<TankPart>(startPart);
   const part = parts.includes(chosenPart) ? chosenPart : "colour";
 
@@ -151,7 +163,7 @@ export function MyTankEditor({ look, onLook, tankName, name, startPart = "colour
               itemKey={choiceKey}
               label={(choice) => choiceName(choice, t, m.common.tankColours)}
               chosen={(choice) => isChosen(look, choice)}
-              unavailable={(choice) => (choose(look, choice) === null ? t.sameAsHull : null)}
+              unavailable={(choice) => (choose(look, choice) === null ? (choice.part === "flagSecond" ? t.sameAsFlag : t.sameAsHull) : null)}
               render={(choice) => <Swatch look={look} choice={choice} />}
               onChoose={(choice) => {
                 const next = choose(look, choice);
@@ -171,7 +183,11 @@ function choiceName(choice: PartChoice, t: MyTankText, colours: ReturnType<typeo
   switch (choice.part) {
     case "colour":
     case "second":
+    case "flagFirst":
+    case "flagSecond":
       return colours[choice.value];
+    case "flag":
+      return choice.value === null ? t.none : t.flags[choice.value];
     case "skin":
       return t.skins[choice.value];
     case "plate":

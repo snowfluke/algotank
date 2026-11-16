@@ -12,6 +12,7 @@
 // and a hit with a bucket pops "+2". In a crowd only the viewer's tank shows these marks.
 //
 // A hover or a tap on a tank shows its name in a pill over it for a moment (tankPeek.ts).
+// A tank's flag (tank/TankFlag.tsx) turns with its hull; a crowd leaves the flags out.
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useId, useMemo, useRef } from "react";
@@ -341,7 +342,7 @@ export function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks
                 <g className="ab-move" style={{ transform: `rotate(${angle}deg)` }}>
                   {/* Only this group is keyed by the turn, so a reaction replays without breaking the glide of the groups around it. */}
                   <g key={reaction === undefined ? "rest" : `react-${tick}`} className={reaction}>
-                    <TankShape look={{ ...look, plate: null, icon: null }} self={isSelf} detail={tankDetail} />
+                    <TankShape look={{ ...look, plate: null, icon: null }} self={isSelf} detail={tankDetail} showFlag heading={angle} />
                   </g>
                   {hatchContent(look, tankLabel, tankDetail) === null ? null : (
                     <g transform={`translate(${TURRET_X} 0)`}>

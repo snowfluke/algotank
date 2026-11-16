@@ -30,6 +30,7 @@ function props(over: Partial<MonthlyViewProps> = {}, tanks = 5): MonthlyViewProp
     reshuffled: false,
     onQuit: () => undefined,
     onChangeRules: () => undefined,
+    onChangeLook: () => undefined,
     tab: "arena",
     onTab: () => undefined,
     side: "today",
@@ -42,7 +43,7 @@ const render = (p: MonthlyViewProps, language: "en" | "id" = "en") =>
   renderToStaticMarkup(
     <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
       <MonthlyView {...p} />
-      <MonthlyPhoneBar seat={p.seat} onJoin={p.onJoin} onChangeRules={p.onChangeRules} tab={p.tab} onTab={p.onTab} />
+      <MonthlyPhoneBar seat={p.seat} onJoin={p.onJoin} onChangeRules={p.onChangeRules} onChangeLook={p.onChangeLook} tab={p.tab} onTab={p.onTab} />
     </I18nProvider>,
   );
 
@@ -169,12 +170,14 @@ describe("a tank that quit today", () => {
 });
 
 describe("changing the rules", () => {
-  test("a seated owner sees Change rules on the arena tab and in the own pane once; a visitor does not", () => {
+  test("a seated owner sees Change rules and Change look on the arena and ranking tabs; a visitor does not", () => {
     const seat = fixtureSeat(1);
-    const count = (html: string) => html.split("data-change-rules").length - 1;
-    expect(count(render(props({ seat, onJoin: null, tab: "arena" }, 16)))).toBe(1);
-    expect(count(render(props({ seat, onJoin: null, tab: "mine" }, 16)))).toBe(1);
-    expect(render(props({ seat, onJoin: null, tab: "arena" }, 16), "id")).toContain(">Ubah aturan<");
-    expect(count(render(props({}, 16)))).toBe(0);
+    const count = (html: string, hook: string) => html.split(hook).length - 1;
+    for (const tab of ["arena", "ranking"] as const) {
+      const html = render(props({ seat, onJoin: null, tab }, 16));
+      expect([count(html, "data-change-rules"), count(html, "data-change-look")]).toEqual([1, 1]);
+    }
+    expect(render(props({ seat, onJoin: null, tab: "arena" }, 16), "id")).toContain(">Ubah penampilan<");
+    expect(count(render(props({}, 16)), "data-change-look")).toBe(0);
   });
 });

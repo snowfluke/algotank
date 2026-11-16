@@ -31,7 +31,7 @@ function temporaryDirectory(): string {
 }
 
 const NOW = Date.parse("2026-11-11T09:00:00Z");
-const TANK: AccountTank = { name: "Rara 2015", look: { colour: 9, skin: "stars", second: 3, plate: 6, icon: "moon" }, updatedAt: NOW };
+const TANK: AccountTank = { name: "Rara 2015", look: { colour: 9, skin: "stars", second: 3, plate: 6, icon: "moon", flag: null }, updatedAt: NOW };
 
 const get = async (t: TestServer, cookie: string): Promise<AccountTankResponse> => {
   const res = await t.api("/api/account/tank", { cookie });
@@ -40,6 +40,19 @@ const get = async (t: TestServer, cookie: string): Promise<AccountTankResponse> 
 };
 const put = (t: TestServer, cookie: string, body: unknown) => t.api("/api/account/tank", { method: "PUT", cookie, body });
 const errorOf = async (res: Response) => (await res.json()) as AccountTankErrorResponse;
+
+describe("the flag of My tank", () => {
+  test("is saved and read back, and a tank saved before flags reads as one without a flag", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    const flagged: AccountTank = { ...TANK, look: { ...TANK.look, flag: { pattern: "dot", first: 3, second: 1 } } };
+    expect((await put(t, cookie, flagged)).status).toBe(204);
+    expect(await get(t, cookie)).toEqual({ tank: flagged });
+    expect((await put(t, cookie, { ...flagged, look: { ...flagged.look, flag: { pattern: "dot", first: 3, second: 3 } }, updatedAt: NOW + 1 })).status).toBe(400);
+    expect((await put(t, cookie, { ...TANK, updatedAt: NOW + 2 })).status).toBe(204);
+    expect(await get(t, cookie)).toEqual({ tank: { ...TANK, updatedAt: NOW + 2 } });
+  });
+});
 
 describe("account tank routes", () => {
   test("need a session, and a change from another site is refused", async () => {

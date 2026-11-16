@@ -17,6 +17,7 @@ import type { Database, Statement } from "bun:sqlite";
 import {
   parsePlayerName,
   parseTankLook,
+  type AccountId,
   type AccountTank,
   type AccountTankErrorCode,
   type AccountTankErrorResponse,
@@ -38,6 +39,8 @@ interface TankRow {
   readonly second: number;
   readonly plate: number | null;
   readonly icon: string | null;
+  /** The look's flag as JSON, or null for none (schema migration 7). */
+  readonly flag_json: string | null;
   readonly updated_at: number;
 }
 
@@ -72,15 +75,15 @@ function parseAccountTankRequest(raw: unknown): TankParse {
 /** The tank of every account. */
 export class AccountTanks {
   private readonly select: Statement<TankRow, [string]>;
-  private readonly upsert: Statement<unknown, [string, string, number, string, number, number | null, string | null, number]>;
+  private readonly upsert: Statement<unknown, [string, string, number, string, number, number | null, string | null, string | null, number]>;
 
   constructor(private readonly db: Database) {
-    const columns = "name, colour, skin, second, plate, icon, updated_at";
+    const columns = "name, colour, skin, second, plate, icon, flag_json, updated_at";
     this.select = db.prepare(`SELECT ${columns} FROM account_tank WHERE account_id = ?`);
     this.upsert = db.prepare(
-      `INSERT INTO account_tank (account_id, ${columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO account_tank (account_id, ${columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (account_id) DO UPDATE SET name = excluded.name, colour = excluded.colour, skin = excluded.skin,
-         second = excluded.second, plate = excluded.plate, icon = excluded.icon, updated_at = excluded.updated_at`,
+         second = excluded.second, plate = excluded.plate, icon = excluded.icon, flag_json = excluded.flag_json, updated_at = excluded.updated_at`,
     );
   }
 
@@ -96,7 +99,7 @@ export class AccountTanks {
       const stored = this.get(accountId);
       if (stored !== null && stored.updatedAt > tank.updatedAt) return { ok: false, code: "tank_stale" } as const;
       const { look } = tank;
-      this.upsert.run(accountId, tank.name, look.colour, look.skin, look.second, look.plate, look.icon, tank.updatedAt);
+      this.upsert.run(accountId, tank.name, look.colour, look.skin, look.second, look.plate, look.icon, look.flag === null ? null : JSON.stringify(look.flag), tank.updatedAt);
       return { ok: true } as const;
     }).immediate();
   }
@@ -106,7 +109,15 @@ function toTank(accountId: string, row: TankRow): AccountTank {
   const invalid = (reason: string) => new PersistenceError(`The row ${accountId} of the table account_tank is not valid: ${reason}`);
   const name = parsePlayerName(row.name);
   if (name === null) throw invalid("the name breaks the name rule.");
-  const look = { colour: row.colour, skin: row.skin, second: row.second, plate: row.plate, icon: row.icon };
+  let flag: unknown = null;
+  if (row.flag_json !== null) {
+    try {
+      flag = JSON.parse(row.flag_json);
+    } catch {
+      throw invalid("flag_json is not JSON.");
+    }
+  }
+  const look = { colour: row.colour, skin: row.skin, second: row.second, plate: row.plate, icon: row.icon, flag };
   const parsed = parseLookAndTime({ look, updatedAt: row.updated_at }, name);
   if (!parsed.ok) throw invalid(parsed.problem);
   return parsed.value;
@@ -126,9 +137,11 @@ export interface AccountTankRouteDeps {
   readonly tanks: AccountTanks;
   /** The server's clock, for the check that updatedAt is not far in the future. */
   readonly now: () => number;
+  /** After a save: the monthly league's seated tank takes the look (monthly.ts followLook). */
+  readonly onSaved: (accountId: AccountId, tank: AccountTank) => void;
 }
 
-export function registerAccountTankRoutes(router: Router, { auth, tanks, now }: AccountTankRouteDeps): void {
+export function registerAccountTankRoutes(router: Router, { auth, tanks, now, onSaved }: AccountTankRouteDeps): void {
   router.add("GET", "/api/account/tank", (ctx) => {
     const account = auth.requireAccount(ctx.req);
     const response: AccountTankResponse = { tank: tanks.get(account.id) };
@@ -144,6 +157,7 @@ export function registerAccountTankRoutes(router: Router, { auth, tanks, now }: 
     }
     const result = tanks.put(account.id, parsed.value);
     if (!result.ok) return refuse(409, { code: "tank_stale", problem: "The account holds a newer copy of this tank." });
+    onSaved(account.id, parsed.value);
     return noContent();
   });
 }

@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { ICON_STROKE, TANK_ICON_GEOMETRY } from "./icons.ts";
 import { plainTankLook, type TankLook } from "./look.ts";
 import { HULL, SKIN_GEOMETRY } from "./skins.ts";
+import { TankFlagDrawing } from "./TankFlag.tsx";
 import { tankColourDarkVar, tankColourVar, type TankColour } from "./colours.ts";
 
 export type TankDetail = "full" | "simple" | "tiny";
@@ -39,6 +40,10 @@ export type TankShapeProps = TankPaint & {
   readonly detail?: TankDetail;
   /** Heading in degrees, clockwise from east (90 faces down). The plate, icon and label stay upright. */
   readonly angle?: number;
+  /** Draws the look's flag (TankFlag.tsx) at full and simple detail. The board and the tank editor do; a badge in a list is too small for it. */
+  readonly showFlag?: boolean;
+  /** The heading when a parent group turns the tank (the board passes its angle), for the flag's flip. Defaults to `angle`. */
+  readonly heading?: number;
 };
 
 const OUTLINE = "var(--color-tank-outline)";
@@ -209,7 +214,7 @@ export function TankHatch({ look, label, detail }: TankHatchProps): ReactNode {
   );
 }
 
-export function TankShape({ self = false, label, detail = "full", angle = 0, ...paint }: TankShapeProps) {
+export function TankShape({ self = false, label, detail = "full", angle = 0, showFlag = false, heading, ...paint }: TankShapeProps) {
   const look = paintedLook(paint as TankPaint);
   const radians = (angle * Math.PI) / 180;
   // The hatch is drawn outside the rotated group, so an icon or a label never turns upside down.
@@ -223,6 +228,7 @@ export function TankShape({ self = false, label, detail = "full", angle = 0, ...
       {self ? <SelfRing detail={detail} /> : null}
       <g transform={angle === 0 ? undefined : `rotate(${angle})`}>
         <TankHull look={look} detail={detail} hatched={hatched} />
+        {showFlag && look.flag !== null && detail !== "tiny" ? <TankFlagDrawing flag={look.flag} heading={heading ?? angle} bold={detail === "simple"} /> : null}
       </g>
       {hatched ? (
         <g transform={`translate(${hatchX} ${hatchY})`}>

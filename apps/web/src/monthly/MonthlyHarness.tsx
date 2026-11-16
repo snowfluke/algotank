@@ -59,7 +59,7 @@ export function MonthlyHarness() {
     <AppShell
       width="full"
       header={<AppHeader {...(presenter ? {} : { title: m.common.pageTitles.monthly })} />}
-      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => setQuitting("rules")} tab={tab} onTab={setTab} />}
+      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => setQuitting("rules")} onChangeLook={() => undefined} tab={tab} onTab={setTab} />}
     >
       <MonthlyView
         league={league}
@@ -79,6 +79,7 @@ export function MonthlyHarness() {
         reshuffled={which === "reshuffled"}
         onQuit={() => setQuitting("leave")}
         onChangeRules={() => setQuitting("rules")}
+        onChangeLook={() => undefined}
         tab={tab}
         onTab={setTab}
         side={side}

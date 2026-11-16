@@ -2,6 +2,8 @@
 // a hull-shaped panel, a plate, an icon on a white hatch, and "none". Each is an SVG
 // that fills the box it is given.
 
+import type { TankFlag } from "@game/arena";
+import { FLAG_VIEW_BOX, TankFlagDrawing } from "../tank/TankFlag.tsx";
 import { TankPlate, TankIconDrawing } from "../tank/TankShape.tsx";
 import { tankColourVar, type TankColour } from "../tank/colours.ts";
 import { SKIN_GEOMETRY, HULL } from "../tank/skins.ts";
@@ -49,6 +51,15 @@ export function IconSwatch({ look }: { readonly look: TankLook }) {
       <g transform="scale(1.15)">
         <TankIconDrawing look={look} />
       </g>
+    </svg>
+  );
+}
+
+/** A flag alone, as it flies on a tank facing right. */
+export function FlagSwatch({ flag }: { readonly flag: TankFlag }) {
+  return (
+    <svg viewBox={FLAG_VIEW_BOX} aria-hidden="true" className={SVG_CLASS}>
+      <TankFlagDrawing flag={flag} heading={0} bold={false} />
     </svg>
   );
 }

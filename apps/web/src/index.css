@@ -271,10 +271,28 @@
   animation: tank-turn-back 14s linear infinite;
 }
 
+/* The flag on the turning tank flips in step with the turn (tank/TankFlag.tsx): the turn starts
+   facing up, so the cloth is the right way up for the first half and flipped over its middle
+   line (y = 2) for the second, which keeps its first colour on top on screen. */
+@keyframes flag-turn-flip {
+  0%,
+  50% {
+    transform: none;
+  }
+  50.001%,
+  100% {
+    transform: translate(0px, 4px) scale(1, -1);
+  }
+}
+.flag-turn-flip {
+  animation: flag-turn-flip 14s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* The "My tank" tank stands still, facing up. */
   .tank-turn,
-  .tank-turn-back {
+  .tank-turn-back,
+  .flag-turn-flip {
     animation: none;
   }
   /* The coach mark's ring stays still; its thickness and colour still show it. */

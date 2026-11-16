@@ -211,7 +211,7 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   registerResultRoutes(router, { auth, results });
   registerChatRoutes(router, { store, hub, auth, autoSteps, chat, chatLimits, now, metrics });
   registerAccountStrategyRoutes(router, { auth, strategies: new AccountStrategies(db), now, metrics });
-  registerAccountTankRoutes(router, { auth, tanks: new AccountTanks(db), now });
+  registerAccountTankRoutes(router, { auth, tanks: new AccountTanks(db), now, onSaved: (accountId, tank) => monthly.followLook(accountId, tank.look) });
   registerAccountStatsRoutes(router, { auth, stats: accountStats });
   registerPublicRoutes(router, { publicArenas, monthly, champions, winners });
   registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics, mailOn });

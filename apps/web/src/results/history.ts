@@ -51,7 +51,7 @@ export interface RoundHistoryModel {
 /** The same shape for a stored round and a live RoundSummary. */
 type RoundInput = Pick<ResultRound, "round" | "isFinal" | "survivors" | "standings">;
 
-const UNKNOWN_LOOK: TankLook = { colour: 1, skin: "plain", second: 2, plate: null, icon: null };
+const UNKNOWN_LOOK: TankLook = { colour: 1, skin: "plain", second: 2, plate: null, icon: null, flag: null };
 
 function build(rounds: readonly RoundInput[], tanks: ReadonlyMap<PlayerId, HistoryTank>, winnerId: PlayerId | null, viewerId: PlayerId | null): RoundHistoryModel {
   const played = new Set(rounds.flatMap((r) => r.standings.map((s) => s.playerId)));

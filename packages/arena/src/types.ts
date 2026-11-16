@@ -241,6 +241,31 @@ export const TANK_ICONS = [
 export type TankIcon = (typeof TANK_ICONS)[number];
 export const isTankIcon = (value: unknown): value is TankIcon => TANK_ICONS.some((icon) => icon === value);
 
+/**
+ * The patterns of a tank's flag, a waving flag on a pole at the back of the tank (owner,
+ * 2026-11-16). Each uses two colours: "plain" draws only `first`; "bands" puts `first` over
+ * `second`; "halves" puts `first` at the pole; "stripe" is a `second` stripe across `first`;
+ * "dot" a `second` dot on `first`; "diagonal" splits it from the pole's top corner.
+ */
+export const FLAG_PATTERNS = ["plain", "bands", "halves", "stripe", "dot", "diagonal"] as const;
+export type FlagPattern = (typeof FLAG_PATTERNS)[number];
+export const isFlagPattern = (value: unknown): value is FlagPattern => FLAG_PATTERNS.some((pattern) => pattern === value);
+
+/** A tank's flag. `second` differs from `first`, also for "plain", as a look's `second` does. */
+export interface TankFlag {
+  readonly pattern: FlagPattern;
+  readonly first: TankColour;
+  readonly second: TankColour;
+}
+
+/** The check of a flag that arrives as unknown data; null when it is not a flag. */
+export function parseTankFlag(value: unknown): TankFlag | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const { pattern, first, second } = value as Record<string, unknown>;
+  if (!isFlagPattern(pattern) || !isTankColour(first) || !isTankColour(second) || first === second) return null;
+  return { pattern, first, second };
+}
+
 export interface TankLook {
   /** The hull. */
   readonly colour: TankColour;
@@ -254,6 +279,8 @@ export interface TankLook {
   readonly plate: TankColour | null;
   /** null shows the first one or two letters of the name instead. */
   readonly icon: TankIcon | null;
+  /** The flag at the back of the tank; null for none. A look stored before flags has none. */
+  readonly flag: TankFlag | null;
 }
 
 /** The colour after `colour`, wrapping 12 to 1. The second colour of a plain look. */
@@ -264,22 +291,25 @@ function nextColour(colour: TankColour): TankColour {
 
 /** A plain look in one colour: no pattern, no plate, no icon. Bots and old stored arenas use it. */
 export function plainTankLook(colour: TankColour): TankLook {
-  return { colour, skin: "plain", second: nextColour(colour), plate: null, icon: null };
+  return { colour, skin: "plain", second: nextColour(colour), plate: null, icon: null, flag: null };
 }
 
 /**
  * The one check of a look that arrives as unknown data (a request body, a stored file,
  * the browser's own storage, the event stream). It returns a new object with exactly
- * the five fields, or null when any field is missing, unknown or out of range, or when
+ * the six fields (a missing flag reads as none), or null when any field is missing, unknown or out of range, or when
  * `second` equals `colour`.
  */
 export function parseTankLook(value: unknown): TankLook | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const { colour, skin, second, plate, icon } = value as Record<string, unknown>;
+  const { colour, skin, second, plate, icon, flag: rawFlag } = value as Record<string, unknown>;
   if (!isTankColour(colour) || !isTankSkin(skin) || !isTankColour(second) || second === colour) return null;
   if (plate !== null && !isTankColour(plate)) return null;
   if (icon !== null && !isTankIcon(icon)) return null;
-  return { colour, skin, second, plate, icon };
+  // A look saved before flags has no `flag` field: it has no flag. A flag that is there must be valid.
+  const flag = rawFlag === undefined || rawFlag === null ? null : parseTankFlag(rawFlag);
+  if (rawFlag !== undefined && rawFlag !== null && flag === null) return null;
+  return { colour, skin, second, plate, icon, flag };
 }
 
 // ---------------------------------------------------------------------------

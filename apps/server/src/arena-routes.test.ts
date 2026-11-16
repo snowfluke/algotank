@@ -317,7 +317,7 @@ describe("players", () => {
   test("join needs a valid look and answers the stored name", async () => {
     const t = start();
     const { arenaId } = await createTestArena(t);
-    const full: TankLook = { colour: 5, skin: "hearts", second: 11, plate: 2, icon: "rocket" };
+    const full: TankLook = { colour: 5, skin: "hearts", second: 11, plate: 2, icon: "rocket", flag: null };
     for (const look of [undefined, { colour: 5 }, { ...full, colour: 13 }, { ...full, second: 5 }, { ...full, icon: "dragon" }]) {
       const res = await t.api(`/api/arenas/${arenaId}/players`, { method: "POST", body: { name: "Ada", look } });
       expect(res.status).toBe(400);
@@ -363,7 +363,7 @@ describe("players", () => {
     const bo = await joinTestPlayer(t, arenaId, "Bob");
     const cy = await joinTestPlayer(t, arenaId, "Cyd");
     const me = `/api/arenas/${arenaId}/players/me`;
-    const look: TankLook = { colour: 12, skin: "waves", second: 1, plate: null, icon: "cat" };
+    const look: TankLook = { colour: 12, skin: "waves", second: 1, plate: null, icon: "cat", flag: null };
 
     expect((await t.api(me, { method: "PATCH", body: { look } })).status).toBe(401);
     expect((await errorOf(await t.api(me, { method: "PATCH", token: ada.playerToken, body: { colour: 4 } }))).code).toBe("look_invalid");

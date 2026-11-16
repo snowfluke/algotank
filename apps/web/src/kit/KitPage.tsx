@@ -37,14 +37,14 @@ import { useToast } from "../ui/Toast.tsx";
 
 const COLOUR_TOKENS = ["ground", "panel", "ink", "muted", "line", "water", "water-deep", "water-soft", "self", "self-ink", "ok", "hit", "warning", "arena-floor", "arena-grid"] as const;
 const BOARD_SAMPLE: readonly { look: TankLook; angle: number; self?: boolean; label: string }[] = [
-  { look: { colour: 9, skin: "dots", second: 12, plate: 9, icon: "star" }, angle: 0, self: true, label: "AN" },
-  { look: { colour: 2, skin: "stripes", second: 11, plate: 7, icon: null }, angle: 180, label: "BU" },
-  { look: { colour: 3, skin: "hearts", second: 5, plate: null, icon: "cat" }, angle: 90, label: "CI" },
+  { look: { colour: 9, skin: "dots", second: 12, plate: 9, icon: "star", flag: null }, angle: 0, self: true, label: "AN" },
+  { look: { colour: 2, skin: "stripes", second: 11, plate: 7, icon: null, flag: null }, angle: 180, label: "BU" },
+  { look: { colour: 3, skin: "hearts", second: 5, plate: null, icon: "cat", flag: null }, angle: 90, label: "CI" },
   { look: plainTankLook(4), angle: -90, label: "DE" },
 ];
 
 /** One look shown at each detail level, so the levels can be compared side by side. */
-const LEVEL_SAMPLE: TankLook = { colour: 1, skin: "zigzag", second: 3, plate: 6, icon: "rocket" };
+const LEVEL_SAMPLE: TankLook = { colour: 1, skin: "zigzag", second: 3, plate: 6, icon: "rocket", flag: null };
 
 function TankSection() {
   const m = useMessages();
@@ -64,7 +64,7 @@ function TankSection() {
       <h3 className="text-lead">{k.skins}</h3>
       <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-4 p-0" data-kit-skins="">
         {TANK_SKINS.map((skin, i) => {
-          const look: TankLook = { colour: i % 2 === 0 ? 1 : 10, skin, second: i % 2 === 0 ? 3 : 11, plate: null, icon: null };
+          const look: TankLook = { colour: i % 2 === 0 ? 1 : 10, skin, second: i % 2 === 0 ? 3 : 11, plate: null, icon: null, flag: null };
           return (
             <li key={skin} className="flex flex-col items-center gap-1 text-caption text-muted">
               <TankBadge look={look} size={64} name={t.skins[skin]} angle={-90} />
@@ -77,7 +77,7 @@ function TankSection() {
       <h3 className="text-lead">{k.icons}</h3>
       <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-4 p-0" data-kit-icons="">
         {TANK_ICONS.map((icon, i) => {
-          const look: TankLook = { colour: ((i % 12) + 1) as TankColour, skin: "plain", second: (((i + 5) % 12) + 1) as TankColour, plate: null, icon };
+          const look: TankLook = { colour: ((i % 12) + 1) as TankColour, skin: "plain", second: (((i + 5) % 12) + 1) as TankColour, plate: null, icon, flag: null };
           return (
             <li key={icon} className="flex flex-col items-center gap-1 text-caption text-muted">
               <TankBadge look={look} size={64} name={t.icons[icon]} angle={-90} />
@@ -108,10 +108,10 @@ function TankSection() {
       </div>
       <h3 className="text-lead">{k.selfAndLabels}</h3>
       <div className="flex flex-wrap items-center gap-4">
-        <TankBadge look={{ colour: 9, skin: "stars", second: 12, plate: 9, icon: "crown" }} size={64} name={m.common.yourTank} self angle={-90} />
+        <TankBadge look={{ colour: 9, skin: "stars", second: 12, plate: 9, icon: "crown", flag: null }} size={64} name={m.common.yourTank} self angle={-90} />
         <TankBadge colour={9} size={64} name={m.common.yourTank} self label="A" angle={-45} />
         <TankBadge colour={6} size={64} name={m.common.tankOf("Budi")} label="BU" angle={30} />
-        <TankBadge look={{ colour: 9, skin: "plain", second: 1, plate: 9, icon: "heart" }} size={24} name={m.common.yourTank} self detail="simple" angle={-90} />
+        <TankBadge look={{ colour: 9, skin: "plain", second: 1, plate: 9, icon: "heart", flag: null }} size={24} name={m.common.yourTank} self detail="simple" angle={-90} />
         <TankBadge colour={7} size={16} name={m.common.yourTank} self detail="simple" angle={0} />
       </div>
       <h3 className="text-lead">{k.onTheBoard}</h3>

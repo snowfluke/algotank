@@ -84,6 +84,13 @@ export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, 
     return new Response(null, { status: 204 });
   });
 
+  router.add("PUT", "/api/monthly/look", async (ctx) => {
+    const account = auth.requireAccount(ctx.req);
+    limitChanges(changes, account.id);
+    monthly.changeLook(account.id, await readJson(ctx.req));
+    return new Response(null, { status: 204 });
+  });
+
   router.add("POST", "/api/monthly/me/move-seen", (ctx) => {
     monthly.moveSeen(auth.requireAccount(ctx.req).id);
     return new Response(null, { status: 204 });

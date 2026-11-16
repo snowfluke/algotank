@@ -745,7 +745,7 @@ describe("join in each phase and kind", () => {
   });
 
   test("keeps a full look and rejects a look that parseTankLook refuses", () => {
-    const look: TankLook = { colour: 3, skin: "dots", second: 5, plate: 7, icon: "star" };
+    const look: TankLook = { colour: 3, skin: "dots", second: 5, plate: 7, icon: "star", flag: null };
     expect(ok(newArena(), { kind: "join", playerId: "p1", name: "Ayu", strategy: strategy(), look }).players[0]?.look).toEqual(look);
     for (const bad of [{ ...look, colour: 13 }, { ...look, second: 3 }, { ...look, skin: "tartan" }, null]) {
       expect(err(newArena(), { kind: "join", playerId: "p1", name: "Ayu", strategy: strategy(), look: bad as TankLook })).toBe("look_invalid");
@@ -806,7 +806,7 @@ describe("removePlayers", () => {
 
 describe("setLook", () => {
   test("changes the look in the lobby, the break and after the final", () => {
-    const look: TankLook = { colour: 3, skin: "dots", second: 5, plate: 7, icon: "star" };
+    const look: TankLook = { colour: 3, skin: "dots", second: 5, plate: 7, icon: "star", flag: null };
     const lobby = lobbyWith(10);
     const inBreak = playRound(lobby, 1);
     const finished = playRound(lobbyWith(3), 1);
@@ -956,9 +956,11 @@ describe("reset", () => {
 });
 
 describe("parseTankLook", () => {
-  test("returns a new object with exactly the five fields", () => {
+  test("returns a new object with exactly the six fields; a look saved before flags has none", () => {
     const raw = { colour: 12, skin: "scales", second: 1, plate: null, icon: "smile", extra: "dropped" };
-    expect(parseTankLook(raw)).toEqual({ colour: 12, skin: "scales", second: 1, plate: null, icon: "smile" });
+    expect(parseTankLook(raw)).toEqual({ colour: 12, skin: "scales", second: 1, plate: null, icon: "smile", flag: null });
+    const flag = { pattern: "bands", first: 2, second: 11, extra: "dropped" };
+    expect(parseTankLook({ ...raw, flag })?.flag).toEqual({ pattern: "bands", first: 2, second: 11 });
   });
 
   test.each<[string, unknown]>([
@@ -971,6 +973,9 @@ describe("parseTankLook", () => {
     ["a missing plate", { colour: 1, skin: "plain", second: 2, icon: null }],
     ["a plate out of range", { colour: 1, skin: "plain", second: 2, plate: 13, icon: null }],
     ["a list", [1, "plain", 2, null, null]],
+    ["a flag with an unknown pattern", { colour: 1, skin: "plain", second: 2, plate: null, icon: null, flag: { pattern: "cross", first: 2, second: 3 } }],
+    ["a flag with two equal colours", { colour: 1, skin: "plain", second: 2, plate: null, icon: null, flag: { pattern: "plain", first: 3, second: 3 } }],
+    ["a flag that is not an object", { colour: 1, skin: "plain", second: 2, plate: null, icon: null, flag: "bands" }],
   ])("rejects %s", (_label, raw) => {
     expect(parseTankLook(raw)).toBeNull();
   });

@@ -166,6 +166,13 @@ export class LeagueDay {
     seated.tank = { ...seated.tank, name };
   }
 
+  /** A seated tank's new look between turns (monthly.ts followLook); the round goes on. */
+  restyle(id: PlayerId, look: TankLook): void {
+    const seated = this.seated.get(id);
+    if (seated === undefined) throw new Error(`Seat ${id} is not in league ${this.league}.`);
+    seated.tank = { ...seated.tank, look };
+  }
+
   pointsOf(id: PlayerId): number {
     const bot = this.round?.snapshot.bots.find((b) => b.id === id);
     if (bot === undefined) throw new Error(`Seat ${id} is not on the board of league ${this.league}.`);

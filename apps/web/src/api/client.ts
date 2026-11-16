@@ -4,6 +4,7 @@
 
 import { isResultId, parseAccountStatsResponse, parsePlayerName, parseStatsView, parseTankLook, parseTournamentResult } from "@game/arena";
 import type {
+  TankLook,
   AccountStatsResponse,
   AccountResultsResponse,
   ArenaAccountsResponse,
@@ -484,6 +485,11 @@ export function getMonthlyMe(): Promise<ApiResult<MonthlyMeResponse>> {
 
 export function takeMonthlySeat(body: TakeSeatRequest): Promise<ApiResult<MonthlyMeResponse>> {
   return request({ method: "POST", path: "/api/monthly/seat", body, guard: isMonthlyMe });
+}
+
+/** "Change look": the seated tank takes this look; its name and points stay. */
+export function putMonthlyLook(look: TankLook): Promise<ApiResult<void>> {
+  return request<void>({ method: "PUT", path: "/api/monthly/look", body: { look } });
 }
 
 export function quitMonthlySeat(): Promise<ApiResult<void>> {

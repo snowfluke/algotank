@@ -157,3 +157,40 @@ describe("the champions of past months", () => {
     expect((await json<ChampionsResponse>(await t.api("/api/champions"))).months).toEqual([{ month: "2026-10", champion: row, top: [row] }]);
   });
 });
+
+describe("Change look", () => {
+  test("PUT /api/monthly/look gives the seated tank a new look; the name stays, and a bad look or no seat is refused", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    const look = { ...plainTankLook(3), flag: { pattern: "dot", first: 4, second: 11 } } as const;
+    expect((await t.api("/api/monthly/look", { method: "PUT", cookie, body: { look } })).status).toBe(404);
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+    expect((await t.api("/api/monthly/look", { method: "PUT", cookie, body: { look: { ...look, colour: 99 } } })).status).toBe(400);
+    expect((await t.api("/api/monthly/look", { method: "PUT", cookie, body: { look } })).status).toBe(204);
+    const seat = (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
+    expect([seat?.name, seat?.look]).toEqual(["Ada", look]);
+  });
+});
+
+describe("the flag of a seated tank", () => {
+  test("the seated tank's look follows My tank, flag included; the name and the seat stay", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+    const seatOf = async () => (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
+    const before = await seatOf();
+    expect(before?.look.flag).toBeNull();
+    const flag = { pattern: "bands", first: 2, second: 11 } as const;
+    const myTank = { name: "Other Name", look: { ...plainTankLook(7), flag }, updatedAt: 1000 };
+    expect((await t.api("/api/account/tank", { method: "PUT", cookie, body: myTank })).status).toBe(204);
+    const after = await seatOf();
+    expect(after?.look).toEqual(myTank.look);
+    expect(after?.name).toBe("Ada");
+    expect(after?.seatId).toBe(before?.seatId);
+    const ranking = await json<LeagueRankingResponse>(await t.api("/api/monthly/leagues/1/ranking"));
+    expect(ranking.today.find((row) => row.seatId === before?.seatId)?.look.flag).toEqual(flag);
+    expect((await t.api("/api/account/tank", { method: "PUT", cookie, body: { ...myTank, look: plainTankLook(7), updatedAt: 1001 } })).status).toBe(204);
+    expect((await seatOf())?.look.flag).toBeNull();
+  });
+});
+

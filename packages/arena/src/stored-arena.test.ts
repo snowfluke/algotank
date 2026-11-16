@@ -18,7 +18,7 @@ function finishedStored(): StoredArena {
     if (!result.ok) throw new Error(result.error);
     arena = result.arena;
   };
-  for (const id of ["a", "b"]) apply({ kind: "join", playerId: id, name: `Player ${id}`, strategy, look: { colour: 1, skin: "stripes", second: 9, plate: 12, icon: "paw" } });
+  for (const id of ["a", "b"]) apply({ kind: "join", playerId: id, name: `Player ${id}`, strategy, look: { colour: 1, skin: "stripes", second: 9, plate: 12, icon: "paw", flag: null } });
   apply({ kind: "addBots", bots: [{ playerId: "c", name: "Splashy", strategy, look: plainTankLook(2) }] });
   apply({ kind: "startRound", seed: 11, ruleSetId: "downpour" });
   const config: RoundConfig = {

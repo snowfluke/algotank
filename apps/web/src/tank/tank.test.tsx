@@ -38,7 +38,7 @@ describe("TankBadge", () => {
 });
 
 describe("a tank's look", () => {
-  const look = { colour: 2, skin: "stars", second: 7, plate: 9, icon: "fish" } as const;
+  const look = { colour: 2, skin: "stars", second: 7, plate: 9, icon: "fish", flag: null } as const;
 
   test("full detail draws the plate, the pattern in the second colour and the icon instead of the letters", () => {
     const html = renderToStaticMarkup(<TankBadge look={look} size={48} name="x" label="AB" />);
@@ -114,7 +114,7 @@ describe("look helpers", () => {
   });
 
   test("a new hull colour equal to the pattern colour swaps them, so the look stays valid", () => {
-    const look = { colour: 1, skin: "dots", second: 4, plate: null, icon: null } as const;
+    const look = { colour: 1, skin: "dots", second: 4, plate: null, icon: null, flag: null } as const;
     expect(withColour(look, 4)).toEqual({ ...look, colour: 4, second: 1 });
     expect(parseTankLook(withColour(look, 4))).not.toBeNull();
   });

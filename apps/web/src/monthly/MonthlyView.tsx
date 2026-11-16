@@ -74,6 +74,8 @@ export interface MonthlyViewProps {
   onQuit(): void;
   /** A seated owner's way to new rules (flow.ts, askChangeRules). Its button stands where a visitor's Join button stands. */
   onChangeRules(): void;
+  /** A seated owner's way to a new look: the tank editor, whose look the seat follows (server monthly.ts followLook). */
+  onChangeLook(): void;
   readonly tab: MonthlyTab;
   onTab(next: MonthlyTab): void;
   readonly side: MonthlySide;
@@ -290,15 +292,13 @@ function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: num
 }
 
 /** The owner's tank: today, the counted days, the turns, and the way out. */
-function OwnPane({ seat, league, board, ranking, onLeague, onQuit, onChangeRules, strategy }: {
+function OwnPane({ seat, league, board, ranking, onLeague, onQuit, strategy }: {
   seat: MonthlySeat;
   league: number;
   board: LeagueBoard | null;
   ranking: LeagueRankingResponse | null;
   onLeague(next: number): void;
   onQuit(): void;
-  /** null on a laptop, whose header has the button already; a phone's own tab has no other. */
-  onChangeRules: (() => void) | null;
   strategy: StrategyInput;
 }) {
   const m = useMessages();
@@ -355,12 +355,8 @@ function OwnPane({ seat, league, board, ranking, onLeague, onQuit, onChangeRules
           {here && board !== null ? <OwnFeed decisions={board.own} strategy={strategy} /> : <div className="min-h-0 flex-1" />}
         </>
       )}
+      {/* Change rules and Change look sit in the phone's bar and the laptop's header; this pane keeps the way out. */}
       <div className="flex min-w-0 shrink-0 flex-wrap gap-2">
-        {onChangeRules === null ? null : (
-          <Button variant="secondary" data-change-rules="" onClick={onChangeRules}>
-            {m.monthly.changeRules.open}
-          </Button>
-        )}
         <Button variant="secondary" data-quit-open="" onClick={onQuit}>
           {m.monthly.quit.open}
         </Button>
@@ -452,9 +448,14 @@ function PresenterLayout(props: MonthlyViewProps) {
         )}
         {/* Only in the own league: another league's view leads back to it first, and a header with two buttons there did not fit 1000 px. */}
         {seat === null || seat.league !== league ? null : (
-          <Button variant="secondary" data-change-rules="" onClick={props.onChangeRules}>
-            {t.changeRules.open}
-          </Button>
+          <>
+            <Button variant="secondary" data-change-rules="" onClick={props.onChangeRules}>
+              {t.changeRules.open}
+            </Button>
+            <Button variant="secondary" data-change-look="" onClick={props.onChangeLook}>
+              {t.changeLook}
+            </Button>
+          </>
         )}
         <MonthlyAbout />
         {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
@@ -472,7 +473,7 @@ function PresenterLayout(props: MonthlyViewProps) {
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
           </div>
           {side === "mine" && seat !== null ? (
-            <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} onChangeRules={null} strategy={seat.strategy} />
+            <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} strategy={seat.strategy} />
           ) : (
             <Ranking part={side === "month" ? "month" : "today"} ranking={props.ranking} ownSeatId={ownSeatId} />
           )}
@@ -491,7 +492,7 @@ const TAB_ICONS: Record<MonthlyTab, ReactNode> = {
 };
 
 /** The phone's bottom bar: the visitor's action above the tabs. MonthlyPage puts it in AppShell's `bottom`. */
-export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, tab, onTab }: Pick<MonthlyViewProps, "seat" | "onJoin" | "onChangeRules" | "tab" | "onTab">) {
+export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab, onTab }: Pick<MonthlyViewProps, "seat" | "onJoin" | "onChangeRules" | "onChangeLook" | "tab" | "onTab">) {
   const m = useMessages();
   const t = m.monthly;
   const laptop = useLaptopLayout();
@@ -507,11 +508,15 @@ export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, tab, onTab }: Pic
           </Button>
         </div>
       )}
-      {/* The own pane has the button too, but players did not find it there (2026-11-16); the "Tank kamu" tab has it once. */}
+      {/* Where a visitor's Join stands: players did not find the way to new rules in the own pane (2026-11-16). The "Tank kamu"
+          tab leaves it out, because at 360 x 640 its way out would not fit under it. */}
       {seat === null || tab === "mine" ? null : (
-        <div className="mx-auto flex w-full max-w-6xl px-4 py-2">
-          <Button size="lg" variant="secondary" data-change-rules="" className="w-full" onClick={onChangeRules}>
+        <div className="mx-auto flex w-full max-w-6xl gap-2 px-4 py-2">
+          <Button size="lg" variant="secondary" data-change-rules="" className="min-w-0 flex-1" onClick={onChangeRules}>
             {t.changeRules.open}
+          </Button>
+          <Button size="lg" variant="secondary" data-change-look="" className="min-w-0 flex-1" onClick={onChangeLook}>
+            {t.changeLook}
           </Button>
         </div>
       )}
@@ -531,7 +536,7 @@ function PhoneLayout(props: MonthlyViewProps) {
   const leagueTitle = leagueTitleOf(t, league, leagues);
   let pane: ReactNode;
   if (tab === "mine" && seat !== null) {
-    pane = <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} onChangeRules={props.onChangeRules} strategy={seat.strategy} />;
+    pane = <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} strategy={seat.strategy} />;
   } else if (tab === "ranking") {
     pane = (
       <section aria-label={t.ranking.label} className={PANE}>

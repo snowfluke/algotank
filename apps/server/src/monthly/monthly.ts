@@ -63,6 +63,7 @@ import {
   type MonthRecord,
   type PlayerId,
   type PublicStatusResponse,
+  type TankLook,
 } from "@game/arena";
 import { parseStrategy, statsView } from "@game/engine";
 import { makeGameName } from "../game-names.ts";
@@ -424,6 +425,42 @@ export class MonthlyLeagues {
       this.dayOf(seat.league).rename(seat.seatId, name);
       this.sendState(seat.league);
     }
+  }
+
+  /**
+   * A seated tank's look follows the account's "My tank" (owner, 2026-11-16: "Ubah penampilan",
+   * and a tank seated without a flag may add one). The name stays this month's name, and today's
+   * points and count stay. account-tank.ts calls it after every save of "My tank"; nothing happens
+   * without a seat or when the look is the same. During the day's close the seat keeps its look,
+   * and the next save of "My tank" brings it.
+   */
+  followLook(accountId: AccountId, look: TankLook): void {
+    const seat = this.seats.seats.get(accountId);
+    if (seat === undefined || this.closing) return;
+    this.restyle(accountId, seat, look);
+  }
+
+  /**
+   * PUT /api/monthly/look: "Change look" sends the edited look at Done, also when "My tank" cannot
+   * reach the account (it sends nothing without a valid name on the device).
+   */
+  changeLook(accountId: AccountId, body: unknown): void {
+    const look = parseTankLook(isRecord(body) ? body["look"] : undefined);
+    if (look === null) throw new HttpError(400, "Send look as a tank look.");
+    const seat = this.seats.seats.get(accountId);
+    if (seat === undefined) throw new HttpError(404, "Your account has no tank in the monthly arena.", { code: "no_monthly_seat" });
+    if (this.closing) throw serviceBusy();
+    this.restyle(accountId, seat, look);
+  }
+
+  /** The seat's new look, between turns: stored, given to the day round, and sent to the viewers. Nothing when it is the same. */
+  private restyle(accountId: AccountId, seat: Seat, look: TankLook): void {
+    if (JSON.stringify(seat.look) === JSON.stringify(look)) return;
+    const next: SeatsState = { ...this.seats, seats: new Map(this.seats.seats).set(accountId, { ...seat, look }) };
+    this.options.store.writeSeats(next);
+    this.seats = next;
+    this.dayOf(seat.league).restyle(seat.seatId, look);
+    this.sendState(seat.league);
   }
 
   /** POST /api/monthly/me/move-seen. */

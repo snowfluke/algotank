@@ -154,7 +154,7 @@ describe("ArenaBoard", () => {
   });
 
   test("a chosen look paints the hull, the plate and the icon, and others are plain in the order of the tanks", () => {
-    const look = { colour: 6, skin: "dots", second: 3, plate: 9, icon: "cat" } as const;
+    const look = { colour: 6, skin: "dots", second: 3, plate: 9, icon: "cat", flag: null } as const;
     const coloured = renderToStaticMarkup(
       <ArenaBoard snapshot={snapshot} throws={[]} names={names} highlightId={null} tickMs={300} tanks={new Map([["p0", { look }]])} />,
     );

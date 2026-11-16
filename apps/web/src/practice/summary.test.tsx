@@ -122,7 +122,7 @@ describe("MatchResult", () => {
 describe("matchTanks", () => {
   test("the player keeps its look and no plain bot shares its colour before the other eleven are used", () => {
     const ids = [PLAYER_ID, ...Array.from({ length: 12 }, (_, i) => `bot-${i + 1}`)];
-    const look = { colour: 4, skin: "waves", second: 1, plate: 3, icon: "fish" } as const;
+    const look = { colour: 4, skin: "waves", second: 1, plate: 3, icon: "fish", flag: null } as const;
     const tanks = matchTanks(ids, look);
     expect(tanks.get(PLAYER_ID)).toEqual({ look });
     const botColours = ids.slice(1, 12).map((botId) => tanks.get(botId)?.look.colour);

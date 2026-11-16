@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { TakeSeatRequest } from "@game/arena";
 import type { StrategyInput } from "@game/engine";
-import { quitMonthlySeat, markMonthlyMoveSeen, takeMonthlySeat } from "../api/client.ts";
+import { putMonthlyLook, quitMonthlySeat, markMonthlyMoveSeen, takeMonthlySeat } from "../api/client.ts";
 import { errorSentence } from "../api/errorSentences.ts";
 import { navigate } from "../app/navigation.ts";
 import { paths } from "../app/route.ts";
@@ -229,7 +229,16 @@ export function MonthlyPage() {
           name={fixedName === null ? name : null}
           onClose={() => {
             setEditingTank(false);
-            focusChangeButton();
+            // A seated owner came from "Change look": the seat takes the look now, also when "My tank" cannot
+            // reach the account. A joining player came from the join step's button.
+            if (seat === null) {
+              focusChangeButton();
+              return;
+            }
+            void putMonthlyLook(myTankStore.getSnapshot().tank.look).then((result) => {
+              if (!result.ok) toast.show({ message: t.changeLookFailed });
+            });
+            requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-change-look]")?.focus());
           }}
         />
       </AppShell>
@@ -277,7 +286,7 @@ export function MonthlyPage() {
     <AppShell
       width="full"
       header={<AppHeader {...(presenter ? {} : { title: m.common.pageTitles.monthly })} />}
-      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => dispatch({ type: "askChangeRules" })} tab={tab} onTab={setTab} />}
+      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => dispatch({ type: "askChangeRules" })} onChangeLook={() => setEditingTank(true)} tab={tab} onTab={setTab} />}
     >
       <MonthlyView
         league={league}
@@ -299,6 +308,7 @@ export function MonthlyPage() {
         reshuffled={now < reshuffledUntil}
         onQuit={() => dispatch({ type: "askQuit" })}
         onChangeRules={() => dispatch({ type: "askChangeRules" })}
+        onChangeLook={() => setEditingTank(true)}
         tab={tab}
         onTab={setTab}
         side={side}

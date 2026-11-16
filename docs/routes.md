@@ -62,7 +62,7 @@ A strategy is data. The server runs no player code, and it does not call a playe
 | Route | Who | Does |
 |-------|-----|------|
 | `GET /api/monthly`, `GET /api/monthly/leagues/:league/events`, `.../ranking`, `.../days` | anyone | The leagues, one event stream per league (the state, then each turn), today's and this month's ranking, and this month's finished days. With the sign-in cookie, a turn carries the account's own tank's decision while its seat plays in that league, also for a seat taken after the stream opened. A league that the month close empties sends `closed` with the number of leagues left and ends its stream. |
-| `GET /api/monthly/me`, `POST`, `DELETE /api/monthly/seat`, `PUT /api/monthly/name`, `POST /api/monthly/me/move-seen` | account | The account's seat (with its strategy and today's statistics, `seat.stats`): take one with `{ name?, look, strategy }`, quit, rename once in a new month, and mark the month close's move as seen. Seat, quit and rename share a limit of 12 per minute per account, then answer 429 `rate_limited` with `retryAfterSeconds`. |
+| `GET /api/monthly/me`, `POST`, `DELETE /api/monthly/seat`, `PUT /api/monthly/name`, `PUT /api/monthly/look`, `POST /api/monthly/me/move-seen` | account | The account's seat (with its strategy and today's statistics, `seat.stats`): take one with `{ name?, look, strategy }`, quit, rename once in a new month, change the seated tank's look with `{ look }` at any time ("Change look"; a save of My tank does it too), and mark the month close's move as seen. Seat, quit, rename and look share a limit of 12 per minute per account, then answer 429 `rate_limited` with `retryAfterSeconds`. |
 
 ## Usage numbers and health
 

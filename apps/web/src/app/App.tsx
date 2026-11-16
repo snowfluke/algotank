@@ -1,3 +1,4 @@
+import { NewVersionBanner } from "./NewVersionBanner.tsx";
 import { useEffect } from "react";
 import { SignInPage } from "../auth/SignInPage.tsx";
 import { VerifyEmailPage } from "../auth/VerifyEmailPage.tsx";
@@ -86,6 +87,7 @@ export function App() {
   return (
     <div className="flex min-h-dvh flex-col">
       <RoutePage route={route} />
+      <NewVersionBanner />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 // read the data without first handling the failure. The route list is at the
 // bottom of packages/arena/src/types.ts.
 
+import { notePageBuild } from "../app/pageBuild.ts";
 import { isResultId, parseAccountStatsResponse, parsePlayerName, parseStatsView, parseTankLook, parseTournamentResult } from "@game/arena";
 import type {
   TankLook,
@@ -160,6 +161,7 @@ async function request<T>(options: RequestOptions<T>): Promise<ApiResult<T>> {
   } catch {
     return clientFailure(0, CLIENT_ERROR.network);
   }
+  notePageBuild(response.headers.get("x-page-build"));
 
   let payload: unknown = undefined;
   if (response.status !== 204) {

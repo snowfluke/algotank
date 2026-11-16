@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 // Serves the built web app. Any path without a file extension that matches no
 // file gets index.html, so client-side routes survive a page reload.
 //
@@ -114,4 +115,23 @@ export async function serveStatic(root: string, pathname: string, origin: string
   if (extname(decoded) !== "") return notFound();
 
   return (await isFile(index)) ? indexResponse(index, pathname, origin) : notFound();
+}
+
+/** The entry script in the built index.html, as Vite writes it: `<script type="module" crossorigin src="/assets/index-…js">`. */
+const ENTRY_SCRIPT = /<script type="module"[^>]*\ssrc="(\/assets\/[^"]+\.js)"/;
+
+/**
+ * The page's build: the address of its entry script, which changes with every release (Vite names
+ * it by content). The API answers carry it (server.ts, x-page-build), so a tab left open on an
+ * older release can offer a reload. Null when there is no built page, as in the server's tests.
+ */
+export function pageBuildOf(root: string): string | null {
+  let html: string;
+  try {
+    html = readFileSync(resolve(root, INDEX), "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+  return ENTRY_SCRIPT.exec(html)?.[1] ?? null;
 }

@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { leagueEventsUrl } from "../api/client.ts";
+import { checkPageBuild } from "../app/pageBuild.ts";
 import { nextLeagueLoad, parseLeagueMessage, type LeagueLiveLoad } from "./leagueLive.ts";
 
 /** The connection itself, apart from what it carried: "reconnecting" keeps the last board on the screen. */
@@ -43,10 +44,16 @@ export function useLeagueLive(league: number | null): LeagueLiveHandle {
         }
       });
     };
+    // A stream that comes back after an error most often met a release that restarted the server.
+    let lostOnce = false;
+    source.onopen = () => {
+      if (lostOnce) checkPageBuild();
+    };
     source.addEventListener("state", onMessage);
     source.addEventListener("tick", onMessage);
     source.addEventListener("closed", onMessage);
     source.onerror = () => {
+      lostOnce = true;
       // CLOSED: the server answered with an error, so the browser gives up; CONNECTING: it tries again by itself.
       setConnection(source.readyState === EventSource.CLOSED ? "failed" : "reconnecting");
     };

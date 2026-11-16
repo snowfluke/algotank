@@ -34,7 +34,7 @@ import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
-import { MonthlyBoard } from "./MonthlyBoard.tsx";
+import { MonthlyBoard, type FollowSwitch } from "./MonthlyBoard.tsx";
 import { formatDayClock, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
 import type { LeagueConnection } from "./useLeagueLive.ts";
 
@@ -162,7 +162,7 @@ function LastWinner({ days, today }: { days: readonly LeagueDayRecord[]; today: 
 }
 
 /** The board as large as its box allows, with the midnight notice, "Reshuffled" or the empty league's invitation over it. */
-function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, switchRow }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; switchRow: boolean }) {
+function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, follow }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; follow: FollowSwitch | null }) {
   const m = useMessages();
   const t = m.monthly;
   const dayName = useDayName();
@@ -208,7 +208,7 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, switchRow }: {
         highlightId={ownSeatId}
         tickMs={live.tickMs}
         tanks={tanks}
-        switchRow={switchRow}
+        follow={follow}
         overlay={
           notice === null ? null : (
             // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
@@ -465,7 +465,7 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} switchRow={false} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} follow={null} />}</div>
         <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0">
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
@@ -524,6 +524,9 @@ export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab
 }
 
 function PhoneLayout(props: MonthlyViewProps) {
+  // The follow window's choice outlasts a visit to the ranking or the own tab (MonthlyBoard.tsx).
+  const [followChoice, setFollowChoice] = useState<FollowSwitch["choice"]>("whole");
+  const follow: FollowSwitch = { choice: followChoice, onChoice: setFollowChoice };
   const m = useMessages();
   const t = m.monthly;
   const { league, leagues, seat, load } = props;
@@ -548,7 +551,7 @@ function PhoneLayout(props: MonthlyViewProps) {
     pane = (
       <div className={PANE}>
         {seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} />}
-        {board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} switchRow />}
+        {board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} follow={follow} />}
         <LastWinner days={props.days} today={board?.live.day ?? null} />
       </div>
     );

@@ -9,7 +9,7 @@
 //   No map of the whole arena is drawn: it would sit over the window's corner, and "Whole arena"
 //   is one tap away.
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { PublicSnapshot } from "@game/arena";
 import type { BotId, ThrowEvent } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
@@ -25,6 +25,16 @@ import { useBoxSize } from "../ui/useBoxSize.ts";
 
 type Choice = "follow" | "whole";
 
+/**
+ * The phone's switch between the whole arena and the follow window. Its choice lives in the page
+ * (MonthlyView.tsx, PhoneLayout), so it outlasts a visit to another tab. Null on a laptop, whose
+ * board takes the whole pane and has no switch row.
+ */
+export interface FollowSwitch {
+  readonly choice: Choice;
+  onChoice(next: Choice): void;
+}
+
 export interface MonthlyBoardProps {
   readonly snapshot: PublicSnapshot;
   readonly throws: readonly ThrowEvent[];
@@ -35,15 +45,14 @@ export interface MonthlyBoardProps {
   readonly tanks: ReadonlyMap<BotId, TankInfo>;
   /** Drawn over the board's area, the board and the space around it (the midnight notice, "Reshuffled"). */
   readonly overlay: ReactNode;
-  /** True on a phone: the row of the switch is then always there. A laptop's board takes the whole pane. */
-  readonly switchRow: boolean;
+  readonly follow: FollowSwitch | null;
 }
 
-export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tanks, overlay, switchRow }: MonthlyBoardProps) {
+export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tanks, overlay, follow }: MonthlyBoardProps) {
   const m = useMessages();
   const fit = useFitLayout();
   const { ref, box } = useBoxSize<HTMLDivElement>();
-  const [choice, setChoice] = useState<Choice>("whole");
+  const choice: Choice = follow?.choice ?? "whole";
 
   // Outside the fixed-height layout the board takes the width and its shape gives the height, so the box says nothing about height.
   const orientation = fit ? bestOrientation(box, snapshot) : "sideways";
@@ -65,7 +74,7 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
 
   return (
     <>
-      {switchRow ? (
+      {follow !== null ? (
         <div data-camera-switch-row="" className="flex min-h-[3.25rem] shrink-0 items-center">
           {offered ? (
             <div data-camera-switch="">
@@ -74,7 +83,7 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
                 hideLegend
                 size="sm"
                 value={choice}
-                onChange={setChoice}
+                onChange={follow.onChoice}
                 options={[
                   { value: "whole", label: m.board.camera.whole },
                   { value: "follow", label: follows === "mine" ? m.board.camera.mine : m.board.camera.leader },

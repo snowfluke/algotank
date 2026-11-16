@@ -24,6 +24,9 @@ export const en = {
   copied: "Copied",
   undo: "Undo",
   close: "Close",
+  /** A tab left open across a release (app/NewVersionBanner.tsx). */
+  newVersion: "A new version of AlgoTank is ready, so reload the page to use it.",
+  reload: "Reload",
   cancel: "Cancel",
   dismiss: "Dismiss",
   moreOptions: "More options",
@@ -99,6 +102,8 @@ export const id: typeof en = {
   copied: "Tersalin",
   undo: "Urungkan",
   close: "Tutup",
+  newVersion: "Versi baru AlgoTank sudah siap, jadi muat ulang halaman ini untuk memakainya.",
+  reload: "Muat ulang",
   cancel: "Batal",
   dismiss: "Tutup",
   moreOptions: "Opsi lainnya",

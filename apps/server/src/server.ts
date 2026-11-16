@@ -37,7 +37,7 @@ import { countedSender, Metrics, routeGroupOf } from "./metrics/metrics.ts";
 import { healthGauges } from "./metrics/health.ts";
 import type { HealthGauges } from "./metrics/prometheus.ts";
 import { prometheusResponse, registerMetricsRoutes } from "./metrics/routes.ts";
-import { requestOrigin, serveStatic } from "./static.ts";
+import { pageBuildOf, requestOrigin, serveStatic } from "./static.ts";
 import { ArenaGoneError, Store } from "./store.ts";
 import { DEFAULT_ARENA_MESSAGE_INTERVAL_MS, DEFAULT_MAX_STREAMS_PER_ARENA, StreamHub } from "./stream.ts";
 import { realTimeScheduler, type Clock, type Scheduler } from "./timers.ts";
@@ -236,6 +236,8 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
     return jsonResponse(health);
   });
   const staticDir = options.staticDir ?? DEFAULT_STATIC_DIR;
+  // Read once: a new page comes only with a new release, which starts the server again.
+  const pageBuild = pageBuildOf(staticDir);
 
   async function handle(req: Request, url: URL, server: Bun.Server<undefined>): Promise<Response> {
     const token = options.metricsToken;
@@ -276,6 +278,8 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   async function respond(req: Request, srv: Bun.Server<undefined>): Promise<Response> {
     const url = new URL(req.url);
     const response = await answer(req, url, srv);
+    // An API answer names the page's build, so a tab on an older release offers a reload (web app/pageBuild.ts).
+    if (pageBuild !== null && url.pathname.startsWith("/api/")) response.headers.set("x-page-build", pageBuild);
     metrics.request(routeGroupOf(url.pathname), response.status);
     return response;
   }

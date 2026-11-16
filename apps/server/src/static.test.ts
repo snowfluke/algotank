@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { serveStatic } from "./static.ts";
+import { pageBuildOf, serveStatic } from "./static.ts";
 import { createTestArena, startTestServer, type TestServer } from "./test-helpers.ts";
 
 let base: string;
@@ -148,5 +148,22 @@ describe("link previews and the root images", () => {
     const svg = await fetch(`${t.server.url}/favicon.svg`);
     expect(svg.headers.get("content-type")).toStartWith("image/svg+xml");
     expect(svg.headers.get("cache-control")).toBe("public, max-age=86400");
+  });
+});
+
+describe("the page's build", () => {
+  test("is the built entry script, null without a built page, and named on API answers only", async () => {
+    const built = join(base, "built");
+    await mkdir(built, { recursive: true });
+    await writeFile(join(built, "index.html"), '<!doctype html><script type="module" crossorigin src="/assets/index-AbC123.js"></script>');
+    expect(pageBuildOf(built)).toBe("/assets/index-AbC123.js");
+    expect(pageBuildOf(join(base, "nothing-here"))).toBeNull();
+    const t = startTestServer({ staticDir: built, dataDir: join(base, "built-data") });
+    try {
+      expect((await t.api("/api/health")).headers.get("x-page-build")).toBe("/assets/index-AbC123.js");
+      expect((await t.api("/")).headers.get("x-page-build")).toBeNull();
+    } finally {
+      await t.server.stop();
+    }
   });
 });

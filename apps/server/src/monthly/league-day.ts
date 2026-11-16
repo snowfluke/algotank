@@ -102,13 +102,19 @@ export const BOARD_GROWTH = 1.5;
 
 /** The tanks a new round's board is sized for: the seated tanks, and at least MONTHLY_BOARD_MIN_TANKS. */
 /**
- * The arena conditions a monthly round draws from (owner, 2026-11-16): the two under which the
- * presets play about equal, within some 40 points a day of the average over 6 days of 4 copies
- * each. Left out until the presets are tuned for them and measured again: dry-spell (the Item
- * hunter scored about 737 a day while every other preset ended below 0), arms-length and downpour
- * (gaps 2 to 2.5 times as large), and open-field (a square about 14 px wide on a phone).
+ * The arena conditions a monthly round draws from (owner, 2026-11-16): the ones under which the
+ * presets play about equal, every preset within 40 points a day of the field mean, measured with
+ * 4 tanks of each of the 7 designed presets on one board (standard error under 13). Points a day
+ * against the field mean, worst preset each way (2026-11-16):
+ * - standard: item-hunter +43, evader -36 (6 days; 10 days: +50, -41, which is the same code).
+ * - sharp-eyes: item-hunter +36, evader -42 (10 days).
+ * - dry-spell: ambusher +23, picker -17 (14 days, sd 10 to 20, so the error is under 6). It needed
+ *   the Item hunter to skip items there (presets.ts): it scored 737 a day against a mean of 93.
+ * Left out until a preset change brings them in: downpour (picker -86, dry-hunter -76, evader +71,
+ * 10 days), arms-length (item-hunter +73, ambusher +58, picker -50, evader -59, 6 days) and
+ * open-field (item-hunter +88, evader -69, 8 days; also a square about 14 px wide on a phone).
  */
-export const MONTHLY_CONDITIONS: readonly RuleSetId[] = ["standard", "sharp-eyes"];
+export const MONTHLY_CONDITIONS: readonly RuleSetId[] = ["standard", "sharp-eyes", "dry-spell"];
 
 export function boardTanksFor(seated: number): number {
   return Math.max(MONTHLY_BOARD_MIN_TANKS, seated);

@@ -1,5 +1,6 @@
 // Gives every monthly seat whose rules are exactly a preset as it was before the retune of
-// 2026-11-16 (presets-before-2026-11-16.json) that preset's rules as they are now
+// 2026-11-16 (presets-before-2026-11-16.json) or before the Item hunter stopped grabbing items
+// under dry-spell (presets-before-2026-11-16-dry-spell.json) that preset's rules as they are now
 // (packages/engine/src/strategy/presets.ts). Owner, 2026-11-16: "if possible seated tanks should
 // be affected as well", so a tank that took a preset plays the equal version. A seat whose rules a
 // player edited, even by one value, keeps them: only its owner knows what the edit was for. Seats,
@@ -15,7 +16,8 @@ import { Database } from "bun:sqlite";
 import { PRESETS, parseStrategy, type Strategy, type StrategyInput } from "@game/engine";
 import { DEFAULT_DATA_DIR } from "../src/config.ts";
 import { DATABASE_FILE } from "../src/db/open.ts";
-import BEFORE from "./presets-before-2026-11-16.json";
+import BEFORE_RETUNE from "./presets-before-2026-11-16.json";
+import BEFORE_DRY_SPELL from "./presets-before-2026-11-16-dry-spell.json";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -42,11 +44,13 @@ function parsed(input: unknown, what: string): Strategy {
 
 /** Old preset text -> preset id, for the presets whose rules changed. */
 const oldPresets = new Map<string, string>();
-for (const preset of PRESETS) {
-  const before = (BEFORE as Record<string, unknown>)[preset.id];
-  if (before === undefined) continue;
-  const oldText = canonical(parsed(before, `The old preset ${preset.id}`));
-  if (oldText !== canonical(preset.strategy)) oldPresets.set(oldText, preset.id);
+for (const snapshot of [BEFORE_RETUNE, BEFORE_DRY_SPELL]) {
+  for (const preset of PRESETS) {
+    const before = (snapshot as Record<string, unknown>)[preset.id];
+    if (before === undefined) continue;
+    const oldText = canonical(parsed(before, `The old preset ${preset.id}`));
+    if (oldText !== canonical(preset.strategy)) oldPresets.set(oldText, preset.id);
+  }
 }
 
 const db = new Database(`${dataDir}/${DATABASE_FILE}`, { readwrite: true, create: false, strict: true });

@@ -12,16 +12,16 @@ const response: AdminPlayersResponse = {
   month: "2026-11",
   day: "2026-11-16",
   players: [
-    { league: 1, rank: 1, name: "Ada", score: 120.5, countedDays: 2, account: { email: "ada@example.org", emailVerified: true, createdAt: "2026-11-02T03:00:00.000Z" } },
-    { league: 1, rank: null, name: "Bobo", score: 0, countedDays: 0, account: { email: "bo@example.org", emailVerified: false, createdAt: "2026-11-16T03:00:00.000Z" } },
-    { league: 1, rank: 2, name: "Cyan", score: 80, countedDays: 1, account: null },
+    { seatId: "s-ada", league: 1, rank: 1, name: "Ada", score: 120.5, countedDays: 2, account: { email: "ada@example.org", emailVerified: true, createdAt: "2026-11-02T03:00:00.000Z" } },
+    { seatId: "s-bobo", league: 1, rank: null, name: "Bobo", score: 0, countedDays: 0, account: { email: "bo@example.org", emailVerified: false, createdAt: "2026-11-16T03:00:00.000Z" } },
+    { seatId: "s-cyan", league: 1, rank: 2, name: "Cyan", score: 80, countedDays: 1, account: null },
   ],
 };
 
 const render = (load: AdminPlayersLoad, language: "en" | "id" = "en") =>
   renderToStaticMarkup(
     <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
-      <AdminPlayersView load={load} onRetry={() => undefined} />
+      <AdminPlayersView load={load} onRetry={() => undefined} onRemove={() => undefined} />
     </I18nProvider>,
   );
 
@@ -48,5 +48,8 @@ describe("the admin's list of monthly players", () => {
     expect(render({ kind: "ready", data: { ...response, players: [] } })).toContain("No tank is in the monthly arena now.");
     expect(render({ kind: "notFound" })).toContain("Page not found");
     expect(render({ kind: "failed" })).toContain("did not load");
+    // Each row has its own Remove button, named for a screen reader by its tank.
+    expect(html).toContain('data-admin-remove="s-bobo"');
+    expect(html).toContain('aria-label="Remove Bobo"');
   });
 });

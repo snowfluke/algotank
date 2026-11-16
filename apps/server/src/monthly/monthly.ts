@@ -368,6 +368,21 @@ export class MonthlyLeagues {
     return this.me(accountId);
   }
 
+  /**
+   * The admin's removal (DELETE /api/admin/players/:seatId), for an owner who cannot sign in to
+   * quit (owner, 2026-11-16). It is the owner's quit, so the day's score, the name and the
+   * counted days stay as at any quit.
+   */
+  removeSeat(seatId: PlayerId): void {
+    for (const seat of this.seats.seats.values()) {
+      if (seat.seatId === seatId) {
+        this.quit(seat.accountId);
+        return;
+      }
+    }
+    throw new HttpError(404, "No tank in the monthly arena has this seat.", { code: "no_monthly_seat" });
+  }
+
   /** DELETE /api/monthly/seat. On a counted day the points now are the day's score, saved before the seat goes. */
   quit(accountId: AccountId): void {
     const seat = this.seats.seats.get(accountId);
@@ -565,7 +580,7 @@ export class MonthlyLeagues {
     for (let league = 1; league <= this.seats.leagues; league++) {
       for (const place of this.monthRanking(league, this.month)) {
         const seat = this.seatOfAccount(place.id);
-        players.push({ accountId: place.id, league, name: seat.name, rank: place.rank, score: place.score, countedDays: place.countedDays });
+        players.push({ accountId: place.id, seatId: seat.seatId, league, name: seat.name, rank: place.rank, score: place.score, countedDays: place.countedDays });
       }
     }
     return { month: this.today.month, day: this.today.day, players };

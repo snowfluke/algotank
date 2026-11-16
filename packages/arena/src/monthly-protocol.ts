@@ -33,6 +33,8 @@
 // GET    /api/admin/players                    (account in ADMIN_EMAILS; verified when the server sends
 //                                                email) -> AdminPlayersResponse. Everyone else gets the 404
 //                                                of a route that does not exist.
+// DELETE /api/admin/players/:seatId             (the same account, and the Origin check) -> 204; takes the
+//                                                tank out as its owner's quit does. 404 no_monthly_seat
 
 import type { Decision, StatsView, StrategyInput } from "@game/engine";
 import type { CompactTick } from "./compact-tick.ts";
@@ -246,6 +248,8 @@ export type MonthlyErrorCode = "monthly_seat_taken" | "no_monthly_seat" | "month
  * each tank before the month's prizes). Only GET /api/admin/players sends an email.
  */
 export interface AdminPlayer {
+  /** The seat's id, which DELETE /api/admin/players/:seatId takes. */
+  readonly seatId: PlayerId;
   readonly league: number;
   /** As in LeagueMonthRow. */
   readonly rank: number | null;

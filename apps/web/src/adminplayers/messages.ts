@@ -17,6 +17,13 @@ export const en = {
   loading: "Loading the monthly players.",
   failed: "The monthly players did not load, so try again in a moment.",
   retry: "Try again",
+  /** The button on each row, and its name for a screen reader, which hears many of them. */
+  remove: "Remove",
+  removeLabel: (name: string) => `Remove ${name}`,
+  removeTitle: (name: string) => `Remove ${name} from the monthly arena?`,
+  removeBody: "The tank leaves the board now, as when its owner quits. Its counted days and its name stay, so its owner can take a seat again.",
+  removeConfirm: "Remove the tank",
+  removeFailed: "The tank was not removed, so try again in a moment.",
 };
 
 export const id: typeof en = {
@@ -33,4 +40,10 @@ export const id: typeof en = {
   loading: "Memuat pemain bulanan.",
   failed: "Pemain bulanan belum termuat, jadi coba lagi sebentar lagi.",
   retry: "Coba lagi",
+  remove: "Keluarkan",
+  removeLabel: (name) => `Keluarkan ${name}`,
+  removeTitle: (name) => `Keluarkan ${name} dari arena bulanan?`,
+  removeBody: "Tank itu keluar dari papan sekarang, sama seperti saat pemiliknya keluar sendiri. Hari yang sudah dihitung dan namanya tetap tersimpan, jadi pemiliknya bisa masuk lagi.",
+  removeConfirm: "Keluarkan tank",
+  removeFailed: "Tank belum dikeluarkan, jadi coba lagi sebentar lagi.",
 };

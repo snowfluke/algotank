@@ -1,5 +1,6 @@
-// The data of "/admin/players": GET /api/admin/players. The server answers 404 to anyone who is not
-// an admin, so the page shows "not found" then, as for any unknown page.
+// The data of "/admin/players": GET /api/admin/players, and DELETE /api/admin/players/:seatId to
+// take one tank out. The server answers 404 to anyone who is not an admin, so the page shows "not
+// found" then, as for any unknown page.
 
 import { useCallback, useEffect, useState } from "react";
 import type { AdminPlayer, AdminPlayersResponse } from "@game/arena";
@@ -24,6 +25,7 @@ function isAccount(value: unknown): value is AdminPlayer["account"] {
 function isAdminPlayer(value: unknown): value is AdminPlayer {
   return (
     isRecord(value) &&
+    typeof value["seatId"] === "string" &&
     whole(value["league"], 1) &&
     (value["rank"] === null || whole(value["rank"], 1)) &&
     typeof value["name"] === "string" &&
@@ -51,6 +53,22 @@ async function load(): Promise<AdminPlayersLoad> {
     return isAdminPlayersResponse(body) ? { kind: "ready", data: body } : { kind: "failed" };
   } catch {
     return { kind: "failed" };
+  }
+}
+
+/**
+ * Takes one tank out of the monthly arena. True when it is out, also when it had left already
+ * (404 no_monthly_seat). A 404 without that code is the admin check: the session ended.
+ */
+export async function removeAdminPlayer(seatId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/admin/players/${encodeURIComponent(seatId)}`, { method: "DELETE" });
+    if (response.ok) return true;
+    if (response.status !== 404) return false;
+    const body: unknown = await response.json();
+    return isRecord(body) && body["code"] === "no_monthly_seat";
+  } catch {
+    return false;
   }
 }
 

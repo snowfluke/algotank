@@ -1049,6 +1049,7 @@ STATES.push(
 // long names and emails, so the Pager pages and every cell truncates; the audit's accounts are not admins.
 function adminPlayersMock(count) {
   const players = Array.from({ length: count }, (_, i) => ({
+    seatId: `seat-${i}`,
     league: 1,
     rank: i < count - 5 ? i + 1 : null,
     name: i % 7 === 0 ? `Tank number ${i} long name` : `Tank ${i}`,
@@ -1063,6 +1064,7 @@ STATES.push(
   adminPlayersState("list"),
   adminPlayersState("last-page", { steps: [{ wait: "[data-admin-player]" }, { pageToEnd: "[data-admin-players] [data-pager-next]" }] }),
   adminPlayersState("empty", { mock: adminPlayersMock(0), steps: [{ wait: "[data-admin-players] p" }] }),
+  adminPlayersState("remove-dialog", { steps: [{ wait: "[data-admin-player]" }, { click: '[data-admin-remove="seat-1"]' }, { wait: "dialog[data-dialog=admin-remove][open]" }] }),
   adminPlayersState("not-admin", { mock: [{ route: "**/api/admin/players", status: 404, body: { error: "That route does not exist." } }], steps: [{ wait: "h1" }] }),
 );
 

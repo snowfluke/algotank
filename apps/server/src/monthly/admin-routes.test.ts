@@ -55,4 +55,23 @@ describe("GET /api/admin/players", () => {
     ]);
     expect(Number.isNaN(Date.parse(view.players[0]?.account?.createdAt ?? ""))).toBe(false);
   });
+
+  test("the admin removes a tank as its owner's quit would; anyone else, a cross-site request and an unknown seat are refused", async () => {
+    const t = start();
+    const owner = await seat(t, "ada@example.org", "Ada");
+    const seatId = ((await (await t.api("/api/monthly/me", { cookie: owner })).json()) as { seat: { seatId: string } }).seat.seatId;
+    const other = await signUp(t, "kid@example.org");
+    expect((await t.api(`/api/admin/players/${seatId}`, { method: "DELETE" })).status).toBe(404);
+    expect((await t.api(`/api/admin/players/${seatId}`, { method: "DELETE", cookie: other })).status).toBe(404);
+    const admin = await signUp(t, ADMIN);
+    expect((await t.api(`/api/admin/players/${seatId}`, { method: "DELETE", cookie: admin, headers: { origin: "https://elsewhere.example" } })).status).toBe(403);
+    const list = (await (await t.api("/api/admin/players", { cookie: admin })).json()) as AdminPlayersResponse;
+    expect(list.players.map((p) => [p.name, p.seatId])).toEqual([["Ada", seatId]]);
+    expect((await t.api(`/api/admin/players/${seatId}`, { method: "DELETE", cookie: admin })).status).toBe(204);
+    expect(((await (await t.api("/api/monthly/me", { cookie: owner })).json()) as { seat: unknown; name: { name: string } }).seat).toBeNull();
+    expect(((await (await t.api("/api/monthly/me", { cookie: owner })).json()) as { name: { name: string } }).name.name).toBe("Ada");
+    expect((await t.api(`/api/admin/players/${seatId}`, { method: "DELETE", cookie: admin })).status).toBe(404);
+    // The owner can take a seat again.
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie: owner, body: { ...tank, name: "Ada" } })).status).toBe(201);
+  });
 });

@@ -2,6 +2,11 @@
 // place (with a short word on whether it goes through), points and water. The
 // water number matters most in a big arena, where the gauge under the tank is a
 // sliver. The full sentence about the cut is read to a screen reader with the row.
+//
+// The row keeps one height for the whole round, so the board under it never jumps: each
+// note sits on its own line under its number with room for two lines ("tertinggal 3 poin"
+// wraps in a phone's column, "lolos" does not), and before the first turn the sentence
+// takes the place of the numbers, which stay laid out but unseen.
 
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import type { OwnLive } from "../standings/standings.ts";
@@ -57,9 +62,10 @@ function Stat({ label, value, note, tone, noteTone = "muted" }: { label: string;
   return (
     <div className="flex min-w-0 flex-col">
       <dt className="truncate text-caption font-semibold text-muted">{label}</dt>
-      <dd className="m-0 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+      <dd className="m-0 flex min-w-0 flex-col">
         <span className={`tabular font-display text-title font-bold leading-tight ${TONE_CLASSES[tone]}`}>{value}</span>
-        {note === null ? null : <span className={`min-w-0 text-caption font-semibold ${TONE_CLASSES[noteTone]}`}>{note}</span>}
+        {/* Two lines are always kept, also with no note, so a note that changes length never moves the board. */}
+        <span className={`line-clamp-2 min-h-[2lh] min-w-0 text-caption font-semibold [overflow-wrap:anywhere] ${TONE_CLASSES[noteTone]}`}>{note}</span>
       </dd>
     </div>
   );
@@ -69,14 +75,16 @@ function Stat({ label, value, note, tone, noteTone = "muted" }: { label: string;
 export function OwnStatusRow({ own, beforeFirstTurn }: { own: OwnLive; beforeFirstTurn: boolean }) {
   const m = useMessages();
   const t = m.live.status;
-  if (beforeFirstTurn) {
-    return <p className="min-w-0 font-semibold text-self-ink [overflow-wrap:anywhere]">{m.live.findYourTank}</p>;
-  }
   const outlook = ownOutlookShort(own, t);
   return (
-    <section className="min-w-0" aria-label={m.common.yourTank}>
-      <p className="sr-only">{ownStatusSentence(own, t, m.results.ordinal)}</p>
-      <dl className="m-0 grid min-w-0 grid-cols-3 gap-3">
+    // One grid cell for both: before the first turn the sentence shows over the numbers, which keep their room.
+    <section className="grid min-w-0" aria-label={m.common.yourTank}>
+      {beforeFirstTurn ? (
+        <p className="min-w-0 self-center font-semibold text-self-ink [grid-area:1/1] [overflow-wrap:anywhere]">{m.live.findYourTank}</p>
+      ) : (
+        <p className="sr-only">{ownStatusSentence(own, t, m.results.ordinal)}</p>
+      )}
+      <dl className={`m-0 grid min-w-0 grid-cols-3 gap-3 [grid-area:1/1] ${beforeFirstTurn ? "invisible" : ""}`} aria-hidden={beforeFirstTurn ? true : undefined}>
         <Stat label={t.place} value={m.results.ordinal(own.place)} note={outlook.text} tone="self" noteTone={outlook.tone} />
         <Stat label={t.points} value={String(own.score)} note={null} tone="ink" />
         <Stat

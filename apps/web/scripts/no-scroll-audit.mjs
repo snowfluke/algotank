@@ -125,7 +125,7 @@ function championsMocks(rows, withYou) {
       // League 1's ranking of the month (monthly league, 77-monthly-league.md). M2 brings the visitor's own row back.
       route: "**/api/monthly/leagues/1/ranking",
       status: 200,
-      body: { league: 1, month: "2026-11", day: "2026-11-14", today: [], thisMonth: all.map((row, i) => ({ rank: i < 10 ? i + 1 : null, seatId: `s${i}`, name: row.name, look: row.look, score: row.score, countedDays: row.games })) },
+      body: { league: 1, month: "2026-11", day: "2026-11-14", today: [], thisMonth: all.map((row, i) => ({ rank: i < 10 ? i + 1 : null, seatId: `s${i}`, name: row.name, look: row.look, score: row.score, countedDays: row.games, gm: false })) },
     },
   ];
 }
@@ -1065,6 +1065,7 @@ function adminPlayersMock(count) {
     name: i % 7 === 0 ? `Tank number ${i} long name` : `Tank ${i}`,
     score: 900 - i * 11,
     countedDays: i < count - 5 ? 1 : 0,
+    gm: i === 1,
     account: i === 3 ? null : { email: i % 5 === 0 ? `a.very.long.address.number.${i}+monthly@example.org` : `player${i}@example.org`, emailVerified: i % 6 !== 0, createdAt: "2026-11-02T03:00:00.000Z" },
   }));
   return [{ route: "**/api/admin/players", status: 200, body: { month: "2026-11", day: "2026-11-16", players } }];

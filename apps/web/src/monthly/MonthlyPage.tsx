@@ -221,7 +221,8 @@ export function MonthlyPage() {
 
   if (editingTank) {
     return (
-      <AppShell width="narrow">
+      // The full width, as on the My tank page: a narrow page left the editor and its tank small on a laptop (2026-11-16).
+      <AppShell>
         <MyTankSheet
           look={tank.look}
           onLook={(look) => myTankStore.setLook(look)}

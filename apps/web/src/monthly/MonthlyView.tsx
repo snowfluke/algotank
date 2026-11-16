@@ -413,9 +413,11 @@ function boardOf(load: LeagueLiveLoad): LeagueBoard | null {
 }
 
 function PresenterLayout(props: MonthlyViewProps) {
-  // The zoomed view on a laptop too (owner, 2026-11-17), in the same row over the board as on a phone.
+  // The zoomed view on a laptop too (owner, 2026-11-17). Its switch stands in the header, right of the clock and the
+  // condition, whose two lines are as tall as the switch, so it adds no line over the board (owner, 2026-11-17).
   const [followChoice, setFollowChoice] = useState<FollowSwitch["choice"]>("whole");
   const follow: FollowSwitch = { choice: followChoice, onChoice: setFollowChoice };
+  const [switchSlot, setSwitchSlot] = useState<HTMLElement | null>(null);
   const m = useMessages();
   const t = m.monthly;
   const { league, leagues, seat, load } = props;
@@ -445,8 +447,13 @@ function PresenterLayout(props: MonthlyViewProps) {
               {leagueTitle}
             </span>
           </h1>
-          <DayClock board={board} fixedNow={props.now} dayChange={props.dayChange} short={false} />
-          <ConditionLine board={board} short={false} />
+          <div className="flex min-w-0 flex-wrap items-end gap-x-4">
+            <div className="flex min-w-0 flex-1 basis-56 flex-col">
+              <DayClock board={board} fixedNow={props.now} dayChange={props.dayChange} short={false} />
+              <ConditionLine board={board} short={false} />
+            </div>
+            <div ref={setSwitchSlot} data-camera-switch-slot="" className="flex shrink-0 empty:hidden" />
+          </div>
         </div>
         <LeagueSwitch league={league} leagues={leagues} ownLeague={seat?.league ?? null} onLeague={props.onLeague} />
         {props.onJoin === null ? null : (
@@ -475,7 +482,7 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={{ lead: null, follow }} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={{ place: { kind: "slot", element: switchSlot }, follow }} />}</div>
         <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0">
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
@@ -582,7 +589,7 @@ function PhoneLayout(props: MonthlyViewProps) {
             onJoin={props.onJoin}
             dayChange={props.dayChange}
             reshuffled={props.reshuffled}
-            row={{ lead: seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} />, follow }}
+            row={{ place: { kind: "row", lead: seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} /> }, follow }}
           />
         )}
         <LastWinner days={props.days} today={board?.live.day ?? null} />

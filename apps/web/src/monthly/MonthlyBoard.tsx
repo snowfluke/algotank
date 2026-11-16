@@ -5,12 +5,14 @@
 //   on a phone or a laptop, a switch offers it around the viewer's tank (the leader for a visitor);
 //   a tap on a tank there follows that tank (owner, 2026-11-17). The board starts whole, so
 //   nobody's view changes without a tap.
-// - The switch stands in a row of its own that is always there, empty when no switch is needed, so
-//   the board does not move when a reshuffle or a new tank changes the board's size.
+// - On a phone the switch stands in a row of its own that is always there, empty when no switch is
+//   needed, so the board does not move when a reshuffle or a new tank changes the board's size. On a
+//   laptop it stands in the header beside the clock and the condition, so the board keeps its height.
 //   No map of the whole arena is drawn: it would sit over the window's corner, and "Whole arena"
 //   is one tap away.
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { PublicSnapshot } from "@game/arena";
 import type { BotId, ThrowEvent } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
@@ -27,9 +29,8 @@ import { useBoxSize } from "../ui/useBoxSize.ts";
 type Choice = "follow" | "whole";
 
 /**
- * The phone's switch between the whole arena and the follow window. Its choice lives in the page
- * (MonthlyView.tsx, PhoneLayout), so it outlasts a visit to another tab. Null on a laptop, whose
- * board takes the whole pane and has no switch row.
+ * The switch between the whole arena and the zoomed view. Its choice lives in the page
+ * (MonthlyView.tsx, PhoneLayout and PresenterLayout), so it outlasts a visit to another tab.
  */
 export interface FollowSwitch {
   readonly choice: Choice;
@@ -37,12 +38,17 @@ export interface FollowSwitch {
 }
 
 /**
- * The phone's row over the board: the owner's place (`lead`, null for a visitor) and the switch,
- * on one line (owner, 2026-11-16). The row is always there on a phone, so the board does not move
- * when the switch comes or goes.
+ * Where the switch stands:
+ * - "row": the phone's row over the board, with the owner's place (`lead`, null for a visitor) on
+ *   the same line (owner, 2026-11-16). The row is always there, so the board does not move when the
+ *   switch comes or goes.
+ * - "slot": an element in the laptop's header, beside the clock and the condition (owner,
+ *   2026-11-17: a row over the board made the board smaller). Null until the header has drawn it.
  */
+export type SwitchPlace = { readonly kind: "row"; readonly lead: ReactNode } | { readonly kind: "slot"; readonly element: HTMLElement | null };
+
 export interface BoardRow {
-  readonly lead: ReactNode;
+  readonly place: SwitchPlace;
   readonly follow: FollowSwitch;
 }
 
@@ -96,26 +102,33 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
         ? { width: `${whole.width}px`, height: `${whole.height}px` }
         : { aspectRatio: `${ratio}`, width: fit ? "100%" : `min(100%, calc(80dvh * ${ratio}))` };
 
+  const cameraSwitch = offered ? (
+    <div data-camera-switch="" className="shrink-0">
+      <SegmentedControl
+        legend={m.board.camera.legend}
+        hideLegend
+        size="sm"
+        value={choice}
+        onChange={onChoice}
+        options={[
+          { value: "whole", label: m.monthly.wholeArena },
+          { value: "follow", label: follows === "mine" ? m.board.camera.mine : m.board.camera.leader },
+        ]}
+      />
+    </div>
+  ) : null;
+  const { place } = row;
+
   return (
     <>
-      <div data-camera-switch-row="" className="flex min-h-[3.25rem] min-w-0 shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <div className="min-w-0 flex-1">{row.lead}</div>
-          {offered ? (
-            <div data-camera-switch="" className="shrink-0">
-              <SegmentedControl
-                legend={m.board.camera.legend}
-                hideLegend
-                size="sm"
-                value={choice}
-                onChange={onChoice}
-                options={[
-                  { value: "whole", label: m.monthly.wholeArena },
-                  { value: "follow", label: follows === "mine" ? m.board.camera.mine : m.board.camera.leader },
-                ]}
-              />
-            </div>
-          ) : null}
-      </div>
+      {place.kind === "row" ? (
+        <div data-camera-switch-row="" className="flex min-h-[3.25rem] min-w-0 shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="min-w-0 flex-1">{place.lead}</div>
+          {cameraSwitch}
+        </div>
+      ) : place.element !== null && cameraSwitch !== null ? (
+        createPortal(cameraSwitch, place.element)
+      ) : null}
       {/* The same element in every view, so the size observer keeps watching it. A window outside the fixed-height layout gets a height of its own. */}
       <div
         ref={ref}

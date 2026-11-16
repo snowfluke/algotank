@@ -427,20 +427,21 @@ function PresenterLayout(props: MonthlyViewProps) {
   const leagueTitle = leagueTitleOf(t, league, leagues);
   return (
     <div data-scale="screen" data-monthly-page="presenter" style={SCREEN_SCALE_STYLE} className="flex min-h-0 min-w-0 flex-1 flex-col gap-[1.5vh] px-[2vw]">
-      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
-        <h1 className="min-w-0 shrink-0 text-heading">
-          {/* With several leagues the league switch beside it already says "League", so the title is the league; the row then fits a 1000 px window. */}
-          {leagues.length > 1 ? null : (
-            <>
-              {m.common.pageTitles.monthly}
-              <span className="sr-only">, </span>
-            </>
-          )}
-          <span data-monthly-players="" className={leagues.length > 1 ? undefined : "ml-3 text-title text-muted"}>
-            {leagueTitle}
-          </span>
-        </h1>
-        <div className="min-w-0 flex-1 basis-80 text-title">
+      {/* The title with the day's clock on one line under it, and the controls together on the right (owner, 2026-11-16: the clock in heading type wrapped between them). */}
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-1 basis-80 flex-col">
+          <h1 className="min-w-0 text-heading">
+            {/* With several leagues the league switch beside it already says "League", so the title is the league; the row then fits a 1000 px window. */}
+            {leagues.length > 1 ? null : (
+              <>
+                {m.common.pageTitles.monthly}
+                <span className="sr-only">, </span>
+              </>
+            )}
+            <span data-monthly-players="" className={leagues.length > 1 ? undefined : "ml-3 text-title text-muted"}>
+              {leagueTitle}
+            </span>
+          </h1>
           <DayClock board={board} now={props.now} dayChange={props.dayChange} />
         </div>
         <LeagueSwitch league={league} leagues={leagues} ownLeague={seat?.league ?? null} onLeague={props.onLeague} />

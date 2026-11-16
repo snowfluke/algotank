@@ -138,11 +138,19 @@ function burstAndRetreat(chase: string, extraStrikeRules: readonly Rule[] = [], 
   };
 }
 
+// Items decide a monthly day: a bucket makes a hit worth 2 points and an umbrella blocks 2 hits. An
+// Item hunter that took every item and an Evader that never walked to one were 56 points above and
+// 40 below the field mean in the standard set (24 days, 4 tanks of each preset). The grab rules below
+// fix that. Under dry-spell no tank grabs, because a throw costs 5 of 6 water there, fights move half
+// the points, and a bucket or an umbrella then outweighs the build (Item hunter: 737 a day against a
+// mean of 93, 6 days).
+const NOT_DRY_SPELL = when("ruleSet", { set: "dry-spell" }, true);
+
 const sources = withLiteralIds<PresetSource>()([
   {
     id: "evader",
     name: "Evader",
-    summary: "Steps out of the line of fire when a bot aims at it, throws at a bot in front of it only when that bot does not aim back, backs away to refill when its tank runs low, and otherwise walks toward the nearest bot.",
+    summary: "Steps out of the line of fire when a bot aims at it, throws at a bot in front of it only when that bot does not aim back, backs away to refill when its tank runs low, picks up an item within 3 cells, and otherwise walks toward the nearest bot.",
     strategy: {
       build: build(0, 3, 3),
       modes: [
@@ -153,6 +161,9 @@ const sources = withLiteralIds<PresetSource>()([
             rule("evade", [when("aimedAtMe", { k: 1 })], act("stepOutOfLine")),
             rule("free-shot", [THROW_AHEAD, when("targetAimed", { target: "inThrowLine" }, true)], act("throw")),
             rule("refill", [holdsFewerThan(WATER_FOR_ONE_THROW)], actOn("moveAway", "nearest")),
+            // Last before the walk, so a bot in line or a low tank still comes first. Without it the Evader
+            // scored 40 to 61 below the field mean in the standard, open-field and arm's-length sets.
+            rule("grab", [when("itemNear", { item: "any", n: 3 }), NOT_DRY_SPELL], act("goToItem", { item: "any" })),
           ],
           actOn("moveToward", "nearest"),
         ),
@@ -218,18 +229,15 @@ const sources = withLiteralIds<PresetSource>()([
     // refill-and-strike of burstAndRetreat, with the item rule while it refills.
     id: "item-hunter",
     name: "Item hunter",
-    summary: "Drives to an item within 5 cells while it refills its tank, then runs at the nearest bot and throws from one cell until the tank runs low.",
-    // ponytail: it ignores items under dry-spell, where it plays like the Ambusher. A tank there throws
-    // once per refill (5 of 6 water), so fights move about half the points of the standard set (about
-    // 3,500 throws per 30,000 turns against 7,200) while a bucket or an umbrella still moves its fixed
-    // 1 point a use. With the rule the Item hunter scored 737 a day against a field mean of 93 (6 days);
-    // a 1-cell reach still left it at +156 over the mean, and with no bucket and no umbrella on the
-    // board it sat at +15. Without the rule: 48 a day against a mean of 28 (14 days, 4 tanks each).
+    summary: "Drives to a bucket within 5 cells while it refills its tank, then runs at the nearest bot and throws from one cell until the tank runs low.",
+    // ponytail: it ignores items under dry-spell, where it plays like the Ambusher (see NOT_DRY_SPELL).
     // Swap this for a rule that scales with the throw cost when the strategy language has one.
+    // It takes buckets only: with every kind it stayed 36 to 63 above the field mean (12 days), and a
+    // 3-cell or 2-cell reach changed nothing in the standard set. The Evader's grab rule did most of the fix.
     strategy: burstAndRetreat(
       "nearest",
       [],
-      [rule("grab", [when("itemNear", { item: "any", n: 5 }), when("ruleSet", { set: "dry-spell" }, true)], act("goToItem", { item: "any" }))],
+      [rule("grab", [when("itemNear", { item: "bucket", n: 5 }), NOT_DRY_SPELL], act("goToItem", { item: "bucket" }))],
     ),
   },
 ]);

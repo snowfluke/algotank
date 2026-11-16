@@ -312,7 +312,7 @@ export const en: VocabularyText = {
     dodge: { name: "Dodge" },
   },
   playStyles: {
-    evader: { name: "Evader", summary: "Dodges first, then shoots a careless tank." },
+    evader: { name: "Evader", summary: "Dodges, grabs items, then shoots a careless tank." },
     "leader-chaser": { name: "Leader chaser", summary: "Refills, then rushes a tank with more points." },
     "dry-hunter": { name: "Dry hunter", summary: "Refills, then hunts tanks that cannot shoot back." },
     ambusher: { name: "Ambusher", summary: "Refills, then rushes the nearest tank." },
@@ -320,7 +320,7 @@ export const en: VocabularyText = {
     backstabber: { name: "Sneak", summary: "Refills, then sneaks up from behind." },
     charger: { name: "Charger", summary: "Drives at the nearest tank, shooting ahead." },
     "random-walker": { name: "Wanderer", summary: "Wanders about and shoots what is in front." },
-    "item-hunter": { name: "Item hunter", summary: "Grabs items while refilling, then rushes the nearest tank." },
+    "item-hunter": { name: "Item hunter", summary: "Grabs buckets when it can, then rushes a tank." },
   },
   modeNames: {
     evade: "Evade",
@@ -589,7 +589,7 @@ export const id: VocabularyText = {
     dodge: { name: "Hindaran" },
   },
   playStyles: {
-    evader: { name: "Pengelak", summary: "Mengelak dulu, lalu menembak tank lengah." },
+    evader: { name: "Pengelak", summary: "Mengelak, memungut item, lalu menembak tank lengah." },
     "leader-chaser": { name: "Pemburu pemimpin", summary: "Mengisi air, lalu menyerbu tank yang poinnya lebih banyak." },
     "dry-hunter": { name: "Pemburu tank kering", summary: "Mengisi air, lalu memburu tank yang tidak bisa membalas." },
     ambusher: { name: "Penyergap", summary: "Mengisi air, lalu menyerbu tank terdekat." },
@@ -597,7 +597,7 @@ export const id: VocabularyText = {
     backstabber: { name: "Penyelinap", summary: "Mengisi air, lalu menyergap dari belakang." },
     charger: { name: "Penyeruduk", summary: "Menyeruduk tank terdekat sambil menembak." },
     "random-walker": { name: "Pengembara", summary: "Jalan acak dan menembak tank di depannya." },
-    "item-hunter": { name: "Pemburu Item", summary: "Memungut item sambil mengisi air, lalu menyerbu tank terdekat." },
+    "item-hunter": { name: "Pemburu Item", summary: "Memungut ember bila bisa, lalu menyerbu tank terdekat." },
   },
   modeNames: {
     evade: "Menghindar",

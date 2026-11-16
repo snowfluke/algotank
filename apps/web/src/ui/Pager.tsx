@@ -108,6 +108,9 @@ export function Pager<T>({ label, items, itemKey, renderItem, keepIndex = null, 
     };
   }, []);
 
+  // A uniform list measures its first row only, and the observer on the layer sees that row change its height. So a new array of
+  // the same length needs no new measure; a ranking of 512 gets a new array every turn, and each measure forced a layout under 512 gliding tanks.
+  const itemsDep = uniformHeight ? items.length : items;
   useLayoutEffect(() => {
     const box = rootRef.current;
     const layer = measureRef.current;
@@ -133,7 +136,7 @@ export function Pager<T>({ label, items, itemKey, renderItem, keepIndex = null, 
     observer.observe(layer);
     if (nav !== null) observer.observe(nav);
     return () => observer.disconnect();
-  }, [fit, items, fontsReady, uniformHeight, nav]);
+  }, [fit, itemsDep, fontsReady, uniformHeight, nav]);
 
   const plan: readonly PagePlan[] | null = (() => {
     if (!fit || measured === null || measured.heights.length !== items.length) return null;

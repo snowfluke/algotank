@@ -9,6 +9,8 @@
 // tank with a place in the month and 12 turns in its feed: the longest own pane);
 // `tanks` = a number of tanks in place of the case's own, and `field` = open puts the board on the
 // open-field rules, whose board is larger (27 tanks give 23 x 17, 40 give 28 x 21);
+// `stream=<url>` replays a recorded league (apps/server/scripts/perf-stream.ts) turn by turn, with the
+// day's clock running, so the board's cost shows with hundreds of tanks that move;
 // `leagues` = 1 (default), 2 or 9; `tab` = arena, ranking or mine (the phone's tab); `side` =
 // today, month or mine (the pane beside the board, and the phone's ranking switch); `quit` = 1
 // opens the quit question.
@@ -22,6 +24,7 @@ import { useFitLayout, useLaptopLayout } from "../ui/layout.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureOwnTurns, fixtureRanking, fixtureRankedSeat, fixtureSeat } from "./monthlyFixtures.ts";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
+import { useStreamReplay } from "./useStreamReplay.ts";
 import { MonthlyPhoneBar, MonthlyView, type DayChange, type MonthlySide, type MonthlyTab } from "./MonthlyView.tsx";
 
 const CASES = ["visitor", "empty", "one", "seated", "other", "move", "dayDone", "closing", "failed", "crowd", "ranked", "reshuffled"] as const;
@@ -55,19 +58,27 @@ export function MonthlyHarness() {
   const laptop = useLaptopLayout();
   const fit = useFitLayout();
   const presenter = laptop && fit;
+  const streamUrl = new URLSearchParams(window.location.search).get("stream");
+  const replay = useStreamReplay(streamUrl);
   const [now] = useState(() => Date.now());
   const seated = which === "seated" || which === "other" || which === "move" || which === "dayDone" || which === "closing" || which === "crowd" || which === "ranked";
-  const seat = which === "ranked" ? fixtureRankedSeat(league) : seated ? fixtureSeat(which === "other" ? 2 : league) : null;
+  // Memoised: a seat holds the statistics of 300 simulated turns, and the page gets one seat per read, not one per render.
+  const seat = useMemo(() => (which === "ranked" ? fixtureRankedSeat(league) : seated ? fixtureSeat(which === "other" ? 2 : league) : null), [which, league, seated]);
   // rules=<id>: the round's arena condition, so the audit can show the longest name (open-field).
   const rules = param<RuleSetId>("rules", RULE_SET_IDS, STANDARD_RULE_SET_ID);
   const tanks = tanksParam(TANKS[which]);
   const field = param("field", ["standard", "open"], "standard");
   // field=open draws the larger open-field board; rules=<id> only names another condition over the same board.
   const live = useMemo(() => fixtureLive(league, tanks, field === "open" ? "open-field" : rules), [league, tanks, field, rules]);
+  const shownLive = replay?.kind === "ready" ? replay.board.live : live;
+  const ranking = useMemo(() => (tanks === 0 ? { ...fixtureRanking(shownLive), today: [], thisMonth: [] } : fixtureRanking(shownLive)), [shownLive, tanks]);
   const load: LeagueLiveLoad =
-    which === "failed" ? { kind: "connecting" } : fixtureLoad(which === "closing" ? { ...live, dayEndsInMs: 0 } : live, now, which === "ranked" ? fixtureOwnTurns(12) : []);
+    streamUrl !== null
+      ? (replay ?? { kind: "connecting" })
+      : which === "failed" ? { kind: "connecting" } : fixtureLoad(which === "closing" ? { ...live, dayEndsInMs: 0 } : live, now, which === "ranked" ? fixtureOwnTurns(12) : []);
   const dayChange: DayChange | null = which === "dayDone" ? { kind: "done", day: "2026-11-13", winner: fixtureDays(league)[0] ?? null } : null;
-  const leagues = fixtureLeagues(Math.max(leagueCount, which === "other" ? 2 : 1), 37);
+  const leagues = useMemo(() => fixtureLeagues(Math.max(leagueCount, which === "other" ? 2 : 1), 37), [leagueCount, which]);
+  const days = useMemo(() => fixtureDays(league), [league]);
   const onJoin = seat === null ? () => undefined : null;
   return (
     <AppShell
@@ -82,9 +93,9 @@ export function MonthlyHarness() {
         load={load}
         connection={which === "failed" ? "failed" : "open"}
         onRetry={() => undefined}
-        now={now}
-        ranking={tanks === 0 ? { ...fixtureRanking(live), today: [], thisMonth: [] } : fixtureRanking(live)}
-        days={fixtureDays(league)}
+        {...(streamUrl === null ? { now } : {})}
+        ranking={ranking}
+        days={days}
         seat={seat}
         move={which === "move" ? FIXTURE_MOVE : null}
         onMoveSeen={() => undefined}

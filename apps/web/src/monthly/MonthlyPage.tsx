@@ -19,6 +19,7 @@ import { errorSentence } from "../api/errorSentences.ts";
 import { navigate } from "../app/navigation.ts";
 import { paths } from "../app/route.ts";
 import { useAccount } from "../auth/accountStore.ts";
+import { canSendEmail, useMailCapability } from "../auth/mailCapability.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { MyTankSheet } from "../mytank/MyTankSheet.tsx";
 import { myTankStore, useMyTank } from "../mytank/useMyTank.ts";
@@ -139,10 +140,18 @@ export function MonthlyPage() {
     if (signedIn && !seated) dispatch({ type: "returnedToJoin" });
   }, [meKnown, signedIn, seated]);
 
+  // The server refuses a seat to an unverified email when it sends email (monthly/routes.ts), so such
+  // a player verifies first and comes back to the join steps, instead of filling them in for nothing.
+  const mail = useMailCapability();
+  const mustVerify = signedIn && !account.account.emailVerified && canSendEmail(mail);
   const join = useCallback(() => {
+    if (mustVerify) {
+      navigate(paths.verifyEmail(paths.monthlyJoin()));
+      return;
+    }
     dispatch({ type: "join", signedIn });
     if (!signedIn) navigate(paths.signIn(paths.monthlyJoin()));
-  }, [signedIn]);
+  }, [signedIn, mustVerify]);
 
   const fixedName = me?.name !== null && me?.name !== undefined && !me.name.canChange ? me.name.name : null;
 

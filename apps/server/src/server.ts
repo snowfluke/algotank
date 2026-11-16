@@ -213,7 +213,7 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   registerAccountTankRoutes(router, { auth, tanks: new AccountTanks(db), now });
   registerAccountStatsRoutes(router, { auth, stats: accountStats });
   registerPublicRoutes(router, { publicArenas, monthly, champions, winners });
-  registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics });
+  registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics, mailOn });
   registerMetricsRoutes(router, {
     metrics,
     auth,

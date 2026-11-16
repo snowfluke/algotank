@@ -26,6 +26,11 @@ export interface MonthlyRouteDeps {
   readonly changes: SlidingWindowLimit;
   /** The usage numbers (metrics/metrics.ts). */
   readonly metrics: MetricsRecorder;
+  /**
+   * True when the server sends email. Then a seat needs a verified email (owner, 2026-11-16: the
+   * monthly arena is for verified accounts). Without email nobody could verify, so then it does not.
+   */
+  readonly mailOn: boolean;
 }
 
 function limitChanges(changes: SlidingWindowLimit, accountId: AccountId): void {
@@ -36,7 +41,7 @@ function limitChanges(changes: SlidingWindowLimit, accountId: AccountId): void {
   changes.record(accountId);
 }
 
-export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, changes, metrics }: MonthlyRouteDeps): void {
+export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, changes, metrics, mailOn }: MonthlyRouteDeps): void {
   router.add("GET", "/api/monthly", () => jsonResponse(monthly.overview()));
 
   router.add("GET", "/api/monthly/leagues/:league/events", (ctx) => {
@@ -56,6 +61,7 @@ export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, 
 
   router.add("POST", "/api/monthly/seat", async (ctx) => {
     const account = auth.requireAccount(ctx.req);
+    if (mailOn && !account.emailVerified) throw new HttpError(403, "The monthly arena is for players whose email is verified.", { code: "email_not_verified" });
     limitChanges(changes, account.id);
     const body = await readJson(ctx.req);
     const seat = monthly.takeSeat(account.id, body);

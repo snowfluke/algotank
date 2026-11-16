@@ -15,6 +15,7 @@ import {
   type PublicStatusResponse,
 } from "@game/arena";
 import { PRESETS } from "@game/engine";
+import { AuthStore } from "../auth/store.ts";
 import { openDatabase } from "../db/open.ts";
 import { signUp, startTestServer, type TestServer, type TestServerOptions } from "../test-helpers.ts";
 import { Champions } from "./champions.ts";
@@ -103,6 +104,29 @@ describe("the monthly routes", () => {
 });
 
 describe("the monthly routes' limit", () => {
+  test("with email on, a seat needs a verified email; the same account takes one once its email is verified", async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "algotank-verified-"));
+    directories.push(dataDir);
+    // Mail settings make the server ask for a verified email; the codes it would send are not read here.
+    const t = start({ dataDir, mail: { sendMail: async () => {} } });
+    const cookie = await signUp(t);
+    const refused = await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } });
+    expect(refused.status).toBe(403);
+    expect((await json<{ code: string }>(refused)).code).toBe("email_not_verified");
+    const accountId = (await json<{ account: { id: string } }>(await t.api("/api/auth/me", { cookie }))).account.id;
+    // The server reads the account on each request, so a second connection may mark it.
+    const db = openDatabase({ kind: "file", dataDir });
+    new AuthStore(db, Date.now).markEmailVerified(accountId);
+    db.close();
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+  });
+
+  test("without email nobody could verify, so an unverified account still takes a seat", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+  });
+
   test("seat, quit and rename share a limit per account; past it they answer 429 with the wait, and another account is not held back", async () => {
     const t = start();
     const cookie = await signUp(t);

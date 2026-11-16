@@ -4,6 +4,7 @@
 // a tinted row and the word "You". Sizes are in em, so a FitList on the big screen
 // scales the rows with its font size.
 
+import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { TankBadge } from "../tank/TankBadge.tsx";
@@ -46,7 +47,7 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
     <Row
       aria-current={isSelf ? "true" : undefined}
       data-player-id={tank.playerId}
-      className={`relative grid grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto] items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
+      className={`relative grid ${open === undefined ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto]" : "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_1em]"} items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
         isSelf ? "bg-self-soft" : ""
       } ${verdict !== null && !verdict.through && !isSelf ? "text-muted" : "text-ink"}`}
     >
@@ -71,7 +72,8 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
         )}
       </span>
       {note === undefined ? null : <span className={`col-start-3 col-end-5 ${ROW_LABEL_TEXT} text-muted [overflow-wrap:anywhere]`}>{note}</span>}
-      {/* Over the whole row, so the row keeps its layout and the whole row is the target. */}
+      {/* The chevron says the row opens; the button over the whole row is the target. */}
+      {open === undefined ? null : <ChevronRight aria-hidden className="h-[1em] w-[1em] text-muted" />}
       {open === undefined ? null : (
         <button
           type="button"

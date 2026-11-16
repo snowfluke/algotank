@@ -140,8 +140,6 @@ export const en = {
       days === 1 ? "A tank gets a place in the month's ranking after one full day." : `A tank needs ${days} counted days for a place in the month's ranking.`,
     /** The champion and the name rule are left out: the dialog must fit a 360 x 640 phone, and the champions page and the join step say them. */
     leagues: "When the month ends, the lower half of each league changes places with the upper half of the league below.",
-    gm: "A GM tank belongs to the organizer, so it takes no place, and everyone can read its rules.",
-    rulesOpen: (month: string) => `After ${month} ends, everyone can read every tank's rules, and the same happens after each later month.`,
   },
   /** The month close's notice, shown once. `month` is "October 2026". */
   move: {
@@ -265,8 +263,6 @@ export const id: typeof en = {
     items: "Item muncul di arena, dan tombol Bantuan menjelaskan gunanya.",
     rankedDays: (days) => (days === 1 ? "Tank masuk peringkat bulan ini setelah main sehari penuh." : `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`),
     leagues: "Di akhir bulan, separuh bawah tiap liga bertukar tempat dengan separuh atas liga di bawahnya.",
-    gm: "Tank GM milik penyelenggara, jadi tidak masuk peringkat, dan semua orang boleh membaca aturannya.",
-    rulesOpen: (month) => `Setelah ${month} selesai, semua orang bisa membaca aturan setiap tank, begitu juga setelah setiap bulan berikutnya.`,
   },
   move: {
     up: (league) => `Tank kamu naik ke Liga ${league}.`,

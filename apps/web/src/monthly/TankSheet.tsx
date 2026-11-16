@@ -119,15 +119,16 @@ function SheetBody({ tank, source, load }: { readonly tank: SheetTank; readonly 
     );
   }
   if (load.kind === "failed") return <p role="alert">{describeError(load.failure, "loadTank", m.errors).sentence}</p>;
+  // The day's numbers first: they are short, and the rules can run to 120 sentences (LIMITS).
   return (
     <>
+      {source.kind === "live" ? <LastDay lastDay={load.lastDay} /> : null}
       <section className="flex min-w-0 flex-col gap-2">
         <h3 className="text-lead font-semibold">{t.rules}</h3>
         {source.kind === "month" ? <p className="text-muted [overflow-wrap:anywhere]">{t.monthRules(f.month(source.month))}</p> : null}
         {source.kind === "live" && tank.gm ? <p className="text-muted [overflow-wrap:anywhere]">{t.gm}</p> : null}
         {load.rules === null ? <p className="[overflow-wrap:anywhere]">{t.rulesLater(f.month(FIRST_PUBLISHED_RULES_MONTH))}</p> : <RulesText strategy={load.rules} />}
       </section>
-      {source.kind === "live" ? <LastDay lastDay={load.lastDay} /> : null}
     </>
   );
 }

@@ -1,13 +1,13 @@
 // Items on the board (docs/specs/revamp/84-items.md). Every number of the feature is in
 // ITEM_RULES, so tuning edits this file only. The round loop (round/round.ts) calls the
 // end-of-turn functions below in this order: pickUp, countDownEffects then the new effects
-// of the turn's hits, ageItems, spawnItem. Throw resolution (round/resolve.ts) reads
+// of the turn's hits, ageItems, spawnItems. Throw resolution (round/resolve.ts) reads
 // holderBlocks, actsOnOwnHit and effectOfHit.
 //
 // Random draws, in this order at the end of a turn: pickUp draws one chance for each pinwheel or
-// mud ball a tank takes (the backfire), in the order of the board's item list; then spawnItem
-// draws one int for the kind and one int for the square, only on a turn that spawns. A round with
-// items off has no item, so neither draws.
+// mud ball a tank takes (the backfire), in the order of the board's item list; then spawnItems
+// draws one int for the kind and one int for the square of each item it adds, only on a turn that
+// spawns. A round with items off has no item, so neither draws.
 
 import type { BoardItem, BotState, ItemKind, Pickup, Rng, Snapshot, TankEffect, TankEffectKind } from "../types.ts";
 import { ITEM_KINDS } from "../types.ts";
@@ -17,6 +17,14 @@ export const ITEM_RULES = {
   spawnEvery: 10,
   /** At most one item on the board per this many tanks, and always at least 1. */
   tanksPerItem: 4,
+  /**
+   * Past this many tanks, items come more often, so each tank's share stays near its share at this
+   * count (spawnTiming). With one item per 10 turns for every count, tanks past about 20 shared a
+   * fixed number of items (2026-11-16, 3,000 turns: 3.9 pickups per tank per 1,000 turns at 20 tanks,
+   * 2.0 at 40, 0.8 at 100). Whole extra items per spawn turn jumped from 3.9 at 20 tanks to 7.0 at 21,
+   * so the wait between spawn turns shortens instead. Rounds of 20 tanks or fewer play as before.
+   */
+  tanksPerSpawn: 20,
   /** Turns an item stays on the board when nobody takes it. */
   turnsOnBoard: 30,
   /** Weight of each kind in the draw. */
@@ -130,20 +138,40 @@ function drawKind(rng: Rng): ItemKind {
 }
 
 /**
- * At the end of turn `tick` (0 for the first), one new item when the turn is a spawn turn,
- * the board holds fewer than the cap and a square has no tank and no item. Draws only then.
+ * How often items come with this many tanks on the board: a spawn turn after every `every` turns,
+ * adding `count` items before the cap. Up to ITEM_RULES.tanksPerSpawn tanks it is one item per
+ * ITEM_RULES.spawnEvery turns. Past it the wait is spawnEvery × tanksPerSpawn ÷ tanks turns, rounded,
+ * so the rate grows in steps of about one tenth; past 200 tanks every turn spawns, and `count` grows.
  */
-export function spawnItem(snapshot: Pick<Snapshot, "width" | "height">, tick: number, tanks: readonly Cell[], items: readonly BoardItem[], rng: Rng): BoardItem | null {
-  if ((tick + 1) % ITEM_RULES.spawnEvery !== 0 || items.length >= itemCap(tanks.length)) return null;
+export function spawnTiming(tanks: number): { readonly every: number; readonly count: number } {
+  const { spawnEvery, tanksPerSpawn } = ITEM_RULES;
+  if (tanks <= tanksPerSpawn) return { every: spawnEvery, count: 1 };
+  const every = Math.max(1, Math.round((spawnEvery * tanksPerSpawn) / tanks));
+  return { every, count: every === 1 ? Math.max(1, Math.round(tanks / (spawnEvery * tanksPerSpawn))) : 1 };
+}
+
+/**
+ * At the end of turn `tick` (0 for the first), the new items: on a spawn turn (spawnTiming), its
+ * count of them while the board holds fewer than the cap and a square has no tank and no item.
+ * Each new item draws its kind and then its square; nothing draws on other turns.
+ */
+export function spawnItems(snapshot: Pick<Snapshot, "width" | "height">, tick: number, tanks: readonly Cell[], items: readonly BoardItem[], rng: Rng): BoardItem[] {
+  const timing = spawnTiming(tanks.length);
+  if ((tick + 1) % timing.every !== 0) return [];
+  const room = Math.min(timing.count, itemCap(tanks.length) - items.length);
+  if (room <= 0) return [];
   const taken = new Set([...tanks, ...items].map((cell) => `${cell.x},${cell.y}`));
   const free: Cell[] = [];
   for (let y = 0; y < snapshot.height; y++) {
     for (let x = 0; x < snapshot.width; x++) if (!taken.has(`${x},${y}`)) free.push({ x, y });
   }
-  if (free.length === 0) return null;
-  const kind = drawKind(rng);
-  const square = free[rng.int(free.length)] as Cell;
-  return { kind, x: square.x, y: square.y, turnsLeft: ITEM_RULES.turnsOnBoard };
+  const added: BoardItem[] = [];
+  while (added.length < room && free.length > 0) {
+    const kind = drawKind(rng);
+    const [square] = free.splice(rng.int(free.length), 1) as [Cell];
+    added.push({ kind, x: square.x, y: square.y, turnsLeft: ITEM_RULES.turnsOnBoard });
+  }
+  return added;
 }
 
 /**

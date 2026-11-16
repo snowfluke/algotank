@@ -7,7 +7,7 @@ import { resolveTick } from "../round/resolve.ts";
 import { createOpenRound, createRound, joinRound, stepRound } from "../round/round.ts";
 import { createRng } from "../round/rng.ts";
 import { PRESETS } from "../strategy/presets.ts";
-import { ITEM_RULES, ageItems, itemCap, pickUp, spawnItem } from "./items.ts";
+import { ITEM_RULES, ageItems, itemCap, pickUp, spawnItems, spawnTiming } from "./items.ts";
 
 const waiter: Strategy = strategyOf([mode("main", [], act("wait"))]);
 const driver: Strategy = strategyOf([mode("main", [], act("stepForward"))]);
@@ -227,11 +227,38 @@ describe("appearing and vanishing", () => {
     expect([itemCap(2), itemCap(8), itemCap(9), itemCap(512)]).toEqual([1, 2, 2, 128]);
     const tanks = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
     const size = { width: 8, height: 6 };
-    expect(spawnItem(size, 8, tanks, [], createRng(1))).toBeNull();
-    const item = spawnItem(size, 9, tanks, [], createRng(1));
+    expect(spawnItems(size, 8, tanks, [], createRng(1))).toEqual([]);
+    const [item, ...more] = spawnItems(size, 9, tanks, [], createRng(1));
+    expect(more).toEqual([]);
     expect(item?.turnsLeft).toBe(ITEM_RULES.turnsOnBoard);
     expect(tanks.some((t) => t.x === item?.x && t.y === item?.y)).toBe(false);
-    expect(spawnItem(size, 9, tanks, item === null ? [] : [item], createRng(1))).toBeNull();
+    expect(spawnItems(size, 9, tanks, item === undefined ? [] : [item], createRng(1))).toEqual([]);
+  });
+
+  test("past 20 tanks items come more often in small steps; 20 tanks or fewer keep one per 10 turns", () => {
+    expect([1, 20, 21, 25, 30, 40, 100, 200, 512].map((n) => spawnTiming(n))).toEqual([
+      { every: 10, count: 1 },
+      { every: 10, count: 1 },
+      { every: 10, count: 1 },
+      { every: 8, count: 1 },
+      { every: 7, count: 1 },
+      { every: 5, count: 1 },
+      { every: 2, count: 1 },
+      { every: 1, count: 1 },
+      { every: 1, count: 3 },
+    ]);
+  });
+
+  test("a spawn turn with room for several items puts them on distinct free squares, within the cap", () => {
+    const size = { width: 40, height: 30 };
+    const tanks = Array.from({ length: 512 }, (_, i) => ({ x: i % 40, y: Math.floor(i / 40) }));
+    const added = spawnItems(size, 0, tanks, [], createRng(4));
+    expect(added).toHaveLength(spawnTiming(512).count);
+    expect(new Set(added.map((i) => `${i.x},${i.y}`)).size).toBe(added.length);
+    expect(added.some((i) => tanks.some((t) => t.x === i.x && t.y === i.y))).toBe(false);
+    // One below the cap leaves room for one of the three.
+    const nearlyFull = Array.from({ length: itemCap(512) - 1 }, (_, i) => ({ kind: "bucket" as const, x: i % 40, y: 13 + Math.floor(i / 40), turnsLeft: 5 }));
+    expect(spawnItems(size, 0, tanks, nearlyFull, createRng(4))).toHaveLength(1);
   });
 
   test("an item nobody takes leaves the board after its turns", () => {

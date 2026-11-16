@@ -25,7 +25,8 @@ A tank has one effect at a time. A new effect replaces the old effect. A tank th
 
 ## How items appear, stay and go
 
-- One item can appear after every 10th turn. In a public arena a turn is 0.9 seconds, so this is every 9 seconds.
+- With 20 tanks or fewer on the board, one item can appear after every 10th turn. In a public arena a turn is 0.9 seconds, so this is every 9 seconds.
+- With more than 20 tanks, items appear more frequently, so each tank gets approximately the same number of items as on a board with 20 tanks. With 40 tanks, one item can appear after every 5th turn. With more than 200 tanks, items can appear after each turn, and more than one item can appear at the same time.
 - The board holds 1 item for each 4 tanks, and at least 1 item. A board with 8 tanks holds at most 2 items.
 - An item appears on a square that has no tank and no item.
 - An item that no tank takes goes away after 30 turns. Then a new item can appear on a different square.

@@ -32,6 +32,7 @@ import { TankBadge } from "../tank/TankBadge.tsx";
 import { BottomTabs, tabPanelProps } from "../ui/BottomTabs.tsx";
 import { Button } from "../ui/Button.tsx";
 import { useFitLayout, useLaptopLayout } from "../ui/layout.ts";
+import { useBoxSize } from "../ui/useBoxSize.ts";
 import { Picker } from "../ui/Picker.tsx";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
@@ -252,6 +253,31 @@ function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; rankin
   );
 }
 
+/**
+ * Height in CSS px the turn feed needs to be useful: its heading, one turn of two lines and the
+ * pager's row of buttons (measured: 180 still cut a turn of two lines). Below it the pager would draw its buttons over the quit button (a phone
+ * whose browser bars take height, 2026-11-16), so the pane leaves the feed out instead.
+ */
+const FEED_MIN_PX = 220;
+
+/** The turn feed where it fits; nothing where it does not, so the quit button under it stays clear. */
+function OwnFeed({ decisions, strategy }: { decisions: LeagueBoard["own"]; strategy: StrategyInput }) {
+  const { ref, box } = useBoxSize<HTMLDivElement>();
+  // Before the first measurement (a server render) the feed shows, as the Pager lists every item then.
+  const fits = box === null || box.height >= FEED_MIN_PX;
+  return (
+    <div ref={ref} data-own-feed={fits ? "shown" : "hidden"} className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {fits ? <DecisionFeed decisions={decisions} strategy={strategy} /> : null}
+    </div>
+  );
+}
+
+/** "League 1 · 15 players": the league shown and its seated tanks, or the league alone before the count arrives. */
+function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: number, leagues: MonthlyViewProps["leagues"]): string {
+  const players = leagues.find((entry) => entry.league === league)?.tanks;
+  return players === undefined ? t.league(league) : t.leaguePlayers(league, players);
+}
+
 /** The owner's tank: today, the counted days, the turns, and the way out. */
 function OwnPane({ seat, league, board, ranking, onLeague, onQuit, strategy }: {
   seat: MonthlySeat;
@@ -311,10 +337,9 @@ function OwnPane({ seat, league, board, ranking, onLeague, onQuit, strategy }: {
                 {t.playsAlone}
               </p>
             ) : null}
-            <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score)}</p>
-            {seat.rank === null ? null : <p className="text-muted">{t.daysCounted(seat.countedDays)}</p>}
+            <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score, seat.countedDays)}</p>
           </div>
-          {here && board !== null ? <DecisionFeed decisions={board.own} strategy={strategy} /> : <div className="min-h-0 flex-1" />}
+          {here && board !== null ? <OwnFeed decisions={board.own} strategy={strategy} /> : <div className="min-h-0 flex-1" />}
         </>
       )}
       <div className="shrink-0">
@@ -381,10 +406,22 @@ function PresenterLayout(props: MonthlyViewProps) {
     ...(seat === null ? [] : [{ value: "mine" as const, label: t.tabs.mine }]),
   ];
   const side = seat === null && props.side === "mine" ? "today" : props.side;
+  const leagueTitle = leagueTitleOf(t, league, leagues);
   return (
     <div data-scale="screen" data-monthly-page="presenter" style={SCREEN_SCALE_STYLE} className="flex min-h-0 min-w-0 flex-1 flex-col gap-[1.5vh] px-[2vw]">
       <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
-        <h1 className="min-w-0 shrink-0 text-heading">{leagues.length > 1 ? t.league(league) : m.common.pageTitles.monthly}</h1>
+        <h1 className="min-w-0 shrink-0 text-heading">
+          {/* With several leagues the league switch beside it already says "League", so the title is the league; the row then fits a 1000 px window. */}
+          {leagues.length > 1 ? null : (
+            <>
+              {m.common.pageTitles.monthly}
+              <span className="sr-only">, </span>
+            </>
+          )}
+          <span data-monthly-players="" className={leagues.length > 1 ? undefined : "ml-3 text-title text-muted"}>
+            {leagueTitle}
+          </span>
+        </h1>
         <div className="min-w-0 flex-1 basis-80 text-title">
           <DayClock board={board} now={props.now} dayChange={props.dayChange} />
         </div>
@@ -414,7 +451,8 @@ function PresenterLayout(props: MonthlyViewProps) {
           ) : (
             <Ranking part={side === "month" ? "month" : "today"} ranking={props.ranking} ownSeatId={ownSeatId} />
           )}
-          <LastWinner days={props.days} today={board?.live.day ?? null} />
+          {/* Yesterday's winner goes with the rankings; beside the own tank it took the room of the quit button (2026-11-16). */}
+          {side === "mine" && seat !== null ? null : <LastWinner days={props.days} today={board?.live.day ?? null} />}
         </section>
       </div>
     </div>
@@ -457,6 +495,7 @@ function PhoneLayout(props: MonthlyViewProps) {
   const ownSeatId = seat !== null && seat.league === league ? seat.seatId : null;
   const tab = seat === null && props.tab === "mine" ? "arena" : props.tab;
   const part = props.side === "month" ? "month" : "today";
+  const leagueTitle = leagueTitleOf(t, league, leagues);
   let pane: ReactNode;
   if (tab === "mine" && seat !== null) {
     pane = <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} strategy={seat.strategy} />;
@@ -481,9 +520,12 @@ function PhoneLayout(props: MonthlyViewProps) {
   return (
     <div data-monthly-page="phone" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-4">
       <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <h1 className="sr-only">{leagues.length > 1 ? t.league(league) : m.common.pageTitles.monthly}</h1>
         <LeagueSwitch league={league} leagues={leagues} ownLeague={seat?.league ?? null} onLeague={props.onLeague} />
         <div className="min-w-0 flex-1 basis-48">
+          {/* The app header names the page on a phone, so this heading names the league and its players. */}
+          <h1 data-monthly-players="" className="text-caption font-semibold text-muted [overflow-wrap:anywhere]">
+            {leagueTitle}
+          </h1>
           <DayClock board={board} now={props.now} dayChange={props.dayChange} />
         </div>
         <MonthlyAbout />

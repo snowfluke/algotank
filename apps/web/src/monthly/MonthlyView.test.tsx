@@ -6,6 +6,7 @@ import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
 import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureRanking, fixtureSeat, OWN_SEAT } from "./monthlyFixtures.ts";
 import { MonthlyPhoneBar, MonthlyView, type MonthlyViewProps } from "./MonthlyView.tsx";
+import { en } from "./messages.ts";
 
 const NOW = 1_000_000;
 
@@ -90,6 +91,16 @@ describe("the monthly page", () => {
     expect(html).toContain("so you can close this page and come back any time.");
     expect(html).toContain("A tank gets a place in the month&#x27;s ranking after one full day.");
     expect(render(props(), "id")).toContain("jadi kamu boleh menutup halaman ini dan kembali kapan saja.");
+  });
+
+  test("the title names the league and how many players sit in it, in both languages", () => {
+    expect(render(props())).toMatch(/data-monthly-players=""[^>]*>League 1 · \d+ players</);
+    expect(render(props(), "id")).toMatch(/data-monthly-players=""[^>]*>Liga 1 · \d+ peserta</);
+  });
+
+  test("the quit question says the counted days stay, so a player can change the rules and come back", () => {
+    expect(en.quit.bodyNotCounted).toContain("Your counted days and your name stay, so you can change your rules and take a seat again.");
+    expect(en.quit.bodyCounted(4)).toContain("Your counted days and your name stay");
   });
 
   test("the board legend's button sits beside the information button, and the list points to it for the items", () => {

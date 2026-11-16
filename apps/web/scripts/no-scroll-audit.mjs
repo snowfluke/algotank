@@ -55,6 +55,8 @@ export const SIZES = [
   { name: "390x450", width: 390, height: 450, kind: "fallback", pages: "keyboard", standsFor: "phone with the keyboard open" },
   // Only for the states that name it: the owner's laptop, where the result page and the round history are judged (75-organiser-tournament.md).
   { name: "1728x1000", width: 1728, height: 1000, kind: "fit", pages: "owner", standsFor: "the owner's laptop" },
+  // Only for the states that name it: the owner's phone with the browser's tab groups bar, which takes height (2026-11-16).
+  { name: "400x620", width: 400, height: 620, kind: "fit", pages: "bars", standsFor: "phone with the browser's tab groups bar" },
 ];
 
 /** The in-between widths checked for horizontal overflow on the simple screens, at a height of 800. */
@@ -1070,6 +1072,9 @@ STATES.push(
   // One league of 512 seats (2026-11-16): the board grows with the tanks, so a crowded day is checked too.
   monthlyKit("crowd", "case=crowd"),
   monthlyKit("crowd-ranking", "case=crowd&tab=ranking"),
+  // The longest own pane (a place in the month and a full feed), 2026-11-16: on a short phone the feed's
+  // buttons once covered the quit button; the feed now leaves when it cannot fit (MonthlyView.tsx, OwnFeed).
+  monthlyKit("ranked-mine", "case=ranked&tab=mine&side=mine", { sizes: [...MONTHLY_SIZES, "400x620"] }),
   // The information list and the board legend (84-items.md): both are dialogs that must fit without scrolling.
   monthlyKit("about", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-monthly-about-open]" }, { wait: "dialog[data-monthly-about][open]" }] }),
   monthlyKit("legend", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-legend-open]" }, { wait: "dialog[open]" }] }),

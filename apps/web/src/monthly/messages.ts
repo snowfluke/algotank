@@ -7,6 +7,8 @@ const points = (n: number) => (n === 1 ? "1 point" : `${n} points`);
 export const en = {
   /** "League 2": the switch, the list and the headings. */
   league: (n: number) => `League ${n}`,
+  /** Beside the page's title: the league shown and its seated tanks (bots are not counted). */
+  leaguePlayers: (n: number, players: number) => `League ${n} · ${players === 1 ? "1 player" : `${players} players`}`,
   /** The league switch's name for a screen reader. */
   leagues: "Leagues",
   /** Read after the own league's name in the switch. */
@@ -57,8 +59,9 @@ export const en = {
     /** Counted days so far against the days a place needs, such as "5 of 7". */
     daysNeeded: (days: number, need: number) =>
       need === 1 ? "Your tank gets a place after its first full day, from midnight to midnight." : `Your tank has ${days} of the ${need} days it needs for a place.`,
-    daysCounted: (days: number) => `Your tank has played ${days === 1 ? "1 counted day" : `${days} counted days`} this month.`,
-    monthPlace: (place: number, score: number) => `Your tank is in place ${place} this month with ${points(score)}.`,
+    /** One sentence for the place and the counted days, so the own pane keeps room for the turn feed. */
+    monthPlace: (place: number, score: number, days: number) =>
+      `Your tank is in place ${place} this month with ${points(score)} from ${days === 1 ? "1 counted day" : `${days} counted days`}.`,
     otherLeague: (league: number) => `Your tank plays in League ${league}.`,
     show: (league: number) => `Show League ${league}`,
   },
@@ -68,9 +71,9 @@ export const en = {
     /** Today counts for the tank: its points now stay. */
     // The last sentence of each body: leaving is not how to stop watching.
     bodyCounted: (score: number) =>
-      `Your tank leaves the board now, and its ${points(score)} of today still count. Your name stays the same until the month ends. If you only want to stop watching, close this page instead, and your tank keeps playing.`,
+      `Your tank leaves the board now, and its ${points(score)} of today still count. Your counted days and your name stay, so you can change your rules and take a seat again. If you only want to stop watching, close this page instead, and your tank keeps playing.`,
     bodyNotCounted:
-      "Your tank leaves the board now, and today does not count for it. Your name stays the same until the month ends. If you only want to stop watching, close this page instead, and your tank keeps playing.",
+      "Your tank leaves the board now, and today does not count for it. Your counted days and your name stay, so you can change your rules and take a seat again. If you only want to stop watching, close this page instead, and your tank keeps playing.",
     confirm: "Leave the arena",
   },
   /** The help button at the top of the page and the dialog it opens (MonthlyAbout.tsx). */
@@ -113,6 +116,7 @@ export const en = {
 
 export const id: typeof en = {
   league: (n) => `Liga ${n}`,
+  leaguePlayers: (n, players) => `Liga ${n} · ${players} peserta`,
   leagues: "Liga",
   ownLeague: "tank kamu main di sini",
   ownLeagueChoice: (n) => `Liga ${n}, tank kamu`,
@@ -148,8 +152,7 @@ export const id: typeof en = {
       need === 1
         ? "Tank kamu masuk peringkat setelah main sehari penuh, dari tengah malam sampai tengah malam."
         : `Tank kamu sudah main ${days} dari ${need} hari yang dibutuhkan untuk masuk peringkat.`,
-    daysCounted: (days) => `Tank kamu sudah main ${days} hari yang dihitung bulan ini.`,
-    monthPlace: (place, score) => `Tank kamu di peringkat ${place} bulan ini dengan ${score} poin.`,
+    monthPlace: (place, score, days) => `Tank kamu di peringkat ${place} bulan ini dengan ${score} poin dari ${days} hari yang dihitung.`,
     otherLeague: (league) => `Tank kamu main di Liga ${league}.`,
     show: (league) => `Lihat Liga ${league}`,
   },
@@ -157,9 +160,9 @@ export const id: typeof en = {
     open: "Keluar dari arena bulanan",
     title: "Keluar dari arena bulanan?",
     bodyCounted: (score) =>
-      `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap dihitung. Namamu tetap sama sampai bulan ini selesai. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.`,
+      `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap dihitung. Hari yang sudah dihitung dan namamu tetap tersimpan, jadi kamu bisa mengubah aturan lalu masuk lagi. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.`,
     bodyNotCounted:
-      "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung. Namamu tetap sama sampai bulan ini selesai. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
+      "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung. Hari yang sudah dihitung dan namamu tetap tersimpan, jadi kamu bisa mengubah aturan lalu masuk lagi. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
     confirm: "Keluar dari arena",
   },
   about: {

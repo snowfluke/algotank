@@ -5,7 +5,8 @@
 // owner's tank in the shown league), other (the owner's tank plays in League 2, League 1 shows),
 // move (seated, with the month close's notice), dayDone (the finished day over the board),
 // closing (the day's end is being recorded), failed (the stream was refused), crowd (40 tanks on
-// the board a full tournament league grows to, the owner's tank among them);
+// the board a full tournament league grows to, the owner's tank among them), ranked (the owner's
+// tank with a place in the month and 12 turns in its feed: the longest own pane);
 // `leagues` = 1 (default), 2 or 9; `tab` = arena, ranking or mine (the phone's tab); `side` =
 // today, month or mine (the pane beside the board, and the phone's ranking switch); `quit` = 1
 // opens the quit question.
@@ -16,11 +17,11 @@ import { AppShell } from "../ui/AppShell.tsx";
 import { Dialog } from "../ui/Dialog.tsx";
 import { useFitLayout, useLaptopLayout } from "../ui/layout.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
-import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureRanking, fixtureSeat } from "./monthlyFixtures.ts";
+import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureOwnTurns, fixtureRanking, fixtureRankedSeat, fixtureSeat } from "./monthlyFixtures.ts";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
 import { MonthlyPhoneBar, MonthlyView, type DayChange, type MonthlySide, type MonthlyTab } from "./MonthlyView.tsx";
 
-const CASES = ["visitor", "empty", "one", "seated", "other", "move", "dayDone", "closing", "failed", "crowd"] as const;
+const CASES = ["visitor", "empty", "one", "seated", "other", "move", "dayDone", "closing", "failed", "crowd", "ranked"] as const;
 type Case = (typeof CASES)[number];
 
 function param<T extends string>(name: string, values: readonly T[], fallback: T): T {
@@ -28,7 +29,7 @@ function param<T extends string>(name: string, values: readonly T[], fallback: T
   return values.find((v) => v === value) ?? fallback;
 }
 
-const TANKS: Record<Case, number> = { visitor: 5, empty: 0, one: 1, seated: 16, other: 16, move: 16, dayDone: 16, closing: 16, failed: 5, crowd: 40 };
+const TANKS: Record<Case, number> = { visitor: 5, empty: 0, one: 1, seated: 16, other: 16, move: 16, dayDone: 16, closing: 16, failed: 5, crowd: 40, ranked: 16 };
 
 export function MonthlyHarness() {
   const m = useMessages();
@@ -42,10 +43,11 @@ export function MonthlyHarness() {
   const fit = useFitLayout();
   const presenter = laptop && fit;
   const [now] = useState(() => Date.now());
-  const seated = which === "seated" || which === "other" || which === "move" || which === "dayDone" || which === "closing" || which === "crowd";
-  const seat = seated ? fixtureSeat(which === "other" ? 2 : league) : null;
+  const seated = which === "seated" || which === "other" || which === "move" || which === "dayDone" || which === "closing" || which === "crowd" || which === "ranked";
+  const seat = which === "ranked" ? fixtureRankedSeat(league) : seated ? fixtureSeat(which === "other" ? 2 : league) : null;
   const live = useMemo(() => fixtureLive(league, TANKS[which]), [league, which]);
-  const load: LeagueLiveLoad = which === "failed" ? { kind: "connecting" } : fixtureLoad(which === "closing" ? { ...live, dayEndsInMs: 0 } : live, now);
+  const load: LeagueLiveLoad =
+    which === "failed" ? { kind: "connecting" } : fixtureLoad(which === "closing" ? { ...live, dayEndsInMs: 0 } : live, now, which === "ranked" ? fixtureOwnTurns(12) : []);
   const dayChange: DayChange | null = which === "dayDone" ? { kind: "done", day: "2026-11-13", winner: fixtureDays(league)[0] ?? null } : null;
   const leagues = fixtureLeagues(Math.max(leagueCount, which === "other" ? 2 : 1), 37);
   const onJoin = seat === null ? () => undefined : null;

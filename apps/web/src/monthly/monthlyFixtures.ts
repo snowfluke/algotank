@@ -4,6 +4,7 @@
 import { playedStats } from "../stats/statsFixtures.ts";
 import { MONTHLY_BOARD_MIN_TANKS, MONTHLY_SEATS, plainTankLook, type LeagueDayRecord, type LeagueLive, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow, type MonthMove, type PublicSnapshot, type TankLook } from "@game/arena";
 import { arenaSize, DEFAULT_PRESET_ID, PRESETS, ruleSet, STANDARD_RULE_SET_ID } from "@game/engine";
+import type { OwnDecision } from "../stream/streamState.ts";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
 import type { MonthlySeat } from "./MonthlyView.tsx";
 
@@ -53,8 +54,29 @@ export function fixtureLive(league: number, count: number): LeagueLive {
   return { league, month: "2026-11", day: FIXTURE_DAY, dayEndsInMs: (5 * 3600 + 12 * 60 + 44) * 1000, tickMs: 900, phase: count === 0 ? "idle" : bot ? "withBot" : "withoutBot", tanks, board };
 }
 
-export function fixtureLoad(live: LeagueLive, now: number): LeagueLiveLoad {
-  return { kind: "ready", board: { live, snapshot: live.board, throws: [], dayEndsAt: now + live.dayEndsInMs, own: [] } };
+export function fixtureLoad(live: LeagueLive, now: number, own: readonly OwnDecision[] = []): LeagueLiveLoad {
+  return { kind: "ready", board: { live, snapshot: live.board, throws: [], dayEndsAt: now + live.dayEndsInMs, own } };
+}
+
+/** The owner's last turns under the default play style: a grab, shots and drives, so the feed has pages. */
+export function fixtureOwnTurns(count: number): OwnDecision[] {
+  const preset = PRESETS.find((p) => p.id === DEFAULT_PRESET_ID) ?? PRESETS[0];
+  const mode = preset?.strategy.modes[0];
+  if (preset === undefined || mode === undefined) throw new Error("The engine has no play style.");
+  return Array.from({ length: count }, (_, i): OwnDecision => {
+    const rule = mode.rules[i % (mode.rules.length + 1)];
+    const shot = rule !== undefined && !("steps" in rule.action) && rule.action.action === "throw";
+    return {
+      tick: 1200 + i,
+      decision: { botId: OWN_SEAT, modeId: mode.id, ruleId: rule?.id ?? null, actionId: rule === undefined ? mode.fallback.action : "steps" in rule.action ? "wait" : rule.action.action, move: shot ? "T" : "F", nextModeId: mode.id },
+      throwEvent: shot ? { throwerId: OWN_SEAT, outcome: i % 2 === 0 ? "hit" : "miss", targetId: "seat-1", distance: 2, hitChance: 60 } : null,
+    };
+  });
+}
+
+/** A seat with a place in the month's ranking: the summary then has its longest form. */
+export function fixtureRankedSeat(league: number): MonthlySeat {
+  return { ...fixtureSeat(league), countedDays: 1, score: 7075, rank: 1 };
 }
 
 export function fixtureRanking(live: LeagueLive): LeagueRankingResponse {

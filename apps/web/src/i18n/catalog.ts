@@ -2,6 +2,7 @@
 // owns its own messages.ts (exports `en` and `id`); this file only wires them in.
 // To add a feature: create src/<feature>/messages.ts, import it here, and add a slot to both objects.
 
+import * as adminPlayers from "../adminplayers/messages.ts";
 import * as errors from "../api/messages.ts";
 import * as auth from "../auth/messages.ts";
 import * as board from "../board/messages.ts";
@@ -58,6 +59,7 @@ const en = {
   chat: chat.en,
   support: support.en,
   metrics: metrics.en,
+  adminPlayers: adminPlayers.en,
   stats: stats.en,
 };
 
@@ -90,6 +92,7 @@ const id: Catalog = {
   chat: chat.id,
   support: support.id,
   metrics: metrics.id,
+  adminPlayers: adminPlayers.id,
   stats: stats.id,
 };
 

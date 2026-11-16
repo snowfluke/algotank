@@ -50,6 +50,7 @@ import {
   parsePlayerName,
   parseTankLook,
   type AccountId,
+  type AdminPlayer,
   type LeagueDayRecord,
   type LeagueDaysResponse,
   type LeagueLive,
@@ -98,6 +99,17 @@ export interface MonthlyOptions {
   readonly random?: Random;
   /** Seats in one league: MONTHLY_SEATS when not given; the tests of several leagues use a small number. */
   readonly seatsPerLeague?: number;
+}
+
+/** A seated tank for the admin route (monthly/admin-routes.ts), which adds the account. */
+export interface SeatedPlayer extends Omit<AdminPlayer, "account"> {
+  readonly accountId: AccountId;
+}
+
+export interface SeatedPlayers {
+  readonly month: string;
+  readonly day: string;
+  readonly players: readonly SeatedPlayer[];
 }
 
 const dayTankOf = (seat: Seat): DayTank => ({ id: seat.seatId, name: seat.name, look: seat.look, strategy: seat.strategy });
@@ -542,6 +554,21 @@ export class MonthlyLeagues {
       name: record === undefined ? null : { name: record.name, month: record.month, canChange: record.month !== this.today.month },
       move: this.seats.moves.get(accountId) ?? null,
     };
+  }
+
+  /**
+   * Every seated tank with its owner's account id and its month place, League 1 first, each league
+   * in its month ranking's order. The account ids leave the server only through the admin route.
+   */
+  seatedPlayers(): SeatedPlayers {
+    const players: SeatedPlayer[] = [];
+    for (let league = 1; league <= this.seats.leagues; league++) {
+      for (const place of this.monthRanking(league, this.month)) {
+        const seat = this.seatOfAccount(place.id);
+        players.push({ accountId: place.id, league, name: seat.name, rank: place.rank, score: place.score, countedDays: place.countedDays });
+      }
+    }
+    return { month: this.today.month, day: this.today.day, players };
   }
 
   /** What the league holds, for the test that nothing grows per turn. */

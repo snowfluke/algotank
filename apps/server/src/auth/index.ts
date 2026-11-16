@@ -46,7 +46,7 @@ export { AuthError } from "./errors.ts";
 
 export interface Account {
   readonly id: AccountId;
-  /** Personal data: it leaves the server only in answers to the account itself or to the owner of an arena the account plays in. */
+  /** Personal data: it leaves the server only in answers to the account itself, to the owner of an arena the account plays in, and to the admin (GET /api/admin/players). */
   readonly email: string;
   readonly createdAt: string;
   readonly emailVerified: boolean;

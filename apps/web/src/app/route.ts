@@ -28,6 +28,8 @@ export type Route =
   | { readonly page: "myResults" }
   /** The host's usage numbers (metrics/AdminMetricsPage.tsx); the server answers 404 to anyone but ADMIN_EMAILS. */
   | { readonly page: "adminMetrics" }
+  /** The monthly tanks with their owners' emails (adminplayers/AdminPlayersPage.tsx); the server answers 404 to anyone but ADMIN_EMAILS. */
+  | { readonly page: "adminPlayers" }
   | { readonly page: "notFound" };
 
 export const paths = {
@@ -52,6 +54,7 @@ export const paths = {
   result: (resultId: string) => `/r/${encodeURIComponent(resultId)}`,
   myResults: () => "/my-results",
   adminMetrics: () => "/admin/metrics",
+  adminPlayers: () => "/admin/players",
   /** The chooser of the three public arenas, with one of them chosen. */
   playIn: (kind: PublicKind) => `/play?arena=${kind}`,
 } as const;
@@ -112,6 +115,7 @@ export function parseRoute(pathname: string): Route {
   }
   if (first === "a") return parseArenaRoute(segments);
   if (first === "admin" && second === "metrics" && segments.length === 2) return { page: "adminMetrics" };
+  if (first === "admin" && second === "players" && segments.length === 2) return { page: "adminPlayers" };
   // A result id is base64url, so it needs no decoding; anything else is not a result.
   if (first === "r" && segments.length === 2 && second !== undefined && isResultId(second)) return { page: "result", resultId: second };
   return NOT_FOUND;

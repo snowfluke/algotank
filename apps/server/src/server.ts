@@ -21,6 +21,7 @@ import { DEFAULT_LEAGUE_TIME_ZONE, shortDayCalendar, zoneCalendar, type ShortDay
 import { Champions } from "./monthly/champions.ts";
 import { LeagueStore } from "./monthly/league-store.ts";
 import { MONTHLY_TICK_MS, MonthlyLeagues } from "./monthly/monthly.ts";
+import { registerAdminPlayerRoutes } from "./monthly/admin-routes.ts";
 import { MONTHLY_CHANGES_PER_MINUTE, registerMonthlyRoutes } from "./monthly/routes.ts";
 import { LeagueStreams } from "./monthly/streams.ts";
 import { DEFAULT_PUBLIC_ARENA_MAX, PublicArenas } from "./public-arenas.ts";
@@ -215,6 +216,7 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   registerPublicRoutes(router, { publicArenas, monthly, champions, winners });
   registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics, mailOn });
   const adminGate = { auth, adminEmails: new Set(options.adminEmails ?? []), mailOn };
+  registerAdminPlayerRoutes(router, { gate: adminGate, monthly });
   registerMetricsRoutes(router, {
     ...adminGate,
     metrics,

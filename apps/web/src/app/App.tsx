@@ -12,6 +12,7 @@ import { HostPage } from "../host/HostPage.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { KitPage } from "../kit/KitPage.tsx";
 import { MyTankPage } from "../mytank/MyTankPage.tsx";
+import { AdminPlayersPage } from "../adminplayers/AdminPlayersPage.tsx";
 import { AdminMetricsPage } from "../metrics/AdminMetricsPage.tsx";
 import { NotFoundPage } from "../ui/NotFoundPage.tsx";
 import { useUsageCounts } from "../metrics/useUsageCounts.ts";
@@ -61,6 +62,8 @@ function RoutePage({ route }: { route: Route }) {
       return <MyResultsPage />;
     case "adminMetrics":
       return <AdminMetricsPage />;
+    case "adminPlayers":
+      return <AdminPlayersPage />;
     case "notFound":
       return <NotFoundPage />;
   }
@@ -73,7 +76,7 @@ export function App() {
   useMusicVenue(route.page === "screen" ? "bigScreen" : "app");
   // The sign-in page is newer than the shared title list, so its title lives with its own text.
   const title =
-    route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : m.common.pageTitles[route.page];
+    route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : route.page === "adminPlayers" ? m.adminPlayers.pageTitle : m.common.pageTitles[route.page];
   useUsageCounts(route.page);
 
   useEffect(() => {

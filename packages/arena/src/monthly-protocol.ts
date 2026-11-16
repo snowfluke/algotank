@@ -30,6 +30,9 @@
 // `retryAfterSeconds`.
 // GET    /api/public                           -> PublicStatusResponse.monthly (public-protocol.ts)
 // GET    /api/champions                        -> ChampionsResponse; the months are League 1's champions
+// GET    /api/admin/players                    (account in ADMIN_EMAILS; verified when the server sends
+//                                                email) -> AdminPlayersResponse. Everyone else gets the 404
+//                                                of a route that does not exist.
 
 import type { Decision, StatsView, StrategyInput } from "@game/engine";
 import type { CompactTick } from "./compact-tick.ts";
@@ -237,3 +240,30 @@ export interface RenameRequest {
  * - monthly_name_fixed: the account's name of this month is set; it changes in the next month (409).
  */
 export type MonthlyErrorCode = "monthly_seat_taken" | "no_monthly_seat" | "monthly_name_fixed";
+
+/**
+ * One seated tank and its owner's account, for the host (owner, 2026-11-16: to check who is behind
+ * each tank before the month's prizes). Only GET /api/admin/players sends an email.
+ */
+export interface AdminPlayer {
+  readonly league: number;
+  /** As in LeagueMonthRow. */
+  readonly rank: number | null;
+  readonly name: string;
+  readonly score: number;
+  readonly countedDays: number;
+  /** null: the seat names an account that no longer exists. */
+  readonly account: {
+    readonly email: string;
+    readonly emailVerified: boolean;
+    /** ISO time. */
+    readonly createdAt: string;
+  } | null;
+}
+
+/** GET /api/admin/players: every seated tank, League 1 first, each league in its month ranking's order. */
+export interface AdminPlayersResponse {
+  readonly month: string;
+  readonly day: string;
+  readonly players: readonly AdminPlayer[];
+}

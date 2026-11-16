@@ -32,7 +32,7 @@ When the server has mail settings, it gives the email address and the code to th
 | Chat lines: the text, the time, and the sender's tank name and look | The table `chat_line` | 24 hours, at most 500 lines per arena. Closing or removing the arena removes its chat. When the owner removes a player, the server removes that player's lines. |
 | The result of a finished game of a private or presenter arena: arena name, tank names, looks, rounds and ranking | The table `result`, with account ids but never an email | 180 days. Anyone with the link can open it. |
 
-The owner of an arena for players with an account sees the email address of each player in it, and the email of each player in that arena's stored results. Other players never see an email.
+The owner of an arena for players with an account sees the email address of each player in it, and the email of each player in that arena's stored results. The accounts named in `ADMIN_EMAILS` see, on `/admin/players`, the email address of the owner of each tank seated in the monthly arena, whether that email is verified, and when the account was made. Other players never see an email.
 
 ## Things an account keeps
 

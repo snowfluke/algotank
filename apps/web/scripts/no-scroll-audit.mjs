@@ -1045,6 +1045,27 @@ STATES.push(
   adminState("not-admin", { mock: [{ route: "**/api/admin/metrics*", status: 404, body: { error: "That route does not exist." } }], steps: [{ wait: "h1" }] }),
 );
 
+// The host's list of monthly players (adminplayers/AdminPlayersPage.tsx). A made-up answer of 60 tanks with
+// long names and emails, so the Pager pages and every cell truncates; the audit's accounts are not admins.
+function adminPlayersMock(count) {
+  const players = Array.from({ length: count }, (_, i) => ({
+    league: 1,
+    rank: i < count - 5 ? i + 1 : null,
+    name: i % 7 === 0 ? `Tank number ${i} long name` : `Tank ${i}`,
+    score: 900 - i * 11,
+    countedDays: i < count - 5 ? 1 : 0,
+    account: i === 3 ? null : { email: i % 5 === 0 ? `a.very.long.address.number.${i}+monthly@example.org` : `player${i}@example.org`, emailVerified: i % 6 !== 0, createdAt: "2026-11-02T03:00:00.000Z" },
+  }));
+  return [{ route: "**/api/admin/players", status: 200, body: { month: "2026-11", day: "2026-11-16", players } }];
+}
+const adminPlayersState = (state, extra = {}) => ({ screen: "admin-players", state, owner: "admin", path: () => "/admin/players", as: "visitor", sizes: ADMIN_SIZES, mock: adminPlayersMock(60), steps: [{ wait: "[data-admin-player]" }], ...extra });
+STATES.push(
+  adminPlayersState("list"),
+  adminPlayersState("last-page", { steps: [{ wait: "[data-admin-player]" }, { pageToEnd: "[data-admin-players] [data-pager-next]" }] }),
+  adminPlayersState("empty", { mock: adminPlayersMock(0), steps: [{ wait: "[data-admin-players] p" }] }),
+  adminPlayersState("not-admin", { mock: [{ route: "**/api/admin/players", status: 404, body: { error: "That route does not exist." } }], steps: [{ wait: "h1" }] }),
+);
+
 // M2 (77-monthly-league.md, section 6): the monthly arena's page. The league is one shared thing per server, so its
 // states come from the kit harness (/kit?show=monthly, monthly/MonthlyHarness.tsx); the join steps and a visitor's
 // page use the real server. The watch page is a presenter view, so it is checked at 1728 x 1000 and 1920 x 1080 too.

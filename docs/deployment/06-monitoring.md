@@ -77,7 +77,7 @@
 
 ## Usage numbers
 
-The accounts in `ADMIN_EMAILS` see the usage numbers on `https://game.example.com/admin/metrics`: today against yesterday, the last 30 days, and how far new devices get on their first visit. The day files are in `/var/lib/algotank/metrics/`, one per day, and the server removes a file after 400 days. `PRIVACY.md` says what is counted.
+The accounts in `ADMIN_EMAILS` see the usage numbers on `https://game.example.com/admin/metrics`: today against yesterday, the last 30 days, and how far new devices get on their first visit. On `https://game.example.com/admin/players` they see each tank seated in the monthly arena with its owner's email, whether that email is verified, and when the account was made. The day files are in `/var/lib/algotank/metrics/`, one per day, and the server removes a file after 400 days. `PRIVACY.md` says what is counted.
 
 ## Logs
 

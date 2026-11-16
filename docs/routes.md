@@ -70,4 +70,5 @@ A strategy is data. The server runs no player code, and it does not call a playe
 |-------|-----|------|
 | `POST /api/metrics/event` | anyone | Body `{ "name", "label" }` from the lists in `packages/arena/src/metrics-protocol.ts` (a page open, the language, a first-visit step): 204, 400 for any other name or label. 600 per minute per address. |
 | `GET /api/admin/metrics?from=&to=` | account in `ADMIN_EMAILS` | The day counts from `from` to `to` (YYYY-MM-DD, at most 400 days; the last 30 days without them). Everyone else gets the 404 of a route that does not exist. |
+| `GET /api/admin/players` | account in `ADMIN_EMAILS` | Every tank seated in the monthly arena, League 1 first in the month ranking's order, with its owner's email, whether it is verified, and when the account was made. Everyone else gets the 404 of a route that does not exist. |
 | `GET /metrics` | `Authorization: Bearer <METRICS_TOKEN>` | Server health in the Prometheus text format; 401 without the token. Without `METRICS_TOKEN` the route does not exist. |

@@ -33,8 +33,9 @@
 // SMTP_USER         The login at the mail server. Set it together with SMTP_PASS, or neither.
 // SMTP_PASS         Its password; for Gmail an app password (see docs/deployment/10-mail.md).
 // MAIL_FROM         The sender address, for example "AlgoTank <game@example.org>". Needed with SMTP_HOST.
-// ADMIN_EMAILS      Comma-separated emails of the accounts that may open /admin/metrics, the usage
-//                   numbers (metrics/routes.ts). With SMTP_HOST the email must also be verified.
+// ADMIN_EMAILS      Comma-separated emails of the accounts that may open the host's pages: /admin/metrics,
+//                   the usage numbers, and /admin/players, the monthly tanks with their owners' emails
+//                   (admin.ts). With SMTP_HOST the email must also be verified.
 //                   Not set: nobody may.
 // METRICS_TOKEN     The bearer token of GET /metrics, the server health in the Prometheus text
 //                   format (docs/deployment/06-monitoring.md). At least 16 characters. Not set:

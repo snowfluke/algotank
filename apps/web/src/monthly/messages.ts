@@ -35,6 +35,8 @@ export const en = {
   tabs: { label: "Parts of the monthly arena", arena: "Arena", ranking: "Ranking", mine: "Your tank" },
   /** The ranking's switch. */
   ranking: { label: "Ranking", today: "Today", month: "This month" },
+  /** After the name of a tank that quit the arena today; its points of today stay in the ranking. */
+  left: "Left",
   todayEmpty: "No tank plays in this league today yet.",
   monthEmpty: "No tank plays in this league this month yet.",
   /** The line before the tanks with fewer counted days than a place needs. */
@@ -77,6 +79,16 @@ export const en = {
     bodyNotCounted:
       "Your tank leaves the board now, and today does not count for it. Your counted days and your name stay, so you can change your rules and take a seat again. If you only want to stop watching, close this page instead, and your tank keeps playing.",
     confirm: "Leave the arena",
+  },
+  /** The way to new rules: a quit, then the join steps with the tank's rules (flow.ts, askChangeRules). */
+  changeRules: {
+    open: "Change rules",
+    title: "Change your tank's rules?",
+    bodyCounted: (score: number) =>
+      `Your tank leaves the board now, and its ${points(score)} of today stay. Then you choose new rules and take a seat again. The new rules count from tomorrow, because a tank that takes a seat during the day does not count that day. Your counted days and your name stay.`,
+    bodyNotCounted:
+      "Your tank leaves the board now, and today does not count for it. Then you choose new rules and take a seat again, and they count from tomorrow. Your counted days and your name stay.",
+    confirm: "Leave and change rules",
   },
   /** The help button at the top of the page and the dialog it opens (MonthlyAbout.tsx). */
   about: {
@@ -136,6 +148,7 @@ export const id: typeof en = {
   },
   tabs: { label: "Bagian arena bulanan", arena: "Arena", ranking: "Peringkat", mine: "Tank kamu" },
   ranking: { label: "Peringkat", today: "Hari ini", month: "Bulan ini" },
+  left: "Keluar",
   todayEmpty: "Belum ada tank yang main di liga ini hari ini.",
   monthEmpty: "Belum ada tank yang main di liga ini bulan ini.",
   notRanked: (days) => (days === 1 ? "Belum masuk peringkat" : `Kurang dari ${days} hari, belum masuk peringkat`),
@@ -167,6 +180,15 @@ export const id: typeof en = {
     bodyNotCounted:
       "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung. Hari yang sudah dihitung dan namamu tetap tersimpan, jadi kamu bisa mengubah aturan lalu masuk lagi. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
     confirm: "Keluar dari arena",
+  },
+  changeRules: {
+    open: "Ubah aturan",
+    title: "Ubah aturan tank kamu?",
+    bodyCounted: (score) =>
+      `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap tersimpan. Lalu kamu memilih aturan baru dan masuk lagi. Aturan baru dihitung mulai besok, karena tank yang masuk di tengah hari tidak dihitung pada hari itu. Hari yang sudah dihitung dan namamu tetap tersimpan.`,
+    bodyNotCounted:
+      "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung untuknya. Lalu kamu memilih aturan baru dan masuk lagi, dan aturan itu dihitung mulai besok. Hari yang sudah dihitung dan namamu tetap tersimpan.",
+    confirm: "Keluar dan ubah aturan",
   },
   about: {
     open: "Cara kerja arena bulanan",

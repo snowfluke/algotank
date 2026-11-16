@@ -82,6 +82,8 @@ export function fixtureRankedSeat(league: number): MonthlySeat {
 export function fixtureRanking(live: LeagueLive): LeagueRankingResponse {
   const seated = live.tanks.filter((tank) => !tank.isBot);
   const today: LeagueTodayRow[] = seated.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, points: 20 - i, counts: true, seated: true }));
+  // A tank that quit today keeps its row, last here, with its points at the quit.
+  if (today.length > 0) today.push({ rank: today.length + 1, seatId: "seat-left", name: "Rangga", look: fixtureLook(5), points: 0, counts: true, seated: false });
   const thisMonth: LeagueMonthRow[] = seated.map((tank, i) => ({ rank: i < seated.length - 3 ? i + 1 : null, seatId: tank.id, name: tank.name, look: tank.look, score: Math.round((18.4 - i) * 10) / 10, countedDays: i < seated.length - 3 ? 9 : 4 }));
   return { league: live.league, month: live.month, day: live.day, today, thisMonth };
 }

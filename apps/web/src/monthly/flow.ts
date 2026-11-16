@@ -14,11 +14,14 @@
 // | preparing  | submitFailed (a name problem)  | server |                                | naming                 |
 // | preparing  | submitFailed (another problem) | server |                                | preparing              |
 // | preparing  | seatTaken                      | server |                                | seated                 |
-// | seated     | askQuit                        | owner  |                                | quitting               |
+// | seated     | askQuit                        | owner  |                                | quitting (then watch)  |
+// | seated     | askChangeRules                 | owner  |                                | quitting (then change  |
+// |            |                                |        |                                | rules)                 |
 // | quitting   | cancelQuit                     | owner  | not busy                       | seated                 |
 // | quitting   | quitConfirmed                  | owner  | not busy                       | quitting (busy)        |
 // | quitting   | quitFailed                     | server |                                | quitting               |
-// | quitting   | quitDone                       | server |                                | watching               |
+// | quitting   | quitDone                       | server | then watch                     | watching               |
+// | quitting   | quitDone                       | server | then change rules              | naming                 |
 // | watching,  | seatLoaded: a seat             | server | (another device took one)      | seated                 |
 // | naming,    |                                |        |                                |                        |
 // | preparing  |                                |        |                                |                        |
@@ -32,7 +35,12 @@ export type MonthlyFlow =
   | { readonly kind: "naming" }
   | { readonly kind: "preparing"; readonly submitting: boolean }
   | { readonly kind: "seated" }
-  | { readonly kind: "quitting"; readonly busy: boolean };
+  /**
+   * `then`: what follows the quit. "changeRules" is the owner's way to new rules (owner,
+   * 2026-11-16: players did not find that leaving is how to change them): the join steps open
+   * again with the tank's rules, and the counted days and the name stay as at any quit.
+   */
+  | { readonly kind: "quitting"; readonly busy: boolean; readonly then: "watch" | "changeRules" };
 
 export type FlowEvent =
   | { readonly type: "join"; readonly signedIn: boolean }
@@ -43,6 +51,7 @@ export type FlowEvent =
   | { readonly type: "submitFailed"; readonly nameProblem: boolean }
   | { readonly type: "seatTaken" }
   | { readonly type: "askQuit" }
+  | { readonly type: "askChangeRules" }
   | { readonly type: "cancelQuit" }
   | { readonly type: "quitConfirmed" }
   | { readonly type: "quitFailed" }
@@ -72,15 +81,18 @@ export function nextFlow(flow: MonthlyFlow, event: FlowEvent): MonthlyFlow {
     case "seatTaken":
       return flow.kind === "preparing" ? { kind: "seated" } : flow;
     case "askQuit":
-      return flow.kind === "seated" ? { kind: "quitting", busy: false } : flow;
+      return flow.kind === "seated" ? { kind: "quitting", busy: false, then: "watch" } : flow;
+    case "askChangeRules":
+      return flow.kind === "seated" ? { kind: "quitting", busy: false, then: "changeRules" } : flow;
     case "cancelQuit":
       return flow.kind === "quitting" && !flow.busy ? { kind: "seated" } : flow;
     case "quitConfirmed":
-      return flow.kind === "quitting" && !flow.busy ? { kind: "quitting", busy: true } : flow;
+      return flow.kind === "quitting" && !flow.busy ? { ...flow, busy: true } : flow;
     case "quitFailed":
-      return flow.kind === "quitting" ? { kind: "quitting", busy: false } : flow;
+      return flow.kind === "quitting" ? { ...flow, busy: false } : flow;
     case "quitDone":
-      return flow.kind === "quitting" ? WATCHING : flow;
+      if (flow.kind !== "quitting") return flow;
+      return flow.then === "changeRules" ? { kind: "naming" } : WATCHING;
     case "seatLoaded":
       if (event.seated) return flow.kind === "watching" || flow.kind === "naming" || (flow.kind === "preparing" && !flow.submitting) ? { kind: "seated" } : flow;
       if (flow.kind === "seated" || (flow.kind === "quitting" && !flow.busy)) return WATCHING;

@@ -1084,6 +1084,7 @@ STATES.push(
   monthlyKit("seated-ranking-month-last-page", "case=seated&tab=ranking&side=month", { steps: [{ wait: "[data-monthly-page]" }, { pageToEnd: "[data-monthly-ranking] [data-pager-next]" }] }),
   monthlyKit("seated-mine", "case=seated&tab=mine&side=mine"),
   monthlyKit("other-league", "case=other&tab=mine&side=mine"),
+  monthlyKit("seated-leagues-2", "case=seated&leagues=2"),
   monthlyKit("other-league-arena", "case=other"),
   monthlyKit("move", "case=move"),
   monthlyKit("day-done", "case=dayDone"),
@@ -1091,6 +1092,7 @@ STATES.push(
   monthlyKit("closing", "case=closing"),
   monthlyKit("failed", "case=failed"),
   monthlyKit("quit", "case=seated&tab=mine&side=mine&quit=1", { steps: [{ wait: "dialog[data-dialog=monthly-quit][open]" }] }),
+  monthlyKit("change-rules", "case=seated&quit=rules", { steps: [{ wait: "dialog[data-dialog=monthly-change-rules][open]" }] }),
   // One league of 512 seats (2026-11-16): the board grows with the tanks, so a crowded day is checked too.
   monthlyKit("crowd", "case=crowd"),
   monthlyKit("crowd-ranking", "case=crowd&tab=ranking"),

@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { TakeSeatRequest } from "@game/arena";
+import type { StrategyInput } from "@game/engine";
 import { quitMonthlySeat, markMonthlyMoveSeen, takeMonthlySeat } from "../api/client.ts";
 import { errorSentence } from "../api/errorSentences.ts";
 import { navigate } from "../app/navigation.ts";
@@ -72,6 +73,8 @@ export function MonthlyPage() {
   const name = useNameDraft(tank.name);
   const strategy = useMonthlyStrategy();
   const [flow, dispatch] = useReducer(nextFlow, WATCHING);
+  const changingRules = flow.kind === "quitting" && flow.then === "changeRules";
+  const quitText = changingRules ? t.changeRules : t.quit;
   const [asked, setAsked] = useState<number | null>(null);
   const [tab, setTab] = useState<MonthlyTab>("arena");
   const [side, setSide] = useState<MonthlySide>("today");
@@ -194,8 +197,10 @@ export function MonthlyPage() {
     if (code === "monthly_name_fixed" || code === "monthly_seat_taken") reloadMe();
   }
 
-  async function quit(): Promise<void> {
+  /** A quit, or the first half of a change of rules: then the rules step opens with the tank's rules (`seatStrategy`). */
+  async function quit(seatStrategy: StrategyInput): Promise<void> {
     dispatch({ type: "quitConfirmed" });
+    if (changingRules) void strategy.saveStrategy(seatStrategy);
     const result = await quitMonthlySeat();
     if (result.ok || result.code === "no_monthly_seat") {
       dispatch({ type: "quitDone" });
@@ -272,7 +277,7 @@ export function MonthlyPage() {
     <AppShell
       width="full"
       header={<AppHeader {...(presenter ? {} : { title: m.common.pageTitles.monthly })} />}
-      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} tab={tab} onTab={setTab} />}
+      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => dispatch({ type: "askChangeRules" })} tab={tab} onTab={setTab} />}
     >
       <MonthlyView
         league={league}
@@ -293,6 +298,7 @@ export function MonthlyPage() {
         dayChange={shownDayChange}
         reshuffled={now < reshuffledUntil}
         onQuit={() => dispatch({ type: "askQuit" })}
+        onChangeRules={() => dispatch({ type: "askChangeRules" })}
         tab={tab}
         onTab={setTab}
         side={side}
@@ -301,11 +307,11 @@ export function MonthlyPage() {
       {seat === null ? null : (
         <Dialog
           open={flow.kind === "quitting"}
-          hook="monthly-quit"
-          title={t.quit.title}
-          body={seat.countsToday ? t.quit.bodyCounted(seat.points) : t.quit.bodyNotCounted}
-          confirmLabel={t.quit.confirm}
-          onConfirm={() => void quit()}
+          hook={changingRules ? "monthly-change-rules" : "monthly-quit"}
+          title={quitText.title}
+          body={seat.countsToday ? quitText.bodyCounted(seat.points) : quitText.bodyNotCounted}
+          confirmLabel={quitText.confirm}
+          onConfirm={() => void quit(seat.strategy)}
           onCancel={() => dispatch({ type: "cancelQuit" })}
         />
       )}

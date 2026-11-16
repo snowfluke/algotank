@@ -5,8 +5,10 @@ const naming: MonthlyFlow = { kind: "naming" };
 const preparing: MonthlyFlow = { kind: "preparing", submitting: false };
 const submitting: MonthlyFlow = { kind: "preparing", submitting: true };
 const seated: MonthlyFlow = { kind: "seated" };
-const quitting: MonthlyFlow = { kind: "quitting", busy: false };
-const quittingBusy: MonthlyFlow = { kind: "quitting", busy: true };
+const quitting: MonthlyFlow = { kind: "quitting", busy: false, then: "watch" };
+const quittingBusy: MonthlyFlow = { kind: "quitting", busy: true, then: "watch" };
+const changing: MonthlyFlow = { kind: "quitting", busy: false, then: "changeRules" };
+const changingBusy: MonthlyFlow = { kind: "quitting", busy: true, then: "changeRules" };
 
 describe("the monthly page's flow (the table in flow.ts)", () => {
   const rows: [MonthlyFlow, FlowEvent, MonthlyFlow][] = [
@@ -29,6 +31,11 @@ describe("the monthly page's flow (the table in flow.ts)", () => {
     [quitting, { type: "quitConfirmed" }, quittingBusy],
     [quittingBusy, { type: "quitFailed" }, quitting],
     [quittingBusy, { type: "quitDone" }, WATCHING],
+    [seated, { type: "askChangeRules" }, changing],
+    [changing, { type: "cancelQuit" }, seated],
+    [changing, { type: "quitConfirmed" }, changingBusy],
+    [changingBusy, { type: "quitFailed" }, changing],
+    [changingBusy, { type: "quitDone" }, naming],
     [WATCHING, { type: "seatLoaded", seated: true }, seated],
     [naming, { type: "seatLoaded", seated: true }, seated],
     [preparing, { type: "seatLoaded", seated: true }, seated],
@@ -43,6 +50,7 @@ describe("the monthly page's flow (the table in flow.ts)", () => {
 
   test("an event no row allows keeps the state", () => {
     expect(nextFlow(WATCHING, { type: "askQuit" })).toEqual(WATCHING);
+    expect(nextFlow(naming, { type: "askChangeRules" })).toEqual(naming);
     expect(nextFlow(seated, { type: "join", signedIn: true })).toEqual(seated);
     expect(nextFlow(naming, { type: "seatTaken" })).toEqual(naming);
     expect(nextFlow(WATCHING, { type: "quitDone" })).toEqual(WATCHING);

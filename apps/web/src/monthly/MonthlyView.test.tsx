@@ -29,6 +29,7 @@ function props(over: Partial<MonthlyViewProps> = {}, tanks = 5): MonthlyViewProp
     dayChange: null,
     reshuffled: false,
     onQuit: () => undefined,
+    onChangeRules: () => undefined,
     tab: "arena",
     onTab: () => undefined,
     side: "today",
@@ -41,7 +42,7 @@ const render = (p: MonthlyViewProps, language: "en" | "id" = "en") =>
   renderToStaticMarkup(
     <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
       <MonthlyView {...p} />
-      <MonthlyPhoneBar seat={p.seat} onJoin={p.onJoin} tab={p.tab} onTab={p.onTab} />
+      <MonthlyPhoneBar seat={p.seat} onJoin={p.onJoin} onChangeRules={p.onChangeRules} tab={p.tab} onTab={p.onTab} />
     </I18nProvider>,
   );
 
@@ -154,5 +155,26 @@ describe("a reshuffle", () => {
     expect(render(props({ reshuffled: true }))).toContain(">Reshuffled<");
     expect(render(props({ reshuffled: true }), "id")).toContain(">Diacak ulang<");
     expect(render(props())).not.toContain("data-reshuffled");
+  });
+});
+
+describe("a tank that quit today", () => {
+  test("keeps its row in today's ranking with Left after its name, in both languages", () => {
+    const html = render(props({ tab: "ranking", side: "today" }, 16));
+    expect(html).toMatch(/data-player-id="seat-left"[\s\S]*?>Rangga<\/span><span[^>]*>Left</);
+    expect(render(props({ tab: "ranking", side: "today" }, 16), "id")).toMatch(/>Rangga<\/span><span[^>]*>Keluar</);
+    // A seated tank has no tag.
+    expect(html).not.toMatch(/>Bima<\/span><span[^>]*>Left</);
+  });
+});
+
+describe("changing the rules", () => {
+  test("a seated owner sees Change rules on the arena tab and in the own pane once; a visitor does not", () => {
+    const seat = fixtureSeat(1);
+    const count = (html: string) => html.split("data-change-rules").length - 1;
+    expect(count(render(props({ seat, onJoin: null, tab: "arena" }, 16)))).toBe(1);
+    expect(count(render(props({ seat, onJoin: null, tab: "mine" }, 16)))).toBe(1);
+    expect(render(props({ seat, onJoin: null, tab: "arena" }, 16), "id")).toContain(">Ubah aturan<");
+    expect(count(render(props({}, 16)))).toBe(0);
   });
 });

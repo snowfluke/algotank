@@ -24,12 +24,14 @@ export interface RankingRowProps {
   readonly truncate: boolean;
   /** A line under the name, such as the own tank's water on the test match board. */
   readonly note?: string;
+  /** A short word after the name, such as "Left" for a tank that quit the monthly arena today. */
+  readonly tag?: string;
   /** "li" in a list of rows (default); "div" inside a Pager, which wraps each item in its own `li`. */
   readonly element?: "li" | "div";
 }
 
 /** One ranked tank. board/Scoreboard.tsx draws its rows with it too, so every ranking marks "you" the same way. */
-export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, element = "li" }: RankingRowProps) {
+export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, element = "li" }: RankingRowProps) {
   const m = useMessages();
   const t = m.results.table;
   const Row = element;
@@ -50,6 +52,7 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
         </span>
         {isSelf ? <span className={`shrink-0 ${ROW_LABEL_TEXT} font-bold text-self-ink`}>{t.you}</span> : null}
         {tank.isBot ? <span className={`shrink-0 ${ROW_LABEL_TEXT} text-muted`}>{t.bot}</span> : null}
+        {tag === undefined ? null : <span className={`shrink-0 ${ROW_LABEL_TEXT} text-muted`}>{tag}</span>}
       </span>
       <span className="flex items-baseline gap-x-[0.75em]">
         {score === null ? null : <span className="tabular font-display font-semibold">{score}</span>}

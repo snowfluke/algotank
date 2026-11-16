@@ -37,7 +37,11 @@ export function MonthlyHarness() {
   const leagueCount = Number(param("leagues", ["1", "2", "9"], "1"));
   const [tab, setTab] = useState<MonthlyTab>(param<MonthlyTab>("tab", ["arena", "ranking", "mine"], "arena"));
   const [side, setSide] = useState<MonthlySide>(param<MonthlySide>("side", ["today", "month", "mine"], "today"));
-  const [quitting, setQuitting] = useState(new URLSearchParams(window.location.search).get("quit") === "1");
+  // quit=1: the quit dialog; quit=rules: the dialog of "Change rules".
+  const [quitting, setQuitting] = useState<"leave" | "rules" | null>(() => {
+    const value = new URLSearchParams(window.location.search).get("quit");
+    return value === "1" ? "leave" : value === "rules" ? "rules" : null;
+  });
   const [league, setLeague] = useState(1);
   const laptop = useLaptopLayout();
   const fit = useFitLayout();
@@ -55,7 +59,7 @@ export function MonthlyHarness() {
     <AppShell
       width="full"
       header={<AppHeader {...(presenter ? {} : { title: m.common.pageTitles.monthly })} />}
-      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} tab={tab} onTab={setTab} />}
+      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => setQuitting("rules")} tab={tab} onTab={setTab} />}
     >
       <MonthlyView
         league={league}
@@ -73,7 +77,8 @@ export function MonthlyHarness() {
         onJoin={onJoin}
         dayChange={dayChange}
         reshuffled={which === "reshuffled"}
-        onQuit={() => setQuitting(true)}
+        onQuit={() => setQuitting("leave")}
+        onChangeRules={() => setQuitting("rules")}
         tab={tab}
         onTab={setTab}
         side={side}
@@ -81,13 +86,13 @@ export function MonthlyHarness() {
       />
       {seat === null ? null : (
         <Dialog
-          open={quitting}
-          hook="monthly-quit"
-          title={m.monthly.quit.title}
-          body={m.monthly.quit.bodyCounted(seat.points)}
-          confirmLabel={m.monthly.quit.confirm}
-          onConfirm={() => setQuitting(false)}
-          onCancel={() => setQuitting(false)}
+          open={quitting !== null}
+          hook={quitting === "rules" ? "monthly-change-rules" : "monthly-quit"}
+          title={(quitting === "rules" ? m.monthly.changeRules : m.monthly.quit).title}
+          body={(quitting === "rules" ? m.monthly.changeRules : m.monthly.quit).bodyCounted(seat.points)}
+          confirmLabel={(quitting === "rules" ? m.monthly.changeRules : m.monthly.quit).confirm}
+          onConfirm={() => setQuitting(null)}
+          onCancel={() => setQuitting(null)}
         />
       )}
     </AppShell>

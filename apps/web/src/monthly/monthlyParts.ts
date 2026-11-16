@@ -44,8 +44,12 @@ export function leagueToShow(asked: number, leagues: number, own: number | null)
   return 1;
 }
 
-export function todayItems(rows: readonly LeagueTodayRow[]): RankingItem[] {
-  return rows.map((row) => ({ kind: "row", row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.points, verdict: null } }));
+/** Today's ranking. A tank that quit today keeps its row with `leftLabel` after its name. */
+export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string): RankingItem[] {
+  return rows.map((row) => ({
+    kind: "row",
+    row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.points, verdict: null, ...(row.seated ? {} : { tag: leftLabel }) },
+  }));
 }
 
 /**

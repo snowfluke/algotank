@@ -17,6 +17,7 @@
 import { ListOrdered, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
+import { ArenaCondition } from "./ArenaCondition.tsx";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
@@ -128,10 +129,20 @@ function DayClock({ board, now, dayChange }: { board: LeagueBoard | null; now: n
   const left = board.dayEndsAt - now;
   const closing = dayChange?.kind === "closing" || board.live.phase === "closing" || left <= 0;
   return (
-    <p data-day-clock="" className="min-w-0 font-display font-semibold [overflow-wrap:anywhere]" aria-live="off">
+    <p data-day-clock="" className="min-w-0 font-display font-semibold tabular-nums [overflow-wrap:anywhere]" aria-live="off">
       {closing ? m.monthly.dayClosing : m.monthly.endsIn(formatDayClock(left))}
     </p>
   );
+}
+
+/**
+ * The round's arena condition on a line of its own, under the clock: beside it, a long name
+ * (Lapangan luas) was cut short at 1000 px and on a phone, and a name that wraps or not at a
+ * reshuffle would move the page. An empty league has no round, so no condition yet.
+ */
+function ConditionLine({ board }: { board: LeagueBoard | null }) {
+  if (board === null || board.live.tanks.length === 0) return null;
+  return <ArenaCondition ruleSetId={board.snapshot.ruleSetId} />;
 }
 
 /** Yesterday's winner, or the newest finished day's when yesterday had no tank. */
@@ -193,12 +204,6 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled }: { board: Lea
     <section aria-label={t.board(live.league)} className="flex min-h-0 min-w-0 flex-1 flex-col">
     <FittedBoard ratio={boardAspect(board.snapshot.width, board.snapshot.height)} dataAttributes={{ "data-monthly-board": "" }}>
       <ArenaBoard snapshot={board.snapshot} throws={board.throws} names={names} highlightId={ownSeatId} tickMs={live.tickMs} tanks={tanks} />
-      {/* The round's arena condition, drawn at each new round. Over the corner, so it takes no row on a phone; a tap goes through. */}
-      {live.tanks.length === 0 ? null : (
-        <p data-arena-condition={board.snapshot.ruleSetId} className="pointer-events-none absolute top-[2%] left-[2%] m-0 max-w-[90%] truncate rounded-full bg-panel/90 px-3 py-1 text-caption font-semibold shadow-[var(--shadow-raised)]">
-          {t.condition(m.vocabulary.roundRules[board.snapshot.ruleSetId].name)}
-        </p>
-      )}
       {notice === null ? null : (
         // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-[4%]">
@@ -424,6 +429,7 @@ function PresenterLayout(props: MonthlyViewProps) {
             </span>
           </h1>
           <DayClock board={board} now={props.now} dayChange={props.dayChange} />
+          <ConditionLine board={board} />
         </div>
         <LeagueSwitch league={league} leagues={leagues} ownLeague={seat?.league ?? null} onLeague={props.onLeague} />
         {props.onJoin === null ? null : (
@@ -554,6 +560,10 @@ function PhoneLayout(props: MonthlyViewProps) {
         <MonthlyAbout />
         {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
         <LegendButton />
+      </div>
+      {/* Its own full-width row: the column beside the two icons cut a long condition name short. */}
+      <div className="flex min-w-0 shrink-0">
+        <ConditionLine board={board} />
       </div>
       {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
       <StreamLine load={load} connection={props.connection} onRetry={props.onRetry} />

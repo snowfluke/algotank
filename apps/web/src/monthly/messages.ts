@@ -54,6 +54,8 @@ export const en = {
   reshuffled: "Reshuffled",
   /** Over the board's corner: the round rules the league drew for this round (server league-day.ts newRound). */
   condition: (name: string) => `Arena condition: ${name}`,
+  /** In the arena condition's note (ArenaCondition.tsx), after what the condition changes. */
+  conditionChanges: "The condition changes every time the tanks are reshuffled.",
   own: {
     heading: "Your tank",
     /** `place` is today's place in the league. */
@@ -165,6 +167,7 @@ export const id: typeof en = {
   newDay: "Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.",
   reshuffled: "Diacak ulang",
   condition: (name) => `Kondisi arena: ${name}`,
+  conditionChanges: "Kondisinya berganti setiap kali tank diacak ulang.",
   own: {
     heading: "Tank kamu",
     today: (place, score) => `Tank kamu di peringkat ${place} hari ini dengan ${score} poin.`,

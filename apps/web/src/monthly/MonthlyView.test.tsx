@@ -152,9 +152,11 @@ describe("the monthly page", () => {
 });
 
 describe("the arena condition", () => {
-  test("names the round's rules over the board's corner, and the reshuffle names the new one", () => {
-    expect(render(props())).toContain(">Arena condition: Standard<");
-    expect(render(props(), "id")).toContain(">Kondisi arena: Standar<");
+  test("names the round's rules beside the clock as a button with its note, and the reshuffle names the new one", () => {
+    expect(render(props())).toMatch(/<button[^>]*data-arena-condition="standard"[^>]*>[\s\S]*?Arena condition: Standard</);
+    const id = render(props(), "id");
+    expect(id).toContain(">Kondisi arena: Standar<");
+    expect(id).toMatch(/data-arena-condition-note[\s\S]*Tembakan sampai 3 petak[\s\S]*berganti setiap kali tank diacak ulang/);
     expect(render(props({ reshuffled: true }), "id")).toMatch(/data-reshuffled[\s\S]*>Diacak ulang<[\s\S]*>Kondisi arena: Standar</);
   });
 });

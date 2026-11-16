@@ -11,6 +11,7 @@
 // today, month or mine (the pane beside the board, and the phone's ranking switch); `quit` = 1
 // opens the quit question.
 
+import { RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
 import { useMemo, useState } from "react";
 import { AppHeader } from "../ui/AppHeader.tsx";
 import { AppShell } from "../ui/AppShell.tsx";
@@ -49,7 +50,12 @@ export function MonthlyHarness() {
   const [now] = useState(() => Date.now());
   const seated = which === "seated" || which === "other" || which === "move" || which === "dayDone" || which === "closing" || which === "crowd" || which === "ranked";
   const seat = which === "ranked" ? fixtureRankedSeat(league) : seated ? fixtureSeat(which === "other" ? 2 : league) : null;
-  const live = useMemo(() => fixtureLive(league, TANKS[which]), [league, which]);
+  // rules=<id>: the round's arena condition, so the audit can show the longest name (open-field).
+  const rules = param<RuleSetId>("rules", RULE_SET_IDS, STANDARD_RULE_SET_ID);
+  const live = useMemo(() => {
+    const base = fixtureLive(league, TANKS[which]);
+    return { ...base, board: { ...base.board, ruleSetId: rules } };
+  }, [league, which, rules]);
   const load: LeagueLiveLoad =
     which === "failed" ? { kind: "connecting" } : fixtureLoad(which === "closing" ? { ...live, dayEndsInMs: 0 } : live, now, which === "ranked" ? fixtureOwnTurns(12) : []);
   const dayChange: DayChange | null = which === "dayDone" ? { kind: "done", day: "2026-11-13", winner: fixtureDays(league)[0] ?? null } : null;

@@ -1,6 +1,7 @@
 // Starts today's monthly day round again from 0 points: sets every seated tank's points and
-// today's statistics in the league's checkpoint to 0. Seats, names, counted days and whether today
-// counts for each tank stay. Owner, 2026-11-16: "this is just reset for today, it start from 0 again".
+// today's statistics in the league's checkpoint to 0, and the saved score of today of every tank
+// that left today on a counted day (league_day_score; its points at the quit) to 0 too. Seats,
+// names, counted days and whether today counts for each tank stay. Owner, 2026-11-16: "this is just reset for today, it start from 0 again".
 //
 //   DATA_DIR=/var/lib/algotank bun apps/server/scripts/zero-today-points.ts 2026-11-16 [--dry-run]
 //
@@ -40,7 +41,9 @@ if (checkpoint.day !== day) {
   process.exit(1);
 }
 const tanks = checkpoint.tanks ?? [];
+const left = db.query<{ name: string; points: number }, [string]>("SELECT name, points FROM league_day_score WHERE day = ?").all(day);
 console.log(`Day ${day}: ${tanks.length} seated tanks, points ${tanks.map((t) => t.points).join(", ") || "none"}.`);
+console.log(`Tanks that left on ${day} with a saved score: ${left.map((t) => `${t.name} (${t.points})`).join(", ") || "none"}.`);
 
 if (dryRun) {
   console.log("Dry run: nothing changes.");
@@ -48,6 +51,9 @@ if (dryRun) {
 }
 
 const zeroed = { ...checkpoint, tanks: tanks.map((t) => ({ ...t, points: 0, stats: EMPTY_STATS })) };
-db.query("UPDATE league_checkpoint SET checkpoint_json = ? WHERE id = 1").run(JSON.stringify(zeroed));
-console.log(`Done: ${tanks.length} tanks start ${day} again from 0 points and empty statistics.`);
+db.transaction(() => {
+  db.query("UPDATE league_checkpoint SET checkpoint_json = ? WHERE id = 1").run(JSON.stringify(zeroed));
+  db.query("UPDATE league_day_score SET points = 0 WHERE day = ?").run(day);
+})();
+console.log(`Done: ${tanks.length} tanks start ${day} again from 0 points and empty statistics, and ${left.length} saved score(s) of ${day} are 0.`);
 db.close();

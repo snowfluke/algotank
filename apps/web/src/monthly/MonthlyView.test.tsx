@@ -78,17 +78,17 @@ describe("the monthly page", () => {
     expect(ranking).toMatch(new RegExp(`aria-current="true"[^>]*data-player-id="${OWN_SEAT}"`));
     expect(ranking).not.toContain("data-monthly-join");
     const mine = render(props({ seat, onJoin: null, tab: "mine" }, 16), "id");
-    expect(mine).toContain("Tank kamu sudah main 5 dari 7 hari yang dibutuhkan untuk masuk peringkat.");
+    expect(mine).toContain("Tank kamu masuk peringkat setelah main sehari penuh, dari tengah malam sampai tengah malam.");
     expect(mine).toContain("Hari ini masuk hitungan poin bulananmu.");
     expect(mine).toContain("Keluar dari arena bulanan");
-    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank has 5 of the 7 days it needs for a place.");
+    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank gets a place after its first full day, from midnight to midnight.");
   });
 
   test("the help button opens a list that says the tank plays without the page, in both languages", () => {
     const html = render(props());
     expect(html).toContain("data-monthly-about-open");
     expect(html).toContain("so you can close this page and come back any time.");
-    expect(html).toContain("A tank needs 7 counted days for a place in the month&#x27;s ranking.");
+    expect(html).toContain("A tank gets a place in the month&#x27;s ranking after one full day.");
     expect(render(props(), "id")).toContain("jadi kamu boleh menutup halaman ini dan kembali kapan saja.");
   });
 
@@ -117,7 +117,7 @@ describe("the monthly page", () => {
 
   test("this month's ranking lists the tanks without a place after a line", () => {
     const html = render(props({ tab: "ranking", side: "month" }, 16));
-    expect(html).toContain("Fewer than 7 days, not ranked yet");
+    expect(html).toContain("No full day yet, not ranked yet");
   });
 
   test("the month close's notice, the finished day at midnight, and yesterday's winner", () => {

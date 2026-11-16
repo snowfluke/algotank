@@ -36,7 +36,7 @@ export const en = {
   todayEmpty: "No tank plays in this league today yet.",
   monthEmpty: "No tank plays in this league this month yet.",
   /** The line before the tanks with fewer counted days than a place needs. */
-  notRanked: (days: number) => `Fewer than ${days} days, not ranked yet`,
+  notRanked: (days: number) => (days === 1 ? "No full day yet, not ranked yet" : `Fewer than ${days} days, not ranked yet`),
   /** "Go to" the not-ranked line on its page. */
   toNotRanked: "Not ranked yet",
   yesterdayWinner: (name: string, score: number) => `${name} won yesterday's round with ${points(score)}.`,
@@ -54,7 +54,8 @@ export const en = {
     /** People thought they had to keep the page open; the tank plays without it. */
     playsAlone: "Your tank plays every round by itself, so you can close this page and come back any time.",
     /** Counted days so far against the days a place needs, such as "5 of 7". */
-    daysNeeded: (days: number, need: number) => `Your tank has ${days} of the ${need} days it needs for a place.`,
+    daysNeeded: (days: number, need: number) =>
+      need === 1 ? "Your tank gets a place after its first full day, from midnight to midnight." : `Your tank has ${days} of the ${need} days it needs for a place.`,
     daysCounted: (days: number) => `Your tank has played ${days === 1 ? "1 counted day" : `${days} counted days`} this month.`,
     monthPlace: (place: number, score: number) => `Your tank is in place ${place} this month with ${points(score)}.`,
     otherLeague: (league: number) => `Your tank plays in League ${league}.`,
@@ -82,7 +83,8 @@ export const en = {
     /** Names the board legend's button (board/messages.ts, legend.button), which lists the items. */
     items: "Items appear on the board, and Help says what each one does.",
     /** `days` is MONTHLY_RANKED_DAYS. The monthly points rule comes from publicplay/messages.ts. */
-    rankedDays: (days: number) => `A tank needs ${days} counted days for a place in the month's ranking.`,
+    rankedDays: (days: number) =>
+      days === 1 ? "A tank gets a place in the month's ranking after one full day." : `A tank needs ${days} counted days for a place in the month's ranking.`,
     /** The champion and the name rule are left out: the dialog must fit a 360 x 640 phone, and the champions page and the join step say them. */
     leagues: "When the month ends, the lower half of each league changes places with the upper half of the league below.",
   },
@@ -129,7 +131,7 @@ export const id: typeof en = {
   ranking: { label: "Peringkat", today: "Hari ini", month: "Bulan ini" },
   todayEmpty: "Belum ada tank yang main di liga ini hari ini.",
   monthEmpty: "Belum ada tank yang main di liga ini bulan ini.",
-  notRanked: (days) => `Kurang dari ${days} hari, belum masuk peringkat`,
+  notRanked: (days) => (days === 1 ? "Belum main sehari penuh, belum masuk peringkat" : `Kurang dari ${days} hari, belum masuk peringkat`),
   toNotRanked: "Belum masuk peringkat",
   yesterdayWinner: (name, score) => `${name} juara ronde kemarin dengan ${score} poin.`,
   dayWinner: (date, name, score) => `${name} juara ronde ${date} dengan ${score} poin.`,
@@ -141,7 +143,10 @@ export const id: typeof en = {
     counts: "Hari ini masuk hitungan poin bulananmu.",
     notCounted: "Hari ini belum dihitung karena tank kamu masuk setelah ronde dimulai.",
     playsAlone: "Tank kamu main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
-    daysNeeded: (days, need) => `Tank kamu sudah main ${days} dari ${need} hari yang dibutuhkan untuk masuk peringkat.`,
+    daysNeeded: (days, need) =>
+      need === 1
+        ? "Tank kamu masuk peringkat setelah main sehari penuh, dari tengah malam sampai tengah malam."
+        : `Tank kamu sudah main ${days} dari ${need} hari yang dibutuhkan untuk masuk peringkat.`,
     daysCounted: (days) => `Tank kamu sudah main ${days} hari yang dihitung bulan ini.`,
     monthPlace: (place, score) => `Tank kamu di peringkat ${place} bulan ini dengan ${score} poin.`,
     otherLeague: (league) => `Tank kamu main di Liga ${league}.`,
@@ -163,7 +168,7 @@ export const id: typeof en = {
     playsAlone: "Tank kamu main setiap hari sampai kamu keluar dari arena, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
     reshuffle: "Setiap beberapa menit, semua tank mulai lagi di petak baru dengan poin yang tetap.",
     items: "Item muncul di arena, dan tombol Bantuan menjelaskan gunanya.",
-    rankedDays: (days) => `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`,
+    rankedDays: (days) => (days === 1 ? "Tank masuk peringkat bulan ini setelah main sehari penuh." : `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`),
     leagues: "Di akhir bulan, separuh bawah tiap liga bertukar tempat dengan separuh atas liga di bawahnya.",
   },
   move: {

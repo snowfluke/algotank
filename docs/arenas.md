@@ -26,7 +26,7 @@ When a game of an owner's arena finishes, the server keeps its result for 180 da
 
 A signed-in account takes one seat in one league with a name, a look and a strategy. They stay fixed while the tank is seated. A seated tank plays every day round until its owner quits. The first name an account submits in a month stays its name until that month ends.
 
-A tank's monthly score is the average of its points over the days it played from the day's first turn. At the end of a month, the lower half of each league and the upper half of the league below change places. The champion of the month is the first of League 1 with 7 or more counted days. The champion and League 1's top 10 are kept for good on `/champions`.
+A tank's monthly score is the average of its points over the days it played from the day's first turn. At the end of a month, the lower half of each league and the upper half of the league below change places. A tank needs 1 counted day for a place in the month's ranking (`MONTHLY_RANKED_DAYS`). The champion of the month is the first of League 1 with a place. The champion and League 1's top 10 are kept for good on `/champions`.
 
 ## Statistics for players
 

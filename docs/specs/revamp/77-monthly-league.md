@@ -53,8 +53,8 @@ Restart (every release restarts the process): the server writes a checkpoint per
 - Day score of a tank: its points at the day's end, or at its quit.
 - Counted day: the tank was seated at the day's first turn (see section 2).
 - Monthly score: the average of the tank's counted day scores of the month, to one decimal.
-- Ranking in a league: tanks with 7 or more counted days first, by monthly score; then tanks with fewer, by monthly score, marked as not ranked yet. Ties: more counted days, then the earlier seat.
-- The month's champion is rank 1 of League 1 when it has 7 or more counted days; the champion and League 1's top 10 are stored for good (the existing champions store and `/champions`). A month without such a tank records no champion.
+- Ranking in a league: tanks with `MONTHLY_RANKED_DAYS` or more counted days first, by monthly score; then tanks with fewer, by monthly score, marked as not ranked yet. Ties: more counted days, then the earlier seat. The minimum was 7 and is 1 since 2026-11-16 (owner: "make it fair so that people who joined between 17-30 still has chance"): one day is 96,000 turns, and five simulated days of one field gave each play style's day points a spread (sd) of 76 to 367 against gaps of hundreds to thousands between styles. Close rivals can swap places on one day's luck, and a tank's days are played against the field of those days.
+- The month's champion is rank 1 of League 1 when it has `MONTHLY_RANKED_DAYS` or more counted days; the champion and League 1's top 10 are stored for good (the existing champions store and `/champions`). A month without such a tank records no champion.
 - Each finished day also keeps its winner and top 3 per league for the month ("Juara hari ini").
 - One sentence explains it to a player: "Skor bulananmu adalah rata-rata poin dari hari-hari yang tank kamu ikuti sejak awal hari."
 
@@ -86,7 +86,7 @@ Tests (injected clock and time zone): every row of both tables in section 2; joi
 
 - `/monthly`: one page for everyone, laid out like the big screen: the board large, "Ronde hari ini berakhir dalam 05:12:44", the ranking with the tabs "Hari ini" and "Bulan ini", the league switch when there is more than one league, and yesterday's winner. It works on a phone and at 1728 x 1000 without scroll.
 - A visitor without a seat sees one action, "Ikut arena bulanan": sign in when needed, then the name (with the sentence that it stays for the month), then the tank with the existing prep tabs (play style, rules, upgrades, try it), then "Masukkan tank". The tank appears on the board at once.
-- A seated owner sees their tank marked on the board and in the ranking, the "Tank kamu" feed, their counted days ("5 dari 7 hari"), what the month close did to them, and "Keluar dari arena bulanan" behind a question that says what quitting does to today and to the tank.
+- A seated owner sees their tank marked on the board and in the ranking, the "Tank kamu" feed, their counted days, or before the first one when the tank gets a place, what the month close did to them, and "Keluar dari arena bulanan" behind a question that says what quitting does to today and to the tank.
 - The home page gets an entry to watch the monthly arena live, with one live line. The `/play` chooser's monthly tile opens the same page. `/champions` follows the new score.
 - Interface text follows the UI copy rules; both languages; the whole no-scroll audit with new states at the end.
 

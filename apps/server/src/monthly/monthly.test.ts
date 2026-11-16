@@ -267,7 +267,12 @@ describe("the day round", () => {
     expect(l.monthly.daysOf(1).days.map((d) => d.day)).toEqual(["2026-11-15", "2026-11-14"]);
     const month = l.monthly.ranking(1).thisMonth;
     expect(month.map((row) => row.countedDays).sort()).toEqual([0, 1, 1]);
-    expect(month.every((row) => row.rank === null)).toBe(true);
+    // One counted day is enough for a place (MONTHLY_RANKED_DAYS), so only the tank that came later has none.
+    expect(month.map((row) => [row.countedDays, row.rank === null])).toEqual([
+      [1, false],
+      [1, false],
+      [0, true],
+    ]);
   });
 });
 

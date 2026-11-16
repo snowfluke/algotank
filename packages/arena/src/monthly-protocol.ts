@@ -38,8 +38,14 @@ import type { PlayerId, PublicSnapshot, TankLook } from "./types.ts";
 
 /** Seats in one league. When every league is full, a new lowest league opens. */
 export const MONTHLY_SEATS = 16;
-/** A tank with fewer counted days in a month is listed after the others, as "not ranked yet". */
-export const MONTHLY_RANKED_DAYS = 7;
+/**
+ * A tank with fewer counted days in a month is listed after the others, as "not ranked yet".
+ * 1 since 2026-11-16 (was 7), so a tank that joins late in the month can still win: one
+ * monthly day is 96,000 turns, and five simulated days of the same field of 8 play styles
+ * gave each style's day points a spread (sd) of 76 to 367 against gaps of hundreds to
+ * thousands between styles. Close rivals can still swap places on one day's luck.
+ */
+export const MONTHLY_RANKED_DAYS = 1;
 
 /**
  * A league's day (apps/server/src/monthly/league-day.ts holds the table):

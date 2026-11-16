@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { MONTHLY_RANKED_DAYS } from "@game/arena";
 import { monthlyScore, rankMonth, type CountedDay } from "./score.ts";
 
 const days = (...points: number[]): CountedDay[] => points.map((p, i) => ({ points: p, place: i + 1 }));
@@ -17,14 +18,17 @@ describe("monthlyScore", () => {
 });
 
 describe("rankMonth", () => {
-  test("tanks with fewer than 7 counted days come after the ranked ones and have no rank", () => {
+  test("a tank without a counted day comes after the ranked ones and has no rank; one counted day is enough (MONTHLY_RANKED_DAYS)", () => {
+    expect(MONTHLY_RANKED_DAYS).toBe(1);
     const ranked = rankMonth([
-      { id: "few", days: days(50, 50), seatOrder: 1 },
-      { id: "many", days: days(1, 1, 1, 1, 1, 1, 1), seatOrder: 2 },
+      { id: "none", days: [], seatOrder: 1 },
+      { id: "one", days: days(-4), seatOrder: 2 },
+      { id: "many", days: days(1, 1, 1, 1, 1, 1, 1), seatOrder: 3 },
     ]);
     expect(ranked).toEqual([
       { id: "many", rank: 1, score: 1, countedDays: 7 },
-      { id: "few", rank: null, score: 50, countedDays: 2 },
+      { id: "one", rank: 2, score: -4, countedDays: 1 },
+      { id: "none", rank: null, score: 0, countedDays: 0 },
     ]);
   });
 
@@ -41,13 +45,16 @@ describe("rankMonth", () => {
     ]);
   });
 
-  test("not-ranked tanks are ordered by the same rule", () => {
+  test("not-ranked tanks are ordered by the same rule: with no counted day they tie, so the earlier seat goes first", () => {
     const ranked = rankMonth([
-      { id: "b", days: days(3), seatOrder: 2 },
-      { id: "a", days: days(3), seatOrder: 1 },
-      { id: "none", days: [], seatOrder: 0 },
+      { id: "b", days: [], seatOrder: 2 },
+      { id: "a", days: [], seatOrder: 1 },
+      { id: "ranked", days: days(-9), seatOrder: 3 },
     ]);
-    expect(ranked.map((r) => r.id)).toEqual(["a", "b", "none"]);
-    expect(ranked.every((r) => r.rank === null)).toBe(true);
+    expect(ranked.map((r) => [r.id, r.rank])).toEqual([
+      ["ranked", 1],
+      ["a", null],
+      ["b", null],
+    ]);
   });
 });

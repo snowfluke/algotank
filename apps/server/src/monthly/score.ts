@@ -6,7 +6,7 @@
 // - A day score is the tank's points at the day's end, or at its quit.
 // - A counted day is a day round the tank was seated for at the day's first turn.
 // - The monthly score is the average of the counted day scores, to one decimal; 0 without one.
-// - Ranking: tanks with MONTHLY_RANKED_DAYS (7) or more counted days first, by monthly score; then
+// - Ranking: tanks with MONTHLY_RANKED_DAYS (1) or more counted days first, by monthly score; then
 //   the others, by monthly score, with no rank ("not ranked yet"). Ties: more counted days, then
 //   the earlier seat.
 // Example: counted days of 12, -3 and 7 points give (12 - 3 + 7) / 3 = 5.3, not ranked yet.

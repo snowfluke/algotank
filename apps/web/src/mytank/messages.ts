@@ -1,7 +1,7 @@
 // Text of "My tank": the editor, its parts, the names of the patterns and icons, and the
 // tank in the join step. Catalog slot: `mytank`. `en` is the source; `id` must have the same shape.
 
-import { PLAYER_NAME_MAX, PLAYER_NAME_MIN, type FlagPattern, type TankIcon, type TankSkin } from "@game/arena";
+import { PLAYER_NAME_MAX, PLAYER_NAME_MIN, type TankIcon, type TankSkin } from "@game/arena";
 import type { TankPart } from "./parts.ts";
 
 const skinsEn: Record<TankSkin, string> = {
@@ -53,9 +53,6 @@ const partsEn: Record<TankPart, string> = {
   plate: "Plate",
   icon: "Icon",
   flag: "Flag",
-  // Short, because nine tabs share a phone's row; the tab's picture is a flag in that colour and its question says the rest.
-  flagFirst: "Colour 1",
-  flagSecond: "Colour 2",
   name: "Name",
 };
 
@@ -73,26 +70,17 @@ export const en = {
     plate: "Which plate does your tank stand on?",
     icon: "Which picture goes on top of your tank?",
     flag: "Which flag flies at the back of your tank?",
-    flagFirst: "Which colour is the flag?",
-    flagSecond: "Which second colour does the flag have?",
     name: "What is your tank called?",
   } satisfies Record<TankPart, string>,
-  /** The flag patterns (FLAG_PATTERNS in @game/arena). */
-  flags: {
-    plain: "One colour",
-    bands: "Two bands",
-    halves: "Two halves",
-    stripe: "Centre stripe",
-    dot: "Dot",
-    diagonal: "Diagonal",
-  } satisfies Record<FlagPattern, string>,
+  /** The flag part's search over the country names (Intl.DisplayNames in the page's language). */
+  countrySearch: "Country name",
+  /** When no country name holds the typed letters. */
+  noCountry: "No country has that name, so try fewer letters.",
   skins: skinsEn,
   icons: iconsEn,
   none: "None",
   /** The second colour cannot be the colour of the hull. */
   sameAsHull: "This is the colour of your tank already.",
-  /** The flag's second colour cannot be its first. */
-  sameAsFlag: "This is the flag's first colour already.",
   surprise: "Surprise me",
   surprised: "Your tank has a new surprise look.",
   done: "Done",
@@ -119,8 +107,6 @@ export const id: typeof en = {
     plate: "Alas",
     icon: "Ikon",
     flag: "Bendera",
-    flagFirst: "Warna 1",
-    flagSecond: "Warna 2",
     name: "Nama",
   },
   questions: {
@@ -130,18 +116,10 @@ export const id: typeof en = {
     plate: "Tank kamu berdiri di atas alas apa?",
     icon: "Gambar apa yang ada di atas tank kamu?",
     flag: "Bendera apa yang berkibar di belakang tank kamu?",
-    flagFirst: "Benderanya warna apa?",
-    flagSecond: "Warna kedua benderanya apa?",
     name: "Apa nama tank kamu?",
   },
-  flags: {
-    plain: "Satu warna",
-    bands: "Dua lajur",
-    halves: "Dua belahan",
-    stripe: "Garis tengah",
-    dot: "Bulatan",
-    diagonal: "Diagonal",
-  },
+  countrySearch: "Nama negara",
+  noCountry: "Tidak ada negara dengan nama itu, jadi coba ketik lebih sedikit huruf.",
   skins: {
     plain: "Polos",
     dots: "Bintik",
@@ -184,7 +162,6 @@ export const id: typeof en = {
   },
   none: "Tidak ada",
   sameAsHull: "Ini sudah jadi warna tank kamu.",
-  sameAsFlag: "Ini sudah jadi warna pertama bendera.",
   surprise: "Pilih acak",
   surprised: "Tank kamu dapat tampilan acak yang baru.",
   done: "Selesai",

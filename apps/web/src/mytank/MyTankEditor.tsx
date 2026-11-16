@@ -6,13 +6,14 @@
 
 import { PenLine } from "lucide-react";
 import { PLAYER_NAME_MAX } from "@game/arena";
-import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
-import { useMessages } from "../i18n/I18nProvider.tsx";
+import { useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useLanguage, useMessages } from "../i18n/I18nProvider.tsx";
 import type { TankLook } from "../tank/look.ts";
 import { TextInput } from "../ui/Field.tsx";
 import { ChoiceGrid } from "./ChoiceGrid.tsx";
 import { LiveTank } from "./LiveTank.tsx";
-import { choose, flagWith, isChosen, partChoices, partsFor, type PartChoice, type TankPart } from "./parts.ts";
+import { countriesIn, searchCountries, type Country } from "./countries.ts";
+import { choose, isChosen, partChoices, partsFor, type PartChoice, type TankPart } from "./parts.ts";
 import { ColourSwatch, FlagSwatch, IconSwatch, NoneSwatch, PatternSwatch, PlateSwatch } from "./Swatches.tsx";
 
 export interface NameField {
@@ -41,11 +42,9 @@ function Swatch({ look, choice }: { readonly look: TankLook; readonly choice: Pa
   switch (choice.part) {
     case "colour":
     case "second":
-    case "flagFirst":
-    case "flagSecond":
       return <ColourSwatch colour={choice.value} />;
     case "flag":
-      return choice.value === null ? <NoneSwatch /> : <FlagSwatch flag={flagWith(look, choice.value)} />;
+      return choice.value === null ? <NoneSwatch /> : <FlagSwatch country={choice.value} />;
     case "skin":
       return <PatternSwatch look={{ ...look, skin: choice.value }} />;
     case "plate":
@@ -69,18 +68,13 @@ function PartPicture({ look, part }: { readonly look: TankLook; readonly part: T
     case "icon":
       return look.icon === null ? <NoneSwatch /> : <IconSwatch look={look} />;
     case "flag":
-      return look.flag === null ? <NoneSwatch /> : <FlagSwatch flag={look.flag} />;
-    // A plain flag in the colour, so "Colour 1" and "Colour 2" read as the flag's colours.
-    case "flagFirst":
-      return look.flag === null ? <NoneSwatch /> : <FlagSwatch flag={{ pattern: "plain", first: look.flag.first, second: look.flag.second }} />;
-    case "flagSecond":
-      return look.flag === null ? <NoneSwatch /> : <FlagSwatch flag={{ pattern: "plain", first: look.flag.second, second: look.flag.first }} />;
+      return look.country === null ? <NoneSwatch /> : <FlagSwatch country={look.country} />;
     case "name":
       return <PenLine aria-hidden className="size-full" strokeWidth={2.2} />;
   }
 }
 
-/** Up to nine parts (the flag added three, 2026-11-16): seven fit one row on a 360 px phone at the 44 px touch size, nine wrap. */
+/** Seven parts with the flag (2026-11-16): they fit one row on a 360 px phone at the 44 px touch size. */
 function PartTabs({ parts, value, onChange, look, panelId }: { readonly parts: readonly TankPart[]; readonly value: TankPart; onChange(part: TankPart): void; readonly look: TankLook; readonly panelId: string }) {
   const m = useMessages();
   const t = m.mytank;
@@ -127,7 +121,7 @@ export function MyTankEditor({ look, onLook, tankName, name, startPart = "colour
   const m = useMessages();
   const t = m.mytank;
   const panelId = useId();
-  const parts = partsFor(look, name !== null);
+  const parts = partsFor(name !== null);
   const [chosenPart, setPart] = useState<TankPart>(startPart);
   const part = parts.includes(chosenPart) ? chosenPart : "colour";
 
@@ -155,15 +149,17 @@ export function MyTankEditor({ look, onLook, tankName, name, startPart = "colour
                 />
               </div>
             )
+          ) : part === "flag" ? (
+            <FlagPart look={look} onLook={onLook} />
           ) : (
             <ChoiceGrid<PartChoice>
               key={part}
               legend={t.questions[part]}
               items={partChoices(part)}
               itemKey={choiceKey}
-              label={(choice) => choiceName(choice, t, m.common.tankColours)}
+              label={(choice) => choiceName(choice, t, m.common.tankColours, null)}
               chosen={(choice) => isChosen(look, choice)}
-              unavailable={(choice) => (choose(look, choice) === null ? (choice.part === "flagSecond" ? t.sameAsFlag : t.sameAsHull) : null)}
+              unavailable={(choice) => (choose(look, choice) === null ? t.sameAsHull : null)}
               render={(choice) => <Swatch look={look} choice={choice} />}
               onChoose={(choice) => {
                 const next = choose(look, choice);
@@ -177,17 +173,54 @@ export function MyTankEditor({ look, onLook, tankName, name, startPart = "colour
   );
 }
 
+/**
+ * The flag part: a search over the country names above the grid of flags, because 255 flags
+ * fill some twenty pages. "None" leads the list while nothing is typed.
+ */
+function FlagPart({ look, onLook }: { readonly look: TankLook; onLook(next: TankLook): void }) {
+  const m = useMessages();
+  const t = m.mytank;
+  const [language] = useLanguage();
+  const countries = useMemo(() => countriesIn(language), [language]);
+  const names = useMemo(() => new Map(countries.map((country) => [country.code, country.name])), [countries]);
+  const [query, setQuery] = useState("");
+  const found = searchCountries(countries, query);
+  const items: readonly PartChoice[] = [...(query.trim() === "" ? [{ part: "flag", value: null } as const] : []), ...found.map((country: Country) => ({ part: "flag", value: country.code }) as const)];
+  return (
+    <div className="flex min-w-0 flex-col gap-3 fit:min-h-0 fit:flex-1">
+      <TextInput label={t.countrySearch} type="search" value={query} autoComplete="off" enterKeyHint="search" onChange={(event) => setQuery(event.currentTarget.value)} data-country-search="" />
+      {items.length === 0 ? (
+        <p className="text-muted [overflow-wrap:anywhere]">{t.noCountry}</p>
+      ) : (
+        <ChoiceGrid<PartChoice>
+          // A new search opens on its first page.
+          key={query.trim()}
+          legend={t.questions.flag}
+          items={items}
+          itemKey={choiceKey}
+          label={(choice) => choiceName(choice, t, m.common.tankColours, names)}
+          chosen={(choice) => isChosen(look, choice)}
+          render={(choice) => <Swatch look={look} choice={choice} />}
+          onChoose={(choice) => {
+            const next = choose(look, choice);
+            if (next !== null) onLook(next);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 type MyTankText = ReturnType<typeof useMessages>["mytank"];
 
-function choiceName(choice: PartChoice, t: MyTankText, colours: ReturnType<typeof useMessages>["common"]["tankColours"]): string {
+/** `countries`: the country names in the page's language, for the flag part; null for the other parts. */
+function choiceName(choice: PartChoice, t: MyTankText, colours: ReturnType<typeof useMessages>["common"]["tankColours"], countries: ReadonlyMap<string, string> | null): string {
   switch (choice.part) {
     case "colour":
     case "second":
-    case "flagFirst":
-    case "flagSecond":
       return colours[choice.value];
     case "flag":
-      return choice.value === null ? t.none : t.flags[choice.value];
+      return choice.value === null ? t.none : (countries?.get(choice.value) ?? choice.value.toUpperCase());
     case "skin":
       return t.skins[choice.value];
     case "plate":

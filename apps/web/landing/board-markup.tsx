@@ -19,7 +19,7 @@ import type { DemoData, DemoFrame, DemoRoundData, DemoShot, DemoTank } from "./d
 import { YOU, orderKey, type DemoRecording, type DemoRound } from "./demo-round.ts";
 
 /** The demo tank: blue with a star, the tank on the README banner. */
-export const YOU_LOOK: TankLook = { colour: 1, skin: "plain", second: 7, plate: null, icon: "star", flag: null };
+export const YOU_LOOK: TankLook = { colour: 1, skin: "plain", second: 7, plate: null, icon: "star", country: null };
 
 const svg = (element: ReactElement) => renderToStaticMarkup(element);
 

@@ -177,7 +177,7 @@ describe("Change look", () => {
   test("PUT /api/monthly/look gives the seated tank a new look; the name stays, and a bad look or no seat is refused", async () => {
     const t = start();
     const cookie = await signUp(t);
-    const look = { ...plainTankLook(3), flag: { pattern: "dot", first: 4, second: 11 } } as const;
+    const look = { ...plainTankLook(3), country: "jp" } as const;
     expect((await t.api("/api/monthly/look", { method: "PUT", cookie, body: { look } })).status).toBe(404);
     expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
     expect((await t.api("/api/monthly/look", { method: "PUT", cookie, body: { look: { ...look, colour: 99 } } })).status).toBe(400);
@@ -194,18 +194,18 @@ describe("the flag of a seated tank", () => {
     expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
     const seatOf = async () => (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
     const before = await seatOf();
-    expect(before?.look.flag).toBeNull();
-    const flag = { pattern: "bands", first: 2, second: 11 } as const;
-    const myTank = { name: "Other Name", look: { ...plainTankLook(7), flag }, updatedAt: 1000 };
+    expect(before?.look.country).toBeNull();
+    const country = "id" as const;
+    const myTank = { name: "Other Name", look: { ...plainTankLook(7), country }, updatedAt: 1000 };
     expect((await t.api("/api/account/tank", { method: "PUT", cookie, body: myTank })).status).toBe(204);
     const after = await seatOf();
     expect(after?.look).toEqual(myTank.look);
     expect(after?.name).toBe("Ada");
     expect(after?.seatId).toBe(before?.seatId);
     const ranking = await json<LeagueRankingResponse>(await t.api("/api/monthly/leagues/1/ranking"));
-    expect(ranking.today.find((row) => row.seatId === before?.seatId)?.look.flag).toEqual(flag);
+    expect(ranking.today.find((row) => row.seatId === before?.seatId)?.look.country).toBe(country);
     expect((await t.api("/api/account/tank", { method: "PUT", cookie, body: { ...myTank, look: plainTankLook(7), updatedAt: 1001 } })).status).toBe(204);
-    expect((await seatOf())?.look.flag).toBeNull();
+    expect((await seatOf())?.look.country).toBeNull();
   });
 });
 

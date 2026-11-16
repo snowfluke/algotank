@@ -61,7 +61,7 @@ export function randomLook(random: Random): TankLook {
     random,
   );
   const icon = pick(TANK_ICONS, random);
-  return { colour, skin, second, plate, icon, flag: null };
+  return { colour, skin, second, plate, icon, country: null };
 }
 
 /** A look whose second colour differs from a newly chosen hull, as parseTankLook requires. */

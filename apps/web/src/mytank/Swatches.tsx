@@ -2,8 +2,8 @@
 // a hull-shaped panel, a plate, an icon on a white hatch, and "none". Each is an SVG
 // that fills the box it is given.
 
-import type { TankFlag } from "@game/arena";
-import { FLAG_VIEW_BOX, TankFlagDrawing } from "../tank/TankFlag.tsx";
+import type { FlagCountry } from "@game/arena";
+import { flagUrl } from "../tank/TankFlag.tsx";
 import { TankPlate, TankIconDrawing } from "../tank/TankShape.tsx";
 import { tankColourVar, type TankColour } from "../tank/colours.ts";
 import { SKIN_GEOMETRY, HULL } from "../tank/skins.ts";
@@ -55,13 +55,13 @@ export function IconSwatch({ look }: { readonly look: TankLook }) {
   );
 }
 
-/** A flag alone, as it flies on a tank facing right. */
-export function FlagSwatch({ flag }: { readonly flag: TankFlag }) {
-  return (
-    <svg viewBox={FLAG_VIEW_BOX} aria-hidden="true" className={SVG_CLASS}>
-      <TankFlagDrawing flag={flag} heading={0} bold={false} />
-    </svg>
-  );
+/**
+ * A country's flag as a flat picture, not as it flies on the tank: there the pole side mirrors
+ * it, and a picker of mirrored flags would show text and emblems backwards. Lazy, because the
+ * picker can list many countries at once.
+ */
+export function FlagSwatch({ country }: { readonly country: FlagCountry }) {
+  return <img src={flagUrl(country)} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full max-w-full rounded-[2px] object-cover shadow-[0_0_0_1px_var(--color-line-strong)]" />;
 }
 
 /** "None": a dashed outline of the space, so it reads as empty and not as white. */

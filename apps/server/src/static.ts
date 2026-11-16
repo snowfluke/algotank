@@ -63,6 +63,8 @@ function cacheFor(pathname: string): string {
   if (pathname.startsWith("/assets/")) return "public, max-age=31536000, immutable";
   // A music file's name carries a version (sound/musicTracks.ts), so a new render gets a new name.
   if (pathname.startsWith("/music/")) return "public, max-age=31536000, immutable";
+  // Country flags (apps/web/public/flags, from flag-icons): a board asks for many at once, and they change only with a new set.
+  if (pathname.startsWith("/flags/")) return "public, max-age=604800";
   const inRoot = pathname.lastIndexOf("/") === 0;
   return inRoot && ROOT_IMAGE_EXTENSIONS.has(extname(pathname).toLowerCase()) ? ROOT_IMAGE_CACHE : "no-cache";
 }

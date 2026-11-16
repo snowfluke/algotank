@@ -194,7 +194,7 @@ describe("leaderId", () => {
 
 describe("tankLooks", () => {
   test("a chosen look wins and the other tanks are plain in the colours of their order", () => {
-    const chosen = { colour: 6, skin: "stars", second: 3, plate: 9, icon: "cat", flag: null } as const;
+    const chosen = { colour: 6, skin: "stars", second: 3, plate: 9, icon: "cat", country: null } as const;
     const looks = tankLooks([bot("a", 0), bot("b", 0), bot("c", 0)], new Map([["b", { look: chosen }]]));
     expect([...looks.values()]).toEqual([plainTankLook(1), chosen, plainTankLook(3)]);
   });

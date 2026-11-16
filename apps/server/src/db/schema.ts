@@ -243,8 +243,9 @@ const MIGRATIONS: readonly string[] = [
   ) STRICT;
   `,
 
-  // 7: the flag of "My tank" (owner, 2026-11-16), the look's `flag` as JSON (TankFlag); NULL for
-  // none. account-tank.ts checks it with parseTankFlag on every read.
+  // 7: the flag of "My tank" (owner, 2026-11-16) as JSON: { country } since 2026-11-17, and on the
+  // evening before a two-colour { pattern, first, second } that now reads as none; NULL for none.
+  // account-tank.ts checks it on every read.
   `
   ALTER TABLE account_tank ADD COLUMN flag_json TEXT CHECK (flag_json IS NULL OR json_valid(flag_json));
   `,

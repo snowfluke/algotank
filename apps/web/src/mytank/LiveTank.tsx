@@ -19,7 +19,7 @@ export function LiveTank({ look, name, label }: { readonly look: TankLook; reado
       <g transform={`rotate(${START_ANGLE})`}>
         <g className="tank-turn">
           <TankHull look={look} detail="full" hatched={hatched} />
-          {look.flag === null ? null : <TankFlagDrawing flag={look.flag} heading={START_ANGLE} bold={false} turning />}
+          {look.country === null ? null : <TankFlagDrawing country={look.country} heading={START_ANGLE} bold={false} turning />}
           {hatched ? (
             <g transform={`translate(${TURRET_X} 0)`}>
               <g transform={`rotate(${-START_ANGLE})`}>

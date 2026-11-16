@@ -99,7 +99,7 @@ export class AccountTanks {
       const stored = this.get(accountId);
       if (stored !== null && stored.updatedAt > tank.updatedAt) return { ok: false, code: "tank_stale" } as const;
       const { look } = tank;
-      this.upsert.run(accountId, tank.name, look.colour, look.skin, look.second, look.plate, look.icon, look.flag === null ? null : JSON.stringify(look.flag), tank.updatedAt);
+      this.upsert.run(accountId, tank.name, look.colour, look.skin, look.second, look.plate, look.icon, look.country === null ? null : JSON.stringify({ country: look.country }), tank.updatedAt);
       return { ok: true } as const;
     }).immediate();
   }
@@ -109,15 +109,21 @@ function toTank(accountId: string, row: TankRow): AccountTank {
   const invalid = (reason: string) => new PersistenceError(`The row ${accountId} of the table account_tank is not valid: ${reason}`);
   const name = parsePlayerName(row.name);
   if (name === null) throw invalid("the name breaks the name rule.");
-  let flag: unknown = null;
+  // flag_json holds { country }. A row saved on the evening of 2026-11-16 holds a two-colour flag
+  // ({ pattern, first, second }) that country flags replaced: it reads as no flag.
+  let country: unknown = null;
   if (row.flag_json !== null) {
+    let stored: unknown;
     try {
-      flag = JSON.parse(row.flag_json);
+      stored = JSON.parse(row.flag_json);
     } catch {
       throw invalid("flag_json is not JSON.");
     }
+    if (typeof stored !== "object" || stored === null) throw invalid("flag_json is not an object.");
+    if ("country" in stored) country = stored.country;
+    else if (!("pattern" in stored)) throw invalid("flag_json holds neither a country nor an old two-colour flag.");
   }
-  const look = { colour: row.colour, skin: row.skin, second: row.second, plate: row.plate, icon: row.icon, flag };
+  const look = { colour: row.colour, skin: row.skin, second: row.second, plate: row.plate, icon: row.icon, country };
   const parsed = parseLookAndTime({ look, updatedAt: row.updated_at }, name);
   if (!parsed.ok) throw invalid(parsed.problem);
   return parsed.value;

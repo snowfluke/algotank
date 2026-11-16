@@ -192,7 +192,7 @@ export const STATES = [
   { screen: "play", state: "default", owner: "S0", path: () => "/play", as: "visitor", sweep: true },
   { screen: "play", state: "mytank", owner: "T1", path: () => "/play", as: "visitor", steps: [{ click: '[data-opens="mytank"]' }, { wait: "[data-step-sheet]" }] },
   // T1: the "My tank" editor on each part, the second page of the icons, and a name that breaks the rule.
-  ...["colour", "skin", "second", "plate", "icon", "name"].map((part) => ({
+  ...["colour", "skin", "second", "plate", "icon", "flag", "name"].map((part) => ({
     screen: "mytank",
     state: part,
     owner: "T1",
@@ -210,6 +210,16 @@ export const STATES = [
     as: "visitor",
     perSize: true,
     steps: [{ click: '[data-tank-part="icon"]' }, { wait: '[data-tank-part-panel="icon"]' }, { pageToEnd: "[data-choice-pages] [data-pager-next]" }],
+  },
+  // The flag part after a search: a few countries and the search field above them.
+  {
+    screen: "mytank",
+    state: "flag-search",
+    owner: "T1",
+    path: () => "/my-tank",
+    as: "visitor",
+    perSize: true,
+    steps: [{ click: '[data-tank-part="flag"]' }, { fill: "[data-country-search]", value: "ind" }, { wait: '[data-tank-part-panel="flag"] img' }],
   },
   {
     screen: "mytank",

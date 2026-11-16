@@ -18,8 +18,8 @@ import { choose, partChoices, planGrid } from "./parts.ts";
 import { followStored } from "./useNameDraft.ts";
 
 const ACCOUNT = "0b1c2d3e-0000-4000-8000-000000000001";
-const LOOK: TankLook = { colour: 2, skin: "dots", second: 7, plate: 9, icon: "cat", flag: null };
-const OTHER: TankLook = { colour: 4, skin: "waves", second: 3, plate: null, icon: "star", flag: null };
+const LOOK: TankLook = { colour: 2, skin: "dots", second: 7, plate: 9, icon: "cat", country: null };
+const OTHER: TankLook = { colour: 4, skin: "waves", second: 3, plate: null, icon: "star", country: null };
 
 function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));

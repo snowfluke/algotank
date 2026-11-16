@@ -2,37 +2,33 @@
 // part, and how many choices fit on one page of the measured choice area. Pure, so the
 // rules are tested without a browser.
 
-import { FLAG_PATTERNS, TANK_COLOURS, TANK_ICONS, TANK_SKINS, type FlagPattern, type TankColour, type TankFlag, type TankIcon, type TankSkin } from "@game/arena";
+import { FLAG_COUNTRIES, TANK_COLOURS, TANK_ICONS, TANK_SKINS, type FlagCountry, type TankColour, type TankIcon, type TankSkin } from "@game/arena";
 import { withColour, type TankLook } from "../tank/look.ts";
 
-export const TANK_PARTS = ["colour", "skin", "second", "plate", "icon", "flag", "flagFirst", "flagSecond", "name"] as const;
+export const TANK_PARTS = ["colour", "skin", "second", "plate", "icon", "flag", "name"] as const;
 export type TankPart = (typeof TANK_PARTS)[number];
 
-/** The flag's colours before a player picks them: red over white. */
-export const NEW_FLAG_COLOURS: Pick<TankFlag, "first" | "second"> = { first: 2, second: 11 };
-
-/** The parts the editor shows for this look: the flag's colours only when it has a flag. */
-export function partsFor(look: TankLook, withName: boolean): readonly TankPart[] {
-  return TANK_PARTS.filter((part) => (part !== "name" || withName) && (look.flag !== null || (part !== "flagFirst" && part !== "flagSecond")));
+/** The parts the editor shows: all, or all but the name where the name cannot change (inside an arena). */
+export function partsFor(withName: boolean): readonly TankPart[] {
+  return TANK_PARTS.filter((part) => part !== "name" || withName);
 }
 
 /** One choice of a part. Plate, icon and flag have "none" first. */
 export type PartChoice =
-  | { readonly part: "colour" | "second" | "flagFirst" | "flagSecond"; readonly value: TankColour }
+  | { readonly part: "colour" | "second"; readonly value: TankColour }
   | { readonly part: "skin"; readonly value: TankSkin }
   | { readonly part: "plate"; readonly value: TankColour | null }
   | { readonly part: "icon"; readonly value: TankIcon | null }
-  | { readonly part: "flag"; readonly value: FlagPattern | null };
+  | { readonly part: "flag"; readonly value: FlagCountry | null };
 
 export function partChoices(part: Exclude<TankPart, "name">): readonly PartChoice[] {
   switch (part) {
     case "colour":
     case "second":
-    case "flagFirst":
-    case "flagSecond":
       return TANK_COLOURS.map((value) => ({ part, value }));
     case "flag":
-      return [null, ...FLAG_PATTERNS].map((value) => ({ part, value }));
+      // The editor orders the countries by their names in the player's language (MyTankEditor.tsx).
+      return [null, ...FLAG_COUNTRIES].map((value) => ({ part, value }));
     case "skin":
       return TANK_SKINS.map((value) => ({ part, value }));
     case "plate":
@@ -55,23 +51,11 @@ export function isChosen(look: TankLook, choice: PartChoice): boolean {
     case "icon":
       return look.icon === choice.value;
     case "flag":
-      return (look.flag?.pattern ?? null) === choice.value;
-    case "flagFirst":
-      return look.flag?.first === choice.value;
-    case "flagSecond":
-      return look.flag?.second === choice.value;
+      return look.country === choice.value;
   }
 }
 
-/** The flag a pattern choice shows: the look's flag colours, or the new flag's. */
-export function flagWith(look: TankLook, pattern: FlagPattern): TankFlag {
-  return { pattern, ...(look.flag === null ? NEW_FLAG_COLOURS : { first: look.flag.first, second: look.flag.second }) };
-}
-
-/**
- * The look with this choice. Null when the choice is not allowed: a pattern colour equal to the
- * hull, a flag's second colour equal to its first, or a flag colour while there is no flag.
- */
+/** The look with this choice. Null when the choice is not allowed: a pattern colour equal to the hull. */
 export function choose(look: TankLook, choice: PartChoice): TankLook | null {
   switch (choice.part) {
     case "colour":
@@ -85,13 +69,7 @@ export function choose(look: TankLook, choice: PartChoice): TankLook | null {
     case "icon":
       return { ...look, icon: choice.value };
     case "flag":
-      return { ...look, flag: choice.value === null ? null : flagWith(look, choice.value) };
-    case "flagFirst":
-      if (look.flag === null) return null;
-      // As with the hull: taking the second colour as the first swaps the two, so they stay different.
-      return { ...look, flag: { ...look.flag, first: choice.value, second: choice.value === look.flag.second ? look.flag.first : look.flag.second } };
-    case "flagSecond":
-      return look.flag === null || choice.value === look.flag.first ? null : { ...look, flag: { ...look.flag, second: choice.value } };
+      return { ...look, country: choice.value };
   }
 }
 

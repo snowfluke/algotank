@@ -31,7 +31,7 @@ function temporaryDirectory(): string {
 }
 
 const NOW = Date.parse("2026-11-11T09:00:00Z");
-const TANK: AccountTank = { name: "Rara 2015", look: { colour: 9, skin: "stars", second: 3, plate: 6, icon: "moon", flag: null }, updatedAt: NOW };
+const TANK: AccountTank = { name: "Rara 2015", look: { colour: 9, skin: "stars", second: 3, plate: 6, icon: "moon", country: null }, updatedAt: NOW };
 
 const get = async (t: TestServer, cookie: string): Promise<AccountTankResponse> => {
   const res = await t.api("/api/account/tank", { cookie });
@@ -45,10 +45,10 @@ describe("the flag of My tank", () => {
   test("is saved and read back, and a tank saved before flags reads as one without a flag", async () => {
     const t = start();
     const cookie = await signUp(t);
-    const flagged: AccountTank = { ...TANK, look: { ...TANK.look, flag: { pattern: "dot", first: 3, second: 1 } } };
+    const flagged: AccountTank = { ...TANK, look: { ...TANK.look, country: "id" } };
     expect((await put(t, cookie, flagged)).status).toBe(204);
     expect(await get(t, cookie)).toEqual({ tank: flagged });
-    expect((await put(t, cookie, { ...flagged, look: { ...flagged.look, flag: { pattern: "dot", first: 3, second: 3 } }, updatedAt: NOW + 1 })).status).toBe(400);
+    expect((await put(t, cookie, { ...flagged, look: { ...flagged.look, country: "zz" }, updatedAt: NOW + 1 })).status).toBe(400);
     expect((await put(t, cookie, { ...TANK, updatedAt: NOW + 2 })).status).toBe(204);
     expect(await get(t, cookie)).toEqual({ tank: { ...TANK, updatedAt: NOW + 2 } });
   });
@@ -113,6 +113,15 @@ describe("stored account tanks", () => {
 
   const ACCOUNT = "00000000-0000-0000-0000-000000000000";
   const ROW = { account_id: ACCOUNT, name: TANK.name, colour: 9, skin: "stars", second: 3, plate: 6, icon: "moon", updated_at: NOW };
+
+  test("a two-colour flag stored on the evening of 2026-11-16 reads as no flag, and a country reads back", () => {
+    const db = memoryDatabase();
+    insertAccount(db, ACCOUNT);
+    insertRow(db, "account_tank", { ...ROW, flag_json: JSON.stringify({ pattern: "dot", first: 3, second: 1 }) });
+    expect(new AccountTanks(db).get(ACCOUNT)?.look.country).toBeNull();
+    db.prepare("UPDATE account_tank SET flag_json = ? WHERE account_id = ?").run(JSON.stringify({ country: "id" }), ACCOUNT);
+    expect(new AccountTanks(db).get(ACCOUNT)?.look.country).toBe("id");
+  });
 
   test("a damaged row is a PersistenceError that names the table and the account", () => {
     const db = memoryDatabase();

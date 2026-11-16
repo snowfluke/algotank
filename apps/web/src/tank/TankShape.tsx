@@ -228,7 +228,7 @@ export function TankShape({ self = false, label, detail = "full", angle = 0, sho
       {self ? <SelfRing detail={detail} /> : null}
       <g transform={angle === 0 ? undefined : `rotate(${angle})`}>
         <TankHull look={look} detail={detail} hatched={hatched} />
-        {showFlag && look.flag !== null && detail !== "tiny" ? <TankFlagDrawing flag={look.flag} heading={heading ?? angle} bold={detail === "simple"} /> : null}
+        {showFlag && look.country !== null && detail !== "tiny" ? <TankFlagDrawing country={look.country} heading={heading ?? angle} bold={detail === "simple"} /> : null}
       </g>
       {hatched ? (
         <g transform={`translate(${hatchX} ${hatchY})`}>

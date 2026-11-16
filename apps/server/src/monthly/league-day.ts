@@ -102,11 +102,13 @@ export const BOARD_GROWTH = 1.5;
 
 /** The tanks a new round's board is sized for: the seated tanks, and at least MONTHLY_BOARD_MIN_TANKS. */
 /**
- * The arena conditions a monthly round draws from. Open field is left out (owner, 2026-11-16): its
- * board, twice as large, drew a square about 14 px wide on a phone. It comes back when the board
- * turns upright on a tall phone.
+ * The arena conditions a monthly round draws from (owner, 2026-11-16): the two under which the
+ * presets play about equal, within some 40 points a day of the average over 6 days of 4 copies
+ * each. Left out until the presets are tuned for them and measured again: dry-spell (the Item
+ * hunter scored about 737 a day while every other preset ended below 0), arms-length and downpour
+ * (gaps 2 to 2.5 times as large), and open-field (a square about 14 px wide on a phone).
  */
-export const MONTHLY_CONDITIONS: readonly RuleSetId[] = RULE_SET_IDS.filter((id) => id !== "open-field");
+export const MONTHLY_CONDITIONS: readonly RuleSetId[] = ["standard", "sharp-eyes"];
 
 export function boardTanksFor(seated: number): number {
   return Math.max(MONTHLY_BOARD_MIN_TANKS, seated);

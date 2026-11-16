@@ -52,6 +52,7 @@ The tokens are in `@theme static`, so each one exists on `:root` as `--color-<na
 | `hit`, `hit-soft`, `hit-deep` | #c4302b, #fce4e2, #8a1f1b | Hit, danger and error text, background, button lip |
 | `warning`, `warning-soft` | #8a5a00, #fdf1d3 | Warning text and background |
 | `arena-floor`, `arena-grid` | #efe6d0, #dccfb0 | Board floor and grid lines |
+| `arena-<ground>-floor`, `-grid`, `-wall`, `-mark` | see index.css | The ground of each round condition: clay, meadow, court, range, wet; standard uses `arena-floor`, `arena-grid` and `arena-sand-mark` (board/arenaGround.ts) |
 | `tank-outline` | #1b2733 | Outline of every tank |
 | `tank-1` … `tank-12` | blue #2f7fe0, red #e2453c, yellow #f4c534, green #2ea869, purple #8b5cd6, pink #ef77b4, sky #58c7e8, slate #59646f, orange #f7962b, brown #8d5b37, white #f4f2ec, black #2a2f36 | Tank colours: the hull, the pattern and the plate |
 | `tank-N-dark` | darker partner of each colour | Tracks, barrel and the plate's rim |

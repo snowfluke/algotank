@@ -4,14 +4,14 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Database } from "bun:sqlite";
 import { plainTankLook, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
-import { PRESETS } from "@game/engine";
+import { arenaSize, PRESETS, ruleSet, STANDARD_RULE_SET_ID } from "@game/engine";
 import { HttpError } from "../http.ts";
 import { manualScheduler, type ManualScheduler } from "../test-helpers.ts";
 import { zoneCalendar } from "./calendar.ts";
 import { Champions } from "./champions.ts";
 import { memoryDatabase } from "../db/testing.ts";
 import { LeagueStore } from "./league-store.ts";
-import { RESHUFFLE_TURNS } from "./league-day.ts";
+import { BOARD_GROWTH, RESHUFFLE_TURNS } from "./league-day.ts";
 import { MonthlyLeagues } from "./monthly.ts";
 import { LeagueStreams } from "./streams.ts";
 
@@ -36,7 +36,11 @@ interface League {
 }
 
 /** A league on `db` (a new database in memory when not given); a second league on the same database is what a restart finds. */
-function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler } = {}): League {
+/**
+ * `seatsPerLeague` is 16 unless given, so the tests of several leagues and of the month close need 17
+ * tanks, not 513; `null` gives the server's MONTHLY_SEATS.
+ */
+function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler; readonly seatsPerLeague?: number | null } = {}): League {
   const ticks = options.ticks ?? manualScheduler(options.at ?? NOV_14 + 10 * 60 * 60 * 1000);
   const db = options.db ?? memoryDatabase();
   const champions = new Champions(db);
@@ -51,6 +55,7 @@ function startLeague(options: { readonly at?: number; readonly db?: Database; re
     tickMs: 900,
     // Every draw is 0: no bot, except the one a lone tank always gets (league-day.ts), with the first play style of the lineup.
     random: () => 0,
+    ...(options.seatsPerLeague === null ? {} : { seatsPerLeague: options.seatsPerLeague ?? 16 }),
   });
   monthly.start();
   return { ticks, monthly, champions, streams };
@@ -161,7 +166,7 @@ describe("the day round", () => {
     expect(l.monthly.ranking(1).today.every((row) => row.name !== "Splashy")).toBe(true);
   });
 
-  test("the board keeps its size for 16 tanks when tanks come and go", () => {
+  test("the board keeps its size for 16 tanks when up to 16 tanks come and go", () => {
     const l = startLeague();
     const size = (): [number, number] => [l.monthly.live(1).board.width, l.monthly.live(1).board.height];
     const before = size();
@@ -170,6 +175,28 @@ describe("the day round", () => {
     expect(size()).toEqual(before);
     l.monthly.quit(owners[0] ?? "");
     expect(size()).toEqual(before);
+  });
+
+  test("with the server's seats, the 17th and the 100th tank stay in League 1, and the board grows with them", () => {
+    const l = startLeague({ seatsPerLeague: null });
+    const cells = () => l.monthly.live(1).board.width * l.monthly.live(1).board.height;
+    const small = cells();
+    // 100 joins with no turn between them: a rush never runs out of squares, and every tank is on the board.
+    const owners = Array.from({ length: 100 }, newAccount);
+    for (const owner of owners) take(l, owner);
+    expect(owners.every((owner) => seatOf(l, owner).league === 1)).toBe(true);
+    expect(l.monthly.overview().leagues).toEqual([{ league: 1, tanks: 100, phase: expect.any(String) }]);
+    expect(l.monthly.live(1).tanks.filter((tank) => !tank.isBot)).toHaveLength(100);
+    // During the rush the board grew whenever the tanks passed BOARD_GROWTH times its size.
+    const cellsFor = (tanks: number) => {
+      const size = arenaSize(tanks, ruleSet(STANDARD_RULE_SET_ID));
+      return size.width * size.height;
+    };
+    expect(cells()).toBeGreaterThan(small);
+    expect(cells()).toBeGreaterThanOrEqual(cellsFor(Math.ceil(100 / BOARD_GROWTH)));
+    // The next new start sizes the board for exactly the seated tanks.
+    for (let i = 0; i < RESHUFFLE_TURNS + 1; i++) l.ticks.tick();
+    expect(cells()).toBe(cellsFor(100));
   });
 
   test("a tank that joins during the day plays from the next turn, and the day does not count for it", () => {

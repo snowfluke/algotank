@@ -20,7 +20,7 @@ Owner, 2026-11-14: "monthly arena is long running arena. 1 round lasted 24h. Onc
 - The name: the first name an account submits in a month stays its name until that month ends, also after quit and rejoin. From the first day of a later month the owner can change it once; that name is then fixed for that month. The block list and "a name already used in the league is refused" apply.
 - Quit: the tank leaves the board at the next turn. Its counted days of the month stay.
 - A seated tank plays every day round and stays seated when the month changes.
-- A new seat goes to the lowest league that has a free seat. When every league is full, a new lowest league opens. A league has 16 seats (`MONTHLY_SEATS`, one constant).
+- A new seat goes to the lowest league that has a free seat. When every league is full, a new lowest league opens. A league has 512 seats (`MONTHLY_SEATS`, one constant; 16 until 2026-11-16, raised so a month's players share one board and one ranking). The board is sized for the tanks seated, at least 16 (`boardTanksFor` in `league-day.ts`), at every new round; a seat that brings the tanks past 1.5 times the board's size rebuilds the round at once, so a rush of joiners never fills the board.
 - Nothing removes a seat except its owner's quit (no "page was open" rule, no absence rule, no arena lifetime sweep). Named limit: a tank whose owner never returns stays.
 
 ## 2. The day round

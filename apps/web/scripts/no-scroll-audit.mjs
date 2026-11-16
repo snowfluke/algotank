@@ -1067,6 +1067,9 @@ STATES.push(
   monthlyKit("closing", "case=closing"),
   monthlyKit("failed", "case=failed"),
   monthlyKit("quit", "case=seated&tab=mine&side=mine&quit=1", { steps: [{ wait: "dialog[data-dialog=monthly-quit][open]" }] }),
+  // One league of 512 seats (2026-11-16): the board grows with the tanks, so a crowded day is checked too.
+  monthlyKit("crowd", "case=crowd"),
+  monthlyKit("crowd-ranking", "case=crowd&tab=ranking"),
   // The information list and the board legend (84-items.md): both are dialogs that must fit without scrolling.
   monthlyKit("about", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-monthly-about-open]" }, { wait: "dialog[data-monthly-about][open]" }] }),
   monthlyKit("legend", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-legend-open]" }, { wait: "dialog[open]" }] }),

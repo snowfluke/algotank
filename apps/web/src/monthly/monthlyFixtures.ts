@@ -2,7 +2,7 @@
 // state of the page shows without a server. The names include one as long as the name rule allows.
 
 import { playedStats } from "../stats/statsFixtures.ts";
-import { MONTHLY_SEATS, plainTankLook, type LeagueDayRecord, type LeagueLive, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow, type MonthMove, type PublicSnapshot, type TankLook } from "@game/arena";
+import { MONTHLY_BOARD_MIN_TANKS, MONTHLY_SEATS, plainTankLook, type LeagueDayRecord, type LeagueLive, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow, type MonthMove, type PublicSnapshot, type TankLook } from "@game/arena";
 import { arenaSize, DEFAULT_PRESET_ID, PRESETS, ruleSet, STANDARD_RULE_SET_ID } from "@game/engine";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
 import type { MonthlySeat } from "./MonthlyView.tsx";
@@ -20,7 +20,7 @@ export const OWN_SEAT = "seat-3";
 
 /** A league of `count` tanks spread over the board; `bot` adds the bot of a league with one tank. */
 export function fixtureLive(league: number, count: number): LeagueLive {
-  const { width, height } = arenaSize(MONTHLY_SEATS, ruleSet(STANDARD_RULE_SET_ID));
+  const { width, height } = arenaSize(Math.max(MONTHLY_BOARD_MIN_TANKS, count), ruleSet(STANDARD_RULE_SET_ID));
   const bot = count === 1;
   const tanks = [
     ...Array.from({ length: count }, (_, i) => ({ id: `seat-${i + 1}`, name: NAMES[i % NAMES.length] ?? "Tank", look: fixtureLook(i), isBot: false })),

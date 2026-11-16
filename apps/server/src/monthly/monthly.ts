@@ -96,6 +96,8 @@ export interface MonthlyOptions {
   readonly metrics?: MetricsRecorder;
   /** Draws the leagues' bots (league-day.ts). Math.random when not given; tests fix it. */
   readonly random?: Random;
+  /** Seats in one league: MONTHLY_SEATS when not given; the tests of several leagues use a small number. */
+  readonly seatsPerLeague?: number;
 }
 
 const dayTankOf = (seat: Seat): DayTank => ({ id: seat.seatId, name: seat.name, look: seat.look, strategy: seat.strategy });
@@ -112,7 +114,11 @@ export class MonthlyLeagues {
   /** When the turn timer fired last, for how late the next turn fires. */
   private lastPulseAt = 0;
 
-  constructor(private readonly options: MonthlyOptions) {}
+  private readonly seatsPerLeague: number;
+
+  constructor(private readonly options: MonthlyOptions) {
+    this.seatsPerLeague = options.seatsPerLeague ?? MONTHLY_SEATS;
+  }
 
   /** Reads the tables, resumes or closes the checkpoint's day, and starts the timers. Throws a PersistenceError for a damaged row. */
   start(): void {
@@ -296,7 +302,7 @@ export class MonthlyLeagues {
     const record: MonthRecord | null = champion === undefined ? null : { month: month.month, champion: rowOf(champion), top: leagueOne.slice(0, RECORD_TOP).map(rowOf) };
     this.options.champions.close(month.month, record);
 
-    const result = closeMonth(rankings.map((ranking) => ranking.map((place) => place.id)), MONTHLY_SEATS);
+    const result = closeMonth(rankings.map((ranking) => ranking.map((place) => place.id)), this.seatsPerLeague);
     const seats = new Map(this.seats.seats);
     const moves = new Map(this.seats.moves);
     for (const [accountId, move] of result.moves) {
@@ -326,7 +332,7 @@ export class MonthlyLeagues {
     const name = this.nameForSeat(accountId, body["name"]);
     let league = 0;
     for (let candidate = this.seats.leagues; candidate >= 1; candidate--) {
-      if (this.seatsIn(candidate).length < MONTHLY_SEATS) {
+      if (this.seatsIn(candidate).length < this.seatsPerLeague) {
         league = candidate;
         break;
       }

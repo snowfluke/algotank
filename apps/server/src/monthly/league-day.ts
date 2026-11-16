@@ -22,7 +22,15 @@
 // Seat of an account: none -> seated (take a seat) -> none (quit). Nothing else removes a seat.
 // Statistics (K2): each seat keeps today's totals (engine stats.ts), added after every turn and
 // carried by rebuild; the bot has none. They start at zero at a seat and go at an unseat.
+// | withBot or   | withBot or   | owner: seat      | the seated tanks pass BOARD_GROWTH times the tanks the    |
+// | withoutBot   | withoutBot   |                  | board is sized for: a rebuild at once, on a board for all |
+// |              |              |                  | of them (a rush of joiners never fills the board)         |
 // Terminal state: none; a league closes only at a month close that leaves it empty.
+//
+// Board size: every new round (a new day, a restart, a new start, a rebuild) gets a board for the
+// tanks seated then (boardTanksFor), so a few tanks still meet and a full league has room. A board
+// for N tanks has about 6.7 N squares (round/grid.ts), so the seats can pass N by half before the
+// rebuild with up to MAX_BOTS bots and never run out of squares.
 //
 // Bot rule (owner, 2026-11-14: bots come and go every few minutes; a bot never appears in a ranking):
 // | Seated tanks | Bots drawn at each new round (a new start, a new day, a rebuild)        |
@@ -38,7 +46,7 @@ import { plainTankLook, type LeagueDayPhase, type LeagueTank, type PlayerId, typ
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
 import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, ruleSet, STANDARD_RULE_SET_ID, stepRound, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
-import { MONTHLY_SEATS } from "@game/arena";
+import { MONTHLY_BOARD_MIN_TANKS } from "@game/arena";
 
 /** What the round needs of a seated tank. */
 export interface DayTank {
@@ -84,9 +92,17 @@ interface LeagueBot {
  */
 export const RESHUFFLE_TURNS = 333;
 
-/** The empty board of a league: sized for MONTHLY_SEATS tanks, like every day round. */
+/** A seat that makes the seated tanks more than this many times the board's tanks rebuilds the round at once. */
+export const BOARD_GROWTH = 1.5;
+
+/** The tanks a new round's board is sized for: the seated tanks, and at least MONTHLY_BOARD_MIN_TANKS. */
+export function boardTanksFor(seated: number): number {
+  return Math.max(MONTHLY_BOARD_MIN_TANKS, seated);
+}
+
+/** The empty board of a league: the board of a round with no tank. */
 function emptyBoard(ticksTotal: number): Snapshot {
-  const { width, height } = arenaSize(MONTHLY_SEATS, ruleSet(STANDARD_RULE_SET_ID));
+  const { width, height } = arenaSize(boardTanksFor(0), ruleSet(STANDARD_RULE_SET_ID));
   return { width, height, tick: 0, ticksTotal, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, bots: [], items: [] };
 }
 
@@ -94,6 +110,8 @@ export class LeagueDay {
   private round: RoundState | null = null;
   private readonly seated = new Map<PlayerId, Seated>();
   private bots: LeagueBot[] = [];
+  /** The tanks the round's board is sized for. */
+  private boardFor = boardTanksFor(0);
 
   constructor(
     readonly league: number,
@@ -107,10 +125,18 @@ export class LeagueDay {
   seat(tank: DayTank, points: number, counts: boolean, ticksLeft: number, stats: TankStats = EMPTY_STATS): void {
     if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
     const fresh = this.round === null;
-    this.round ??= createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS, items: true });
+    if (this.round === null) this.round = this.newRound(1, ticksLeft);
     joinRound(this.round, { id: tank.id, strategy: tank.strategy }, points);
     this.seated.set(tank.id, { tank, counts, stats });
     if (fresh) this.drawBots();
+    // A rush of joiners: the next new start may be minutes away, so the board grows now.
+    else if (this.seated.size > this.boardFor * BOARD_GROWTH) this.rebuild(ticksLeft);
+  }
+
+  /** A round on a board for `tanks` tanks (boardTanksFor). */
+  private newRound(tanks: number, ticksLeft: number): RoundState {
+    this.boardFor = boardTanksFor(tanks);
+    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: this.boardFor, items: true });
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */
@@ -214,7 +240,7 @@ export class LeagueDay {
   start(tanks: readonly { readonly tank: DayTank; readonly points: number; readonly counts: boolean; readonly stats: TankStats | undefined }[], ticksLeft: number): void {
     if (this.round !== null) throw new Error(`League ${this.league} already has a round.`);
     if (tanks.length === 0) return;
-    const round = createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId: STANDARD_RULE_SET_ID, boardFor: MONTHLY_SEATS, items: true });
+    const round = this.newRound(tanks.length, ticksLeft);
     this.round = round;
     for (const { tank, points, counts, stats } of tanks) {
       if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);

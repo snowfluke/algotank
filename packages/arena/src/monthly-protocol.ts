@@ -36,8 +36,15 @@ import type { CompactTick } from "./compact-tick.ts";
 import type { MonthRecord } from "./public-protocol.ts";
 import type { PlayerId, PublicSnapshot, TankLook } from "./types.ts";
 
-/** Seats in one league. When every league is full, a new lowest league opens. */
-export const MONTHLY_SEATS = 16;
+/**
+ * Seats in one league. When every league is full, a new lowest league opens. 512 since 2026-11-16
+ * (was 16), so every player of a month plays on one board and in one ranking (owner: a tournament
+ * in the November league). The board is sized for the tanks seated, not for this number
+ * (apps/server/src/monthly/league-day.ts, boardTanksFor).
+ */
+export const MONTHLY_SEATS = 512;
+/** A league's board is sized for at least this many tanks, so a few tanks still meet. */
+export const MONTHLY_BOARD_MIN_TANKS = 16;
 /**
  * A tank with fewer counted days in a month is listed after the others, as "not ranked yet".
  * 1 since 2026-11-16 (was 7), so a tank that joins late in the month can still win: one

@@ -82,17 +82,23 @@ export function fixtureRankedSeat(league: number): MonthlySeat {
   return { ...fixtureSeat(league), countedDays: 1, score: 7075, rank: 1 };
 }
 
+/** The second seated tank is the game master when there are 3 or more: on the board, so it leaves its tread marks. */
+const GM_INDEX = 1;
+
 export function fixtureRanking(live: LeagueLive): LeagueRankingResponse {
   const seated = live.tanks.filter((tank) => !tank.isBot);
-  const today: LeagueTodayRow[] = seated.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, points: 20 - i, counts: true, seated: true, livePoints: true, gm: false }));
+  const gmId = seated.length >= 3 ? (seated[GM_INDEX]?.id ?? null) : null;
+  const players = seated.filter((tank) => tank.id !== gmId);
+  const today: LeagueTodayRow[] = players.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, points: 20 - i, counts: true, seated: true, livePoints: true, gm: false }));
   // A tank that quit today keeps its row, last here, with its points at the quit.
   if (today.length > 0) today.push({ rank: today.length + 1, seatId: "seat-left", name: "Rangga", look: fixtureLook(5), points: 0, counts: true, seated: false, livePoints: false, gm: false });
-  const thisMonth: LeagueMonthRow[] = seated.map((tank, i) => ({ rank: i < seated.length - 3 ? i + 1 : null, seatId: tank.id, name: tank.name, look: tank.look, score: Math.round((18.4 - i) * 10) / 10, countedDays: i < seated.length - 3 ? 9 : 4, gm: false }));
-  // The game master's tank, as the server sends it: last by its points today, and last this month. The longest
-  // name (16 letters) and a five-digit negative score, so a page shows the widest GM row.
-  if (today.length > 0) {
-    today.push({ rank: 0, seatId: "seat-gm", name: "Organizer Tank X", look: fixtureLook(7), points: -12345, counts: true, seated: true, livePoints: true, gm: true });
-    thisMonth.push({ rank: null, seatId: "seat-gm", name: "Organizer Tank X", look: fixtureLook(7), score: 0, countedDays: 0, gm: true });
+  const thisMonth: LeagueMonthRow[] = players.map((tank, i) => ({ rank: i < players.length - 3 ? i + 1 : null, seatId: tank.id, name: tank.name, look: tank.look, score: Math.round((18.4 - i) * 10) / 10, countedDays: i < players.length - 3 ? 9 : 4, gm: false }));
+  // The game master's tank, as the server sends it: last by its points today (a five-digit negative score, the
+  // widest), and last this month without a place.
+  const gm = seated.find((tank) => tank.id === gmId);
+  if (gm !== undefined) {
+    today.push({ rank: 0, seatId: gm.id, name: gm.name, look: gm.look, points: -12345, counts: true, seated: true, livePoints: false, gm: true });
+    thisMonth.push({ rank: null, seatId: gm.id, name: gm.name, look: gm.look, score: 0, countedDays: 0, gm: true });
   }
   return { league: live.league, month: live.month, day: live.day, today, thisMonth };
 }

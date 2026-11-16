@@ -71,9 +71,11 @@ export interface MonthlyBoardProps {
   /** Drawn over the board's area, the board and the space around it (the midnight notice, "Reshuffled"). */
   readonly overlay: ReactNode;
   readonly row: BoardRow;
+  /** The game masters' tanks, which leave tread marks (board/tankTrail.ts). */
+  readonly trailIds: ReadonlySet<BotId>;
 }
 
-export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tanks, overlay, row }: MonthlyBoardProps) {
+export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tanks, overlay, row, trailIds }: MonthlyBoardProps) {
   const m = useMessages();
   const fit = useFitLayout();
   const { ref, box } = useBoxSize<HTMLDivElement>();
@@ -155,7 +157,7 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
       >
         <div className="relative min-w-0" style={boardStyle}>
           {/* A new orientation starts a new board: tanks would otherwise glide across it and spin a quarter. */}
-          <ArenaBoard key={orientation} snapshot={shown} throws={throws} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
+          <ArenaBoard key={orientation} snapshot={shown} throws={throws} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} trailIds={trailIds} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
         </div>
         {/* Over the board's whole area, not only the board: a small board on a short phone cut the midnight notice. */}
         {overlay}

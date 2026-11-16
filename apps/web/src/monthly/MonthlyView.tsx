@@ -171,13 +171,17 @@ function LastWinner({ days, today }: { days: readonly LeagueDayRecord[]; today: 
 }
 
 /** The board as large as its box allows, with the midnight notice, "Reshuffled" or the empty league's invitation over it. */
-function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; row: BoardRow }) {
+function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row, ranking }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; row: BoardRow; ranking: LeagueRankingResponse | null }) {
   const m = useMessages();
   const t = m.monthly;
   const dayName = useDayName();
   const { live } = board;
   const names = useMemo(() => Object.fromEntries(live.tanks.map((tank) => [tank.id, tank.name])), [live.tanks]);
   const tanks = useMemo(() => new Map<string, TankInfo>(live.tanks.map((tank) => [tank.id, { look: tank.look, isBot: tank.isBot }])), [live.tanks]);
+  // The game masters' tanks leave tread marks on the board (owner, 2026-11-17); the ranking says which they are.
+  // Keyed by the ids, so a ranking poll with the same game masters keeps the set and the memoised board.
+  const gameMasterKey = (ranking?.today ?? []).filter((row) => row.gm).map((row) => row.seatId).join(" ");
+  const gameMasterIds = useMemo(() => new Set(gameMasterKey === "" ? [] : gameMasterKey.split(" ")), [gameMasterKey]);
   const winner = dayChange?.kind === "done" ? (dayChange.winner?.top[0] ?? null) : null;
   let notice: ReactNode = null;
   if (dayChange?.kind === "done") {
@@ -218,6 +222,7 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row }: { board
         tickMs={live.tickMs}
         tanks={tanks}
         row={row}
+        trailIds={gameMasterIds}
         overlay={
           notice === null ? null : (
             // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
@@ -507,7 +512,7 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={{ place: { kind: "slot", element: switchSlot }, follow }} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={{ place: { kind: "slot", element: switchSlot }, follow }} ranking={props.ranking} />}</div>
         <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0">
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
@@ -615,6 +620,7 @@ function PhoneLayout(props: MonthlyViewProps) {
             dayChange={props.dayChange}
             reshuffled={props.reshuffled}
             row={{ place: { kind: "row", lead: seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} /> }, follow }}
+            ranking={props.ranking}
           />
         )}
         <LastWinner days={props.days} today={board?.live.day ?? null} />

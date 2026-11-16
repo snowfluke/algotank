@@ -30,6 +30,7 @@ import { ARENA_MOTION_CSS } from "./arenaMotion.ts";
 import { botLabels } from "./botLabels.ts";
 import { ARENA_GROUNDS, groundMarksPath, marksFilled } from "./arenaGround.ts";
 import { CULL_MARGIN, inWindow } from "./camera.ts";
+import { nextTrail, stepAngle, TRAIL_OPACITY, type TrailState } from "./tankTrail.ts";
 import {
   CELL,
   TANK_LIFT,
@@ -60,6 +61,26 @@ import { WaterGauge } from "./WaterGauge.tsx";
  * item (0.6). At 0.7 the floor's marks showed through a tank.
  */
 const DIM_OPACITY = 0.8;
+
+/**
+ * Each trail tank's trail, moved on once per turn: a render for another reason (the camera, a poll) keeps it.
+ * A board turned to the other orientation is a new board (MonthlyBoard.tsx), so its trails start again.
+ */
+function useTrails(bots: readonly PublicBot[], tick: number, trailIds: ReadonlySet<BotId> | undefined): ReadonlyMap<BotId, TrailState> {
+  const state = useRef<{ tick: number; trails: ReadonlyMap<BotId, TrailState> }>({ tick: -1, trails: new Map() });
+  if (trailIds === undefined || trailIds.size === 0) return NO_TRAILS;
+  if (state.current.tick !== tick) {
+    const next = new Map<BotId, TrailState>();
+    for (const id of trailIds) {
+      const bot = bots.find((b) => b.id === id);
+      if (bot !== undefined) next.set(id, nextTrail(state.current.trails.get(id), { x: bot.x, y: bot.y }));
+    }
+    state.current = { tick, trails: next };
+  }
+  return state.current.trails;
+}
+
+const NO_TRAILS: ReadonlyMap<BotId, TrailState> = new Map();
 
 /** Thickness of the wall around the floor, in board units (a square is 10). */
 export const WALL = 3;
@@ -156,7 +177,7 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
  * Memoised: a parent that renders for another reason (the ranking's poll, a notice) leaves the board alone. A turn gives
  * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
  */
-export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, onTankTap }: ArenaBoardProps) {
+export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap }: ArenaBoardProps) {
   // The zoomed view's other tanks, a little dimmer than the followed tank and the viewer's own (props.ts, focusId).
   const dimmed = (id: BotId) => focusId !== null && id !== focusId && id !== highlightId;
   const m = useMessages();
@@ -164,6 +185,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
   const rules = rulesOf(snapshot);
   const { width, height, bots, tick } = snapshot;
   const angles = useTurnAngles(bots);
+  const trails = useTrails(bots, tick, trailIds);
   const labels = useMemo(() => botLabels(names), [names]);
   const looks = tankLooks(bots, tanks);
   const spanX = camera === null ? width + (2 * WALL) / CELL : camera.width;
@@ -282,6 +304,32 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
             ))}
           </defs>
         ) : null}
+
+        {/* A game master's tread marks lie on the floor, under the items and tanks (tankTrail.ts). */}
+        {trails.size === 0 || hidden ? null : (
+          <g data-layer="trail">
+            {[...trails].flatMap(([id, state]) => {
+              const colour = `var(--color-tank-${(looks.get(id) ?? FALLBACK_LOOK).colour}-dark)`;
+              return state.trail.map((cell, i) => {
+                const centre = cellCenter(cell.x, cell.y);
+                const to = i === 0 ? state.at : (state.trail[i - 1] ?? state.at);
+                return (
+                  <g
+                    key={`${id}-${cell.x}-${cell.y}`}
+                    data-trail-mark={i}
+                    transform={`translate(${centre.x} ${centre.y}) rotate(${stepAngle(cell, to)})`}
+                    opacity={TRAIL_OPACITY[i] ?? 0}
+                    style={{ stroke: colour, transition: `opacity ${tickMs}ms linear` }}
+                  >
+                    {/* Two tread prints along the step, dashed like a track's plates. */}
+                    <line x1={-3.6} x2={3.6} y1={-2.7} y2={-2.7} strokeWidth={1.7} strokeDasharray="1.1 0.7" />
+                    <line x1={-3.6} x2={3.6} y1={2.7} y2={2.7} strokeWidth={1.7} strokeDasharray="1.1 0.7" />
+                  </g>
+                );
+              });
+            })}
+          </g>
+        )}
 
         {/* Items lie on the floor. Each keeps its key while it stays, so it pops in once. */}
         <g data-layer="items">

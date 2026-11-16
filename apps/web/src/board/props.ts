@@ -41,6 +41,8 @@ export interface ArenaBoardProps {
    * gauges are drawn a little dimmer; the viewer's own tank never is (owner, 2026-11-17).
    */
   readonly focusId?: BotId | null;
+  /** Tanks that leave tread marks on the last squares they left (board/tankTrail.ts): the monthly league's game masters. */
+  readonly trailIds?: ReadonlySet<BotId>;
   /** A tap on the drawing of a tank (not the square it glides to), after its name tag shows: the monthly board's zoomed view follows that tank (monthly/MonthlyBoard.tsx). */
   readonly onTankTap?: (id: BotId) => void;
 }

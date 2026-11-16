@@ -36,6 +36,8 @@ export interface ArenaBoardProps {
    * The board then fills its box at that window and draws only the tanks near it.
    */
   readonly camera?: CameraWindow | null;
+  /** A tap on a tank, after its name tag shows: the monthly board's zoomed view follows that tank (monthly/MonthlyBoard.tsx). */
+  readonly onTankTap?: (id: BotId) => void;
 }
 
 export interface ScoreboardProps {

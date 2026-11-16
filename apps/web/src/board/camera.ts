@@ -58,18 +58,30 @@ function clampAxis(centre: number, size: number, span: number): number {
 }
 
 /**
- * The window of a box of `box` px at FOLLOW_CELL_PX per square around the centre of
- * square (`cellX`, `cellY`), clamped so it never shows past the wall.
+ * The window of a box of `box` px at `cellPx` per square (FOLLOW_CELL_PX in a room) around the
+ * centre of square (`cellX`, `cellY`), clamped so it never shows past the wall.
  */
-export function followWindow(box: Box, arena: ArenaSize, cellX: number, cellY: number): CameraWindow {
-  const width = box.width / FOLLOW_CELL_PX;
-  const height = box.height / FOLLOW_CELL_PX;
+export function followWindow(box: Box, arena: ArenaSize, cellX: number, cellY: number, cellPx = FOLLOW_CELL_PX): CameraWindow {
+  const width = box.width / cellPx;
+  const height = box.height / cellPx;
   return {
     x: clampAxis(cellX + 0.5, width, arena.width),
     y: clampAxis(cellY + 0.5, height, arena.height),
     width,
     height,
   };
+}
+
+/**
+ * Squares across the short side of the monthly board's zoomed view, on any screen (owner,
+ * 2026-11-17: "zoom on any camera size", closer than a room's 28 px): about 40 px a square on a
+ * 390 px phone and 55 px on a 500 px tall laptop board.
+ */
+export const ZOOM_SQUARES = 9;
+
+/** Px per square of the zoomed view in this box. */
+export function zoomCellPx(box: Box): number {
+  return Math.min(box.width, box.height) / ZOOM_SQUARES;
 }
 
 /** True when square (x, y) lies inside the window grown by `margin` squares on each side. */

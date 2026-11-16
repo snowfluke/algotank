@@ -1,6 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import { CULL_MARGIN, FOLLOW_CELL_PX, WALL_SQUARES, followWindow, inWindow, leaderTarget, needsFollowCamera, wholeArenaCellPx } from "./camera.ts";
+import { CULL_MARGIN, FOLLOW_CELL_PX, WALL_SQUARES, ZOOM_SQUARES, followWindow, inWindow, leaderTarget, needsFollowCamera, wholeArenaCellPx, zoomCellPx } from "./camera.ts";
 
 // A 68 x 51 arena holds 512 tanks at the standard fill; a box of 280 x 420 px is a 10 by 15 square window.
 const big = { width: 68, height: 51 };
@@ -68,5 +68,15 @@ describe("follow camera", () => {
     expect(leaderTarget(bots, "c")).toBe("c");
     expect(leaderTarget(bots, "a")).toBe("b");
     expect(leaderTarget([], null)).toBeNull();
+  });
+});
+
+describe("the monthly board's zoom", () => {
+  test("shows ZOOM_SQUARES across the short side on any box, and a larger cell than a room's window on a phone", () => {
+    expect(zoomCellPx({ width: 358, height: 500 })).toBeCloseTo(358 / ZOOM_SQUARES);
+    expect(zoomCellPx({ width: 900, height: 495 })).toBeCloseTo(55);
+    expect(zoomCellPx({ width: 358, height: 500 })).toBeGreaterThan(FOLLOW_CELL_PX);
+    const view = followWindow({ width: 360, height: 540 }, { width: 23, height: 17 }, 11, 8, 40);
+    expect([view.width, view.height]).toEqual([9, 13.5]);
   });
 });

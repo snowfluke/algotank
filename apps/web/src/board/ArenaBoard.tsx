@@ -148,7 +148,7 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
  * Memoised: a parent that renders for another reason (the ranking's poll, a notice) leaves the board alone. A turn gives
  * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
  */
-export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null }: ArenaBoardProps) {
+export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, onTankTap }: ArenaBoardProps) {
   const m = useMessages();
   // The water a tank holds and the cost of a shot differ between rule sets, so the board reads the set of the snapshot.
   const rules = rulesOf(snapshot);
@@ -243,7 +243,11 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           const id = tankUnder(event);
           if (id !== null) showName(id);
         }}
-        onPointerDown={(event) => showName(tankUnder(event))}
+        onPointerDown={(event) => {
+          const id = tankUnder(event);
+          showName(id);
+          if (id !== null) onTankTap?.(id);
+        }}
       >
         <style>{ARENA_MOTION_CSS}</style>
         {/* The window glides with the same transition as the tanks, so the followed tank stays still in the middle.

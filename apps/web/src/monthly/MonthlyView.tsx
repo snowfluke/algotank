@@ -168,7 +168,7 @@ function LastWinner({ days, today }: { days: readonly LeagueDayRecord[]; today: 
 }
 
 /** The board as large as its box allows, with the midnight notice, "Reshuffled" or the empty league's invitation over it. */
-function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; row: BoardRow | null }) {
+function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; row: BoardRow }) {
   const m = useMessages();
   const t = m.monthly;
   const dayName = useDayName();
@@ -413,6 +413,9 @@ function boardOf(load: LeagueLiveLoad): LeagueBoard | null {
 }
 
 function PresenterLayout(props: MonthlyViewProps) {
+  // The zoomed view on a laptop too (owner, 2026-11-17), in the same row over the board as on a phone.
+  const [followChoice, setFollowChoice] = useState<FollowSwitch["choice"]>("whole");
+  const follow: FollowSwitch = { choice: followChoice, onChoice: setFollowChoice };
   const m = useMessages();
   const t = m.monthly;
   const { league, leagues, seat, load } = props;
@@ -472,7 +475,7 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={null} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={{ lead: null, follow }} />}</div>
         <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0">
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />

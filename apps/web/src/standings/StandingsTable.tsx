@@ -26,12 +26,17 @@ export interface RankingRowProps {
   readonly note?: string;
   /** A short word after the name, such as "Left" for a tank that quit the monthly arena today. */
   readonly tag?: string;
+  /**
+   * A badge before the name: "GM" for the monthly arena's game master (the organizer's tank, which
+   * takes no place). `title` says it in words on hover.
+   */
+  readonly badge?: { readonly text: string; readonly title: string };
   /** "li" in a list of rows (default); "div" inside a Pager, which wraps each item in its own `li`. */
   readonly element?: "li" | "div";
 }
 
 /** One ranked tank. board/Scoreboard.tsx draws its rows with it too, so every ranking marks "you" the same way. */
-export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, element = "li" }: RankingRowProps) {
+export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, badge, element = "li" }: RankingRowProps) {
   const m = useMessages();
   const t = m.results.table;
   const Row = element;
@@ -47,6 +52,7 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
       {/* The name next to it names the tank, so a screen reader skips the badge. */}
       <TankBadge look={tank.look} size={28} name={null} self={isSelf} detail="full" angle={-90} className="h-[1.5em] w-[1.5em]" />
       <span className="flex min-w-0 items-baseline gap-x-[0.5em]">
+        {badge === undefined ? null : <NameBadge text={badge.text} title={badge.title} />}
         <span className={`min-w-0 font-semibold ${truncate ? "truncate" : "[overflow-wrap:anywhere]"}`} title={tank.name}>
           {tank.name}
         </span>
@@ -64,6 +70,15 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
       </span>
       {note === undefined ? null : <span className={`col-start-3 col-end-5 ${ROW_LABEL_TEXT} text-muted [overflow-wrap:anywhere]`}>{note}</span>}
     </Row>
+  );
+}
+
+/** A short badge before a name, such as the monthly arena's "GM"; the admin page draws it too. */
+export function NameBadge({ text, title }: { readonly text: string; readonly title: string }) {
+  return (
+    <span data-badge="" title={title} className="shrink-0 self-center rounded-[0.35em] bg-ink px-[0.4em] py-[0.05em] font-display text-[0.75em] leading-tight font-bold text-panel">
+      {text}
+    </span>
   );
 }
 

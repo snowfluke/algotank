@@ -31,6 +31,7 @@ function isAdminPlayer(value: unknown): value is AdminPlayer {
     typeof value["name"] === "string" &&
     typeof value["score"] === "number" &&
     whole(value["countedDays"], 0) &&
+    typeof value["gm"] === "boolean" &&
     isAccount(value["account"])
   );
 }
@@ -60,6 +61,16 @@ async function load(): Promise<AdminPlayersLoad> {
  * Takes one tank out of the monthly arena. True when it is out, also when it had left already
  * (404 no_monthly_seat). A 404 without that code is the admin check: the session ended.
  */
+/** PUT /api/admin/players/:seatId/gm. True when the server took it. */
+export async function setAdminGameMaster(seatId: string, gm: boolean): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/admin/players/${encodeURIComponent(seatId)}/gm`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gm }) });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function removeAdminPlayer(seatId: string): Promise<boolean> {
   try {
     const response = await fetch(`/api/admin/players/${encodeURIComponent(seatId)}`, { method: "DELETE" });

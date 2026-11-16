@@ -45,10 +45,23 @@ export function leagueToShow(asked: number, leagues: number, own: number | null)
 }
 
 /** Today's ranking. A tank that quit today keeps its row with `leftLabel` after its name. */
-export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string): RankingItem[] {
+/** The game master's badge (server monthly/game-masters.ts): its row has no place. */
+export interface GmBadge {
+  readonly text: string;
+  readonly title: string;
+}
+
+export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string, gm: GmBadge): RankingItem[] {
   return rows.map((row) => ({
     kind: "row",
-    row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.points, verdict: null, ...(row.seated ? {} : { tag: leftLabel }) },
+    row: {
+      tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false },
+      place: row.gm ? null : row.rank,
+      score: row.points,
+      verdict: null,
+      ...(row.seated ? {} : { tag: leftLabel }),
+      ...(row.gm ? { badge: gm } : {}),
+    },
   }));
 }
 
@@ -56,11 +69,12 @@ export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string): 
  * This month's ranking: the ranked tanks, then a line, then the tanks with fewer than
  * MONTHLY_RANKED_DAYS counted days, which have no place yet (77-monthly-league.md, section 3).
  */
-export function monthItems(rows: readonly LeagueMonthRow[], notRankedLabel: string): RankingItem[] {
+export function monthItems(rows: readonly LeagueMonthRow[], notRankedLabel: string, gm: GmBadge): RankingItem[] {
   const items: RankingItem[] = [];
   rows.forEach((row, i) => {
-    if (row.rank === null && (i === 0 || rows[i - 1]?.rank !== null)) items.push({ kind: "cut", label: notRankedLabel });
-    items.push({ kind: "row", row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.score, verdict: null } });
+    // The game master's row comes last and is never "not ranked yet": it takes no place at all.
+    if (!row.gm && row.rank === null && (i === 0 || rows[i - 1]?.rank !== null)) items.push({ kind: "cut", label: notRankedLabel });
+    items.push({ kind: "row", row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.score, verdict: null, ...(row.gm ? { badge: gm } : {}) } });
   });
   return items;
 }
@@ -81,7 +95,8 @@ export function withLivePoints(
   const live = new Map(board.snapshot.bots.map((bot) => [bot.id, bot.score]));
   const today = ranking.today
     .map((row, index) => ({ row: row.seated ? { ...row, points: live.get(row.seatId) ?? row.points } : row, index }))
-    .sort((a, b) => b.row.points - a.row.points || a.index - b.index)
-    .map(({ row }, i) => ({ ...row, rank: i + 1 }));
-  return { ...ranking, today };
+    .sort((a, b) => b.row.points - a.row.points || a.index - b.index);
+  // The game master takes no place (rank 0, as the server sends it), so the places skip its row.
+  let place = 0;
+  return { ...ranking, today: today.map(({ row }) => ({ ...row, rank: row.gm ? 0 : ++place })) };
 }

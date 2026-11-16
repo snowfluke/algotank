@@ -55,7 +55,7 @@ function MonthPane({ month, rows, ownSeatId }: { readonly month: string; readonl
       {rows.length === 0 ? (
         <p className="text-lead">{t.monthEmpty}</p>
       ) : (
-        <PagedRanking label={heading} items={monthItems(rows, m.monthly.notRanked(MONTHLY_RANKED_DAYS))} highlightId={ownSeatId} jumpLabel={m.monthly.toNotRanked} />
+        <PagedRanking label={heading} items={monthItems(rows, m.monthly.notRanked(MONTHLY_RANKED_DAYS), m.monthly.gm)} highlightId={ownSeatId} jumpLabel={m.monthly.toNotRanked} />
       )}
     </section>
   );

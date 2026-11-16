@@ -42,6 +42,9 @@
 //                                                of a route that does not exist.
 // DELETE /api/admin/players/:seatId             (the same account, and the Origin check) -> 204; takes the
 //                                                tank out as its owner's quit does. 404 no_monthly_seat
+// PUT    /api/admin/players/:seatId/gm          (the same account, and the Origin check) SetGameMasterRequest
+//                                                -> 204; makes the seat's account a game master or not.
+//                                                404 no_monthly_seat
 
 import type { Decision, StatsView, StrategyInput } from "@game/engine";
 import type { CompactTick } from "./compact-tick.ts";
@@ -134,6 +137,10 @@ export interface MonthlyOverviewResponse {
 
 /** One tank in today's ranking: seated tanks with their points now, and tanks that quit today on a counted day. */
 export interface LeagueTodayRow {
+  /**
+   * The place among today's tanks; 0 for a game master, who takes no place (`gm`). 0, not null:
+   * pages built before 2026-11-17 accept only a number here.
+   */
   readonly rank: number;
   readonly seatId: PlayerId;
   readonly name: string;
@@ -143,6 +150,8 @@ export interface LeagueTodayRow {
   readonly counts: boolean;
   /** False for a tank that quit today. */
   readonly seated: boolean;
+  /** The organizer's tank (server monthly/game-masters.ts): a "GM" badge, and no place. */
+  readonly gm: boolean;
 }
 
 /** One seated tank in this month's ranking of its league. */
@@ -155,6 +164,8 @@ export interface LeagueMonthRow {
   /** The average of the counted day scores, to one decimal; 0 without a counted day. */
   readonly score: number;
   readonly countedDays: number;
+  /** As in LeagueTodayRow: a game master has no counted day, so its rank is null. */
+  readonly gm: boolean;
 }
 
 /** GET /api/monthly/leagues/:league/ranking. */
@@ -273,6 +284,8 @@ export interface AdminPlayer {
   readonly name: string;
   readonly score: number;
   readonly countedDays: number;
+  /** As in LeagueTodayRow; PUT /api/admin/players/:seatId/gm sets it. */
+  readonly gm: boolean;
   /** null: the seat names an account that no longer exists. */
   readonly account: {
     readonly email: string;
@@ -280,6 +293,11 @@ export interface AdminPlayer {
     /** ISO time. */
     readonly createdAt: string;
   } | null;
+}
+
+/** Body of PUT /api/admin/players/:seatId/gm. */
+export interface SetGameMasterRequest {
+  readonly gm: boolean;
 }
 
 /** GET /api/admin/players: every seated tank, League 1 first, each league in its month ranking's order. */

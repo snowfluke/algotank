@@ -1,7 +1,7 @@
 // GET /api/admin/players through HTTP: who may read it, and what it lists.
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { plainTankLook, type AdminPlayersResponse } from "@game/arena";
+import { plainTankLook, type AdminPlayersResponse, type LeagueRankingResponse } from "@game/arena";
 import { PRESETS } from "@game/engine";
 import { signUp, startTestServer, type TestServer, type TestServerOptions } from "../test-helpers.ts";
 
@@ -73,5 +73,35 @@ describe("GET /api/admin/players", () => {
     expect((await t.api(`/api/admin/players/${seatId}`, { method: "DELETE", cookie: admin })).status).toBe(404);
     // The owner can take a seat again.
     expect((await t.api("/api/monthly/seat", { method: "POST", cookie: owner, body: { ...tank, name: "Ada" } })).status).toBe(201);
+  });
+});
+
+describe("PUT /api/admin/players/:seatId/gm", () => {
+  test("the admin makes a tank the game master: it keeps playing under the flag and takes no place; others are refused", async () => {
+    const t = start();
+    const ada = await seat(t, "ada@example.org", "Ada");
+    await seat(t, "bob@example.org", "Bobo");
+    const seatId = ((await (await t.api("/api/monthly/me", { cookie: ada })).json()) as { seat: { seatId: string } }).seat.seatId;
+    const gm = (cookie: string | undefined, body: unknown, headers?: Record<string, string>) => t.api(`/api/admin/players/${seatId}/gm`, { method: "PUT", ...(cookie === undefined ? {} : { cookie }), body, ...(headers === undefined ? {} : { headers }) });
+    expect((await gm(ada, { gm: true })).status).toBe(404);
+    const admin = await signUp(t, ADMIN);
+    expect((await gm(admin, { gm: "yes" })).status).toBe(400);
+    expect((await gm(admin, { gm: true }, { origin: "https://elsewhere.example" })).status).toBe(403);
+    expect((await t.api("/api/admin/players/nobody/gm", { method: "PUT", cookie: admin, body: { gm: true } })).status).toBe(404);
+    expect((await gm(admin, { gm: true })).status).toBe(204);
+
+    const ranking = (await (await t.api("/api/monthly/leagues/1/ranking")).json()) as LeagueRankingResponse;
+    const today = ranking.today.filter((r) => r.name === "Ada" || r.name === "Bobo").map((r) => [r.name, r.gm, r.gm ? r.rank : "placed"]);
+    expect(today).toContainEqual(["Ada", true, 0]);
+    expect(today).toContainEqual(["Bobo", false, "placed"]);
+    // The places run 1, 2, … over the other tanks only.
+    expect(ranking.today.filter((r) => !r.gm).map((r) => r.rank)).toEqual(ranking.today.filter((r) => !r.gm).map((_, i) => i + 1));
+    expect(ranking.thisMonth.find((r) => r.name === "Ada")).toMatchObject({ gm: true, rank: null });
+    const list = (await (await t.api("/api/admin/players", { cookie: admin })).json()) as AdminPlayersResponse;
+    expect(list.players.find((p) => p.name === "Ada")?.gm).toBe(true);
+
+    expect((await gm(admin, { gm: false })).status).toBe(204);
+    const after = (await (await t.api("/api/monthly/leagues/1/ranking")).json()) as LeagueRankingResponse;
+    expect(after.today.every((r) => !r.gm && r.rank >= 1)).toBe(true);
   });
 });

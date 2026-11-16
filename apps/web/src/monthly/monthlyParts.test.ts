@@ -33,16 +33,20 @@ describe("the monthly page's rules", () => {
   });
 
   test("this month's ranking puts one line before the tanks without a place", () => {
-    const row = (rank: number | null, i: number): LeagueMonthRow => ({ rank, seatId: `s${i}`, name: `T${i}`, look, score: 10 - i, countedDays: rank === null ? 2 : 8 });
-    const items = monthItems([row(1, 1), row(2, 2), row(null, 3), row(null, 4)], "not ranked");
+    const row = (rank: number | null, i: number): LeagueMonthRow => ({ rank, seatId: `s${i}`, name: `T${i}`, look, score: 10 - i, countedDays: rank === null ? 2 : 8, gm: false });
+    const gm = { text: "GM", title: "Game master" };
+    const items = monthItems([row(1, 1), row(2, 2), row(null, 3), row(null, 4)], "not ranked", gm);
     expect(items.map((item) => (item.kind === "cut" ? "cut" : item.row.place))).toEqual([1, 2, "cut", null, null]);
-    expect(monthItems([row(null, 1)], "x").map((item) => item.kind)).toEqual(["cut", "row"]);
-    expect(monthItems([row(1, 1)], "x").map((item) => item.kind)).toEqual(["row"]);
+    expect(monthItems([row(null, 1)], "x", gm).map((item) => item.kind)).toEqual(["cut", "row"]);
+    expect(monthItems([row(1, 1)], "x", gm).map((item) => item.kind)).toEqual(["row"]);
+    // The game master's row, last, has its badge and no place, and it does not open the "not ranked" part.
+    const withGm = monthItems([row(1, 1), { ...row(null, 9), countedDays: 0, gm: true }], "not ranked", gm);
+    expect(withGm.map((item) => (item.kind === "cut" ? "cut" : [item.row.place, item.row.badge?.text ?? null]))).toEqual([[1, null], [null, "GM"]]);
   });
 });
 
 describe("today's ranking follows the board", () => {
-  const row = (seatId: string, points: number, rank: number, seated = true): LeagueTodayRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), points, counts: true, seated });
+  const row = (seatId: string, points: number, rank: number, seated = true, gm = false): LeagueTodayRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), points, counts: true, seated, gm });
   const ranking: LeagueRankingResponse = {
     league: 1,
     month: "2026-11",
@@ -58,6 +62,17 @@ describe("today's ranking follows the board", () => {
       [1, "b", 8],
       [2, "gone", 4],
       [3, "a", 3],
+    ]);
+  });
+
+  test("the game master takes no place as the points move: the other tanks' places skip it", () => {
+    const withGm: LeagueRankingResponse = { ...ranking, today: [row("gm", 9, 0, true, true), ...ranking.today] };
+    const merged = withLivePoints(withGm, board({ gm: 20, a: 3, b: 8 }));
+    expect(merged?.today.map((r) => [r.rank, r.seatId])).toEqual([
+      [0, "gm"],
+      [1, "b"],
+      [2, "gone"],
+      [3, "a"],
     ]);
   });
 

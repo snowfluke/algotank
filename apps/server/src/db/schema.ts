@@ -249,6 +249,14 @@ const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE account_tank ADD COLUMN flag_json TEXT CHECK (flag_json IS NULL OR json_valid(flag_json));
   `,
+
+  // 8: the monthly league's game master accounts (owner, 2026-11-17, monthly/game-masters.ts): their
+  // tank plays under a "GM" badge and takes no place. Gone with the account.
+  `
+  CREATE TABLE league_game_master (
+    account_id TEXT PRIMARY KEY REFERENCES account (id) ON DELETE CASCADE
+  ) STRICT;
+  `,
 ];
 
 /** The version this code writes. */

@@ -61,6 +61,8 @@ export const en = {
   conditionShort: (name: string) => `Condition: ${name}`,
   /** The board's switch on a phone, beside the owner's place: "Whole arena" did not fit that line. */
   wholeArena: "All",
+  /** The badge before the game master's name (the organizer's tank, which takes no place). */
+  gm: { text: "GM", title: "Game master: the organizer's tank, which takes no place" },
   /** In the arena condition's note (ArenaCondition.tsx), after what the condition changes. */
   conditionChanges: "The condition changes every time the tanks are reshuffled.",
   own: {
@@ -69,6 +71,9 @@ export const en = {
     today: (place: number, score: number) => `Your tank is in place ${place} today with ${points(score)}.`,
     /** The phone's line beside the board's switch; the badge and its colour say it is the viewer's tank. */
     todayShort: (place: number, score: number) => `#${place} · ${points(score)}`,
+    /** The game master's own line and pane: it has points but no place. */
+    todayGmShort: (score: number) => `GM · ${points(score)}`,
+    todayGm: (score: number) => `Your tank is the game master, with ${points(score)} today and no place in the ranking.`,
     counts: "Today counts for your monthly points.",
     notCounted: "Today does not count yet, because your tank joined after the round started.",
     /** People thought they had to keep the page open; the tank plays without it. */
@@ -176,11 +181,14 @@ export const id: typeof en = {
   condition: (name) => `Kondisi arena: ${name}`,
   conditionShort: (name) => `Kondisi: ${name}`,
   wholeArena: "Semua",
+  gm: { text: "GM", title: "Game master: tank penyelenggara, yang tidak masuk peringkat" },
   conditionChanges: "Kondisinya berganti setiap kali tank diacak ulang.",
   own: {
     heading: "Tank kamu",
     today: (place, score) => `Tank kamu di peringkat ${place} hari ini dengan ${score} poin.`,
     todayShort: (place, score) => `#${place} · ${score} poin`,
+    todayGmShort: (score) => `GM · ${score} poin`,
+    todayGm: (score) => `Tank kamu adalah GM dengan ${score} poin hari ini, dan tidak masuk peringkat.`,
     counts: "Hari ini masuk hitungan poin bulananmu.",
     notCounted: "Hari ini belum dihitung karena tank kamu masuk setelah ronde dimulai.",
     playsAlone: "Tank kamu main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",

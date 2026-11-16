@@ -18,7 +18,8 @@ import { NotFoundPage } from "../ui/NotFoundPage.tsx";
 import { Pager } from "../ui/Pager.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { useToast } from "../ui/Toast.tsx";
-import { removeAdminPlayer, useAdminPlayers, type AdminPlayersLoad } from "./useAdminPlayers.ts";
+import { NameBadge } from "../standings/StandingsTable.tsx";
+import { removeAdminPlayer, setAdminGameMaster, useAdminPlayers, type AdminPlayersLoad } from "./useAdminPlayers.ts";
 
 /**
  * Tank, place, email, verified, account made. The last two columns have a fixed width, so the
@@ -31,10 +32,23 @@ const WRAP = "min-w-0 [overflow-wrap:anywhere]";
 /** A date at noon UTC, so no time zone moves it to another day. */
 const noon = (day: string) => `${day}T12:00:00Z`;
 
-function PlayerRow({ player, laptop, onRemove }: { readonly player: AdminPlayer; readonly laptop: boolean; onRemove(player: AdminPlayer): void }) {
-  const t = useMessages().adminPlayers;
+/** The row's two actions: the game master switch, which can be undone, and Remove, which asks first. */
+interface RowActions {
+  onRemove(player: AdminPlayer): void;
+  onGameMaster(player: AdminPlayer, gm: boolean): void;
+}
+
+function PlayerRow({ player, laptop, onRemove, onGameMaster }: { readonly player: AdminPlayer; readonly laptop: boolean } & RowActions) {
+  const m = useMessages();
+  const t = m.adminPlayers;
   const f = useFormat();
-  const place = t.place(player.league, player.rank);
+  const place = player.gm ? t.placeGm(player.league) : t.place(player.league, player.rank);
+  const name = (
+    <span className="flex min-w-0 items-baseline gap-x-2">
+      {player.gm ? <NameBadge text={m.monthly.gm.text} title={m.monthly.gm.title} /> : null}
+      <span className={`${WRAP} font-semibold`}>{player.name}</span>
+    </span>
+  );
   const email = player.account?.email ?? t.noAccount;
   const status =
     player.account === null ? null : player.account.emailVerified ? <span className={`${WRAP} text-muted`}>{t.verified}</span> : <span className={`${WRAP} text-warning`}>{t.unverified}</span>;
@@ -46,14 +60,19 @@ function PlayerRow({ player, laptop, onRemove }: { readonly player: AdminPlayer;
       </span>
     );
   const remove = (
-    <Button variant="secondary" data-admin-remove={player.seatId} aria-label={t.removeLabel(player.name)} onClick={() => onRemove(player)}>
-      {t.remove}
-    </Button>
+    <span className="flex min-w-0 flex-wrap justify-end gap-2">
+      <Button variant="secondary" data-admin-gm={player.seatId} aria-label={player.gm ? t.gmOffLabel(player.name) : t.gmOnLabel(player.name)} onClick={() => onGameMaster(player, !player.gm)}>
+        {player.gm ? t.gmOff : t.gmOn}
+      </Button>
+      <Button variant="secondary" data-admin-remove={player.seatId} aria-label={t.removeLabel(player.name)} onClick={() => onRemove(player)}>
+        {t.remove}
+      </Button>
+    </span>
   );
   if (laptop) {
     return (
       <div data-admin-player="" className={`${ROW_GRID} min-h-11 border-b border-line py-1`}>
-        <span className={`${WRAP} font-semibold`}>{player.name}</span>
+        {name}
         <span className={`${WRAP} text-muted`}>{place}</span>
         <span className={WRAP}>
           <span className="sr-only">{`${t.columns.email}: `}</span>
@@ -68,7 +87,7 @@ function PlayerRow({ player, laptop, onRemove }: { readonly player: AdminPlayer;
   return (
     <div data-admin-player="" className="flex min-w-0 flex-col border-b border-line py-1">
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className={`${WRAP} flex-1 font-semibold`}>{player.name}</span>
+        <span className="flex min-w-0 flex-1">{name}</span>
         <span className={`${WRAP} max-w-[60%] text-right text-caption text-muted`}>{place}</span>
       </div>
       <span className={WRAP}>{email}</span>
@@ -81,7 +100,7 @@ function PlayerRow({ player, laptop, onRemove }: { readonly player: AdminPlayer;
   );
 }
 
-function PlayerList({ players, laptop, onRemove }: { readonly players: readonly AdminPlayer[]; readonly laptop: boolean; onRemove(player: AdminPlayer): void }) {
+function PlayerList({ players, laptop, ...actions }: { readonly players: readonly AdminPlayer[]; readonly laptop: boolean } & RowActions) {
   const t = useMessages().adminPlayers;
   if (players.length === 0) return <p className="text-lead">{t.empty}</p>;
   return (
@@ -96,13 +115,13 @@ function PlayerList({ players, laptop, onRemove }: { readonly players: readonly 
           <span />
         </div>
       ) : null}
-      <Pager label={t.listLabel} items={players} ordered={false} gap={0} itemKey={(p) => `${p.league}-${p.name}`} renderItem={(p) => <PlayerRow player={p} laptop={laptop} onRemove={onRemove} />} />
+      <Pager label={t.listLabel} items={players} ordered={false} gap={0} itemKey={(p) => `${p.league}-${p.name}`} renderItem={(p) => <PlayerRow player={p} laptop={laptop} {...actions} />} />
     </div>
   );
 }
 
 /** The page in any state of its data. */
-export function AdminPlayersView({ load, onRetry, onRemove }: { readonly load: AdminPlayersLoad; onRetry(): void; onRemove(player: AdminPlayer): void }) {
+export function AdminPlayersView({ load, onRetry, ...actions }: { readonly load: AdminPlayersLoad; onRetry(): void } & RowActions) {
   const m = useMessages();
   const f = useFormat();
   const t = m.adminPlayers;
@@ -130,7 +149,7 @@ export function AdminPlayersView({ load, onRetry, onRemove }: { readonly load: A
             }
           />
         ) : (
-          <PlayerList players={load.data.players} laptop={laptop} onRemove={onRemove} />
+          <PlayerList players={load.data.players} laptop={laptop} {...actions} />
         )}
       </div>
     </AppShell>
@@ -142,6 +161,10 @@ export function AdminPlayersPage() {
   const toast = useToast();
   const { load, retry } = useAdminPlayers();
   const [removing, setRemoving] = useState<AdminPlayer | null>(null);
+  async function gameMaster(player: AdminPlayer, gm: boolean): Promise<void> {
+    if (await setAdminGameMaster(player.seatId, gm)) retry();
+    else toast.show({ message: t.gmFailed });
+  }
   async function remove(player: AdminPlayer): Promise<void> {
     setRemoving(null);
     if (await removeAdminPlayer(player.seatId)) retry();
@@ -149,7 +172,7 @@ export function AdminPlayersPage() {
   }
   return (
     <>
-      <AdminPlayersView load={load} onRetry={retry} onRemove={setRemoving} />
+      <AdminPlayersView load={load} onRetry={retry} onRemove={setRemoving} onGameMaster={(player, gm) => void gameMaster(player, gm)} />
       <Dialog
         open={removing !== null}
         hook="admin-remove"

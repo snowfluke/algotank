@@ -77,6 +77,7 @@ import { RECORD_TOP, type Champions } from "./champions.ts";
 import { LeagueDay, type DayTank, type Random } from "./league-day.ts";
 import { EMPTY_SEATS, type Checkpoint, type DayScore, type LeagueStore, type MonthState, type Seat, type SeatsState } from "./league-store.ts";
 import { closeMonth } from "./month-close.ts";
+import type { GameMasters } from "./game-masters.ts";
 import { rankMonth, type MonthPlace } from "./score.ts";
 import type { LeagueStreams } from "./streams.ts";
 import { NO_METRICS, type MetricsRecorder } from "../metrics/metrics.ts";
@@ -87,6 +88,8 @@ const CHECKPOINT_MS = 60_000;
 
 export interface MonthlyOptions {
   readonly store: LeagueStore;
+  /** The game master accounts, whose tanks take no place (game-masters.ts). */
+  readonly gameMasters: GameMasters;
   readonly champions: Champions;
   readonly streams: LeagueStreams;
   readonly calendar: LeagueCalendar;
@@ -123,6 +126,8 @@ export class MonthlyLeagues {
   private today: CalendarDay = { day: "", month: "", startsAt: 0, endsAt: 0 };
   private readonly days = new Map<number, LeagueDay>();
   private closing = false;
+  /** Read at the start and after each admin change: the turn loop never asks the database. */
+  private gameMasters: ReadonlySet<AccountId> = new Set();
   private stops: (() => void)[] = [];
   /** When the turn timer fired last, for how late the next turn fires. */
   private lastPulseAt = 0;
@@ -137,6 +142,7 @@ export class MonthlyLeagues {
   start(): void {
     const { store, calendar, scheduler, tickMs } = this.options;
     this.seats = store.readSeats();
+    this.gameMasters = this.options.gameMasters.read();
     const now = this.options.now();
     const current = calendar.dayAt(now);
     const checkpoint = store.readCheckpoint();
@@ -286,7 +292,8 @@ export class MonthlyLeagues {
       });
       const seatedIds = new Set(seated.map((s) => s.seatId));
       const quit = days.filter((d) => d.day === day && d.league === league && !seatedIds.has(d.seatId)).map((d) => ({ ...d, counts: true }));
-      const tanks = [...seated, ...quit].sort((a, b) => b.points - a.points || a.order - b.order);
+      // A game master's tank takes no place and is not in the day's top 3.
+      const tanks = [...seated, ...quit].filter((tank) => !this.gameMasters.has(tank.accountId)).sort((a, b) => b.points - a.points || a.order - b.order);
       tanks.forEach((tank, index) => {
         if (!tank.counts) return;
         const score: DayScore = { accountId: tank.accountId, seatId: tank.seatId, name: tank.name, look: tank.look, order: tank.order, day, league, points: tank.points, place: index + 1 };
@@ -576,19 +583,27 @@ export class MonthlyLeagues {
     const day = this.dayOf(league);
     const seated = day.standings().map(({ id, points, counts }) => {
       const seat = this.seatById(id);
-      return { seatId: id, name: seat.name, look: seat.look, points, counts, seated: true, order: seat.order };
+      return { accountId: seat.accountId, seatId: id, name: seat.name, look: seat.look, points, counts, seated: true, order: seat.order };
     });
     const seatedIds = new Set(seated.map((s) => s.seatId));
     const quit = this.month.days
       .filter((d) => d.day === this.today.day && d.league === league && !seatedIds.has(d.seatId))
-      .map((d) => ({ seatId: d.seatId, name: d.name, look: d.look, points: d.points, counts: true, seated: false, order: d.order }));
+      .map((d) => ({ accountId: d.accountId, seatId: d.seatId, name: d.name, look: d.look, points: d.points, counts: true, seated: false, order: d.order }));
+    // A game master's tank stays in the list by its points, but takes no place: the tanks under it keep theirs.
+    let place = 0;
     const today = [...seated, ...quit]
       .sort((a, b) => b.points - a.points || a.order - b.order)
-      .map(({ order: _order, ...row }, i): LeagueTodayRow => ({ rank: i + 1, ...row }));
-    const thisMonth = this.monthRanking(league, this.month).map((place): LeagueMonthRow => {
-      const seat = this.seatOfAccount(place.id);
-      return { rank: place.rank, seatId: seat.seatId, name: seat.name, look: seat.look, score: place.score, countedDays: place.countedDays };
-    });
+      .map(({ order: _order, accountId, ...row }): LeagueTodayRow => {
+        const gm = this.gameMasters.has(accountId);
+        return { rank: gm ? 0 : ++place, ...row, gm };
+      });
+    const thisMonth = [
+      ...this.monthRanking(league, this.month).map((p): LeagueMonthRow => {
+        const seat = this.seatOfAccount(p.id);
+        return { rank: p.rank, seatId: seat.seatId, name: seat.name, look: seat.look, score: p.score, countedDays: p.countedDays, gm: false };
+      }),
+      ...this.gameMasterSeatsIn(league).map((seat): LeagueMonthRow => ({ rank: null, seatId: seat.seatId, name: seat.name, look: seat.look, score: 0, countedDays: 0, gm: true })),
+    ];
     return { league, month: this.today.month, day: this.today.day, today, thisMonth };
   }
 
@@ -637,10 +652,25 @@ export class MonthlyLeagues {
     for (let league = 1; league <= this.seats.leagues; league++) {
       for (const place of this.monthRanking(league, this.month)) {
         const seat = this.seatOfAccount(place.id);
-        players.push({ accountId: place.id, seatId: seat.seatId, league, name: seat.name, rank: place.rank, score: place.score, countedDays: place.countedDays });
+        players.push({ accountId: place.id, seatId: seat.seatId, league, name: seat.name, rank: place.rank, score: place.score, countedDays: place.countedDays, gm: false });
+      }
+      for (const seat of this.gameMasterSeatsIn(league)) {
+        players.push({ accountId: seat.accountId, seatId: seat.seatId, league, name: seat.name, rank: null, score: 0, countedDays: 0, gm: true });
       }
     }
     return { month: this.today.month, day: this.today.day, players };
+  }
+
+  /**
+   * PUT /api/admin/players/:seatId/gm: the seat's account becomes a game master, or stops being one.
+   * Its tank keeps playing; from now on it takes no place (game-masters.ts). Days it already
+   * placed in stay as they were.
+   */
+  setGameMaster(seatId: PlayerId, gm: boolean): void {
+    const seat = [...this.seats.seats.values()].find((s) => s.seatId === seatId);
+    if (seat === undefined) throw new HttpError(404, "No tank in the monthly arena has this seat.", { code: "no_monthly_seat" });
+    this.options.gameMasters.set(seat.accountId, gm);
+    this.gameMasters = this.options.gameMasters.read();
   }
 
   /** What the league holds, for the test that nothing grows per turn. */
@@ -663,10 +693,13 @@ export class MonthlyLeagues {
 
   // -------------------------------------------------------------------------
 
-  /** The seated tanks of `league` ranked by `month`'s finished counted days (score.ts). */
+  /**
+   * The seated tanks of `league` ranked by `month`'s finished counted days (score.ts). A game
+   * master's tank is not in it, so it has no month rank, no move and no championship.
+   */
   private monthRanking(league: number, month: MonthState): MonthPlace<AccountId>[] {
     return rankMonth(
-      this.seatsIn(league).map((seat) => ({
+      this.seatsIn(league).filter((seat) => !this.gameMasters.has(seat.accountId)).map((seat) => ({
         id: seat.accountId,
         days: month.days.filter((d) => d.accountId === seat.accountId && d.place !== null).map((d) => ({ points: d.points, place: d.place ?? 0 })),
         seatOrder: seat.order,
@@ -681,6 +714,10 @@ export class MonthlyLeagues {
 
   private seatsIn(league: number): Seat[] {
     return [...this.seats.seats.values()].filter((seat) => seat.league === league);
+  }
+
+  private gameMasterSeatsIn(league: number): Seat[] {
+    return this.seatsIn(league).filter((seat) => this.gameMasters.has(seat.accountId));
   }
 
   private seatById(seatId: PlayerId): Seat {

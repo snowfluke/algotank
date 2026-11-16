@@ -7,7 +7,7 @@
 
 import type { AdminPlayer, AdminPlayersResponse } from "@game/arena";
 import { requireAdmin, type AdminGate } from "../admin.ts";
-import { jsonResponse } from "../http.ts";
+import { HttpError, isRecord, jsonResponse, readJson } from "../http.ts";
 import type { Router } from "../router.ts";
 import type { MonthlyLeagues } from "./monthly.ts";
 
@@ -36,6 +36,16 @@ export function registerAdminPlayerRoutes(router: Router, { gate, monthly }: Adm
     // After the admin check, so anyone else still gets the 404; this adds the Origin check.
     gate.auth.requireAccount(ctx.req);
     monthly.removeSeat(ctx.params["seatId"] ?? "");
+    return new Response(null, { status: 204 });
+  });
+
+  router.add("PUT", "/api/admin/players/:seatId/gm", async (ctx) => {
+    requireAdmin(gate, ctx.req);
+    gate.auth.requireAccount(ctx.req);
+    const body = await readJson(ctx.req);
+    const gm = isRecord(body) ? body["gm"] : undefined;
+    if (typeof gm !== "boolean") throw new HttpError(400, "Send gm as true or false.");
+    monthly.setGameMaster(ctx.params["seatId"] ?? "", gm);
     return new Response(null, { status: 204 });
   });
 }

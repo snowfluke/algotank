@@ -1,6 +1,7 @@
 // The league's rules through its public methods, with the manual clock and scheduler and the
 // Asia/Jakarta calendar (docs/specs/revamp/77-monthly-league.md, sections 1 to 3 and 5).
 
+import { GameMasters } from "./game-masters.ts";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Database } from "bun:sqlite";
 import { plainTankLook, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
@@ -9,7 +10,7 @@ import { HttpError } from "../http.ts";
 import { manualScheduler, type ManualScheduler } from "../test-helpers.ts";
 import { zoneCalendar } from "./calendar.ts";
 import { Champions } from "./champions.ts";
-import { memoryDatabase } from "../db/testing.ts";
+import { insertAccount, memoryDatabase } from "../db/testing.ts";
 import { LeagueStore } from "./league-store.ts";
 import { BOARD_GROWTH, RESHUFFLE_TURNS } from "./league-day.ts";
 import { MonthlyLeagues } from "./monthly.ts";
@@ -47,6 +48,7 @@ function startLeague(options: { readonly at?: number; readonly db?: Database; re
   const streams = new LeagueStreams({ heartbeatMs: 60_000, maxStreamsPerLeague: 10 });
   const monthly = new MonthlyLeagues({
     store: new LeagueStore(db, ticks.now),
+    gameMasters: new GameMasters(db),
     champions,
     streams,
     calendar: zoneCalendar("Asia/Jakarta"),
@@ -271,6 +273,25 @@ describe("the day round", () => {
     const after = seatOf(l, ada);
     expect(after.countedDays).toBe(1);
     expect(after.score).toBe(points);
+  });
+
+  test("a game master's tank plays the day but takes no place: no counted day, no top 3, no month rank", () => {
+    const db = memoryDatabase();
+    const l = startLeague({ db });
+    const [gm, ada, bo] = [newAccount(), newAccount(), newAccount()];
+    // The game master table points at real accounts (gone with the account); the other tests' accounts are only ids.
+    insertAccount(db, gm);
+    for (const account of [gm, ada, bo]) take(l, account);
+    l.monthly.setGameMaster(seatOf(l, gm).seatId, true);
+    nextDay(l);
+    for (let i = 0; i < 200; i++) l.ticks.tick();
+    nextDay(l);
+    expect([seatOf(l, gm).countedDays, seatOf(l, ada).countedDays, seatOf(l, bo).countedDays]).toEqual([0, 1, 1]);
+    const top = l.monthly.daysOf(1).days.flatMap((d) => d.top.map((t) => t.name));
+    expect(top).not.toContain(seatOf(l, gm).name);
+    const month = l.monthly.ranking(1).thisMonth;
+    expect(month.find((row) => row.seatId === seatOf(l, gm).seatId)).toMatchObject({ rank: null, gm: true });
+    expect(month.filter((row) => !row.gm).map((row) => row.rank).sort()).toEqual([1, 2]);
   });
 
   test("a day close counts the tanks seated at its first turn and not the ones that came later; its top 3 is kept", () => {
@@ -539,6 +560,7 @@ describe("memory", () => {
     const scheduler: ManualScheduler = { ...ticks, every: (run, ms) => (timers.push({ ms, run }), ticks.every(run, ms)) };
     const monthly = new MonthlyLeagues({
       store: counted(new LeagueStore(db, ticks.now)),
+      gameMasters: new GameMasters(db),
       champions: counted(new Champions(db)),
       streams: new LeagueStreams({ heartbeatMs: 60_000, maxStreamsPerLeague: 10 }),
       calendar: zoneCalendar("Asia/Jakarta"),

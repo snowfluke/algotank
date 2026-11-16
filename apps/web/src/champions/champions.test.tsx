@@ -10,7 +10,7 @@ import type { ChampionsLoad } from "./useChampions.ts";
 
 const look = plainTankLook(4);
 const rowAt = (rank: number): LeagueRow => ({ rank, name: `Tank ${rank}`, look, score: 500 - rank, games: 20, wins: 1 });
-const monthRow = (rank: number | null, i: number): LeagueMonthRow => ({ rank, seatId: `seat-${i}`, name: `Tank ${i}`, look, score: 50 - i, countedDays: rank === null ? 3 : 9 });
+const monthRow = (rank: number | null, i: number): LeagueMonthRow => ({ rank, seatId: `seat-${i}`, name: `Tank ${i}`, look, score: 50 - i, countedDays: rank === null ? 3 : 9, gm: false });
 
 const ready: ChampionsLoad = {
   kind: "ready",

@@ -276,7 +276,7 @@ function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; rankin
   const t = m.monthly;
   const items = useMemo(() => {
     if (ranking === null) return null;
-    return part === "today" ? todayItems(ranking.today, t.left) : monthItems(ranking.thisMonth, t.notRanked(MONTHLY_RANKED_DAYS));
+    return part === "today" ? todayItems(ranking.today, t.left, t.gm) : monthItems(ranking.thisMonth, t.notRanked(MONTHLY_RANKED_DAYS), t.gm);
   }, [ranking, part, t]);
   const label = part === "today" ? t.ranking.today : t.ranking.month;
   if (items === null) return <p className="animate-pulse-soft text-muted">{t.connecting}</p>;
@@ -344,7 +344,7 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
                 </Button>
               </div>
             )}
-            {todayRow === null ? null : <p>{t.today(todayRow.rank, todayRow.points)}</p>}
+            {todayRow === null ? null : <p>{todayRow.gm ? t.todayGm(todayRow.points) : t.today(todayRow.rank, todayRow.points)}</p>}
             <p className="text-muted">{seat.countsToday ? t.counts : t.notCounted}</p>
             {/* Only beside the own league: the other league's view spends this room on the way back, and the help dialog says it too. */}
             {here ? (
@@ -388,7 +388,7 @@ function OwnLine({ seat, league, ranking, onLeague }: { seat: MonthlySeat; leagu
   return (
     <p data-own-line="" className="flex min-w-0 shrink-0 items-center gap-2 rounded-[var(--radius-control)] bg-self-soft px-2 py-1">
       <TankBadge look={seat.look} label={tankLetters(seat.name)} size={28} name={null} self detail="simple" angle={-90} className="shrink-0" />
-      <span className="min-w-0 [overflow-wrap:anywhere]">{t.todayShort(row.rank, row.points)}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{row.gm ? t.todayGmShort(row.points) : t.todayShort(row.rank, row.points)}</span>
     </p>
   );
 }

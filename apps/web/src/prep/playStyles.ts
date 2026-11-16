@@ -10,7 +10,7 @@ import { matchingPreset } from "../editor/compare.ts";
 import { isOneOf } from "../vocabulary/ids.ts";
 
 export const TRAIT_IDS = [
-  "huntsLeader",
+  "huntsRicher",
   "huntsDryTanks",
   "sneaksBehind",
   "refillsFirst",
@@ -37,7 +37,7 @@ const targets = (strategy: StrategyInput) => new Set(actionsOf(strategy).map((ac
 
 /** Each trait and the test of the rules that makes it true, in the order they are worth showing. */
 const TESTS: Readonly<Record<TraitId, (strategy: StrategyInput) => boolean>> = {
-  huntsLeader: (s) => targets(s).has("highestScore"),
+  huntsRicher: (s) => targets(s).has("highestScore") || targets(s).has("nearestWithMorePoints"),
   huntsDryTanks: (s) => targets(s).has("nearestWithLessWater"),
   sneaksBehind: (s) => targets(s).has("nearestFacingAway"),
   refillsFirst: (s) =>

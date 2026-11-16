@@ -50,7 +50,7 @@ The rule editor has an "Items" group. Each part below is in the editor in Englis
 
 ## The Item hunter play style
 
-The Item hunter (Pemburu Item) is the first card of the play style picker. It has the rules of the Charger (Penyeruduk) with one more rule at the top: "When an item is at most 5 squares away, drive to the nearest square with an item." Without that rule the Charger wins 2% of the test games against the other play styles. With that rule it wins 14%, near the luck of 8 tanks (12.5%). One rule in the correct place changes the result of a play style.
+The Item hunter (Pemburu Item) is the first card of the play style picker. While its tank fills with water, it drives to an item that is at most 5 squares away. When the tank holds the water for two shots, it drives to the nearest tank and shoots from one square. When the water for one shot is gone, it backs away to fill the tank again. In the test days of the monthly arena, it gets about the same points as each other play style in the picker.
 
 The Charger has no card in the picker now. The bots use it, and the balance scripts measure every play style against it.
 

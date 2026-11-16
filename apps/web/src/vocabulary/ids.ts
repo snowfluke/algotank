@@ -31,8 +31,6 @@ export type ActionGroupId = keyof typeof ACTION_GROUPS;
  */
 export const PLAY_STYLE_MODES = {
   evade: "Evade",
-  chase: "Chase",
-  hunt: "Hunt",
   rest: "Rest",
   strike: "Strike",
   charge: "Charge",

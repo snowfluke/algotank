@@ -8,7 +8,10 @@
 // 3 weak, 3 middle and 1 strong. Tune the mix here, as data. The tiers follow the
 // win rates of the eight-direction game in docs/decisions (the Ambusher leads the
 // mixed field), and scripts/simulate.ts --lineup= measures the default play style
-// against this list: pass the 7 preset ids in this order after any change.
+// against this list: pass the 7 preset ids in this order after any change. Since the
+// retune of 2026-11-16 the designed presets get about the same points in a mixed
+// field, so only "weak" (the Charger, the Random walker) still means weaker; "middle"
+// and "strong" now name only where the tier stood before.
 
 import { botsToAddAtStart, plainTankLook, TANK_COLOURS, type Arena, type BotSeat, type PlayerId, type TankColour } from "@game/arena";
 import { PRESETS, type Strategy } from "@game/engine";

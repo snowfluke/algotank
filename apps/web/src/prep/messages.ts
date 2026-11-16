@@ -196,7 +196,7 @@ export const en: PrepText = {
     traitsLabel: "What it does",
     changed: (name) => `Your tank now plays as ${name}.`,
     traits: {
-      huntsLeader: "hunts the leader",
+      huntsRicher: "hunts tanks with more points",
       huntsDryTanks: "hunts tanks with less water",
       sneaksBehind: "sneaks up from behind",
       refillsFirst: "refills before it attacks",
@@ -427,7 +427,7 @@ export const id: PrepText = {
     traitsLabel: "Yang dilakukannya",
     changed: (name) => `Tank kamu sekarang bermain sebagai ${name}.`,
     traits: {
-      huntsLeader: "memburu pemimpin",
+      huntsRicher: "memburu tank berpoin lebih banyak",
       huntsDryTanks: "memburu tank yang airnya sedikit",
       sneaksBehind: "menyelinap dari belakang",
       refillsFirst: "mengisi air sebelum menyerang",

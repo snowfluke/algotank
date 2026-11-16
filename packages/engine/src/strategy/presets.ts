@@ -23,12 +23,14 @@ import { parseStrategy } from "./parse.ts";
 // Measured 2026-11-15, items on, 800 finals of 60 turns (a practice round, so run
 // simulate.ts with ticks=60), +/- 1.3: item-hunter 13.8, backstabber 14.6, picker 15.8,
 // dry-hunter 8.4, evader 16.6, leader-chaser 17.9, ambusher 21.7, random-walker 1.8.
-// The numbers support the first card and the last two; places 2 to 6 are within noise of
-// each other. Measure again after a rule change.
+// Retuned 2026-11-16 (below), the same measure: item-hunter 18.8, ambusher 17.3, picker 17.3,
+// backstabber 16.2, evader 14.1, dry-hunter 11.8, leader-chaser 11.7, random-walker 1.1. The
+// order is kept for the tournament of 17 November, so the first card does not change the night
+// before; by the rule above the dry hunter would come first now. Measure again after a rule change.
 export const PICKER_ORDER = ["item-hunter", "backstabber", "picker", "dry-hunter", "evader", "leader-chaser", "ambusher", "random-walker"] as const;
 
 // The first card of the picker, the play style a new player starts from. It must win at least
-// 12% alone against the server's bot lineup (simulate.ts --lineup=): 17.8% at 60 turns.
+// 12% alone against the server's bot lineup (simulate.ts --lineup=): 24.3% at 60 turns (2026-11-16).
 export const DEFAULT_PRESET_ID = PICKER_ORDER[0];
 
 function when(condition: string, params: ParamValues = {}, negate = false): ConditionRef {
@@ -95,10 +97,18 @@ const targetCannotThrow = (target: string) => when("targetWater", { target, comp
 /**
  * Refill out of the lines of fire, run at a chosen bot once the tank holds the water
  * for two throws, throw from one cell, and leave when the water for one throw is gone.
- * `chase` and the extra strike rules are the only differences between the Ambusher,
- * the Picker and the Backstabber.
+ * `chase` and the extra rules are the only differences between the presets built on it.
+ *
+ * Retuned 2026-11-16 (owner: every preset equal for the monthly tournament). The Leader
+ * chaser, the Dry hunter and the Item hunter now refill and strike like this, and the
+ * Backstabber turns to a bot facing away only within 2 cells. Measured in the monthly
+ * league's conditions (apps/server LeagueDay: open rounds, items, bots, a new start every
+ * 333 turns), 7 designed presets x 4 tanks, 4 days of 96,000 turns, points per tank per day
+ * (field mean 139, day-to-day sd 9 to 44): ambusher +31, item-hunter +26, dry-hunter +5,
+ * backstabber -3, leader-chaser -8, picker -23, evader -28. Before: a spread of 7,774 points
+ * a day, from ambusher +2,603 to item-hunter -5,171 in the same field.
  */
-function burstAndRetreat(chase: string, extraStrikeRules: readonly Rule[] = []): StrategyInput {
+function burstAndRetreat(chase: string, extraStrikeRules: readonly Rule[] = [], extraRestRules: readonly Rule[] = []): StrategyInput {
   return {
     build: build(0, 3, 3),
     modes: [
@@ -108,6 +118,7 @@ function burstAndRetreat(chase: string, extraStrikeRules: readonly Rule[] = []):
         [
           rule("loaded", [holdsAtLeast(WATER_FOR_TWO_THROWS)], actOn("moveToward", chase), { switchTo: "strike" }),
           rule("dodge", [when("aimedAtMe", { k: 1 })], act("stepOutOfLine")),
+          ...extraRestRules,
         ],
         actOn("moveAway", "nearest"),
       ),
@@ -129,7 +140,7 @@ const sources = withLiteralIds<PresetSource>()([
   {
     id: "evader",
     name: "Evader",
-    summary: "Steps out of the line of fire when a bot aims at it, throws at a bot in front of it only when that bot does not aim back, and otherwise walks toward the nearest bot.",
+    summary: "Steps out of the line of fire when a bot aims at it, throws at a bot in front of it only when that bot does not aim back, backs away to refill when its tank runs low, and otherwise walks toward the nearest bot.",
     strategy: {
       build: build(0, 3, 3),
       modes: [
@@ -139,6 +150,7 @@ const sources = withLiteralIds<PresetSource>()([
           [
             rule("evade", [when("aimedAtMe", { k: 1 })], act("stepOutOfLine")),
             rule("free-shot", [THROW_AHEAD, when("targetAimed", { target: "inThrowLine" }, true)], act("throw")),
+            rule("refill", [holdsFewerThan(WATER_FOR_ONE_THROW)], actOn("moveAway", "nearest")),
           ],
           actOn("moveToward", "nearest"),
         ),
@@ -148,40 +160,17 @@ const sources = withLiteralIds<PresetSource>()([
   {
     id: "leader-chaser",
     name: "Leader chaser",
-    summary: "Steps out of a line of fire, throws at a bot one cell ahead, and otherwise goes after the bot with the most points.",
-    strategy: {
-      build: build(0, 3, 3),
-      modes: [
-        mode(
-          "chase",
-          "Chase",
-          [rule("duck", [when("aimedAtMe", { k: 1 })], act("stepOutOfLine")), rule("point-blank", [POINT_BLANK], act("throw"))],
-          actOn("attack", "highestScore"),
-        ),
-      ],
-    },
+    summary: "Backs away to refill its tank, then runs at the nearest bot with more points than it has and throws from one cell until the tank runs low.",
+    strategy: burstAndRetreat("nearestWithMorePoints", [
+      // The leader has nobody richer to chase, so it takes the nearest bot instead of standing still.
+      rule("top", [when("targetDistance", { target: "nearestWithMorePoints", compare: "atMost", n: 20 }, true)], actOn("moveToward", "nearest")),
+    ]),
   },
   {
     id: "dry-hunter",
     name: "Dry hunter",
-    summary: "Goes after the nearest bot with less water than it has, and throws when the bot in front cannot throw back.",
-    strategy: {
-      build: build(0, 3, 3),
-      modes: [
-        mode(
-          "hunt",
-          "Hunt",
-          [
-            rule("free-hit", [THROW_AHEAD, targetCannotThrow("inThrowLine"), holdsAtLeast(WATER_FOR_ONE_THROW)], act("throw")),
-            rule("plenty", [POINT_BLANK, holdsAtLeast(WATER_FOR_TWO_THROWS)], act("throw")),
-            rule("recover", [holdsFewerThan(WATER_FOR_ONE_THROW), when("aimedAtMe", { k: 1 })], act("stepOutOfLine")),
-            // Without this rule a hunter that nobody undercuts stands still, and a field of hunters goes passive.
-            rule("no-prey", [when("targetDistance", { target: "nearestWithLessWater", compare: "atMost", n: 20 }, true)], actOn("moveToward", "nearest")),
-          ],
-          actOn("attack", "nearestWithLessWater"),
-        ),
-      ],
-    },
+    summary: "Backs away to refill its tank, then runs at the nearest bot with less water, and throws at once at a bot in range that cannot throw back.",
+    strategy: burstAndRetreat("nearestWithLessWater", [rule("free-hit", [THROW_AHEAD, targetCannotThrow("inThrowLine")], act("throw"))]),
   },
   {
     id: "ambusher",
@@ -201,7 +190,7 @@ const sources = withLiteralIds<PresetSource>()([
     summary: "Backs away to refill its tank, then runs at the nearest bot, goes for a bot that faces away when one is near, and throws from one cell.",
     strategy: burstAndRetreat("nearest", [
       // 5 cells in Chebyshev distance covers about the area that 8 covered in |dx| + |dy| (121 cells against 145).
-      rule("go-behind", [when("targetDistance", { target: "nearestFacingAway", compare: "atMost", n: 5 })], actOn("moveToward", "nearestFacingAway")),
+      rule("go-behind", [when("targetDistance", { target: "nearestFacingAway", compare: "atMost", n: 2 })], actOn("moveToward", "nearestFacingAway")),
     ]),
   },
   {
@@ -223,23 +212,12 @@ const sources = withLiteralIds<PresetSource>()([
     },
   },
   {
-    // The Charger with one rule on top (docs/specs/revamp/84-items.md). Measured 2026-11-15 with
-    // items on, 800 finals: 14.0% of the mixed field at 60 turns and 15.3% at 150 (the Charger
-    // alone: 0.3%), and 17.8% alone against the server's bot lineup at 60 turns.
+    // Until 2026-11-16 the Charger with one rule on top (docs/specs/revamp/84-items.md); now the
+    // refill-and-strike of burstAndRetreat, with the item rule while it refills.
     id: "item-hunter",
     name: "Item hunter",
-    summary: "Drives to an item within 5 cells first, throws when a bot is in range, and otherwise walks toward the nearest bot.",
-    strategy: {
-      build: build(0, 3, 3),
-      modes: [
-        mode(
-          "hunt",
-          "Hunt",
-          [rule("grab", [when("itemNear", { item: "any", n: 5 })], act("goToItem", { item: "any" })), rule("throw-ahead", [THROW_AHEAD], act("throw"))],
-          actOn("moveToward", "nearest"),
-        ),
-      ],
-    },
+    summary: "Drives to an item within 5 cells while it refills its tank, then runs at the nearest bot and throws from one cell until the tank runs low.",
+    strategy: burstAndRetreat("nearest", [], [rule("grab", [when("itemNear", { item: "any", n: 5 })], act("goToItem", { item: "any" }))]),
   },
 ]);
 

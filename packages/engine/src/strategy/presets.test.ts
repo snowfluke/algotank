@@ -135,7 +135,7 @@ describe("presets", () => {
   test("the dry hunter throws at a bot in line whose tank cannot pay for a throw, and not at one that can throw back", () => {
     const hunter = presetOf("dry-hunter");
     const decideWith = (targetWater: number) => {
-      const me = bot("me", 1, 3, "E", { modeId: "hunt", build: hunter.strategy.build, water: WATER_PER_THROW });
+      const me = bot("me", 1, 3, "E", { modeId: "strike", build: hunter.strategy.build, water: WATER_PER_THROW });
       const snapshot = snapshotOf([me, bot("target", 4, 3, "N", { water: targetWater })]);
       return decide(contextFor(snapshot, "me"), hunter.strategy, stubRng());
     };
@@ -159,7 +159,7 @@ describe("presets", () => {
   test("the water thresholds are fixed data: another set's cost does not move them", () => {
     const hunter = presetOf("dry-hunter");
     // Under dry-spell a throw costs 5, but the hunter still reads "3 water" as enough for a free hit.
-    const me = bot("me", 1, 3, "E", { modeId: "hunt", build: hunter.strategy.build, water: 3 });
+    const me = bot("me", 1, 3, "E", { modeId: "strike", build: hunter.strategy.build, water: 3 });
     const snapshot = snapshotOf([me, bot("target", 3, 3, "N", { water: 0 })], { ruleSetId: "dry-spell" });
     expect(decide(contextFor(snapshot, "me"), hunter.strategy, stubRng())).toMatchObject({ ruleId: "free-hit", move: "T" });
   });

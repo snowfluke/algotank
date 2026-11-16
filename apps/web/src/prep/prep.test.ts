@@ -22,7 +22,7 @@ describe("play styles", () => {
   test("there are 8, and the traits of an own play style come from its rules", () => {
     expect(PLAY_STYLES).toHaveLength(8);
     const chaser = PLAY_STYLES.find((style) => style.id === "leader-chaser")!;
-    expect(traitsOf(chaser.strategy)).toContain("huntsLeader");
+    expect(traitsOf(chaser.strategy)).toContain("huntsRicher");
     expect(traitsOf({ build: {}, modes: [] })).toEqual([]);
   });
 

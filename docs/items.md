@@ -11,6 +11,8 @@ Items are toys on the arena floor. A tank takes an item when it drives onto the 
 | Pinwheel / Kincir | On the next hit of the tank that holds it | The tank that the shot hits becomes dizzy for 3 turns. Then the pinwheel is gone. |
 | Mud ball / Bola lumpur | On the next hit of the tank that holds it | The tank that the shot hits becomes stuck for 2 turns. Then the mud ball is gone. |
 
+A pinwheel or a mud ball can backfire. When a tank takes one, there is a 1 in 5 chance that the item's effect goes to that tank: it becomes dizzy for 3 turns (pinwheel) or stuck for 2 turns (mud ball), and the item is gone. The bucket and the umbrella never backfire.
+
 A shot at a tank with an umbrella stops at the umbrella, also when the shooter holds a bucket, a pinwheel or a mud ball. The shooter then keeps its item for the next hit.
 
 ## The two effects

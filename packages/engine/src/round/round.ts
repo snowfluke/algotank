@@ -8,8 +8,10 @@
 //                bot in the middle of a sequence, whose step draws nothing; then the
 //                shuffle of the move order; then one chance roll for each throw that
 //                has a target and enough water, in move order. A dry throw draws nothing.
-//                Then, in a round with items on and only on a spawn turn, one int for the
-//                item's kind and one int for its square (items/items.ts, spawnItem).
+//                Then one chance for each pinwheel or mud ball taken on the turn (its
+//                backfire, items/items.ts pickUp), and, in a round with items on and only on
+//                a spawn turn, one int for the item's kind and one int for its square
+//                (spawnItem). A round with items off has no item, so it draws neither.
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
 //
@@ -246,7 +248,7 @@ export function stepRound(state: RoundState): TickResult {
   // 4. Items: tanks take what lies on their square, effects count down and new ones start,
   //    items age, and on a spawn turn one more appears.
   const carriers: { -readonly [K in keyof Placement]: Placement[K] }[] = placements.map((place) => ({ ...place }));
-  const { items: left, pickups } = pickUp(before.items, carriers);
+  const { items: left, pickups, backfires } = pickUp(before.items, carriers, round.rng);
   const aged = ageItems(left);
   const spawned = round.config.items ? spawnItem(before, before.tick, carriers, aged, round.rng) : null;
 
@@ -255,7 +257,8 @@ export function stepRound(state: RoundState): TickResult {
   const next: Snapshot = {
     ...before,
     tick: before.tick + 1,
-    bots: before.bots.map((bot, i) => nextBotState(bot, carriers[i], decisions[i], hits, inflicted.get(bot.id) ?? null)),
+    // Pickups come after the throws, so a backfire replaces an effect a hit gave on the same turn.
+    bots: before.bots.map((bot, i) => nextBotState(bot, carriers[i], decisions[i], hits, backfires.get(bot.id) ?? inflicted.get(bot.id) ?? null)),
     items: spawned === null ? aged : [...aged, spawned],
   };
   round.snapshot = next;

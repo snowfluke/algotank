@@ -4,8 +4,10 @@
 // of the turn's hits, ageItems, spawnItem. Throw resolution (round/resolve.ts) reads
 // holderBlocks, actsOnOwnHit and effectOfHit.
 //
-// Random draws: only spawnItem draws, one int for the kind and one int for the square, and
-// only on a turn that spawns. A round with items off never calls it.
+// Random draws, in this order at the end of a turn: pickUp draws one chance for each pinwheel or
+// mud ball a tank takes (the backfire), in the order of the board's item list; then spawnItem
+// draws one int for the kind and one int for the square, only on a turn that spawns. A round with
+// items off has no item, so neither draws.
 
 import type { BoardItem, BotState, ItemKind, Pickup, Rng, Snapshot, TankEffect, TankEffectKind } from "../types.ts";
 import { ITEM_KINDS } from "../types.ts";
@@ -21,8 +23,14 @@ export const ITEM_RULES = {
   weights: { bucket: 3, umbrella: 3, pinwheel: 2, mudBall: 2 } satisfies Record<ItemKind, number>,
   /** Points a hit from a tank with a bucket moves, instead of POINTS_PER_HIT. */
   bucketHitPoints: 2,
-  /** Turns an effect lasts after the hit that caused it. */
+  /** Turns an effect lasts after the hit, or the backfire, that caused it. */
   effectTurns: { dizzy: 3, stuck: 2 } satisfies Record<TankEffectKind, number>,
+  /**
+   * Percent chance that a pinwheel or a mud ball backfires when a tank takes it: its effect lands
+   * on the tank that took it, and the item is used up. Owner, 2026-11-16: "20% chance the item
+   * will be affecting the user who gets it". The bucket and the umbrella never backfire.
+   */
+  backfirePercent: 20,
 } as const;
 
 /** The effect each item gives the tank its holder hits. The bucket and the umbrella give none. */
@@ -71,25 +79,39 @@ export interface Carrier {
   item: ItemKind | null;
 }
 
+export interface PickupResult {
+  /** The items still on the board. */
+  readonly items: BoardItem[];
+  /** In the order of the board's item list. */
+  readonly pickups: Pickup[];
+  /** The tanks whose pinwheel or mud ball backfired, with the effect it put on them. */
+  readonly backfires: ReadonlyMap<string, TankEffectKind>;
+}
+
 /**
  * Tanks with an empty hand that ended the turn on an item take it. A tank that holds an item
- * leaves another on the board. Changes `carriers` in place and returns the items left.
+ * leaves another on the board. A pinwheel or a mud ball backfires on its taker with
+ * ITEM_RULES.backfirePercent: the taker gets the item's effect and holds nothing. Changes
+ * `carriers` in place.
  */
-export function pickUp(items: readonly BoardItem[], carriers: readonly Carrier[]): { readonly items: BoardItem[]; readonly pickups: Pickup[] } {
+export function pickUp(items: readonly BoardItem[], carriers: readonly Carrier[], rng: Rng): PickupResult {
   const onSquare = new Map<string, Carrier>();
   for (const carrier of carriers) onSquare.set(`${carrier.x},${carrier.y}`, carrier);
   const left: BoardItem[] = [];
   const pickups: Pickup[] = [];
+  const backfires = new Map<string, TankEffectKind>();
   for (const item of items) {
     const carrier = onSquare.get(`${item.x},${item.y}`);
     if (carrier === undefined || carrier.item !== null) {
       left.push(item);
-    } else {
-      carrier.item = item.kind;
-      pickups.push({ botId: carrier.id, item: item.kind });
+      continue;
     }
+    pickups.push({ botId: carrier.id, item: item.kind });
+    const effect = EFFECT_OF_ITEM[item.kind];
+    if (effect !== null && rng.chance(ITEM_RULES.backfirePercent)) backfires.set(carrier.id, effect);
+    else carrier.item = item.kind;
   }
-  return { items: left, pickups };
+  return { items: left, pickups, backfires };
 }
 
 /** One turn older: an item whose time is up leaves the board. */

@@ -150,10 +150,45 @@ describe("picking up", () => {
       { id: "a", x: 1, y: 1, item: null },
       { id: "b", x: 3, y: 3, item: "pinwheel" },
     ];
-    const { items, pickups } = pickUp([bucketAt(1, 1), { kind: "umbrella", x: 3, y: 3, turnsLeft: 9 }], carriers);
+    // stubRng fails on any draw: taking a bucket draws nothing, and a full hand takes nothing.
+    const { items, pickups } = pickUp([bucketAt(1, 1), { kind: "umbrella", x: 3, y: 3, turnsLeft: 9 }], carriers, stubRng());
     expect(pickups).toEqual([{ botId: "a", item: "bucket" }]);
     expect(carriers.map((c) => c.item)).toEqual(["bucket", "pinwheel"]);
     expect(items).toEqual([{ kind: "umbrella", x: 3, y: 3, turnsLeft: 9 }]);
+  });
+
+  test("a pinwheel or a mud ball backfires on its taker when the roll says so, and is used up", () => {
+    for (const [kind, effect] of [["pinwheel", "dizzy"], ["mudBall", "stuck"]] as const) {
+      const carriers: { id: string; x: number; y: number; item: ItemKind | null }[] = [{ id: "a", x: 1, y: 1, item: null }];
+      const rng = stubRng({ chance: [true] });
+      const backfired = pickUp([{ kind, x: 1, y: 1, turnsLeft: 9 }], carriers, rng);
+      expect(rng.calls).toEqual([`chance:${ITEM_RULES.backfirePercent}`]);
+      expect([carriers[0]?.item, backfired.backfires.get("a"), backfired.pickups, backfired.items]).toEqual([null, effect, [{ botId: "a", item: kind }], []]);
+      const kept = [{ id: "a", x: 1, y: 1, item: null as ItemKind | null }];
+      expect(pickUp([{ kind, x: 1, y: 1, turnsLeft: 9 }], kept, stubRng({ chance: [false] })).backfires.size).toBe(0);
+      expect(kept[0]?.item).toBe(kind);
+    }
+  });
+
+  test("a backfire at the end of turn t makes the taker dizzy on turns t+1 to t+3, like a hit", () => {
+    for (let seed = 1; seed < 200; seed++) {
+      const state = roundWith(
+        [
+          { id: "a", strategy: driver },
+          { id: "b", strategy: waiter },
+        ],
+        [bot("a", 0, 0, "E"), bot("b", 7, 5, "N")],
+        [{ kind: "pinwheel", x: 1, y: 0, turnsLeft: 9 }],
+        seed,
+      );
+      stepRound(state);
+      if (tank(state, "a").item !== null) continue;
+      expect(tank(state, "a").effect).toEqual({ kind: "dizzy", turnsLeft: ITEM_RULES.effectTurns.dizzy });
+      const dizzyTurns = Array.from({ length: 4 }, () => stepRound(state).decisions.find((d) => d.botId === "a")?.dizzy === true);
+      expect(dizzyTurns).toEqual([true, true, true, false]);
+      return;
+    }
+    throw new Error("no seed in 1 to 199 backfired");
   });
 
   test("a tank that drives onto an item takes it at the end of the turn", () => {

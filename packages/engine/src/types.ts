@@ -405,7 +405,7 @@ export interface TickResult {
   /** One entry per bot, in the snapshot's bot order. */
   readonly decisions: readonly Decision[];
   readonly throws: readonly ThrowEvent[];
-  /** Items taken on this tick, in snapshot order of the tanks. */
+  /** Items taken on this tick, in the order of the board's item list. A backfired one is listed too. */
   readonly pickups: readonly Pickup[];
   /** The state after the tick. */
   readonly snapshot: Snapshot;

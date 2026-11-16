@@ -50,7 +50,6 @@ export interface LandingCopy {
     readonly signInNeeded: string;
     readonly screenshotAlt: string;
   };
-  readonly footer: { readonly license: string; readonly source: string };
 }
 
 const en: LandingCopy = {
@@ -99,7 +98,6 @@ const en: LandingCopy = {
     signInNeeded: home.en.signInNeeded,
     screenshotAlt: "A stored tournament result: Ana won, with the final ranking and each round's ranking from round 1 to the final.",
   },
-  footer: { license: "AlgoTank is open source under the MIT license.", source: "Source code on GitHub" },
 };
 
 const id: LandingCopy = {
@@ -148,7 +146,6 @@ const id: LandingCopy = {
     signInNeeded: home.id.signInNeeded,
     screenshotAlt: "Hasil turnamen yang tersimpan: Ana menang, dengan peringkat akhir dan peringkat setiap ronde dari ronde 1 sampai final.",
   },
-  footer: { license: "AlgoTank adalah perangkat lunak sumber terbuka dengan lisensi MIT.", source: "Kode sumber di GitHub" },
 };
 
 export const LANDING_COPY: Readonly<Record<LandingLanguage, LandingCopy>> = { id, en };

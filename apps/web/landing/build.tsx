@@ -4,7 +4,7 @@
 //   bun run build:landing
 //
 // The output is plain static files with relative links, so any static host serves it,
-// also under a sub-path such as GitHub Pages (.github/workflows/landing.yml). Every
+// also under a sub-path; Cloudflare Pages serves it (.github/workflows/landing.yml). Every
 // button links into the game at GAME_URL. The page reuses the game's drawings,
 // tokens, fonts, copy and engine; the build records the demo rounds and fails when
 // they stop showing that the order of the rules matters (demo-round.ts).
@@ -21,7 +21,6 @@ import { renderPage } from "./page.tsx";
 
 /** The game's public address, with no slash at the end. */
 const GAME_URL = "https://algotank.awala.my.id";
-const REPOSITORY_URL = "https://github.com/snowfluke/algotank";
 
 const here = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 const OUT = here("./dist/");
@@ -82,7 +81,6 @@ async function build(): Promise<void> {
       gameUrl: GAME_URL,
       base: page.base,
       otherLanguageHref: page.other,
-      repositoryUrl: REPOSITORY_URL,
       css: pageCss.replaceAll("FONT_BASE", `${page.base}assets`),
       floor: floorMarkup(width, height),
       viewBox,

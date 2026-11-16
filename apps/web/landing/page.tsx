@@ -22,7 +22,6 @@ export interface PageInput {
   readonly base: string;
   /** The other language's page, relative to this one. */
   readonly otherLanguageHref: string;
-  readonly repositoryUrl: string;
   readonly css: string;
   /** The board's floor and grid, and its viewBox, from board-markup.tsx. */
   readonly floor: string;
@@ -248,10 +247,6 @@ function Page({ input }: { input: PageInput }) {
           <Arenas input={input} />
           <Organisers input={input} />
         </main>
-        <footer className="site-footer">
-          <p>{copy.footer.license}</p>
-          <a href={input.repositoryUrl}>{copy.footer.source}</a>
-        </footer>
         <script type="module" src={`${base}assets/demo.js`} data-demo={`${base}assets/demo.json`} />
       </body>
     </html>

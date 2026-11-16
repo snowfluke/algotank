@@ -75,19 +75,20 @@ export const en = {
     /** Today counts for the tank: its points now stay. */
     // The last sentence of each body: leaving is not how to stop watching.
     bodyCounted: (score: number) =>
-      `Your tank leaves the board now, and its ${points(score)} of today still count. Your counted days and your name stay, so you can change your rules and take a seat again. If you only want to stop watching, close this page instead, and your tank keeps playing.`,
+      `Your tank leaves the board now. All your points stay saved, including today's ${points(score)}. Your name stays the same, and you can join again later. To stop watching only, close this page, and your tank keeps playing.`,
     bodyNotCounted:
-      "Your tank leaves the board now, and today does not count for it. Your counted days and your name stay, so you can change your rules and take a seat again. If you only want to stop watching, close this page instead, and your tank keeps playing.",
+      "Your tank leaves the board now. Points from earlier days stay saved, and your name stays the same. You can join again later. To stop watching only, close this page, and your tank keeps playing.",
     confirm: "Leave the arena",
   },
   /** The way to new rules: a quit, then the join steps with the tank's rules (flow.ts, askChangeRules). */
   changeRules: {
     open: "Change rules",
     title: "Change your tank's rules?",
+    // Short sentences for children (owner, 2026-11-16: the first text was too dense).
     bodyCounted: (score: number) =>
-      `Your tank leaves the board now, and its ${points(score)} of today stay. Then you choose new rules and take a seat again. The new rules count from tomorrow, because a tank that takes a seat during the day does not count that day. Your counted days and your name stay.`,
+      `Your tank leaves the board first, then you pick new rules and join again. All your points stay saved, including today's ${points(score)}. Your name stays the same too. The new rules start counting tomorrow.`,
     bodyNotCounted:
-      "Your tank leaves the board now, and today does not count for it. Then you choose new rules and take a seat again, and they count from tomorrow. Your counted days and your name stay.",
+      "Your tank leaves the board first, then you pick new rules and join again. Points from earlier days stay saved, and your name stays the same too. The new rules start counting tomorrow.",
     confirm: "Leave and change rules",
   },
   /** The help button at the top of the page and the dialog it opens (MonthlyAbout.tsx). */
@@ -176,18 +177,18 @@ export const id: typeof en = {
     open: "Keluar dari arena bulanan",
     title: "Keluar dari arena bulanan?",
     bodyCounted: (score) =>
-      `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap dihitung. Hari yang sudah dihitung dan namamu tetap tersimpan, jadi kamu bisa mengubah aturan lalu masuk lagi. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.`,
+      `Tank kamu keluar dari papan sekarang. Semua poinmu tetap tersimpan, termasuk ${score} poin hari ini. Namamu tetap sama, dan kamu bisa masuk lagi nanti. Kalau hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.`,
     bodyNotCounted:
-      "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung. Hari yang sudah dihitung dan namamu tetap tersimpan, jadi kamu bisa mengubah aturan lalu masuk lagi. Kalau kamu hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
+      "Tank kamu keluar dari papan sekarang. Poin dari hari-hari sebelumnya tetap tersimpan, dan namamu tetap sama. Kamu bisa masuk lagi nanti. Kalau hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
     confirm: "Keluar dari arena",
   },
   changeRules: {
     open: "Ubah aturan",
     title: "Ubah aturan tank kamu?",
     bodyCounted: (score) =>
-      `Tank kamu keluar dari papan sekarang, dan ${score} poin hari ini tetap tersimpan. Lalu kamu memilih aturan baru dan masuk lagi. Aturan baru dihitung mulai besok, karena tank yang masuk di tengah hari tidak dihitung pada hari itu. Hari yang sudah dihitung dan namamu tetap tersimpan.`,
+      `Tank kamu keluar dari papan dulu, lalu kamu pilih aturan baru dan masuk lagi. Semua poinmu tetap tersimpan, termasuk ${score} poin hari ini. Namamu juga tetap sama. Aturan baru mulai dihitung besok.`,
     bodyNotCounted:
-      "Tank kamu keluar dari papan sekarang, dan hari ini tidak dihitung untuknya. Lalu kamu memilih aturan baru dan masuk lagi, dan aturan itu dihitung mulai besok. Hari yang sudah dihitung dan namamu tetap tersimpan.",
+      "Tank kamu keluar dari papan dulu, lalu kamu pilih aturan baru dan masuk lagi. Poin dari hari-hari sebelumnya tetap tersimpan, dan namamu juga tetap sama. Aturan baru mulai dihitung besok.",
     confirm: "Keluar dan ubah aturan",
   },
   about: {

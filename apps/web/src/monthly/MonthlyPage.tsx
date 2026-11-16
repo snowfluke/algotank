@@ -10,7 +10,8 @@
 // viewer to their own league or League 1.
 //
 // Midnight: a state with a new day shows "the round of <day> has ended" with its winner over
-// the board for DAY_NOTICE_MS, while the new round already plays under it.
+// the board for DAY_NOTICE_MS, while the new round already plays under it. A reshuffle (a new
+// round of the same day, leagueLive.ts) shows "Reshuffled" over the board for RESHUFFLE_NOTICE_MS.
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { TakeSeatRequest } from "@game/arena";
@@ -39,6 +40,8 @@ import { useMonthlyData } from "./useMonthlyData.ts";
 
 /** How long the finished day's notice stays over the board after midnight. */
 const DAY_NOTICE_MS = 12_000;
+/** Long enough to read one word; the round already plays under it. */
+const RESHUFFLE_NOTICE_MS = 2_500;
 
 /** Name problems send the viewer back to the name step. */
 const NAME_CODES: ReadonlySet<string> = new Set(["name_taken", "name_invalid", "name_blocked", "monthly_name_fixed"]);
@@ -122,6 +125,15 @@ export function MonthlyPage() {
     seenDay.current = { league: board.live.league, day: board.live.day };
     if (before !== null && before.league === board.live.league && before.day !== board.live.day) setDayChange({ day: before.day, until: Date.now() + DAY_NOTICE_MS });
   }, [board]);
+  // A reshuffle: the count of today's new rounds went up on the same stream.
+  const [reshuffledUntil, setReshuffledUntil] = useState(0);
+  const seenReshuffles = useRef<number | null>(null);
+  const reshuffles = board?.reshuffles ?? null;
+  useEffect(() => {
+    const before = seenReshuffles.current;
+    seenReshuffles.current = reshuffles;
+    if (before !== null && reshuffles !== null && reshuffles > before) setReshuffledUntil(Date.now() + RESHUFFLE_NOTICE_MS);
+  }, [reshuffles]);
   const now = useNow(board !== null);
   const shownDayChange: DayChange | null =
     dayChange !== null && now < dayChange.until ? { kind: "done", day: dayChange.day, winner: data.days.data?.days.find((d) => d.day === dayChange.day) ?? null } : null;
@@ -279,6 +291,7 @@ export function MonthlyPage() {
         }}
         onJoin={onJoin}
         dayChange={shownDayChange}
+        reshuffled={now < reshuffledUntil}
         onQuit={() => dispatch({ type: "askQuit" })}
         tab={tab}
         onTab={setTab}

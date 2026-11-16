@@ -27,6 +27,7 @@ function props(over: Partial<MonthlyViewProps> = {}, tanks = 5): MonthlyViewProp
     onMoveSeen: () => undefined,
     onJoin: () => undefined,
     dayChange: null,
+    reshuffled: false,
     onQuit: () => undefined,
     tab: "arena",
     onTab: () => undefined,
@@ -145,5 +146,13 @@ describe("the monthly page", () => {
     const failed = render(props({ load: { kind: "connecting" }, connection: "failed" }));
     expect(failed).toContain("The page cannot show this league right now, so try again.");
     expect(failed).toContain("Try again");
+  });
+});
+
+describe("a reshuffle", () => {
+  test("says Reshuffled over the board in both languages, and nothing without one", () => {
+    expect(render(props({ reshuffled: true }))).toContain(">Reshuffled<");
+    expect(render(props({ reshuffled: true }), "id")).toContain(">Diacak ulang<");
+    expect(render(props())).not.toContain("data-reshuffled");
   });
 });

@@ -69,6 +69,8 @@ export interface MonthlyViewProps {
   /** The visitor's one action; null for a seated owner and while the account is not known yet. */
   readonly onJoin: (() => void) | null;
   readonly dayChange: DayChange | null;
+  /** True for a moment after a new round of today put every tank on a new square (leagueLive.ts, `reshuffles`). */
+  readonly reshuffled: boolean;
   onQuit(): void;
   readonly tab: MonthlyTab;
   onTab(next: MonthlyTab): void;
@@ -148,8 +150,8 @@ function LastWinner({ days, today }: { days: readonly LeagueDayRecord[]; today: 
   );
 }
 
-/** The board as large as its box allows, with the empty league's invitation or the midnight notice over it. */
-function Board({ board, ownSeatId, onJoin, dayChange }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null }) {
+/** The board as large as its box allows, with the midnight notice, "Reshuffled" or the empty league's invitation over it. */
+function Board({ board, ownSeatId, onJoin, dayChange, reshuffled }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean }) {
   const m = useMessages();
   const t = m.monthly;
   const dayName = useDayName();
@@ -171,6 +173,12 @@ function Board({ board, ownSeatId, onJoin, dayChange }: { board: LeagueBoard; ow
         <p>{t.newDay}</p>
       </div>
     );
+  } else if (reshuffled && live.tanks.length > 0) {
+    notice = (
+      <p data-reshuffled="" className="font-display text-display font-semibold">
+        {t.reshuffled}
+      </p>
+    );
   } else if (live.tanks.length === 0) {
     notice = (
       <div data-league-empty="" className="flex flex-col gap-1">
@@ -184,7 +192,8 @@ function Board({ board, ownSeatId, onJoin, dayChange }: { board: LeagueBoard; ow
     <FittedBoard ratio={boardAspect(board.snapshot.width, board.snapshot.height)} dataAttributes={{ "data-monthly-board": "" }}>
       <ArenaBoard snapshot={board.snapshot} throws={board.throws} names={names} highlightId={ownSeatId} tickMs={live.tickMs} tanks={tanks} />
       {notice === null ? null : (
-        <div className="absolute inset-0 flex items-center justify-center p-[4%]">
+        // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-[4%]">
           {/* A panel behind the words, so they read on the sand and over tanks. */}
           <div className="max-w-[32em] rounded-[var(--radius-card)] bg-panel/95 p-[1em] shadow-[var(--shadow-raised)] animate-rise">{notice}</div>
         </div>
@@ -441,7 +450,7 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} />}</div>
         <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0">
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
@@ -512,7 +521,7 @@ function PhoneLayout(props: MonthlyViewProps) {
     pane = (
       <div className={PANE}>
         {seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} />}
-        {board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} />}
+        {board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} />}
         <LastWinner days={props.days} today={board?.live.day ?? null} />
       </div>
     );

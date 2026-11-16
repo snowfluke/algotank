@@ -48,6 +48,8 @@ export const en = {
   /** Over the board for a few seconds after midnight. */
   dayDone: (date: string) => `The round of ${date} has ended.`,
   newDay: "A new round has started, and every tank starts again at 0 points.",
+  /** Over the board for a moment after a reshuffle put every tank on a new square. */
+  reshuffled: "Reshuffled",
   own: {
     heading: "Your tank",
     /** `place` is today's place in the league. */
@@ -142,6 +144,7 @@ export const id: typeof en = {
   dayWinner: (date, name, score) => `${name} juara ronde ${date} dengan ${score} poin.`,
   dayDone: (date) => `Ronde ${date} sudah selesai.`,
   newDay: "Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.",
+  reshuffled: "Diacak ulang",
   own: {
     heading: "Tank kamu",
     today: (place, score) => `Tank kamu di peringkat ${place} hari ini dengan ${score} poin.`,

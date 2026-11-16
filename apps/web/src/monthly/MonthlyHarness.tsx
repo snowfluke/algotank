@@ -21,7 +21,7 @@ import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fi
 import type { LeagueLiveLoad } from "./leagueLive.ts";
 import { MonthlyPhoneBar, MonthlyView, type DayChange, type MonthlySide, type MonthlyTab } from "./MonthlyView.tsx";
 
-const CASES = ["visitor", "empty", "one", "seated", "other", "move", "dayDone", "closing", "failed", "crowd", "ranked"] as const;
+const CASES = ["visitor", "empty", "one", "seated", "other", "move", "dayDone", "closing", "failed", "crowd", "ranked", "reshuffled"] as const;
 type Case = (typeof CASES)[number];
 
 function param<T extends string>(name: string, values: readonly T[], fallback: T): T {
@@ -29,7 +29,7 @@ function param<T extends string>(name: string, values: readonly T[], fallback: T
   return values.find((v) => v === value) ?? fallback;
 }
 
-const TANKS: Record<Case, number> = { visitor: 5, empty: 0, one: 1, seated: 16, other: 16, move: 16, dayDone: 16, closing: 16, failed: 5, crowd: 40, ranked: 16 };
+const TANKS: Record<Case, number> = { visitor: 5, empty: 0, one: 1, seated: 16, other: 16, move: 16, dayDone: 16, closing: 16, failed: 5, crowd: 40, ranked: 16, reshuffled: 16 };
 
 export function MonthlyHarness() {
   const m = useMessages();
@@ -72,6 +72,7 @@ export function MonthlyHarness() {
         onMoveSeen={() => undefined}
         onJoin={onJoin}
         dayChange={dayChange}
+        reshuffled={which === "reshuffled"}
         onQuit={() => setQuitting(true)}
         tab={tab}
         onTab={setTab}

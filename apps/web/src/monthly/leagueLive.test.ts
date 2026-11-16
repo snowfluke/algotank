@@ -53,6 +53,21 @@ describe("a league's live state", () => {
     expect(owned(nextLeagueLoad(moved, { type: "state", state: { ...live, day: "2026-11-15" } }, 0))).toEqual([]);
   });
 
+  test("a new round of the same day counts as a reshuffle; a join, the first state and a new day do not", () => {
+    const reshuffles = (load: ReturnType<typeof nextLeagueLoad>) => (load.kind === "ready" ? load.board.reshuffles : null);
+    const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: live }, 0);
+    expect(reshuffles(ready)).toBe(0);
+    const moved = nextLeagueLoad(ready, { type: "tick", tick, own: null }, 0);
+    // A join goes on with the round, so its state keeps the turn.
+    const joined = nextLeagueLoad(moved, { type: "state", state: { ...live, board: next } }, 0);
+    expect(reshuffles(joined)).toBe(0);
+    const again = nextLeagueLoad(joined, { type: "state", state: live }, 0);
+    expect(reshuffles(again)).toBe(1);
+    // Two states at turn 0 in a row are one new round.
+    expect(reshuffles(nextLeagueLoad(again, { type: "state", state: live }, 0))).toBe(1);
+    expect(reshuffles(nextLeagueLoad(joined, { type: "state", state: { ...live, day: "2026-11-15" } }, 0))).toBe(0);
+  });
+
   test("a closed league ends the load with the number of leagues left", () => {
     const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: live }, 0);
     expect(nextLeagueLoad(ready, { type: "closed", leagues: 2 }, 0)).toEqual({ kind: "closed", leagues: 2 });

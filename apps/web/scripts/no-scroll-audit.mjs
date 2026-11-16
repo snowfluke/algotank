@@ -1087,6 +1087,7 @@ STATES.push(
   monthlyKit("other-league-arena", "case=other"),
   monthlyKit("move", "case=move"),
   monthlyKit("day-done", "case=dayDone"),
+  monthlyKit("reshuffled", "case=reshuffled"),
   monthlyKit("closing", "case=closing"),
   monthlyKit("failed", "case=failed"),
   monthlyKit("quit", "case=seated&tab=mine&side=mine&quit=1", { steps: [{ wait: "dialog[data-dialog=monthly-quit][open]" }] }),

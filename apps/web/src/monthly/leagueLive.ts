@@ -9,6 +9,8 @@
 // | connecting   | state                         | ready        | the board, the day's end anchored to now   |
 // | connecting   | tick                          | connecting   | a turn before any state cannot be placed   |
 // | ready        | state                         | ready        | own turns kept while the day is the same   |
+// | ready        | state at turn 0, same day,    | ready        | a reshuffle: `reshuffles` counts up, so    |
+// |              | after a turn past 0           |              | the board says "Reshuffled" for a moment   |
 // | ready        | tick                          | ready        | the board moves; `own` adds a feed line    |
 // | ready        | tick for other tanks          | connecting   | the hook opens the stream again            |
 // | any          | closed                        | closed       | the month close emptied this league        |
@@ -31,6 +33,12 @@ export interface LeagueBoard {
   readonly dayEndsAt: number;
   /** The viewer's own tank's last turns, oldest first, for the "Tank kamu" feed. */
   readonly own: readonly OwnDecision[];
+  /**
+   * The new rounds of today seen on this stream: a reshuffle every few minutes, and a board that
+   * grows for a rush of joiners. Both put every tank on a new square. A join or a quit goes on with
+   * the round, so its state keeps the turn; a new round's state is at turn 0.
+   */
+  readonly reshuffles: number;
 }
 
 export type LeagueLiveLoad =
@@ -63,7 +71,9 @@ export function nextLeagueLoad(load: LeagueLiveLoad, message: LeagueStreamMessag
     const state = message.state;
     // A join or a quit keeps the feed; a new day or another league starts it empty.
     const same = load.kind === "ready" && load.board.live.day === state.day && load.board.live.league === state.league;
-    return { kind: "ready", board: { live: state, snapshot: state.board, throws: [], dayEndsAt: now + state.dayEndsInMs, own: same ? load.board.own : [] } };
+    const reshuffled = same && state.board.tick === 0 && load.board.snapshot.tick > 0 && state.tanks.length > 0;
+    const reshuffles = same ? load.board.reshuffles + (reshuffled ? 1 : 0) : 0;
+    return { kind: "ready", board: { live: state, snapshot: state.board, throws: [], dayEndsAt: now + state.dayEndsInMs, own: same ? load.board.own : [], reshuffles } };
   }
   if (load.kind !== "ready") return load;
   // expandTick throws on a turn that does not fit the tanks of the state; the stream then reconnects (useLeagueLive).

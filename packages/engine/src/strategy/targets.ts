@@ -1,7 +1,7 @@
 // Target selectors. Each picks one enemy from the snapshot, or null.
 // No selector draws a random number. A tie is settled by the selector's own
-// measure first, then by lower distance (Chebyshev: a diagonal step counts as 1), then by lower id. Ids come
-// from the round seed and never change in the round, so a tie never flips.
+// measure first, then by lower distance (Chebyshev: a diagonal step counts as 1), then by the lower tie rank
+// of an open round (BotState.tieRank), else by the lower id. Neither changes in a round, so a tie never flips.
 
 import { attributeLevel, hitChancePercent, throwRange } from "../combat/combat.ts";
 import { rulesOf } from "../combat/rule-sets.ts";
@@ -20,6 +20,7 @@ const ISOLATION_NEIGHBOUR_RADIUS = 3;
 type Compare = (a: BotState, b: BotState) => number;
 
 function compareIds(a: BotState, b: BotState): number {
+  if (a.tieRank !== undefined && b.tieRank !== undefined && a.tieRank !== b.tieRank) return a.tieRank - b.tieRank;
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 

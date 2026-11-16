@@ -196,8 +196,10 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   const direction = DIRECTIONS[round.rng.int(DIRECTIONS.length)];
   const firstMode = player.strategy.modes[0];
   if (cell === undefined || direction === undefined || firstMode === undefined) throw new Error(`could not place player "${player.id}"`);
-  const bot = spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, ruleSet(before.ruleSetId).waterCapacity);
-  round.tieBreaks.set(player.id, round.rng.next());
+  // The tie-break number also settles target ties in this round (BotState.tieRank), so a join draws nothing more.
+  const tieRank = round.rng.next();
+  const bot: BotState = { ...spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, ruleSet(before.ruleSetId).waterCapacity), tieRank };
+  round.tieBreaks.set(player.id, tieRank);
   round.strategies.set(player.id, player.strategy);
   round.snapshot = { ...before, bots: [...before.bots, bot] };
   return bot;

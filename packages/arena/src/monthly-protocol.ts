@@ -50,7 +50,8 @@ export const MONTHLY_BOARD_MIN_TANKS = 16;
  * 1 since 2026-11-16 (was 7), so a tank that joins late in the month can still win: one
  * monthly day is 96,000 turns, and five simulated days of the same field of 8 play styles
  * gave each style's day points a spread (sd) of 76 to 367 against gaps of hundreds to
- * thousands between styles. Close rivals can still swap places on one day's luck.
+ * thousands between styles (measured before the tie ranks and new starts of 2026-11-16).
+ * Close rivals can still swap places on one day's luck.
  */
 export const MONTHLY_RANKED_DAYS = 1;
 

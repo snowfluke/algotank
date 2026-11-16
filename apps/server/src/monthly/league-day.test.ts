@@ -34,10 +34,12 @@ describe("the league's bots", () => {
     expect(botsOf(day)).toHaveLength(3);
     for (let i = 0; i < RESHUFFLE_TURNS; i++) day.step();
     expect(day.reshuffleDue()).toBe(true);
-    const points = day.standings().map((s) => s.points);
+    // A new start seats the tanks in a random order, so the points are compared by tank.
+    const pointsById = () => Object.fromEntries(day.standings().map((s) => [s.id, s.points]));
+    const points = pointsById();
     draw = 0;
     day.rebuild(4000);
     expect(botsOf(day)).toHaveLength(0);
-    expect(day.standings().map((s) => s.points)).toEqual(points);
+    expect(pointsById()).toEqual(points);
   });
 });

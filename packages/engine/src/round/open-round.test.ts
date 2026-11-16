@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { STANDARD_RULE_SET_ID, ruleSet } from "../combat/rule-sets.ts";
 import { PRESETS } from "../strategy/presets.ts";
-import { act, mode, rule, strategyOf, when } from "../strategy/test-helpers.ts";
+import { act, bot, mode, rule, snapshotOf, strategyOf, when } from "../strategy/test-helpers.ts";
+import { TARGET_SELECTORS } from "../strategy/vocabulary.ts";
 import type { RoundState, Strategy } from "../types.ts";
 import { arenaSize } from "./grid.ts";
-import { createOpenRound, joinRound, leaveRound, roundHoldings, standings, stepRound } from "./round.ts";
+import { createOpenRound, createRound, joinRound, leaveRound, roundHoldings, standings, stepRound } from "./round.ts";
 
 const strategyAt = (i: number): Strategy => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
 const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false });
@@ -101,5 +102,36 @@ describe("an open round", () => {
     expect(late.strategies).toBe(early.strategies);
     expect(late.tieBreaks).toBe(early.tieBreaks);
     expect(late.sequences).toBeLessThanOrEqual(16);
+  });
+});
+
+describe("target ties in an open round", () => {
+  test("a tank that joins carries a tie rank, and the nearest of two tanks at one distance is the lower rank, not the lower id", () => {
+    const round = open(11);
+    const a = joinRound(round, { id: "a", strategy: strategyAt(0) });
+    const z = joinRound(round, { id: "z", strategy: strategyAt(1) });
+    expect([typeof a.tieRank, typeof z.tieRank]).toEqual(["number", "number"]);
+    // The rank stays with the tank turn after turn.
+    stepRound(round);
+    expect(round.snapshot.bots.map((t) => t.tieRank)).toEqual([a.tieRank, z.tieRank]);
+    const me = bot("me", 4, 4, "N");
+    // "a" and "z" stand at the same distance; only their ranks decide, and the ids would pick "a".
+    for (const [rankA, rankZ, nearest] of [[0.9, 0.1, "z"], [0.1, 0.9, "a"]] as const) {
+      const snapshot = snapshotOf([me, bot("a", 4, 2, "S", { tieRank: rankA }), bot("z", 4, 6, "N", { tieRank: rankZ })]);
+      expect(TARGET_SELECTORS["nearest"]?.pick({ self: me, snapshot })?.id).toBe(nearest);
+    }
+  });
+
+  test("a round of fixed players carries no tie rank, so it settles ties by id as before", () => {
+    const round = createRound({ seed: 3, ticksTotal: 5, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: [{ id: "a", strategy: strategyAt(0) }, { id: "b", strategy: strategyAt(1) }], items: false });
+    expect(round.snapshot.bots.map((t) => t.tieRank)).toEqual([undefined, undefined]);
+  });
+
+  test("each new open round draws new ranks, so the order changes when the monthly league starts again", () => {
+    const ranks = (seed: number) => {
+      const round = open(seed);
+      return ["a", "b", "c"].map((id) => joinRound(round, { id, strategy: strategyAt(0) }).tieRank);
+    };
+    expect(ranks(1)).not.toEqual(ranks(2));
   });
 });

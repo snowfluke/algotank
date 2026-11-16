@@ -27,6 +27,11 @@
 // |              |              |                  | of them (a rush of joiners never fills the board)         |
 // Terminal state: none; a league closes only at a month close that leaves it empty.
 //
+// Ties: a target selector settles a tie by the tanks' tie ranks in an open round (BotState.tieRank,
+// drawn at each join), and some rules by the board's tank order. Both change at every new round:
+// the engine draws new ranks, and start() seats the tanks in a random order. A seat's fixed id was
+// worth thousands of points a day before (2026-11-16).
+//
 // Board size: every new round (a new day, a restart, a new start, a rebuild) gets a board for the
 // tanks seated then (boardTanksFor), so a few tanks still meet and a full league has room. A board
 // for N tanks has about 6.7 N squares (round/grid.ts), so the seats can pass N by half before the
@@ -242,7 +247,9 @@ export class LeagueDay {
     if (tanks.length === 0) return;
     const round = this.newRound(tanks.length, ticksLeft);
     this.round = round;
-    for (const { tank, points, counts, stats } of tanks) {
+    // A random seating order, so the board's tank order (which settles some ties) changes with every
+    // new round, like the tie ranks the engine draws at each join (BotState.tieRank).
+    for (const { tank, points, counts, stats } of this.shuffled(tanks)) {
       if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
       joinRound(round, { id: tank.id, strategy: tank.strategy }, points);
       this.seated.set(tank.id, { tank, counts, stats: stats ?? EMPTY_STATS });
@@ -267,6 +274,16 @@ export class LeagueDay {
   /** What it holds, for the test that nothing grows per turn. */
   holdings(): { readonly seated: number; readonly onBoard: number } {
     return { seated: this.seated.size, onBoard: this.round?.snapshot.bots.length ?? 0 };
+  }
+
+  /** A copy in random order (Fisher-Yates with this league's random source). */
+  private shuffled<T>(items: readonly T[]): T[] {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(this.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j] as T, copy[i] as T];
+    }
+    return copy;
   }
 
   /** The bot rule of the header, at a new round: the round holds the seated tanks and no bot yet. */

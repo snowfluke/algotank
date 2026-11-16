@@ -63,6 +63,23 @@ export const en = {
   wholeArena: "All",
   /** The badge before the game master's name (the organizer's tank, which takes no place). */
   gm: { text: "GM", title: "Game master: the organizer's tank, which takes no place" },
+  /**
+   * A tank's sheet (TankSheet.tsx), opened from a ranking row. `month` is "December 2026", the
+   * first month whose close opens the rules (FIRST_PUBLISHED_RULES_MONTH), so the line stays true later.
+   */
+  sheet: {
+    open: (name: string) => `Show the tank ${name}`,
+    rules: "Rules",
+    upgrades: (list: string) => `Upgrades: ${list}.`,
+    gm: "This is the organizer's tank, so everyone can read its rules.",
+    rulesLater: (month: string) => `Everyone can read this tank's rules after each month ends, starting with ${month}.`,
+    monthRules: (month: string) => `These are the rules the tank had when ${month} ended.`,
+    lastDay: (day: string) => `On ${day}`,
+    turns: "Turns",
+    moved: "Squares moved",
+    noLastDay: "This tank has no finished day yet, so its numbers show after the next midnight.",
+    loading: "The tank is loading.",
+  },
   /** In the arena condition's note (ArenaCondition.tsx), after what the condition changes. */
   conditionChanges: "The condition changes every time the tanks are reshuffled.",
   own: {
@@ -123,6 +140,8 @@ export const en = {
       days === 1 ? "A tank gets a place in the month's ranking after one full day." : `A tank needs ${days} counted days for a place in the month's ranking.`,
     /** The champion and the name rule are left out: the dialog must fit a 360 x 640 phone, and the champions page and the join step say them. */
     leagues: "When the month ends, the lower half of each league changes places with the upper half of the league below.",
+    gm: "A GM tank belongs to the organizer, so it takes no place, and everyone can read its rules.",
+    rulesOpen: (month: string) => `After ${month} ends, everyone can read every tank's rules, and the same happens after each later month.`,
   },
   /** The month close's notice, shown once. `month` is "October 2026". */
   move: {
@@ -130,6 +149,10 @@ export const en = {
     down: (league: number) => `Your tank moved down to League ${league}.`,
     stayed: (league: number) => `Your tank stays in League ${league}.`,
     body: (month: string) => `${month} has ended, so every league was put together again.`,
+    /** The closed month's rules are open now: they are on the champions page. */
+    rulesOpen: (month: string) => `Everyone can now read the rules each tank had when ${month} ended, on the Champions page.`,
+    /** Before the first published month: the announcement. */
+    rulesSoon: (month: string) => `From now on, everyone can read every tank's rules after a month ends, starting with ${month}.`,
     ok: "OK",
   },
   joinSteps: {
@@ -143,6 +166,8 @@ export const en = {
     seatTaken: "Your account already has a tank in the monthly arena, so the page shows it now.",
     /** The toast after the tank joined. */
     joined: "Your tank is in the monthly arena now and plays every round by itself, so you can close this page.",
+    /** Beside the submit of the rules step, for joining and for "Change rules": where a player agrees to it. */
+    rulesOpen: (month: string) => `Everyone can read your tank's rules after each month ends, starting with ${month}.`,
   },
 };
 
@@ -182,6 +207,19 @@ export const id: typeof en = {
   conditionShort: (name) => `Kondisi: ${name}`,
   wholeArena: "Semua",
   gm: { text: "GM", title: "Game master: tank penyelenggara, yang tidak masuk peringkat" },
+  sheet: {
+    open: (name) => `Lihat tank ${name}`,
+    rules: "Aturan",
+    upgrades: (list) => `Peningkatan: ${list}.`,
+    gm: "Ini tank penyelenggara, jadi semua orang boleh membaca aturannya.",
+    rulesLater: (month) => `Semua orang bisa membaca aturan tank ini setiap kali bulan selesai, dimulai dari ${month}.`,
+    monthRules: (month) => `Ini aturan tank saat ${month} berakhir.`,
+    lastDay: (day) => `Pada ${day}`,
+    turns: "Giliran",
+    moved: "Petak ditempuh",
+    noLastDay: "Tank ini belum menyelesaikan satu hari, jadi angkanya muncul setelah tengah malam berikutnya.",
+    loading: "Tank sedang dimuat.",
+  },
   conditionChanges: "Kondisinya berganti setiap kali tank diacak ulang.",
   own: {
     heading: "Tank kamu",
@@ -227,12 +265,16 @@ export const id: typeof en = {
     items: "Item muncul di arena, dan tombol Bantuan menjelaskan gunanya.",
     rankedDays: (days) => (days === 1 ? "Tank masuk peringkat bulan ini setelah main sehari penuh." : `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`),
     leagues: "Di akhir bulan, separuh bawah tiap liga bertukar tempat dengan separuh atas liga di bawahnya.",
+    gm: "Tank GM milik penyelenggara, jadi tidak masuk peringkat, dan semua orang boleh membaca aturannya.",
+    rulesOpen: (month) => `Setelah ${month} selesai, semua orang bisa membaca aturan setiap tank, begitu juga setelah setiap bulan berikutnya.`,
   },
   move: {
     up: (league) => `Tank kamu naik ke Liga ${league}.`,
     down: (league) => `Tank kamu turun ke Liga ${league}.`,
     stayed: (league) => `Tank kamu tetap di Liga ${league}.`,
     body: (month) => `Bulan ${month} sudah selesai, jadi semua liga disusun lagi.`,
+    rulesOpen: (month) => `Aturan setiap tank saat ${month} berakhir sekarang bisa dibaca semua orang di halaman Para juara.`,
+    rulesSoon: (month) => `Mulai sekarang, semua orang bisa membaca aturan setiap tank setelah bulan berakhir, dimulai dari ${month}.`,
     ok: "Oke",
   },
   joinSteps: {
@@ -245,5 +287,6 @@ export const id: typeof en = {
     nameTaken: "Nama ini sudah dipakai tank lain di arena bulanan, jadi ketik nama lain.",
     seatTaken: "Akun kamu sudah punya tank di arena bulanan, jadi halaman ini menampilkannya sekarang.",
     joined: "Tank kamu sudah masuk arena bulanan dan main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini.",
+    rulesOpen: (month) => `Semua orang bisa membaca aturan tank kamu setiap kali bulan selesai, dimulai dari ${month}.`,
   },
 };

@@ -1,6 +1,7 @@
 // The league's rules through its public methods, with the manual clock and scheduler and the
 // Asia/Jakarta calendar (docs/specs/revamp/77-monthly-league.md, sections 1 to 3 and 5).
 
+import { Disclosure } from "./disclosure.ts";
 import { GameMasters } from "./game-masters.ts";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Database } from "bun:sqlite";
@@ -49,6 +50,7 @@ function startLeague(options: { readonly at?: number; readonly db?: Database; re
   const monthly = new MonthlyLeagues({
     store: new LeagueStore(db, ticks.now),
     gameMasters: new GameMasters(db),
+    disclosure: new Disclosure(db),
     champions,
     streams,
     calendar: zoneCalendar("Asia/Jakarta"),
@@ -425,6 +427,72 @@ describe("the month close", () => {
   });
 });
 
+describe("what anyone may read about a tank (monthly-protocol.ts, the visibility table)", () => {
+  test("a tank's sheet has its last finished day's numbers, and rules only for a game master's tank", () => {
+    const db = memoryDatabase();
+    const l = startLeague({ db });
+    const [gm, ada] = [newAccount(), newAccount()];
+    insertAccount(db, gm);
+    take(l, gm);
+    take(l, ada);
+    l.monthly.setGameMaster(seatOf(l, gm).seatId, true);
+    expect(l.monthly.tankSheet(seatOf(l, ada).seatId)).toEqual({ seatId: seatOf(l, ada).seatId, rules: null, lastDay: null });
+    for (let i = 0; i < 50; i++) l.ticks.tick();
+    nextDay(l);
+    const sheet = l.monthly.tankSheet(seatOf(l, ada).seatId);
+    expect(sheet.rules).toBeNull();
+    expect(sheet.lastDay?.day).toBe("2026-11-14");
+    expect(sheet.lastDay?.numbers.turns).toBeGreaterThan(0);
+    // The numbers carry no rule counts.
+    expect(Object.keys(sheet.lastDay?.numbers ?? {}).sort()).toEqual(["hits", "shots", "squaresMoved", "timesHit", "turns"]);
+    expect(l.monthly.tankSheet(seatOf(l, gm).seatId).rules).toEqual(l.monthly.me(gm).seat?.strategy ?? null);
+    expect(codeOf(() => l.monthly.tankSheet("nobody"))).toBe("no_monthly_seat");
+  });
+
+  test("a quit keeps the numbers of the part of the day the tank played", () => {
+    const db = memoryDatabase();
+    const l = startLeague({ db });
+    const ada = newAccount();
+    take(l, ada);
+    take(l, newAccount());
+    for (let i = 0; i < 30; i++) l.ticks.tick();
+    const seatId = seatOf(l, ada).seatId;
+    l.monthly.quit(ada);
+    expect(new Disclosure(db).lastDayNumbers(seatId, "2026-11-15")?.day).toBe("2026-11-14");
+  });
+
+  test("November's close opens no rules; December's opens every seated tank's rules once, with its place", () => {
+    const db = memoryDatabase();
+    const november = startLeague({ db, at: Date.parse("2026-11-29T20:00:00Z") });
+    take(november, newAccount());
+    nextDay(november);
+    nextDay(november);
+    expect(november.monthly.live(1).month).toBe("2026-12");
+    expect(november.monthly.publishedMonths().months).toEqual([]);
+    expect(codeOf(() => november.monthly.monthTanks("2026-11"))).toBe("month_not_published");
+
+    // Seated during 2026-12-23, so 24 to 31 December are 8 counted days.
+    const l = startLeague({ at: Date.parse("2026-12-22T20:00:00Z") });
+    const owners = [newAccount(), newAccount(), newAccount()];
+    owners.forEach((owner, i) => take(l, owner, { name: `Tank ${i + 1}`, strategy: strategy(i) }));
+    for (let day = 0; day < 9; day++) nextDay(l);
+    expect(l.monthly.live(1).month).toBe("2027-01");
+    expect(l.monthly.publishedMonths().months).toEqual(["2026-12"]);
+    const { tanks } = l.monthly.monthTanks("2026-12");
+    expect(tanks.map((t) => t.rank)).toEqual([1, 2, 3]);
+    expect(tanks.every((t) => t.league === 1 && !t.gm)).toBe(true);
+    const first = tanks[0];
+    expect(first).toBeDefined();
+    const rules = l.monthly.monthTankRules("2026-12", first?.seatId);
+    expect(rules.rules.modes.length).toBeGreaterThan(0);
+    expect(codeOf(() => l.monthly.monthTankRules("2026-12", "nobody"))).toBe("no_monthly_seat");
+    // The copy is the one taken at the close: a tank's new rules in January do not change it.
+    const before = JSON.stringify(rules);
+    l.monthly.changeStrategy(owners[0] ?? "", { strategy: strategy(5) });
+    expect(JSON.stringify(l.monthly.monthTankRules("2026-12", first?.seatId))).toBe(before);
+  });
+});
+
 describe("the streams", () => {
   test("`own` follows the stream's account: a seat taken after the stream opened, a quit, and a new seat", async () => {
     const l = startLeague();
@@ -564,6 +632,7 @@ describe("memory", () => {
     const monthly = new MonthlyLeagues({
       store: counted(new LeagueStore(db, ticks.now)),
       gameMasters: new GameMasters(db),
+    disclosure: new Disclosure(db),
       champions: counted(new Champions(db)),
       streams: new LeagueStreams({ heartbeatMs: 60_000, maxStreamsPerLeague: 10 }),
       calendar: zoneCalendar("Asia/Jakarta"),

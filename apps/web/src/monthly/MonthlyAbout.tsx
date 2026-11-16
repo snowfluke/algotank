@@ -6,18 +6,22 @@
 
 import { Info, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { MONTHLY_RANKED_DAYS } from "@game/arena";
-import { useMessages } from "../i18n/I18nProvider.tsx";
+import { FIRST_PUBLISHED_RULES_MONTH, MONTHLY_RANKED_DAYS } from "@game/arena";
+import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
 
-/** The facts in reading order: how a round runs, that the tank plays alone, then how the month counts. */
-export function monthlyFacts(m: ReturnType<typeof useMessages>): readonly string[] {
+/**
+ * The facts in reading order: how a round runs, that the tank plays alone, how the month counts,
+ * then what everyone may read (owner, 2026-11-17). `firstOpenMonth` is FIRST_PUBLISHED_RULES_MONTH as a name.
+ */
+export function monthlyFacts(m: ReturnType<typeof useMessages>, firstOpenMonth: string): readonly string[] {
   const t = m.monthly.about;
-  return [t.round, t.reshuffle, t.items, t.playsAlone, m.publicplay.league.rule, t.rankedDays(MONTHLY_RANKED_DAYS), t.leagues];
+  return [t.round, t.reshuffle, t.items, t.playsAlone, m.publicplay.league.rule, t.rankedDays(MONTHLY_RANKED_DAYS), t.leagues, t.gm, t.rulesOpen(firstOpenMonth)];
 }
 
 export function MonthlyAbout() {
   const m = useMessages();
+  const f = useFormat();
   const t = m.monthly.about;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -46,16 +50,16 @@ export function MonthlyAbout() {
         }}
         className="m-auto w-[min(32rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-ink/50"
       >
-        {/* p-4, not p-5: the Indonesian list fills a 360 x 640 phone to within a pixel at p-5. */}
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex min-w-0 items-center gap-2">
+        {/* The list scrolls inside the dialog: with the rules facts (2026-11-17) it is taller than a 360 x 640 phone. */}
+        <div className="flex max-h-[calc(100dvh-2rem)] flex-col gap-4 p-4">
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
             <h2 id={titleId} className="min-w-0 flex-1 text-title">
               {t.heading}
             </h2>
             <IconButton label={m.common.close} icon={<X aria-hidden size={22} />} variant="quiet" onClick={() => setOpen(false)} />
           </div>
-          <ul className="flex min-w-0 list-disc flex-col gap-2 pl-5 [overflow-wrap:anywhere] marker:text-water">
-            {monthlyFacts(m).map((fact) => (
+          <ul className="flex min-h-0 min-w-0 list-disc flex-col gap-2 overflow-auto overscroll-contain pl-5 [overflow-wrap:anywhere] marker:text-water">
+            {monthlyFacts(m, f.month(FIRST_PUBLISHED_RULES_MONTH)).map((fact) => (
               <li key={fact}>{fact}</li>
             ))}
           </ul>

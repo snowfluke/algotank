@@ -39,6 +39,12 @@ import type {
   LeagueDaysResponse,
   LeagueMonthRow,
   LeagueRankingResponse,
+  DayNumbers,
+  MonthTank,
+  MonthTankRulesResponse,
+  MonthTanksResponse,
+  PublishedMonthsResponse,
+  TankSheetResponse,
   LeagueRow,
   LeagueTodayRow,
   LoginRequest,
@@ -427,6 +433,43 @@ export function getPublicStatus(): Promise<ApiResult<PublicStatusResponse>> {
 /** A league's ranking of today and of this month (League 1 is the top league). */
 export function getLeagueRanking(league: number): Promise<ApiResult<LeagueRankingResponse>> {
   return request({ method: "GET", path: `/api/monthly/leagues/${league}/ranking`, guard: isLeagueRankingResponse });
+}
+
+// What anyone may read about a tank (the visibility table in monthly-protocol.ts).
+const isDayNumbers = (v: unknown): v is DayNumbers =>
+  isRecord(v) && isNumber(v["turns"]) && isNumber(v["shots"]) && isNumber(v["hits"]) && isNumber(v["timesHit"]) && isNumber(v["squaresMoved"]);
+
+const isTankSheetResponse: Guard<TankSheetResponse> = (v): v is TankSheetResponse =>
+  isRecord(v) &&
+  typeof v["seatId"] === "string" &&
+  (v["rules"] === null || isStrategyInput(v["rules"])) &&
+  (v["lastDay"] === null || (isRecord(v["lastDay"]) && isDayId(v["lastDay"]["day"]) && isDayNumbers(v["lastDay"]["numbers"])));
+
+const isPublishedMonthsResponse: Guard<PublishedMonthsResponse> = (v): v is PublishedMonthsResponse => isRecord(v) && Array.isArray(v["months"]) && v["months"].every(isMonthId);
+
+const isMonthTank = (v: unknown): v is MonthTank =>
+  isRecord(v) && typeof v["seatId"] === "string" && isNumber(v["league"]) && isNumberOrNull(v["rank"]) && hasNameAndLook(v) && typeof v["gm"] === "boolean";
+
+const isMonthTanksResponse: Guard<MonthTanksResponse> = (v): v is MonthTanksResponse => isRecord(v) && isMonthId(v["month"]) && Array.isArray(v["tanks"]) && v["tanks"].every(isMonthTank);
+
+const isMonthTankRulesResponse: Guard<MonthTankRulesResponse> = (v): v is MonthTankRulesResponse => isRecord(v) && isStrategyInput(v["rules"]);
+
+/** A seated tank's last finished day, and the rules of a game master's tank. */
+export function getTankSheet(seatId: string): Promise<ApiResult<TankSheetResponse>> {
+  return request({ method: "GET", path: `/api/monthly/tanks/${encodeURIComponent(seatId)}`, guard: isTankSheetResponse });
+}
+
+/** The closed months whose tanks' rules are open, the newest first. */
+export function getPublishedMonths(): Promise<ApiResult<PublishedMonthsResponse>> {
+  return request({ method: "GET", path: "/api/monthly/months", guard: isPublishedMonthsResponse });
+}
+
+export function getMonthTanks(month: string): Promise<ApiResult<MonthTanksResponse>> {
+  return request({ method: "GET", path: `/api/monthly/months/${encodeURIComponent(month)}`, guard: isMonthTanksResponse });
+}
+
+export function getMonthTankRules(month: string, seatId: string): Promise<ApiResult<MonthTankRulesResponse>> {
+  return request({ method: "GET", path: `/api/monthly/months/${encodeURIComponent(month)}/tanks/${encodeURIComponent(seatId)}`, guard: isMonthTankRulesResponse });
 }
 
 const LEAGUE_PHASES: readonly unknown[] = ["idle", "withBot", "withoutBot", "closing"];

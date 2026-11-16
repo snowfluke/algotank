@@ -18,6 +18,7 @@ const ready: ChampionsLoad = {
     month: "2026-11",
     rows: [monthRow(1, 1), monthRow(2, 2), monthRow(null, 3)],
     ownSeatId: "seat-2",
+    rulesMonths: new Set(["2026-10"]),
     champions: {
       months: [{ month: "2026-10", champion: { ...rowAt(1), name: "Bima" }, top: [{ ...rowAt(1), name: "Bima" }, rowAt(2), rowAt(3)] }],
       tournamentWinners: [{ name: "Citra", look, wonAt: "2026-11-12T10:00:00Z", tanks: 16 }],
@@ -51,8 +52,14 @@ describe("ChampionsView", () => {
     expect(render(ready, "month", "id")).toMatch(/aria-label="Kembali"/);
   });
 
+  test("a month whose rules are open has the button to its tanks' rules; other months have none", () => {
+    expect(render(ready, "months")).toContain('data-month-rules-open="2026-10"');
+    const closed: ChampionsLoad = ready.kind === "ready" ? { kind: "ready", data: { ...ready.data, rulesMonths: new Set() } } : ready;
+    expect(render(closed, "months")).not.toContain("data-month-rules-open");
+  });
+
   test("an empty record says so in each part", () => {
-    const empty: ChampionsLoad = { kind: "ready", data: { month: "2026-11", rows: [], ownSeatId: null, champions: { months: [], tournamentWinners: [] } } };
+    const empty: ChampionsLoad = { kind: "ready", data: { month: "2026-11", rows: [], ownSeatId: null, rulesMonths: new Set(), champions: { months: [], tournamentWinners: [] } } };
     expect(render(empty, "month")).toContain(en.monthEmpty);
     expect(render(empty, "months")).toContain(en.monthsEmpty);
     expect(render(empty, "tournaments")).toContain(en.tournamentsEmpty);

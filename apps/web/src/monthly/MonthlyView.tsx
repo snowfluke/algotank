@@ -16,8 +16,9 @@
 
 import { ListOrdered, Palette, SlidersHorizontal, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import { MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
+import { FIRST_PUBLISHED_RULES_MONTH, MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
 import { ArenaCondition } from "./ArenaCondition.tsx";
+import { TankSheet, type SheetSource, type SheetTank } from "./TankSheet.tsx";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import type { TankInfo } from "../board/props.ts";
@@ -81,6 +82,8 @@ export interface MonthlyViewProps {
 }
 
 const PANE = "flex min-h-0 min-w-0 flex-1 flex-col gap-2";
+
+const LIVE: SheetSource = { kind: "live" };
 
 /** A date such as "14 November 2026" from YYYY-MM-DD, at noon UTC so no time zone moves it to another day. */
 function useDayName(): (day: string) => string {
@@ -260,7 +263,8 @@ function MoveNotice({ move, onSeen }: { move: MonthMove; onSeen(): void }) {
       <StatusBanner
         tone={move.kind === "up" ? "success" : "info"}
         title={title}
-        body={t.body(f.month(move.month))}
+        // Seats carry over, so a seated player never passes the join step again: the month close says what is open.
+        body={`${t.body(f.month(move.month))} ${move.month >= FIRST_PUBLISHED_RULES_MONTH ? t.rulesOpen(f.month(move.month)) : t.rulesSoon(f.month(FIRST_PUBLISHED_RULES_MONTH))}`}
         action={
           <Button variant="secondary" onClick={onSeen}>
             {t.ok}
@@ -278,12 +282,26 @@ function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; rankin
     if (ranking === null) return null;
     return part === "today" ? todayItems(ranking.today, t.left, t.gm) : monthItems(ranking.thisMonth, t.notRanked(MONTHLY_RANKED_DAYS), t.gm);
   }, [ranking, part, t]);
+  // A row opens its tank's sheet (TankSheet.tsx). Not a tank that left today: its seat is gone, so it has no sheet.
+  const [sheet, setSheet] = useState<SheetTank | null>(null);
+  const tanks = useMemo(() => {
+    if (ranking === null) return new Map<string, SheetTank>();
+    const rows = part === "today" ? ranking.today.filter((row) => row.seated) : ranking.thisMonth;
+    return new Map(rows.map((row) => [row.seatId, { seatId: row.seatId, name: row.name, look: row.look, gm: row.gm }]));
+  }, [ranking, part]);
   const label = part === "today" ? t.ranking.today : t.ranking.month;
   if (items === null) return <p className="animate-pulse-soft text-muted">{t.connecting}</p>;
   if (items.length === 0) return <p className="text-muted">{part === "today" ? t.todayEmpty : t.monthEmpty}</p>;
   return (
     <div data-monthly-ranking={part} className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <PagedRanking label={label} items={items} highlightId={ownSeatId} jumpLabel={part === "month" ? t.toNotRanked : null} />
+      <PagedRanking
+        label={label}
+        items={items}
+        highlightId={ownSeatId}
+        jumpLabel={part === "month" ? t.toNotRanked : null}
+        open={{ label: t.sheet.open, can: (id) => tanks.has(id), onOpen: (id) => setSheet(tanks.get(id) ?? null) }}
+      />
+      <TankSheet tank={sheet} source={LIVE} onClose={() => setSheet(null)} />
     </div>
   );
 }

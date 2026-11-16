@@ -5,9 +5,9 @@
 
 import { Paintbrush } from "lucide-react";
 import { useMemo, useState } from "react";
-import { PLAYER_NAME_MAX } from "@game/arena";
+import { FIRST_PUBLISHED_RULES_MONTH, PLAYER_NAME_MAX } from "@game/arena";
 import { DEFAULT_PRESET_ID, PRESETS, type StrategyInput } from "@game/engine";
-import { useMessages } from "../i18n/I18nProvider.tsx";
+import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
 import type { NameDraft } from "../mytank/useNameDraft.ts";
 import { readLastStyle } from "../prep/lastStyle.ts";
 import { PrepPanel, type PrepTab } from "../prep/PrepPanel.tsx";
@@ -128,6 +128,7 @@ export interface TankStepProps {
 
 export function TankStep({ strategy, look, playerName, submitting, problem, purpose, onBack, onSubmit }: TankStepProps) {
   const m = useMessages();
+  const f = useFormat();
   const t = purpose === "join" ? { title: m.monthly.joinSteps.tankTitle, submit: m.monthly.joinSteps.submit } : { title: m.monthly.changeRules.title, submit: m.monthly.changeRules.submit };
   const [tab, setTab] = useState<PrepTab>("style");
   return (
@@ -136,7 +137,12 @@ export function TankStep({ strategy, look, playerName, submitting, problem, purp
       onBack={onBack}
       action={
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
-          {problem === null ? null : (
+          {/* Where a player agrees to the terms: what everyone may read (monthly-protocol.ts). The problem takes its place. */}
+          {problem === null ? (
+            <p data-rules-open-notice="" className="min-w-0 flex-1 basis-60 text-muted [overflow-wrap:anywhere]">
+              {m.monthly.joinSteps.rulesOpen(f.month(FIRST_PUBLISHED_RULES_MONTH))}
+            </p>
+          ) : (
             <p role="alert" className="min-w-0 flex-1 basis-60 font-semibold text-hit [overflow-wrap:anywhere]">
               {problem}
             </p>

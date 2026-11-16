@@ -257,6 +257,33 @@ const MIGRATIONS: readonly string[] = [
     account_id TEXT PRIMARY KEY REFERENCES account (id) ON DELETE CASCADE
   ) STRICT;
   `,
+
+  // 9: what the monthly league opens to everyone (owner, 2026-11-17, monthly/disclosure.ts):
+  // each tank's numbers of a finished day, and every tank's rules as they stood at a month's
+  // close. Keyed by the public seat id, not the account. A month's copy is written once and kept.
+  `
+  CREATE TABLE league_day_numbers (
+    day TEXT NOT NULL CHECK (day GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+    seat_id TEXT NOT NULL,
+    turns INTEGER NOT NULL CHECK (turns >= 0),
+    shots INTEGER NOT NULL CHECK (shots >= 0),
+    hits INTEGER NOT NULL CHECK (hits >= 0),
+    times_hit INTEGER NOT NULL CHECK (times_hit >= 0),
+    squares_moved INTEGER NOT NULL CHECK (squares_moved >= 0),
+    PRIMARY KEY (seat_id, day)
+  ) STRICT;
+  CREATE TABLE league_month_rules (
+    month TEXT NOT NULL CHECK (month GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]'),
+    seat_id TEXT NOT NULL,
+    league INTEGER NOT NULL CHECK (league >= 1),
+    rank INTEGER CHECK (rank >= 1),
+    name TEXT NOT NULL,
+    look_json TEXT NOT NULL,
+    gm INTEGER NOT NULL CHECK (gm IN (0, 1)),
+    strategy_json TEXT NOT NULL,
+    PRIMARY KEY (month, seat_id)
+  ) STRICT;
+  `,
 ];
 
 /** The version this code writes. */

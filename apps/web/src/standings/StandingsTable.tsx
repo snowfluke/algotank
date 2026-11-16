@@ -33,10 +33,12 @@ export interface RankingRowProps {
   readonly badge?: { readonly text: string; readonly title: string };
   /** "li" in a list of rows (default); "div" inside a Pager, which wraps each item in its own `li`. */
   readonly element?: "li" | "div";
+  /** A button over the whole row that opens the tank (monthly/TankSheet.tsx), named by `label`. */
+  readonly open?: { readonly label: string; onOpen(): void } | undefined;
 }
 
 /** One ranked tank. board/Scoreboard.tsx draws its rows with it too, so every ranking marks "you" the same way. */
-export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, badge, element = "li" }: RankingRowProps) {
+export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, badge, element = "li", open }: RankingRowProps) {
   const m = useMessages();
   const t = m.results.table;
   const Row = element;
@@ -44,7 +46,7 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
     <Row
       aria-current={isSelf ? "true" : undefined}
       data-player-id={tank.playerId}
-      className={`grid grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto] items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
+      className={`relative grid grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto] items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
         isSelf ? "bg-self-soft" : ""
       } ${verdict !== null && !verdict.through && !isSelf ? "text-muted" : "text-ink"}`}
     >
@@ -69,6 +71,16 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
         )}
       </span>
       {note === undefined ? null : <span className={`col-start-3 col-end-5 ${ROW_LABEL_TEXT} text-muted [overflow-wrap:anywhere]`}>{note}</span>}
+      {/* Over the whole row, so the row keeps its layout and the whole row is the target. */}
+      {open === undefined ? null : (
+        <button
+          type="button"
+          aria-label={open.label}
+          data-open-tank=""
+          onClick={open.onOpen}
+          className="absolute inset-0 cursor-pointer rounded-[0.5em] focus-visible:outline-2 focus-visible:outline-water hover:bg-ink/5"
+        />
+      )}
     </Row>
   );
 }
@@ -185,12 +197,15 @@ export function PagedRanking({
   items,
   highlightId,
   jumpLabel,
+  open,
 }: {
   label: string;
   items: readonly RankingItem[];
   highlightId: string | null;
   /** The button that turns to the line's page; default "to the cut line", null for none. */
   jumpLabel?: string | null;
+  /** Makes a row a button that opens its tank: `label` names it, `can` says which rows open. */
+  open?: { label(name: string): string; can(playerId: string): boolean; onOpen(playerId: string): void };
 }) {
   const m = useMessages();
   const cutIndex = items.findIndex((item) => item.kind === "cut");
@@ -209,7 +224,13 @@ export function PagedRanking({
         item.kind === "cut" ? (
           <CutLine label={item.label} element="div" />
         ) : (
-          <RankingRow {...item.row} isSelf={item.row.tank.playerId === highlightId} truncate element="div" />
+          <RankingRow
+            {...item.row}
+            isSelf={item.row.tank.playerId === highlightId}
+            truncate
+            element="div"
+            open={open !== undefined && open.can(item.row.tank.playerId) ? { label: open.label(item.row.tank.name), onOpen: () => open.onOpen(item.row.tank.playerId) } : undefined}
+          />
         )
       }
     />

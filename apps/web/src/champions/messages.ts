@@ -30,6 +30,13 @@ export const en = {
   tournamentsEmpty: "Nobody has won a tournament yet, so the first winner could be you.",
   loading: "Loading the champions.",
   retry: "Try again",
+  /** A closed month whose rules are open (champions/MonthRules.tsx). `month` is "December 2026". */
+  monthRules: {
+    open: "Every tank's rules",
+    heading: (month: string) => `Rules of ${month}`,
+    note: (month: string) => `These are the rules each tank had when ${month} ended, so a tank that left earlier is not in the list.`,
+    loading: "The tanks are loading.",
+  },
 };
 
 export const id: typeof en = {
@@ -52,4 +59,10 @@ export const id: typeof en = {
   tournamentsEmpty: "Belum ada yang memenangkan turnamen, jadi pemenang pertama bisa kamu.",
   loading: "Memuat para juara.",
   retry: "Coba lagi",
+  monthRules: {
+    open: "Aturan semua tank",
+    heading: (month) => `Aturan ${month}`,
+    note: (month) => `Ini aturan setiap tank saat ${month} berakhir, jadi tank yang keluar lebih awal tidak ada di daftar.`,
+    loading: "Daftar tank sedang dimuat.",
+  },
 };

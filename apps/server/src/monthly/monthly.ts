@@ -44,6 +44,7 @@
 // starts every seat at zero, and only the owner's /api/monthly/me carries them.
 
 import {
+  FIRST_PUBLISHED_RULES_MONTH,
   MONTHLY_SEATS,
   PLAYER_NAME_MAX,
   PLAYER_NAME_MIN,
@@ -61,9 +62,13 @@ import {
   type MonthlyMeResponse,
   type MonthlyOverviewResponse,
   type MonthRecord,
+  type MonthTanksResponse,
+  type MonthTankRulesResponse,
   type PlayerId,
+  type PublishedMonthsResponse,
   type PublicStatusResponse,
   type TankLook,
+  type TankSheetResponse,
 } from "@game/arena";
 import { parseStrategy, statsView } from "@game/engine";
 import { makeGameName } from "../game-names.ts";
@@ -77,6 +82,7 @@ import { RECORD_TOP, type Champions } from "./champions.ts";
 import { LeagueDay, type DayTank, type Random } from "./league-day.ts";
 import { EMPTY_SEATS, type Checkpoint, type DayScore, type LeagueStore, type MonthState, type Seat, type SeatsState } from "./league-store.ts";
 import { closeMonth } from "./month-close.ts";
+import { dayNumbersOf, type Disclosure } from "./disclosure.ts";
 import type { GameMasters } from "./game-masters.ts";
 import { rankMonth, type MonthPlace } from "./score.ts";
 import type { LeagueStreams } from "./streams.ts";
@@ -90,6 +96,8 @@ export interface MonthlyOptions {
   readonly store: LeagueStore;
   /** The game master accounts, whose tanks take no place (game-masters.ts). */
   readonly gameMasters: GameMasters;
+  /** What the league opens to everyone: day numbers and, from a month's close, its rules (disclosure.ts). */
+  readonly disclosure: Disclosure;
   readonly champions: Champions;
   readonly streams: LeagueStreams;
   readonly calendar: LeagueCalendar;
@@ -119,6 +127,8 @@ export interface SeatedPlayers {
 const dayTankOf = (seat: Seat): DayTank => ({ id: seat.seatId, name: seat.name, look: seat.look, strategy: seat.strategy });
 
 const serviceBusy = () => new HttpError(503, "The day round is being recorded. Please try again in a moment.");
+
+const monthNotPublished = () => new HttpError(404, "The rules of that month are not open.", { code: "month_not_published" });
 
 export class MonthlyLeagues {
   private seats: SeatsState = EMPTY_SEATS;
@@ -264,6 +274,7 @@ export class MonthlyLeagues {
       const month = this.withDayClosed(this.month, ended.day);
       this.options.store.writeMonth(month);
       this.month = month;
+      this.options.disclosure.writeDayNumbers(ended.day, this.dayNumbersOfSeated());
       const leaguesBefore = this.seats.leagues;
       if (next.month !== ended.month) {
         this.closeMonthOf(month);
@@ -312,6 +323,7 @@ export class MonthlyLeagues {
   private closeMonthOf(month: MonthState): void {
     if (this.seats.closedMonth === month.month) return;
     const rankings = Array.from({ length: this.seats.leagues }, (_, i) => this.monthRanking(i + 1, month));
+    if (month.month >= FIRST_PUBLISHED_RULES_MONTH) this.publishRules(month.month, rankings);
     const leagueOne = (rankings[0] ?? []).filter((place) => place.rank !== null);
     const rowOf = (place: MonthPlace<AccountId>): LeagueRow => {
       const seat = this.seatOfAccount(place.id);
@@ -333,6 +345,57 @@ export class MonthlyLeagues {
     const next: SeatsState = { ...this.seats, leagues: Math.max(1, result.leagues.length), closedMonth: month.month, seats, moves };
     this.options.store.writeSeats(next);
     this.seats = next;
+  }
+
+  /** Every seated tank's rules as they stand at the close, with its place (disclosure.ts). Written once per month. */
+  private publishRules(month: string, rankings: readonly (readonly MonthPlace<AccountId>[])[]): void {
+    const rows = [...this.seats.seats.values()].map((seat) => ({
+      seatId: seat.seatId,
+      league: seat.league,
+      rank: rankings[seat.league - 1]?.find((place) => place.id === seat.accountId)?.rank ?? null,
+      name: seat.name,
+      look: seat.look,
+      gm: this.gameMasters.has(seat.accountId),
+      strategy: seat.strategy,
+    }));
+    this.options.disclosure.writeMonthRules(month, rows);
+  }
+
+  /** Each seated tank's numbers of the day so far. */
+  private dayNumbersOfSeated(): { readonly seatId: PlayerId; readonly numbers: ReturnType<typeof dayNumbersOf> }[] {
+    return [...this.days.values()].flatMap((round) => round.standings().map(({ id }) => ({ seatId: id, numbers: dayNumbersOf(round.statsOf(id)) })));
+  }
+
+  // -------------------------------------------------------------------------
+  // What anyone may read about a tank (visibility table: monthly-protocol.ts).
+  // -------------------------------------------------------------------------
+
+  /** GET /api/monthly/tanks/:seatId: the last finished day's numbers, and the rules only of a game master's tank. */
+  tankSheet(seatId: string | undefined): TankSheetResponse {
+    const seat = [...this.seats.seats.values()].find((s) => s.seatId === seatId);
+    if (seat === undefined) throw new HttpError(404, "No tank in the monthly arena has that id.", { code: "no_monthly_seat" });
+    return {
+      seatId: seat.seatId,
+      rules: this.gameMasters.has(seat.accountId) ? seat.strategy : null,
+      lastDay: this.options.disclosure.lastDayNumbers(seat.seatId, this.today.day),
+    };
+  }
+
+  publishedMonths(): PublishedMonthsResponse {
+    return { months: this.options.disclosure.publishedMonths() };
+  }
+
+  monthTanks(month: string | undefined): MonthTanksResponse {
+    const tanks = month === undefined ? null : this.options.disclosure.monthTanks(month);
+    if (month === undefined || tanks === null) throw monthNotPublished();
+    return { month, tanks };
+  }
+
+  monthTankRules(month: string | undefined, seatId: string | undefined): MonthTankRulesResponse {
+    if (month === undefined || seatId === undefined || this.options.disclosure.monthTanks(month) === null) throw monthNotPublished();
+    const rules = this.options.disclosure.monthRules(month, seatId);
+    if (rules === null) throw new HttpError(404, "That month has no tank with that id.", { code: "no_monthly_seat" });
+    return { rules };
   }
 
   // -------------------------------------------------------------------------
@@ -404,6 +467,8 @@ export class MonthlyLeagues {
       this.options.store.writeMonth(month);
       this.month = month;
     }
+    // The numbers of the part of the day it played, so its sheet's "last day" is not lost with the seat.
+    this.options.disclosure.writeDayNumbers(this.today.day, [{ seatId: seat.seatId, numbers: dayNumbersOf(day.statsOf(seat.seatId)) }]);
     const seats = new Map(this.seats.seats);
     seats.delete(accountId);
     const next: SeatsState = { ...this.seats, seats };

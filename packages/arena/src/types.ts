@@ -600,7 +600,8 @@ export interface PublicArena {
 /**
  * A bot as every viewer sees it. This is an allow-list: a field of BotState
  * reaches viewers only when it is named here. The mode a bot is in stays
- * private, because it shows opponents when a player's rules fire.
+ * private, because it shows opponents when a player's rules fire. Who may read the rules
+ * themselves of a monthly tank: monthly-protocol.ts, the table at the top.
  */
 export type PublicBot = Pick<
   BotState,

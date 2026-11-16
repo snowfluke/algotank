@@ -57,6 +57,12 @@ export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, 
 
   router.add("GET", "/api/monthly/leagues/:league/days", (ctx) => jsonResponse(monthly.daysOf(monthly.leagueOf(ctx.params["league"]))));
 
+  // What anyone may read about a tank (the visibility table in monthly-protocol.ts); no session needed.
+  router.add("GET", "/api/monthly/tanks/:seatId", (ctx) => jsonResponse(monthly.tankSheet(ctx.params["seatId"])));
+  router.add("GET", "/api/monthly/months", () => jsonResponse(monthly.publishedMonths()));
+  router.add("GET", "/api/monthly/months/:month", (ctx) => jsonResponse(monthly.monthTanks(ctx.params["month"])));
+  router.add("GET", "/api/monthly/months/:month/tanks/:seatId", (ctx) => jsonResponse(monthly.monthTankRules(ctx.params["month"], ctx.params["seatId"])));
+
   router.add("GET", "/api/monthly/me", (ctx) => jsonResponse(monthly.me(auth.requireAccount(ctx.req).id)));
 
   router.add("POST", "/api/monthly/seat", async (ctx) => {

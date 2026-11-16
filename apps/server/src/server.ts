@@ -20,6 +20,7 @@ import { errorResponse, HttpError, jsonResponse } from "./http.ts";
 import { DEFAULT_LEAGUE_TIME_ZONE, shortDayCalendar, zoneCalendar, type ShortDays } from "./monthly/calendar.ts";
 import { Champions } from "./monthly/champions.ts";
 import { LeagueStore } from "./monthly/league-store.ts";
+import { Disclosure } from "./monthly/disclosure.ts";
 import { GameMasters } from "./monthly/game-masters.ts";
 import { MONTHLY_TICK_MS, MonthlyLeagues } from "./monthly/monthly.ts";
 import { registerAdminPlayerRoutes } from "./monthly/admin-routes.ts";
@@ -183,6 +184,7 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   const monthly = new MonthlyLeagues({
     store: league,
     gameMasters: new GameMasters(db),
+    disclosure: new Disclosure(db),
     champions,
     streams: leagueStreams,
     calendar: options.leagueShortDays === undefined ? zoneCalendar(leagueTimeZone) : shortDayCalendar(options.leagueShortDays),

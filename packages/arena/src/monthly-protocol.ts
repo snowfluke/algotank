@@ -35,6 +35,13 @@
 // POST   /api/monthly/me/move-seen             (account) -> 204; the month close's move is shown once
 // Seat, quit, rename, strategy and look share one limit per account: past it they answer 429 rate_limited with
 // `retryAfterSeconds`.
+// GET    /api/monthly/tanks/:seatId            -> TankSheetResponse: a seated tank's numbers of its last finished day, and its
+//                                                rules only while its account is a game master. 404 no_monthly_seat
+// GET    /api/monthly/months                   -> PublishedMonthsResponse: the closed months whose rules are open
+// GET    /api/monthly/months/:month            -> MonthTanksResponse: that month's tanks at its close, without
+//                                                rules. 404 month_not_published
+// GET    /api/monthly/months/:month/tanks/:seatId -> MonthTankRulesResponse: one tank's rules at that close.
+//                                                404 month_not_published, 404 no_monthly_seat
 // GET    /api/public                           -> PublicStatusResponse.monthly (public-protocol.ts)
 // GET    /api/champions                        -> ChampionsResponse; the months are League 1's champions
 // GET    /api/admin/players                    (account in ADMIN_EMAILS; verified when the server sends
@@ -47,6 +54,18 @@
 //                                                404 no_monthly_seat
 
 import type { Decision, StatsView, StrategyInput } from "@game/engine";
+
+// Who may read a tank's rules (owner, 2026-11-17: "for fair play"). The server enforces it; a page
+// never receives rules it may not show.
+// | Rules of a tank      | To                   | Actor  | Guard                                                     |
+// |----------------------|----------------------|--------|-----------------------------------------------------------|
+// | private              | open (game master)   | admin  | Make GM on /admin/players                                 |
+// | open (game master)   | private              | admin  | Remove GM                                                 |
+// | private or open      | published (month M)  | server | M's close, and M >= FIRST_PUBLISHED_RULES_MONTH: the rules |
+// |                      |                      |        | as they stood at the close; a tank that quit before it is |
+// |                      |                      |        | not in the list                                           |
+// "Published" is terminal for that month: the copy taken at the close never changes. A tank's
+// numbers of a finished day (DayNumbers) are open to everyone; they say what it did, not its rules.
 import type { CompactTick } from "./compact-tick.ts";
 import type { MonthRecord } from "./public-protocol.ts";
 import type { PlayerId, PublicSnapshot, TankLook } from "./types.ts";
@@ -276,7 +295,7 @@ export interface RenameRequest {
  * - no_monthly_seat: a quit without a seat (404).
  * - monthly_name_fixed: the account's name of this month is set; it changes in the next month (409).
  */
-export type MonthlyErrorCode = "monthly_seat_taken" | "no_monthly_seat" | "monthly_name_fixed";
+export type MonthlyErrorCode = "monthly_seat_taken" | "no_monthly_seat" | "monthly_name_fixed" | "month_not_published";
 
 /**
  * One seated tank and its owner's account, for the host (owner, 2026-11-16: to check who is behind
@@ -312,4 +331,55 @@ export interface AdminPlayersResponse {
   readonly month: string;
   readonly day: string;
   readonly players: readonly AdminPlayer[];
+}
+
+/**
+ * The first month whose tanks' rules open at its close. Not November 2026: that month began with
+ * rules kept private, and the owner agreed to announce the change before it applies.
+ */
+export const FIRST_PUBLISHED_RULES_MONTH = "2026-12";
+
+/** What a tank did in one finished day. Not StatsNumbers: its noRuleTurns would say how its rules are written. */
+export interface DayNumbers {
+  readonly turns: number;
+  readonly shots: number;
+  readonly hits: number;
+  readonly timesHit: number;
+  readonly squaresMoved: number;
+}
+
+/** GET /api/monthly/tanks/:seatId: what anyone may read about a seated tank. */
+export interface TankSheetResponse {
+  readonly seatId: PlayerId;
+  /** The rules of a game master's tank, which are always open; null for every other tank. */
+  readonly rules: StrategyInput | null;
+  /** The tank's numbers of its newest finished day before today (normally yesterday), or null before its first. */
+  readonly lastDay: { readonly day: string; readonly numbers: DayNumbers } | null;
+}
+
+/** GET /api/monthly/months: the closed months whose rules are open, the newest first ("2026-12"). */
+export interface PublishedMonthsResponse {
+  readonly months: readonly string[];
+}
+
+/** One tank of a published month, as it stood at the month's close. */
+export interface MonthTank {
+  readonly seatId: PlayerId;
+  readonly league: number;
+  /** Its place in the league's month ranking; null without a place (too few counted days, or a game master). */
+  readonly rank: number | null;
+  readonly name: string;
+  readonly look: TankLook;
+  readonly gm: boolean;
+}
+
+/** GET /api/monthly/months/:month: every tank of the month's close, League 1 first, each league by place. */
+export interface MonthTanksResponse {
+  readonly month: string;
+  readonly tanks: readonly MonthTank[];
+}
+
+/** GET /api/monthly/months/:month/tanks/:seatId */
+export interface MonthTankRulesResponse {
+  readonly rules: StrategyInput;
 }

@@ -25,6 +25,7 @@ import { IconButton } from "../ui/IconButton.tsx";
 import { useLaptopLayout } from "../ui/layout.ts";
 import { Pager } from "../ui/Pager.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
+import { MonthRules } from "./MonthRules.tsx";
 import { useChampions, type ChampionsLoad } from "./useChampions.ts";
 
 export type ChampionsPart = "month" | "months" | "tournaments";
@@ -61,7 +62,7 @@ function MonthPane({ month, rows, ownSeatId }: { readonly month: string; readonl
   );
 }
 
-function MonthCard({ record }: { readonly record: MonthRecord }) {
+function MonthCard({ record, rulesOpen }: { readonly record: MonthRecord; readonly rulesOpen: boolean }) {
   const m = useMessages();
   const f = useFormat();
   const t = m.champions;
@@ -78,11 +79,16 @@ function MonthCard({ record }: { readonly record: MonthRecord }) {
           <RankingRow key={row.rank} tank={{ playerId: rankKey(row.rank), name: row.name, look: row.look, isBot: false }} place={row.rank} score={row.score} verdict={null} isSelf={false} truncate />
         ))}
       </ol>
+      {rulesOpen ? (
+        <div className="flex min-w-0">
+          <MonthRules month={record.month} />
+        </div>
+      ) : null}
     </article>
   );
 }
 
-function MonthsPane({ months }: { readonly months: readonly MonthRecord[] }) {
+function MonthsPane({ months, rulesMonths }: { readonly months: readonly MonthRecord[]; readonly rulesMonths: ReadonlySet<string> }) {
   const m = useMessages();
   const t = m.champions;
   return (
@@ -91,7 +97,7 @@ function MonthsPane({ months }: { readonly months: readonly MonthRecord[] }) {
       {months.length === 0 ? (
         <p className="text-lead">{t.monthsEmpty}</p>
       ) : (
-        <Pager label={t.monthsHeading} items={months} itemKey={(record) => record.month} gap={8} renderItem={(record) => <MonthCard record={record} />} />
+        <Pager label={t.monthsHeading} items={months} itemKey={(record) => record.month} gap={8} renderItem={(record) => <MonthCard record={record} rulesOpen={rulesMonths.has(record.month)} />} />
       )}
     </section>
   );
@@ -162,7 +168,7 @@ export function ChampionsView({ load, part, onPart, onRetry }: { readonly load: 
     const { data } = load;
     const panes: Record<ChampionsPart, ReactNode> = {
       month: <MonthPane month={data.month} rows={data.rows} ownSeatId={data.ownSeatId} />,
-      months: <MonthsPane months={data.champions.months} />,
+      months: <MonthsPane months={data.champions.months} rulesMonths={data.rulesMonths} />,
       tournaments: <TournamentsPane winners={data.champions.tournamentWinners} />,
     };
     body = laptop ? (

@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ChampionsResponse, LeagueMonthRow } from "@game/arena";
-import { getChampions, getLeagueRanking, getMonthlyMe, type ApiFailure } from "../api/client.ts";
+import { getChampions, getLeagueRanking, getMonthlyMe, getPublishedMonths, type ApiFailure } from "../api/client.ts";
 
 export interface ChampionsData {
   readonly champions: ChampionsResponse;
@@ -16,6 +16,8 @@ export interface ChampionsData {
   readonly rows: readonly LeagueMonthRow[];
   /** The visitor's own seat when it plays in League 1, or null. */
   readonly ownSeatId: string | null;
+  /** The closed months whose tanks' rules are open (GET /api/monthly/months), the newest first. */
+  readonly rulesMonths: ReadonlySet<string>;
 }
 
 export type ChampionsLoad =
@@ -34,11 +36,21 @@ async function ownSeatInLeagueOne(signedIn: boolean): Promise<string | null> {
   return me.data.seat !== null && me.data.seat.league === 1 ? me.data.seat.seatId : null;
 }
 
+/** The months with open rules. A failure only hides their buttons, so the page still shows; it is logged. */
+async function rulesMonths(): Promise<ReadonlySet<string>> {
+  const result = await getPublishedMonths();
+  if (!result.ok) {
+    console.error("The champions page could not read the months whose rules are open:", result.error);
+    return new Set();
+  }
+  return new Set(result.data.months);
+}
+
 async function loadAll(signedIn: boolean): Promise<ChampionsLoad> {
-  const [champions, ranking, ownSeatId] = await Promise.all([getChampions(), getLeagueRanking(1), ownSeatInLeagueOne(signedIn)]);
+  const [champions, ranking, ownSeatId, months] = await Promise.all([getChampions(), getLeagueRanking(1), ownSeatInLeagueOne(signedIn), rulesMonths()]);
   if (!champions.ok) return { kind: "failed", failure: champions };
   if (!ranking.ok) return { kind: "failed", failure: ranking };
-  return { kind: "ready", data: { champions: champions.data, month: ranking.data.month, rows: ranking.data.thisMonth, ownSeatId } };
+  return { kind: "ready", data: { champions: champions.data, month: ranking.data.month, rows: ranking.data.thisMonth, ownSeatId, rulesMonths: months } };
 }
 
 export function useChampions(signedIn: boolean): { readonly load: ChampionsLoad; retry(): void } {

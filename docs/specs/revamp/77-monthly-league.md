@@ -16,7 +16,7 @@ Owner, 2026-11-14: "monthly arena is long running arena. 1 round lasted 24h. Onc
 ## 1. Seats
 
 - Only a signed-in account takes a seat (as today). One seat per account over all leagues. The seat belongs to the account on any device.
-- Taking a seat submits the name, look, strategy and upgrades. They are fixed while the tank is seated. To change the tank, the owner quits and takes a seat again.
+- Taking a seat submits the name, look, strategy and upgrades. Since 2026-11-16 "Change rules" gives the seated tank new rules in place (its points stay), and "Change look" its look.
 - The name: the first name an account submits in a month stays its name until that month ends, also after quit and rejoin. From the first day of a later month the owner can change it once; that name is then fixed for that month. The block list and "a name already used in the league is refused" apply.
 - Quit: the tank leaves the board at the next turn. Its counted days of the month stay.
 - A seated tank plays every day round and stays seated when the month changes.
@@ -70,6 +70,18 @@ Computed from the final rankings of the month, before any move:
 3. With one league nothing moves.
 
 Each seat keeps what happened to it for the owner to see once: went up, went down, stayed.
+
+## 4b. What everyone may read (owner, 2026-11-17)
+
+- A game master's tank (the organizer's, "GM") always has open rules: its sheet shows them.
+- Every tank's rules as they stood at a month's close open to everyone at that close, from
+  December 2026 on (`FIRST_PUBLISHED_RULES_MONTH`); November 2026 began with private rules, so its
+  close opens nothing. A tank that quit before the close is not in the copy.
+- Each tank's numbers of a finished day (turns, shots, hits, times hit, squares moved) are open;
+  the rule counts are not, because they show how the rules are written.
+- The server enforces this (monthly/disclosure.ts, monthly-protocol.ts has the state table); the
+  page opens a tank's sheet from a ranking row, and a published month's list from its card on
+  the champions page. The About list, the rules step and the month-close notice say it.
 
 ## 5. Contract and server (M1)
 

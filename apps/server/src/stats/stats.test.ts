@@ -1,6 +1,7 @@
 // Statistics for players (docs/specs/revamp/81-metrics.md, K2) through the public interfaces:
 // the event stream, the arena's answers, GET /api/account/stats and the monthly league.
 
+import { Disclosure } from "../monthly/disclosure.ts";
 import { GameMasters } from "../monthly/game-masters.ts";
 import type { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -182,6 +183,7 @@ function league(db: Database, at = NOV_14_10H) {
   const monthly = new MonthlyLeagues({
     store: new LeagueStore(db, ticks.now),
     gameMasters: new GameMasters(db),
+    disclosure: new Disclosure(db),
     champions: new Champions(db),
     streams,
     calendar: zoneCalendar("Asia/Jakarta"),

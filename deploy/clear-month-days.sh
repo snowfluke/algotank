@@ -4,8 +4,8 @@
 #
 #   sudo bash /opt/algotank/current/deploy/clear-month-days.sh 2026-11-17
 #
-# Run it after 00:00 of that day in LEAGUE_TIME_ZONE. It checks the day first, so a run at the
-# wrong time stops before the server does. A backup goes to /var/backups/algotank first. When
+# Run it on that day or later in the same month (after 00:00 in LEAGUE_TIME_ZONE). It checks the
+# day first, so a run too early stops before the server does. Only days before the given day go. A backup goes to /var/backups/algotank first. When
 # the delete fails, the server starts again with the data unchanged.
 set -euo pipefail
 

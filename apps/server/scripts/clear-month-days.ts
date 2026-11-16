@@ -9,8 +9,9 @@
 // the deleted days back. deploy/clear-month-days.sh stops the server, backs up, runs this and
 // starts it again.
 //
-// Guard: the league's checkpoint must already be on the given day, so the day close of the day
-// before has written its rows (they are deleted too) and no later day is touched.
+// Guard: the league's checkpoint must be on the given day or later, so the day close of the day
+// before has written its rows (they are deleted too). The delete stops before the given day, so a
+// run on a later day still keeps that day and every day after it.
 
 import { Database } from "bun:sqlite";
 import { DEFAULT_DATA_DIR } from "../src/config.ts";
@@ -37,8 +38,9 @@ if (checkpoint === null) {
   process.exit(1);
 }
 const checkpointDay: unknown = (JSON.parse(checkpoint.checkpoint_json) as { day?: unknown }).day;
-if (checkpointDay !== firstDay) {
-  console.error(`The league is on day ${String(checkpointDay)}, not ${firstDay}. Run this after 00:00 of ${firstDay} in LEAGUE_TIME_ZONE, when that day has started.`);
+// Days are YYYY-MM-DD, so their text order is their calendar order.
+if (typeof checkpointDay !== "string" || checkpointDay < firstDay || checkpointDay.slice(0, 7) !== firstDay.slice(0, 7)) {
+  console.error(`The league is on day ${String(checkpointDay)}. Run this on ${firstDay} or later in the same month, after 00:00 in LEAGUE_TIME_ZONE.`);
   process.exit(1);
 }
 

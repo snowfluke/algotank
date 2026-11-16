@@ -35,8 +35,9 @@ export interface RankingRowProps {
   /** "li" in a list of rows (default); "div" inside a Pager, which wraps each item in its own `li`. */
   readonly element?: "li" | "div";
   /**
-   * A button over the whole row that opens the tank (monthly/TankSheet.tsx), named by `label`. The
-   * row ends in a chevron, or in `cue` (the GM's "See rules") when the row has more to show.
+   * A button over the whole row that opens the tank (monthly/TankSheet.tsx), named by `label`. A row
+   * with `cue` (the GM's "See rules") ends in it; the others show nothing extra (owner, 2026-11-17: a
+   * chevron on every row promised more than a player's sheet holds and hid the GM's cue).
    */
   readonly open?: { readonly label: string; readonly cue: string | null; onOpen(): void } | undefined;
 }
@@ -50,7 +51,7 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
     <Row
       aria-current={isSelf ? "true" : undefined}
       data-player-id={tank.playerId}
-      className={`relative grid ${open === undefined ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto]" : open.cue === null ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_1em]" : "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_auto]"} items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
+      className={`relative grid ${open === undefined || open.cue === null ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto]" : "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_auto]"} items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
         isSelf ? "bg-self-soft" : ""
       } ${verdict !== null && !verdict.through && !isSelf ? "text-muted" : "text-ink"}`}
     >
@@ -75,10 +76,8 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
         )}
       </span>
       {note === undefined ? null : <span className={`col-start-3 col-end-5 ${ROW_LABEL_TEXT} text-muted [overflow-wrap:anywhere]`}>{note}</span>}
-      {/* The chevron says the row opens; the button over the whole row is the target. */}
-      {open === undefined ? null : open.cue === null ? (
-        <ChevronRight aria-hidden className="h-[1em] w-[1em] text-muted" />
-      ) : (
+      {/* The cue says what the row opens; the button over the whole row is the target. */}
+      {open === undefined || open.cue === null ? null : (
         <span aria-hidden className={`flex items-center whitespace-nowrap ${ROW_LABEL_TEXT} font-semibold text-water`}>
           {open.cue}
           <ChevronRight className="h-[1em] w-[1em]" />

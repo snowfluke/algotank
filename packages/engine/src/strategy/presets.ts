@@ -219,7 +219,18 @@ const sources = withLiteralIds<PresetSource>()([
     id: "item-hunter",
     name: "Item hunter",
     summary: "Drives to an item within 5 cells while it refills its tank, then runs at the nearest bot and throws from one cell until the tank runs low.",
-    strategy: burstAndRetreat("nearest", [], [rule("grab", [when("itemNear", { item: "any", n: 5 })], act("goToItem", { item: "any" }))]),
+    // ponytail: it ignores items under dry-spell, where it plays like the Ambusher. A tank there throws
+    // once per refill (5 of 6 water), so fights move about half the points of the standard set (about
+    // 3,500 throws per 30,000 turns against 7,200) while a bucket or an umbrella still moves its fixed
+    // 1 point a use. With the rule the Item hunter scored 737 a day against a field mean of 93 (6 days);
+    // a 1-cell reach still left it at +156 over the mean, and with no bucket and no umbrella on the
+    // board it sat at +15. Without the rule: 48 a day against a mean of 28 (14 days, 4 tanks each).
+    // Swap this for a rule that scales with the throw cost when the strategy language has one.
+    strategy: burstAndRetreat(
+      "nearest",
+      [],
+      [rule("grab", [when("itemNear", { item: "any", n: 5 }), when("ruleSet", { set: "dry-spell" }, true)], act("goToItem", { item: "any" }))],
+    ),
   },
 ]);
 

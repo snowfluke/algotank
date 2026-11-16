@@ -117,7 +117,7 @@ describe("the monthly page", () => {
 
   test("this month's ranking lists the tanks without a place after a line", () => {
     const html = render(props({ tab: "ranking", side: "month" }, 16));
-    expect(html).toContain("No full day yet, not ranked yet");
+    expect(html).toContain("Not ranked yet");
   });
 
   test("the month close's notice, the finished day at midnight, and yesterday's winner", () => {

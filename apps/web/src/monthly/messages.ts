@@ -36,7 +36,8 @@ export const en = {
   todayEmpty: "No tank plays in this league today yet.",
   monthEmpty: "No tank plays in this league this month yet.",
   /** The line before the tanks with fewer counted days than a place needs. */
-  notRanked: (days: number) => (days === 1 ? "No full day yet, not ranked yet" : `Fewer than ${days} days, not ranked yet`),
+  /** The cut line above the tanks without a place: one short line, because the line truncates. The reason is in the info list. */
+  notRanked: (days: number) => (days === 1 ? "Not ranked yet" : `Fewer than ${days} days, not ranked yet`),
   /** "Go to" the not-ranked line on its page. */
   toNotRanked: "Not ranked yet",
   yesterdayWinner: (name: string, score: number) => `${name} won yesterday's round with ${points(score)}.`,
@@ -131,7 +132,7 @@ export const id: typeof en = {
   ranking: { label: "Peringkat", today: "Hari ini", month: "Bulan ini" },
   todayEmpty: "Belum ada tank yang main di liga ini hari ini.",
   monthEmpty: "Belum ada tank yang main di liga ini bulan ini.",
-  notRanked: (days) => (days === 1 ? "Belum main sehari penuh, belum masuk peringkat" : `Kurang dari ${days} hari, belum masuk peringkat`),
+  notRanked: (days) => (days === 1 ? "Belum masuk peringkat" : `Kurang dari ${days} hari, belum masuk peringkat`),
   toNotRanked: "Belum masuk peringkat",
   yesterdayWinner: (name, score) => `${name} juara ronde kemarin dengan ${score} poin.`,
   dayWinner: (date, name, score) => `${name} juara ronde ${date} dengan ${score} poin.`,

@@ -87,16 +87,12 @@ export const en = {
   /** A seated owner's tank editor; the seated tank takes the new look at once (no quit). */
   changeLook: "Change look",
   changeLookFailed: "Your tank's new look was not saved, so try Change look again.",
-  /** The way to new rules: a quit, then the join steps with the tank's rules (flow.ts, askChangeRules). */
+  /** The rules step for the seated tank (flow.ts, changingRules): the new rules play at once in its own seat. */
   changeRules: {
     open: "Change rules",
-    title: "Change your tank's rules?",
-    // Short sentences for children (owner, 2026-11-16: the first text was too dense).
-    bodyCounted: (score: number) =>
-      `Your tank leaves the board first, then you pick new rules and join again. All your points stay saved, including today's ${points(score)}. Your name stays the same too. The new rules start counting tomorrow.`,
-    bodyNotCounted:
-      "Your tank leaves the board first, then you pick new rules and join again. Points from earlier days stay saved, and your name stays the same too. The new rules start counting tomorrow.",
-    confirm: "Leave and change rules",
+    title: "Change your tank's rules",
+    submit: "Save rules",
+    done: "Your tank plays its new rules now, and its points stay.",
   },
   /** The help button at the top of the page and the dialog it opens (MonthlyAbout.tsx). */
   about: {
@@ -195,12 +191,9 @@ export const id: typeof en = {
   changeLookFailed: "Penampilan baru tank kamu belum tersimpan, jadi coba Ubah penampilan lagi.",
   changeRules: {
     open: "Ubah aturan",
-    title: "Ubah aturan tank kamu?",
-    bodyCounted: (score) =>
-      `Tank kamu keluar dari papan dulu, lalu kamu pilih aturan baru dan masuk lagi. Semua poinmu tetap tersimpan, termasuk ${score} poin hari ini. Namamu juga tetap sama. Aturan baru mulai dihitung besok.`,
-    bodyNotCounted:
-      "Tank kamu keluar dari papan dulu, lalu kamu pilih aturan baru dan masuk lagi. Poin dari hari-hari sebelumnya tetap tersimpan, dan namamu juga tetap sama. Aturan baru mulai dihitung besok.",
-    confirm: "Keluar dan ubah aturan",
+    title: "Ubah aturan tank kamu",
+    submit: "Simpan aturan",
+    done: "Tank kamu sekarang main dengan aturan baru, dan poinnya tetap.",
   },
   about: {
     open: "Cara kerja arena bulanan",

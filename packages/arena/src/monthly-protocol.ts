@@ -25,12 +25,15 @@
 // PUT    /api/monthly/name                     (account) RenameRequest -> 204; once in a month whose name is
 //                                                not set yet (409 monthly_name_fixed), and the seated tank
 //                                                takes it at once
+// PUT    /api/monthly/strategy                 (account) ChangeStrategyRequest -> 204; the seated tank plays these
+//                                                rules from the next turn; its seat, points and today's count stay.
+//                                                404 no_monthly_seat, 400 for a strategy that fails parseStrategy.
 // PUT    /api/monthly/look                     (account) ChangeLookRequest -> 204; the seated tank's look, at any
 //                                                time ("Change look"); its name and points stay. 404 no_monthly_seat,
 //                                                400 for a look that fails parseTankLook. A save of "My tank" also
 //                                                gives the seat its look (server monthly.ts followLook).
 // POST   /api/monthly/me/move-seen             (account) -> 204; the month close's move is shown once
-// Seat, quit, rename and look share one limit per account: past it they answer 429 rate_limited with
+// Seat, quit, rename, strategy and look share one limit per account: past it they answer 429 rate_limited with
 // `retryAfterSeconds`.
 // GET    /api/public                           -> PublicStatusResponse.monthly (public-protocol.ts)
 // GET    /api/champions                        -> ChampionsResponse; the months are League 1's champions
@@ -231,6 +234,11 @@ export interface TakeSeatRequest {
   /** Without it: this month's name, an earlier month's name, or a name from the game, in that order. */
   readonly name?: string;
   readonly look: TankLook;
+  readonly strategy: StrategyInput;
+}
+
+/** Body of PUT /api/monthly/strategy. */
+export interface ChangeStrategyRequest {
   readonly strategy: StrategyInput;
 }
 

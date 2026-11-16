@@ -158,6 +158,20 @@ export class LeagueDay {
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */
+  /**
+   * A seated tank's new rules ("Ubah aturan", owner 2026-11-16: the new rules play at once). It
+   * keeps its id, today's points, whether today counts, and its statistics; it takes a new free
+   * square and starts its steps again, as at a reshuffle.
+   */
+  restrategy(id: PlayerId, strategy: Strategy): void {
+    const seated = this.seated.get(id);
+    if (seated === undefined || this.round === null) throw new Error(`Seat ${id} is not in league ${this.league}.`);
+    const points = this.pointsOf(id);
+    leaveRound(this.round, id);
+    joinRound(this.round, { id, strategy }, points);
+    this.seated.set(id, { ...seated, tank: { ...seated.tank, strategy } });
+  }
+
   unseat(id: PlayerId): { readonly points: number; readonly counts: boolean } {
     const seated = this.seated.get(id);
     if (seated === undefined || this.round === null) throw new Error(`Seat ${id} is not in league ${this.league}.`);

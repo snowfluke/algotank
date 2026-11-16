@@ -158,6 +158,21 @@ describe("the champions of past months", () => {
   });
 });
 
+describe("Change rules", () => {
+  test("PUT /api/monthly/strategy gives the seated tank new rules in its own seat; a bad strategy or no seat is refused", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    const strategy = (PRESETS[1] as (typeof PRESETS)[number]).strategy;
+    expect((await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy } })).status).toBe(404);
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+    const before = (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
+    expect((await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy: { rules: "no" } } })).status).toBe(400);
+    expect((await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy } })).status).toBe(204);
+    const after = (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
+    expect([after?.seatId, after?.name, after?.strategy]).toEqual([before?.seatId, "Ada", strategy]);
+  });
+});
+
 describe("Change look", () => {
   test("PUT /api/monthly/look gives the seated tank a new look; the name stays, and a bad look or no seat is refused", async () => {
     const t = start();

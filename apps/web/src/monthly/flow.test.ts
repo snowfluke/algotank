@@ -5,10 +5,10 @@ const naming: MonthlyFlow = { kind: "naming" };
 const preparing: MonthlyFlow = { kind: "preparing", submitting: false };
 const submitting: MonthlyFlow = { kind: "preparing", submitting: true };
 const seated: MonthlyFlow = { kind: "seated" };
-const quitting: MonthlyFlow = { kind: "quitting", busy: false, then: "watch" };
-const quittingBusy: MonthlyFlow = { kind: "quitting", busy: true, then: "watch" };
-const changing: MonthlyFlow = { kind: "quitting", busy: false, then: "changeRules" };
-const changingBusy: MonthlyFlow = { kind: "quitting", busy: true, then: "changeRules" };
+const quitting: MonthlyFlow = { kind: "quitting", busy: false };
+const quittingBusy: MonthlyFlow = { kind: "quitting", busy: true };
+const changing: MonthlyFlow = { kind: "changingRules", submitting: false };
+const changingBusy: MonthlyFlow = { kind: "changingRules", submitting: true };
 
 describe("the monthly page's flow (the table in flow.ts)", () => {
   const rows: [MonthlyFlow, FlowEvent, MonthlyFlow][] = [
@@ -32,10 +32,13 @@ describe("the monthly page's flow (the table in flow.ts)", () => {
     [quittingBusy, { type: "quitFailed" }, quitting],
     [quittingBusy, { type: "quitDone" }, WATCHING],
     [seated, { type: "askChangeRules" }, changing],
-    [changing, { type: "cancelQuit" }, seated],
-    [changing, { type: "quitConfirmed" }, changingBusy],
-    [changingBusy, { type: "quitFailed" }, changing],
-    [changingBusy, { type: "quitDone" }, naming],
+    [changing, { type: "back" }, seated],
+    [changing, { type: "submit" }, changingBusy],
+    [changingBusy, { type: "rulesFailed" }, changing],
+    [changingBusy, { type: "rulesChanged" }, seated],
+    [changing, { type: "seatLoaded", seated: false }, WATCHING],
+    [changingBusy, { type: "back" }, changingBusy],
+    [changingBusy, { type: "seatLoaded", seated: false }, changingBusy],
     [WATCHING, { type: "seatLoaded", seated: true }, seated],
     [naming, { type: "seatLoaded", seated: true }, seated],
     [preparing, { type: "seatLoaded", seated: true }, seated],

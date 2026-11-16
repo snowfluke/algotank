@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { TakeSeatRequest } from "@game/arena";
 import type { StrategyInput } from "@game/engine";
-import { putMonthlyLook, quitMonthlySeat, markMonthlyMoveSeen, takeMonthlySeat } from "../api/client.ts";
+import { putMonthlyLook, putMonthlyStrategy, quitMonthlySeat, markMonthlyMoveSeen, takeMonthlySeat } from "../api/client.ts";
 import { errorSentence } from "../api/errorSentences.ts";
 import { navigate } from "../app/navigation.ts";
 import { paths } from "../app/route.ts";
@@ -73,8 +73,6 @@ export function MonthlyPage() {
   const name = useNameDraft(tank.name);
   const strategy = useMonthlyStrategy();
   const [flow, dispatch] = useReducer(nextFlow, WATCHING);
-  const changingRules = flow.kind === "quitting" && flow.then === "changeRules";
-  const quitText = changingRules ? t.changeRules : t.quit;
   const [asked, setAsked] = useState<number | null>(null);
   const [tab, setTab] = useState<MonthlyTab>("arena");
   const [side, setSide] = useState<MonthlySide>("today");
@@ -197,10 +195,33 @@ export function MonthlyPage() {
     if (code === "monthly_name_fixed" || code === "monthly_seat_taken") reloadMe();
   }
 
-  /** A quit, or the first half of a change of rules: then the rules step opens with the tank's rules (`seatStrategy`). */
-  async function quit(seatStrategy: StrategyInput): Promise<void> {
+  /** The rules step opens with the seated tank's own rules. */
+  function changeRules(seatStrategy: StrategyInput): void {
+    setProblem(null);
+    void strategy.saveStrategy(seatStrategy);
+    dispatch({ type: "askChangeRules" });
+  }
+
+  async function submitRules(): Promise<void> {
+    if (strategy.load.kind !== "ready" || flow.kind !== "changingRules" || flow.submitting) return;
+    dispatch({ type: "submit" });
+    setProblem(null);
+    const result = await putMonthlyStrategy(strategy.load.draft);
+    if (result.ok) {
+      dispatch({ type: "rulesChanged" });
+      setTab("arena");
+      toast.show({ message: t.changeRules.done });
+      reloadMe();
+      return;
+    }
+    setProblem(errorSentence(result, "join", m.errors));
+    dispatch({ type: "rulesFailed" });
+    // A seat that is gone (quit on another device): the account's answer leads back to watching.
+    if (result.code === "no_monthly_seat") reloadMe();
+  }
+
+  async function quit(): Promise<void> {
     dispatch({ type: "quitConfirmed" });
-    if (changingRules) void strategy.saveStrategy(seatStrategy);
     const result = await quitMonthlySeat();
     if (result.ok || result.code === "no_monthly_seat") {
       dispatch({ type: "quitDone" });
@@ -263,17 +284,19 @@ export function MonthlyPage() {
     );
   }
 
-  if (flow.kind === "preparing") {
+  if (flow.kind === "preparing" || (flow.kind === "changingRules" && seat !== null)) {
+    const joining = flow.kind === "preparing";
     return (
       <AppShell header={<AppHeader title={m.common.pageTitles.monthly} />}>
         <TankStep
+          purpose={joining ? "join" : "changeRules"}
           strategy={strategy}
-          look={tank.look}
-          playerName={fixedName ?? name.field.value}
+          look={joining ? tank.look : (seat?.look ?? tank.look)}
+          playerName={joining ? (fixedName ?? name.field.value) : (seat?.name ?? "")}
           submitting={flow.submitting}
           problem={problem}
           onBack={() => dispatch({ type: "back" })}
-          onSubmit={() => void submit()}
+          onSubmit={() => void (joining ? submit() : submitRules())}
         />
       </AppShell>
     );
@@ -287,7 +310,9 @@ export function MonthlyPage() {
     <AppShell
       width="full"
       header={<AppHeader {...(presenter ? {} : { title: m.common.pageTitles.monthly })} />}
-      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => dispatch({ type: "askChangeRules" })} onChangeLook={() => setEditingTank(true)} tab={tab} onTab={setTab} />}
+      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => {
+          if (seat !== null) changeRules(seat.strategy);
+        }} onChangeLook={() => setEditingTank(true)} tab={tab} onTab={setTab} />}
     >
       <MonthlyView
         league={league}
@@ -308,7 +333,9 @@ export function MonthlyPage() {
         dayChange={shownDayChange}
         reshuffled={now < reshuffledUntil}
         onQuit={() => dispatch({ type: "askQuit" })}
-        onChangeRules={() => dispatch({ type: "askChangeRules" })}
+        onChangeRules={() => {
+          if (seat !== null) changeRules(seat.strategy);
+        }}
         onChangeLook={() => setEditingTank(true)}
         tab={tab}
         onTab={setTab}
@@ -318,11 +345,11 @@ export function MonthlyPage() {
       {seat === null ? null : (
         <Dialog
           open={flow.kind === "quitting"}
-          hook={changingRules ? "monthly-change-rules" : "monthly-quit"}
-          title={quitText.title}
-          body={seat.countsToday ? quitText.bodyCounted(seat.points) : quitText.bodyNotCounted}
-          confirmLabel={quitText.confirm}
-          onConfirm={() => void quit(seat.strategy)}
+          hook="monthly-quit"
+          title={t.quit.title}
+          body={seat.countsToday ? t.quit.bodyCounted(seat.points) : t.quit.bodyNotCounted}
+          confirmLabel={t.quit.confirm}
+          onConfirm={() => void quit()}
           onCancel={() => dispatch({ type: "cancelQuit" })}
         />
       )}

@@ -38,10 +38,10 @@ export function MonthlyHarness() {
   const leagueCount = Number(param("leagues", ["1", "2", "9"], "1"));
   const [tab, setTab] = useState<MonthlyTab>(param<MonthlyTab>("tab", ["arena", "ranking", "mine"], "arena"));
   const [side, setSide] = useState<MonthlySide>(param<MonthlySide>("side", ["today", "month", "mine"], "today"));
-  // quit=1: the quit dialog; quit=rules: the dialog of "Change rules".
-  const [quitting, setQuitting] = useState<"leave" | "rules" | null>(() => {
+  // quit=1: the quit dialog. "Change rules" opens the join steps' tank step, which the join audit covers.
+  const [quitting, setQuitting] = useState<"leave" | null>(() => {
     const value = new URLSearchParams(window.location.search).get("quit");
-    return value === "1" ? "leave" : value === "rules" ? "rules" : null;
+    return value === "1" ? "leave" : null;
   });
   const [league, setLeague] = useState(1);
   const laptop = useLaptopLayout();
@@ -65,7 +65,7 @@ export function MonthlyHarness() {
     <AppShell
       width="full"
       header={<AppHeader {...(presenter ? {} : { title: m.common.pageTitles.monthly })} />}
-      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => setQuitting("rules")} onChangeLook={() => undefined} tab={tab} onTab={setTab} />}
+      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => undefined} onChangeLook={() => undefined} tab={tab} onTab={setTab} />}
     >
       <MonthlyView
         league={league}
@@ -84,7 +84,7 @@ export function MonthlyHarness() {
         dayChange={dayChange}
         reshuffled={which === "reshuffled"}
         onQuit={() => setQuitting("leave")}
-        onChangeRules={() => setQuitting("rules")}
+        onChangeRules={() => undefined}
         onChangeLook={() => undefined}
         tab={tab}
         onTab={setTab}
@@ -94,10 +94,10 @@ export function MonthlyHarness() {
       {seat === null ? null : (
         <Dialog
           open={quitting !== null}
-          hook={quitting === "rules" ? "monthly-change-rules" : "monthly-quit"}
-          title={(quitting === "rules" ? m.monthly.changeRules : m.monthly.quit).title}
-          body={(quitting === "rules" ? m.monthly.changeRules : m.monthly.quit).bodyCounted(seat.points)}
-          confirmLabel={(quitting === "rules" ? m.monthly.changeRules : m.monthly.quit).confirm}
+          hook="monthly-quit"
+          title={m.monthly.quit.title}
+          body={m.monthly.quit.bodyCounted(seat.points)}
+          confirmLabel={m.monthly.quit.confirm}
           onConfirm={() => setQuitting(null)}
           onCancel={() => setQuitting(null)}
         />

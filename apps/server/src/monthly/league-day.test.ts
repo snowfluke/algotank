@@ -69,3 +69,19 @@ describe("the arena condition", () => {
     expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
   });
 });
+
+describe("new rules for a seated tank", () => {
+  test("restrategy keeps the tank's id, today's points, today's count and its statistics, and plays the new rules", () => {
+    const day = new LeagueDay(1, () => 0.5);
+    day.start([{ tank: tank(1), points: 40, counts: true, stats: undefined }, { tank: tank(2), points: 0, counts: false, stats: undefined }], 1000);
+    const stats = day.statsOf("seat-1");
+    const strategy = (PRESETS[1] as (typeof PRESETS)[number]).strategy;
+    day.restrategy("seat-1", strategy);
+    expect([day.pointsOf("seat-1"), day.countsToday("seat-1"), day.statsOf("seat-1")]).toEqual([40, true, stats]);
+    expect(day.view(1000).tanks.filter((t) => t.id === "seat-1")).toHaveLength(1);
+    // The round goes on with it, and a reshuffle keeps the new rules' tank and its points.
+    expect(() => day.step()).not.toThrow();
+    day.rebuild(1000);
+    expect(day.countsToday("seat-1")).toBe(true);
+  });
+});

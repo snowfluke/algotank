@@ -118,19 +118,21 @@ export interface TankStepProps {
   readonly look: TankLook;
   readonly playerName: string;
   readonly submitting: boolean;
-  /** The server's answer to the last "Masukkan tank", or null. */
+  /** The server's answer to the last submit, or null. */
   readonly problem: string | null;
+  /** "join" puts the tank in; "changeRules" gives the seated tank new rules (flow.ts, changingRules). */
+  readonly purpose: "join" | "changeRules";
   onBack(): void;
   onSubmit(): void;
 }
 
-export function TankStep({ strategy, look, playerName, submitting, problem, onBack, onSubmit }: TankStepProps) {
+export function TankStep({ strategy, look, playerName, submitting, problem, purpose, onBack, onSubmit }: TankStepProps) {
   const m = useMessages();
-  const t = m.monthly.joinSteps;
+  const t = purpose === "join" ? { title: m.monthly.joinSteps.tankTitle, submit: m.monthly.joinSteps.submit } : { title: m.monthly.changeRules.title, submit: m.monthly.changeRules.submit };
   const [tab, setTab] = useState<PrepTab>("style");
   return (
     <StepSheet
-      title={t.tankTitle}
+      title={t.title}
       onBack={onBack}
       action={
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">

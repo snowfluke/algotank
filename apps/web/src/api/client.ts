@@ -487,6 +487,11 @@ export function takeMonthlySeat(body: TakeSeatRequest): Promise<ApiResult<Monthl
   return request({ method: "POST", path: "/api/monthly/seat", body, guard: isMonthlyMe });
 }
 
+/** "Change rules": the seated tank plays these rules at once; its seat and points stay. */
+export function putMonthlyStrategy(strategy: StrategyInput): Promise<ApiResult<void>> {
+  return request<void>({ method: "PUT", path: "/api/monthly/strategy", body: { strategy } });
+}
+
 /** "Change look": the seated tank takes this look; its name and points stay. */
 export function putMonthlyLook(look: TankLook): Promise<ApiResult<void>> {
   return request<void>({ method: "PUT", path: "/api/monthly/look", body: { look } });

@@ -406,6 +406,24 @@ export class MonthlyLeagues {
     this.sendState(seat.league);
   }
 
+  /**
+   * PUT /api/monthly/strategy ("Ubah aturan"): the seated tank plays these rules from the next
+   * turn. Its seat, name, look, today's points and whether today counts all stay (owner,
+   * 2026-11-16, after players who changed rules by a quit and a new seat saw their points at 0).
+   */
+  changeStrategy(accountId: AccountId, body: unknown): void {
+    const parsed = parseStrategy(isRecord(body) ? body["strategy"] : undefined);
+    if (!parsed.ok) throw new HttpError(400, "The strategy is not valid.", { details: parsed.errors });
+    const seat = this.seats.seats.get(accountId);
+    if (seat === undefined) throw new HttpError(404, "Your account has no tank in the monthly arena.", { code: "no_monthly_seat" });
+    if (this.closing) throw serviceBusy();
+    const next: SeatsState = { ...this.seats, seats: new Map(this.seats.seats).set(accountId, { ...seat, strategy: parsed.strategy }) };
+    this.options.store.writeSeats(next);
+    this.seats = next;
+    this.dayOf(seat.league).restrategy(seat.seatId, parsed.strategy);
+    this.sendState(seat.league);
+  }
+
   /** PUT /api/monthly/name: once in a month whose name is not set yet. */
   rename(accountId: AccountId, body: unknown): void {
     const raw = isRecord(body) ? body["name"] : undefined;

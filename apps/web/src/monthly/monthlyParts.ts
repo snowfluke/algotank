@@ -94,7 +94,7 @@ export function withLivePoints(
   if (ranking === null || board === null || ranking.league !== board.league || ranking.day !== board.day) return ranking;
   const live = new Map(board.snapshot.bots.map((bot) => [bot.id, bot.score]));
   const today = ranking.today
-    .map((row, index) => ({ row: row.seated ? { ...row, points: live.get(row.seatId) ?? row.points } : row, index }))
+    .map((row, index) => ({ row: row.livePoints ? { ...row, points: live.get(row.seatId) ?? row.points } : row, index }))
     .sort((a, b) => b.row.points - a.row.points || a.index - b.index);
   // The game master takes no place (rank 0, as the server sends it), so the places skip its row.
   let place = 0;

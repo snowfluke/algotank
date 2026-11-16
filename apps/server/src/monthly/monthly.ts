@@ -583,15 +583,26 @@ export class MonthlyLeagues {
     const day = this.dayOf(league);
     const seated = day.standings().map(({ id, points, counts }) => {
       const seat = this.seatById(id);
-      return { accountId: seat.accountId, seatId: id, name: seat.name, look: seat.look, points, counts, seated: true, order: seat.order };
+      return { accountId: seat.accountId, seatId: id, name: seat.name, look: seat.look, points, counts, seated: true, livePoints: true, order: seat.order };
     });
     const seatedIds = new Set(seated.map((s) => s.seatId));
     const quit = this.month.days
       .filter((d) => d.day === this.today.day && d.league === league && !seatedIds.has(d.seatId))
-      .map((d) => ({ accountId: d.accountId, seatId: d.seatId, name: d.name, look: d.look, points: d.points, counts: true, seated: false, order: d.order }));
+      .map((d) => ({ accountId: d.accountId, seatId: d.seatId, name: d.name, look: d.look, points: d.points, counts: true, seated: false, livePoints: false, order: d.order }));
+    // A player who quit and joined again today has one row: the new tank's, with the quit tank's counted points,
+    // because the new tank's day does not count (protocol LeagueTodayRow.livePoints).
+    const quitOf = new Map(quit.map((row) => [row.accountId, row]));
+    const back = new Set(seated.filter((row) => !row.counts && quitOf.has(row.accountId)).map((row) => row.accountId));
+    const rows = [
+      ...seated.map((row) => {
+        const left = back.has(row.accountId) ? quitOf.get(row.accountId) : undefined;
+        return left === undefined ? row : { ...row, points: left.points, counts: true, livePoints: false, order: left.order };
+      }),
+      ...quit.filter((row) => !back.has(row.accountId)),
+    ];
     // A game master's tank stays in the list by its points, but takes no place: the tanks under it keep theirs.
     let place = 0;
-    const today = [...seated, ...quit]
+    const today = rows
       .sort((a, b) => b.points - a.points || a.order - b.order)
       .map(({ order: _order, accountId, ...row }): LeagueTodayRow => {
         const gm = this.gameMasters.has(accountId);

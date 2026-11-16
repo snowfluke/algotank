@@ -401,7 +401,7 @@ const isPublicStatusResponse: Guard<PublicStatusResponse> = (v): v is PublicStat
 };
 
 const isLeagueTodayRow = (v: unknown): v is LeagueTodayRow =>
-  isRecord(v) && isNumber(v["rank"]) && typeof v["seatId"] === "string" && hasNameAndLook(v) && isNumber(v["points"]) && typeof v["counts"] === "boolean" && typeof v["seated"] === "boolean" && typeof v["gm"] === "boolean";
+  isRecord(v) && isNumber(v["rank"]) && typeof v["seatId"] === "string" && hasNameAndLook(v) && isNumber(v["points"]) && typeof v["counts"] === "boolean" && typeof v["seated"] === "boolean" && typeof v["livePoints"] === "boolean" && typeof v["gm"] === "boolean";
 
 const isLeagueMonthRow = (v: unknown): v is LeagueMonthRow =>
   isRecord(v) && isNumberOrNull(v["rank"]) && typeof v["seatId"] === "string" && hasNameAndLook(v) && isNumber(v["score"]) && isNumber(v["countedDays"]) && typeof v["gm"] === "boolean";

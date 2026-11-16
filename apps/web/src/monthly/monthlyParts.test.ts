@@ -46,7 +46,7 @@ describe("the monthly page's rules", () => {
 });
 
 describe("today's ranking follows the board", () => {
-  const row = (seatId: string, points: number, rank: number, seated = true, gm = false): LeagueTodayRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), points, counts: true, seated, gm });
+  const row = (seatId: string, points: number, rank: number, seated = true, gm = false): LeagueTodayRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), points, counts: true, seated, livePoints: seated, gm });
   const ranking: LeagueRankingResponse = {
     league: 1,
     month: "2026-11",
@@ -74,6 +74,13 @@ describe("today's ranking follows the board", () => {
       [2, "gone"],
       [3, "a"],
     ]);
+  });
+
+  test("a player back after quitting keeps the quit tank's counted points, not the new tank's", () => {
+    const back: LeagueTodayRow = { ...row("back", 7, 3), livePoints: false };
+    const merged = withLivePoints({ ...ranking, today: [row("a", 10, 1), row("b", 5, 2), back] }, board({ a: 1, b: 2, back: -40 }));
+    expect(merged?.today.find((r) => r.seatId === "back")?.points).toBe(7);
+    expect(merged?.today.map((r) => r.seatId)).toEqual(["back", "b", "a"]);
   });
 
   test("a board of another day or league leaves the server's ranking as it is", () => {

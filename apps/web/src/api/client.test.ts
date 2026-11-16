@@ -102,7 +102,7 @@ describe("api client: public arenas, league and champions", () => {
   });
 
   test("a league's ranking and the champions are checked the same way", async () => {
-    const today = { rank: 1, seatId: "p1", name: "Bima", look, points: 4, counts: true, seated: true, gm: false };
+    const today = { rank: 1, seatId: "p1", name: "Bima", look, points: 4, counts: true, seated: true, livePoints: true, gm: false };
     const month = { rank: null, seatId: "p1", name: "Bima", look, score: 2.5, countedDays: 2, gm: false };
     const ranking = { league: 1, month: "2026-11", day: "2026-11-14", today: [today], thisMonth: [month] };
     let asked = "";

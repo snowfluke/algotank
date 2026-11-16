@@ -99,7 +99,7 @@ const ranking = {
   league: 1,
   month: state.month,
   day: state.day,
-  today: state.tanks.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, points: 0, counts: true, seated: true })),
+  today: state.tanks.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, points: 0, counts: true, seated: true, livePoints: true, gm: false })),
   thisMonth: state.tanks.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, score: 18.4, countedDays: 9 })),
 };
 console.log(`tanks ${view.board.bots.length} (seated ${tanks}, board ${view.board.width} x ${view.board.height}, minimum ${MONTHLY_BOARD_MIN_TANKS}), rules ${view.board.ruleSetId}, ${turns} turns`);

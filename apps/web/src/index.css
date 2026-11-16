@@ -316,3 +316,13 @@
     scroll-behavior: auto;
   }
 }
+
+/* A browser without the popover feature (iOS 16 and older) does not hide a [popover] element, so
+   the arena condition's note (monthly/ArenaCondition.tsx) would stay open under the clock. There
+   the button shows the condition's name and opens nothing. Its own rule, because a selector the
+   browser does not know drops the whole rule. */
+@supports not selector(:popover-open) {
+  [popover] {
+    display: none;
+  }
+}

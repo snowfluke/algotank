@@ -20,8 +20,6 @@ import { MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, 
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import type { StrategyInput } from "@game/engine";
-import { ArenaBoard } from "../board/ArenaBoard.tsx";
-import { boardAspect, FittedBoard } from "../board/FittedBoard.tsx";
 import type { TankInfo } from "../board/props.ts";
 import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
 import { DecisionFeed } from "../player/DecisionFeed.tsx";
@@ -38,6 +36,7 @@ import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
+import { MonthlyBoard } from "./MonthlyBoard.tsx";
 import { formatDayClock, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
 import type { LeagueConnection } from "./useLeagueLive.ts";
 
@@ -153,7 +152,7 @@ function LastWinner({ days, today }: { days: readonly LeagueDayRecord[]; today: 
 }
 
 /** The board as large as its box allows, with the midnight notice, "Reshuffled" or the empty league's invitation over it. */
-function Board({ board, ownSeatId, onJoin, dayChange, reshuffled }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean }) {
+function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, switchRow }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; switchRow: boolean }) {
   const m = useMessages();
   const t = m.monthly;
   const dayName = useDayName();
@@ -191,16 +190,24 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled }: { board: Lea
   }
   return (
     <section aria-label={t.board(live.league)} className="flex min-h-0 min-w-0 flex-1 flex-col">
-    <FittedBoard ratio={boardAspect(board.snapshot.width, board.snapshot.height)} dataAttributes={{ "data-monthly-board": "" }}>
-      <ArenaBoard snapshot={board.snapshot} throws={board.throws} names={names} highlightId={ownSeatId} tickMs={live.tickMs} tanks={tanks} />
-      {notice === null ? null : (
-        // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-[4%]">
-          {/* A panel behind the words, so they read on the sand and over tanks. */}
-          <div className="max-w-[32em] rounded-[var(--radius-card)] bg-panel/95 p-[1em] shadow-[var(--shadow-raised)] animate-rise">{notice}</div>
-        </div>
-      )}
-    </FittedBoard>
+      <MonthlyBoard
+        snapshot={board.snapshot}
+        throws={board.throws}
+        names={names}
+        highlightId={ownSeatId}
+        tickMs={live.tickMs}
+        tanks={tanks}
+        switchRow={switchRow}
+        overlay={
+          notice === null ? null : (
+            // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-[4%]">
+              {/* A panel behind the words, so they read on the sand and over tanks. */}
+              <div className="max-w-[32em] rounded-[var(--radius-card)] bg-panel/95 p-[1em] shadow-[var(--shadow-raised)] animate-rise">{notice}</div>
+            </div>
+          )
+        }
+      />
     </section>
   );
 }
@@ -466,7 +473,7 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} switchRow={false} />}</div>
         <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0">
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
@@ -545,7 +552,7 @@ function PhoneLayout(props: MonthlyViewProps) {
     pane = (
       <div className={PANE}>
         {seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} />}
-        {board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} />}
+        {board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} switchRow />}
         <LastWinner days={props.days} today={board?.live.day ?? null} />
       </div>
     );

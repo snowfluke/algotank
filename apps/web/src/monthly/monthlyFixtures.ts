@@ -3,7 +3,7 @@
 
 import { playedStats } from "../stats/statsFixtures.ts";
 import { MONTHLY_BOARD_MIN_TANKS, MONTHLY_SEATS, plainTankLook, type LeagueDayRecord, type LeagueLive, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow, type MonthMove, type PublicSnapshot, type TankLook } from "@game/arena";
-import { arenaSize, DEFAULT_PRESET_ID, PRESETS, ruleSet, STANDARD_RULE_SET_ID } from "@game/engine";
+import { arenaSize, DEFAULT_PRESET_ID, PRESETS, ruleSet, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
 import type { OwnDecision } from "../stream/streamState.ts";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
 import type { MonthlySeat } from "./MonthlyView.tsx";
@@ -19,9 +19,12 @@ function fixtureLook(i: number): TankLook {
 const FIXTURE_DAY = "2026-11-14";
 export const OWN_SEAT = "seat-3";
 
-/** A league of `count` tanks spread over the board; `bot` adds the bot of a league with one tank. */
-export function fixtureLive(league: number, count: number): LeagueLive {
-  const { width, height } = arenaSize(Math.max(MONTHLY_BOARD_MIN_TANKS, count), ruleSet(STANDARD_RULE_SET_ID));
+/**
+ * A league of `count` tanks spread over the board; `bot` adds the bot of a league with one tank.
+ * `ruleSetId` sets the board's size: "open-field" gives 23 x 17 for 27 tanks and 28 x 21 for 40.
+ */
+export function fixtureLive(league: number, count: number, ruleSetId: RuleSetId = STANDARD_RULE_SET_ID): LeagueLive {
+  const { width, height } = arenaSize(Math.max(MONTHLY_BOARD_MIN_TANKS, count), ruleSet(ruleSetId));
   const bot = count === 1;
   const tanks = [
     ...Array.from({ length: count }, (_, i) => ({ id: `seat-${i + 1}`, name: NAMES[i % NAMES.length] ?? "Tank", look: fixtureLook(i), isBot: false })),
@@ -34,7 +37,7 @@ export function fixtureLive(league: number, count: number): LeagueLive {
     tick: 1200,
     ticksTotal: 96_000,
     survivorsAfterRound: null,
-    ruleSetId: STANDARD_RULE_SET_ID,
+    ruleSetId,
     bots: tanks.map((tank, i) => ({
       id: tank.id,
       x: (i * 5 + 2) % width,

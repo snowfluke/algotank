@@ -8,18 +8,18 @@
 // Both views keep the same element tree, so a switch never mounts the board again:
 // the board's turn sounds and turning angles live in it.
 
-import { useMemo, useRef, useState } from "react";
-import type { BotId } from "@game/engine";
+import { useMemo, useState } from "react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { useFitLayout } from "../ui/layout.ts";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { useBoxSize } from "../ui/useBoxSize.ts";
 import { ArenaBoard } from "./ArenaBoard.tsx";
 import { tankLooks } from "./boardHelpers.ts";
-import { followWindow, leaderTarget, needsFollowCamera, type CameraMode } from "./camera.ts";
+import { followWindow, needsFollowCamera, type CameraMode } from "./camera.ts";
 import { boardAspect, fittedSize } from "./FittedBoard.tsx";
 import { OverviewMap, overviewWidth } from "./OverviewMap.tsx";
 import type { ArenaBoardProps } from "./props.ts";
+import { useFollowTarget } from "./useFollowTarget.ts";
 
 export type ArenaViewProps = Omit<ArenaBoardProps, "camera">;
 
@@ -33,18 +33,12 @@ export function ArenaView(props: ArenaViewProps) {
   const arena = { width: snapshot.width, height: snapshot.height };
   const ratio = boardAspect(arena.width, arena.height);
   const [choice, setChoice] = useState<Choice>("follow");
-  const leader = useRef<BotId | null>(null);
   const looks = useMemo(() => tankLooks(snapshot.bots, tanks), [snapshot.bots, tanks]);
 
   // Outside the fixed-height layout the board takes the width and its shape gives the height, so only the width decides.
   const available = box !== null && needsFollowCamera(fit ? box : { width: box.width, height: Number.POSITIVE_INFINITY }, arena);
   const follows: CameraMode = highlightId === null ? "leader" : "mine";
-  let targetId: BotId | null = null;
-  if (available && choice === "follow") {
-    targetId = highlightId ?? leaderTarget(snapshot.bots, leader.current);
-    if (highlightId === null) leader.current = targetId;
-  }
-  const target = targetId === null ? undefined : snapshot.bots.find((bot) => bot.id === targetId);
+  const target = useFollowTarget(snapshot.bots, highlightId, available && choice === "follow");
   const camera = box !== null && target !== undefined ? followWindow(box, arena, target.x, target.y) : null;
   const mode: CameraMode = camera === null ? "whole" : follows;
 

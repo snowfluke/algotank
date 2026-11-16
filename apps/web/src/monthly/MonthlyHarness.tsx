@@ -7,6 +7,8 @@
 // closing (the day's end is being recorded), failed (the stream was refused), crowd (40 tanks on
 // the board a full tournament league grows to, the owner's tank among them), ranked (the owner's
 // tank with a place in the month and 12 turns in its feed: the longest own pane);
+// `tanks` = a number of tanks in place of the case's own, and `field` = open puts the board on the
+// open-field rules, whose board is larger (27 tanks give 23 x 17, 40 give 28 x 21);
 // `leagues` = 1 (default), 2 or 9; `tab` = arena, ranking or mine (the phone's tab); `side` =
 // today, month or mine (the pane beside the board, and the phone's ranking switch); `quit` = 1
 // opens the quit question.
@@ -31,6 +33,12 @@ function param<T extends string>(name: string, values: readonly T[], fallback: T
 
 const TANKS: Record<Case, number> = { visitor: 5, empty: 0, one: 1, seated: 16, other: 16, move: 16, dayDone: 16, closing: 16, failed: 5, crowd: 40, ranked: 16, reshuffled: 16 };
 
+/** `tanks=27` in the address puts that many tanks on the board in place of the case's own. */
+function tanksParam(fallback: number): number {
+  const value = Number(new URLSearchParams(window.location.search).get("tanks"));
+  return Number.isInteger(value) && value > 0 && value <= 512 ? value : fallback;
+}
+
 export function MonthlyHarness() {
   const m = useMessages();
   const which = param("case", CASES, "visitor");
@@ -49,7 +57,9 @@ export function MonthlyHarness() {
   const [now] = useState(() => Date.now());
   const seated = which === "seated" || which === "other" || which === "move" || which === "dayDone" || which === "closing" || which === "crowd" || which === "ranked";
   const seat = which === "ranked" ? fixtureRankedSeat(league) : seated ? fixtureSeat(which === "other" ? 2 : league) : null;
-  const live = useMemo(() => fixtureLive(league, TANKS[which]), [league, which]);
+  const tanks = tanksParam(TANKS[which]);
+  const field = param("field", ["standard", "open"], "standard");
+  const live = useMemo(() => fixtureLive(league, tanks, field === "open" ? "open-field" : "standard"), [league, tanks, field]);
   const load: LeagueLiveLoad =
     which === "failed" ? { kind: "connecting" } : fixtureLoad(which === "closing" ? { ...live, dayEndsInMs: 0 } : live, now, which === "ranked" ? fixtureOwnTurns(12) : []);
   const dayChange: DayChange | null = which === "dayDone" ? { kind: "done", day: "2026-11-13", winner: fixtureDays(league)[0] ?? null } : null;
@@ -69,7 +79,7 @@ export function MonthlyHarness() {
         connection={which === "failed" ? "failed" : "open"}
         onRetry={() => undefined}
         now={now}
-        ranking={TANKS[which] === 0 ? { ...fixtureRanking(live), today: [], thisMonth: [] } : fixtureRanking(live)}
+        ranking={tanks === 0 ? { ...fixtureRanking(live), today: [], thisMonth: [] } : fixtureRanking(live)}
         days={fixtureDays(league)}
         seat={seat}
         move={which === "move" ? FIXTURE_MOVE : null}

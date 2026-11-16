@@ -1098,6 +1098,16 @@ STATES.push(
   // One league of 512 seats (2026-11-16): the board grows with the tanks, so a crowded day is checked too.
   monthlyKit("crowd", "case=crowd"),
   monthlyKit("crowd-ranking", "case=crowd&tab=ranking"),
+  // A big board (open-field rules: 27 tanks give 23 x 17, 40 give 28 x 21). On a phone it turns upright, and where the
+  // squares stay under 22 px a switch offers a window around the viewer's tank (monthly/MonthlyBoard.tsx).
+  monthlyKit("open-field-27", "case=seated&tanks=27&field=open"),
+  monthlyKit("open-field-40-visitor", "case=visitor&tanks=40&field=open"),
+  ...[["seated", "27"], ["visitor", "40"]].map(([which, tanks]) =>
+    monthlyKit(`open-field-${tanks}-${which === "seated" ? "mine" : "leader"}`, `case=${which}&tanks=${tanks}&field=open`, {
+      sizes: ["360x640", "390x844"],
+      steps: [{ wait: "[data-monthly-page]" }, { click: '[data-camera-switch] label:has(input[value="follow"])' }, { wait: "[data-camera]:not([data-camera=whole])" }],
+    }),
+  ),
   // The longest own pane (a place in the month and a full feed), 2026-11-16: on a short phone the feed's
   // buttons once covered the quit button; the feed now leaves when it cannot fit (MonthlyView.tsx, OwnFeed).
   monthlyKit("ranked-mine", "case=ranked&tab=mine&side=mine", { sizes: [...MONTHLY_SIZES, "400x620"] }),

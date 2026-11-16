@@ -14,7 +14,7 @@
 // carries `own` only for tanks in that league. A switch in "Tank kamu" shows today's statistics
 // card (K2, stats/StatsCard.tsx) in place of the summary; the numbers come from /api/monthly/me.
 
-import { ListOrdered, Swords, UserRound } from "lucide-react";
+import { ListOrdered, Palette, SlidersHorizontal, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
 import { ArenaCondition } from "./ArenaCondition.tsx";
@@ -34,7 +34,7 @@ import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
-import { MonthlyBoard, type FollowSwitch } from "./MonthlyBoard.tsx";
+import { MonthlyBoard, type BoardRow, type FollowSwitch } from "./MonthlyBoard.tsx";
 import { formatDayClock, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
 import type { LeagueConnection } from "./useLeagueLive.ts";
 
@@ -122,14 +122,15 @@ function LeagueSwitch({ league, leagues, ownLeague, onLeague }: { league: number
   );
 }
 
-function DayClock({ board, now, dayChange }: { board: LeagueBoard | null; now: number; dayChange: DayChange | null }) {
+/** `short`: the phone's line, which has the arena condition beside it. */
+function DayClock({ board, now, dayChange, short }: { board: LeagueBoard | null; now: number; dayChange: DayChange | null; short: boolean }) {
   const m = useMessages();
   if (board === null) return null;
   const left = board.dayEndsAt - now;
   const closing = dayChange?.kind === "closing" || board.live.phase === "closing" || left <= 0;
   return (
     <p data-day-clock="" className="min-w-0 font-display font-semibold tabular-nums [overflow-wrap:anywhere]" aria-live="off">
-      {closing ? m.monthly.dayClosing : m.monthly.endsIn(formatDayClock(left))}
+      {closing ? (short ? m.monthly.dayClosingShort : m.monthly.dayClosing) : (short ? m.monthly.endsInShort : m.monthly.endsIn)(formatDayClock(left))}
     </p>
   );
 }
@@ -139,9 +140,9 @@ function DayClock({ board, now, dayChange }: { board: LeagueBoard | null; now: n
  * (Lapangan luas) was cut short at 1000 px and on a phone, and a name that wraps or not at a
  * reshuffle would move the page. An empty league has no round, so no condition yet.
  */
-function ConditionLine({ board }: { board: LeagueBoard | null }) {
+function ConditionLine({ board, short }: { board: LeagueBoard | null; short: boolean }) {
   if (board === null || board.live.tanks.length === 0) return null;
-  return <ArenaCondition ruleSetId={board.snapshot.ruleSetId} />;
+  return <ArenaCondition ruleSetId={board.snapshot.ruleSetId} short={short} />;
 }
 
 /** Yesterday's winner, or the newest finished day's when yesterday had no tank. */
@@ -162,7 +163,7 @@ function LastWinner({ days, today }: { days: readonly LeagueDayRecord[]; today: 
 }
 
 /** The board as large as its box allows, with the midnight notice, "Reshuffled" or the empty league's invitation over it. */
-function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, follow }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; follow: FollowSwitch | null }) {
+function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; row: BoardRow | null }) {
   const m = useMessages();
   const t = m.monthly;
   const dayName = useDayName();
@@ -208,7 +209,7 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, follow }: { bo
         highlightId={ownSeatId}
         tickMs={live.tickMs}
         tanks={tanks}
-        follow={follow}
+        row={row}
         overlay={
           notice === null ? null : (
             // The notices hold no control, so a tap goes through to the tanks under them (board/tankPeek.ts).
@@ -363,6 +364,7 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
 }
 
 /** The owner's tank in one line above the board on a phone. */
+/** The phone's line beside the board's switch ("#4 · 893 poin"); the own pane says it in a full sentence. */
 function OwnLine({ seat, league, ranking, onLeague }: { seat: MonthlySeat; league: number; ranking: LeagueRankingResponse | null; onLeague(next: number): void }) {
   const m = useMessages();
   const t = m.monthly.own;
@@ -381,7 +383,7 @@ function OwnLine({ seat, league, ranking, onLeague }: { seat: MonthlySeat; leagu
   return (
     <p data-own-line="" className="flex min-w-0 shrink-0 items-center gap-2 rounded-[var(--radius-control)] bg-self-soft px-2 py-1">
       <TankBadge look={seat.look} label={tankLetters(seat.name)} size={28} name={null} self detail="simple" angle={-90} className="shrink-0" />
-      <span className="min-w-0 [overflow-wrap:anywhere]">{t.today(row.rank, row.points)}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{t.todayShort(row.rank, row.points)}</span>
     </p>
   );
 }
@@ -435,8 +437,8 @@ function PresenterLayout(props: MonthlyViewProps) {
               {leagueTitle}
             </span>
           </h1>
-          <DayClock board={board} now={props.now} dayChange={props.dayChange} />
-          <ConditionLine board={board} />
+          <DayClock board={board} now={props.now} dayChange={props.dayChange} short={false} />
+          <ConditionLine board={board} short={false} />
         </div>
         <LeagueSwitch league={league} leagues={leagues} ownLeague={seat?.league ?? null} onLeague={props.onLeague} />
         {props.onJoin === null ? null : (
@@ -465,7 +467,7 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} follow={null} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={null} />}</div>
         <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0">
             <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
@@ -490,6 +492,21 @@ const TAB_ICONS: Record<MonthlyTab, ReactNode> = {
 };
 
 /** The phone's bottom bar: the visitor's action above the tabs. MonthlyPage puts it in AppShell's `bottom`. */
+/** A button in the phone's bottom bar that looks like its tabs: an icon over a label of up to two lines. */
+function BarAction({ hook, icon, label, onClick }: { readonly hook: "change-rules" | "change-look"; readonly icon: ReactNode; readonly label: string; onClick(): void }) {
+  return (
+    <button
+      type="button"
+      {...(hook === "change-rules" ? { "data-change-rules": "" } : { "data-change-look": "" })}
+      onClick={onClick}
+      className="press flex min-h-13 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] px-0.5 text-center font-display text-caption font-semibold leading-tight text-muted [word-break:keep-all] hover:text-ink"
+    >
+      {icon}
+      <span className="min-w-0">{label}</span>
+    </button>
+  );
+}
+
 export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab, onTab }: Pick<MonthlyViewProps, "seat" | "onJoin" | "onChangeRules" | "onChangeLook" | "tab" | "onTab">) {
   const m = useMessages();
   const t = m.monthly;
@@ -506,19 +523,19 @@ export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab
           </Button>
         </div>
       )}
-      {/* Where a visitor's Join stands: players did not find the way to new rules in the own pane (2026-11-16). The "Tank kamu"
-          tab leaves it out, because at 360 x 640 its way out would not fit under it. */}
-      {seat === null || tab === "mine" ? null : (
-        <div className="mx-auto flex w-full max-w-6xl gap-2 px-4 py-2">
-          <Button size="lg" variant="secondary" data-change-rules="" className="min-w-0 flex-1" onClick={onChangeRules}>
-            {t.changeRules.open}
-          </Button>
-          <Button size="lg" variant="secondary" data-change-look="" className="min-w-0 flex-1" onClick={onChangeLook}>
-            {t.changeLook}
-          </Button>
+      {/* One row: the tabs, then the seated owner's two ways to change the tank (owner, 2026-11-16: a row of two large
+          buttons above the tabs took too much of the phone). They are buttons beside the tab list, not tabs: each opens a step. */}
+      {seat === null ? (
+        <BottomTabs idBase="monthly" label={t.tabs.label} value={seat === null && tab === "mine" ? "arena" : tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
+      ) : (
+        <div className="mx-auto grid w-full max-w-xl min-w-0 grid-cols-5 gap-1 px-2 py-1">
+          <div className="col-span-3 min-w-0">
+            <BottomTabs inline idBase="monthly" label={t.tabs.label} value={tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
+          </div>
+          <BarAction hook="change-rules" icon={<SlidersHorizontal aria-hidden size={22} />} label={t.changeRules.open} onClick={onChangeRules} />
+          <BarAction hook="change-look" icon={<Palette aria-hidden size={22} />} label={t.changeLook} onClick={onChangeLook} />
         </div>
       )}
-      <BottomTabs idBase="monthly" label={t.tabs.label} value={seat === null && tab === "mine" ? "arena" : tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
     </>
   );
 }
@@ -550,8 +567,16 @@ function PhoneLayout(props: MonthlyViewProps) {
   } else {
     pane = (
       <div className={PANE}>
-        {seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} />}
-        {board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} follow={follow} />}
+        {board === null ? null : (
+          <Board
+            board={board}
+            ownSeatId={ownSeatId}
+            onJoin={props.onJoin}
+            dayChange={props.dayChange}
+            reshuffled={props.reshuffled}
+            row={{ lead: seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} />, follow }}
+          />
+        )}
         <LastWinner days={props.days} today={board?.live.day ?? null} />
       </div>
     );
@@ -565,15 +590,18 @@ function PhoneLayout(props: MonthlyViewProps) {
           <h1 data-monthly-players="" className="text-caption font-semibold text-muted [overflow-wrap:anywhere]">
             {leagueTitle}
           </h1>
-          <DayClock board={board} now={props.now} dayChange={props.dayChange} />
         </div>
         <MonthlyAbout />
         {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
         <LegendButton />
       </div>
-      {/* Its own full-width row: the column beside the two icons cut a long condition name short. */}
-      <div className="flex min-w-0 shrink-0">
-        <ConditionLine board={board} />
+      {/* One full-width line of time left and condition (owner, 2026-11-16: four lines were too many). It does not wrap,
+          so a longer condition name at a reshuffle is cut short instead of moving the page. */}
+      <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-4">
+        <div className="shrink-0">
+          <DayClock board={board} now={props.now} dayChange={props.dayChange} short />
+        </div>
+        <ConditionLine board={board} short />
       </div>
       {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
       <StreamLine load={load} connection={props.connection} onRetry={props.onRetry} />

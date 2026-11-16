@@ -35,6 +35,16 @@ export interface FollowSwitch {
   onChoice(next: Choice): void;
 }
 
+/**
+ * The phone's row over the board: the owner's place (`lead`, null for a visitor) and the switch,
+ * on one line (owner, 2026-11-16). The row is always there on a phone, so the board does not move
+ * when the switch comes or goes.
+ */
+export interface BoardRow {
+  readonly lead: ReactNode;
+  readonly follow: FollowSwitch;
+}
+
 export interface MonthlyBoardProps {
   readonly snapshot: PublicSnapshot;
   readonly throws: readonly ThrowEvent[];
@@ -45,14 +55,15 @@ export interface MonthlyBoardProps {
   readonly tanks: ReadonlyMap<BotId, TankInfo>;
   /** Drawn over the board's area, the board and the space around it (the midnight notice, "Reshuffled"). */
   readonly overlay: ReactNode;
-  readonly follow: FollowSwitch | null;
+  /** Null on a laptop, whose board takes the whole pane. */
+  readonly row: BoardRow | null;
 }
 
-export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tanks, overlay, follow }: MonthlyBoardProps) {
+export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tanks, overlay, row }: MonthlyBoardProps) {
   const m = useMessages();
   const fit = useFitLayout();
   const { ref, box } = useBoxSize<HTMLDivElement>();
-  const choice: Choice = follow?.choice ?? "whole";
+  const choice: Choice = row?.follow.choice ?? "whole";
 
   // Outside the fixed-height layout the board takes the width and its shape gives the height, so the box says nothing about height.
   const orientation = fit ? bestOrientation(box, snapshot) : "sideways";
@@ -74,18 +85,19 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
 
   return (
     <>
-      {follow !== null ? (
-        <div data-camera-switch-row="" className="flex min-h-[3.25rem] shrink-0 items-center">
+      {row !== null ? (
+        <div data-camera-switch-row="" className="flex min-h-[3.25rem] min-w-0 shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="min-w-0 flex-1">{row.lead}</div>
           {offered ? (
-            <div data-camera-switch="">
+            <div data-camera-switch="" className="shrink-0">
               <SegmentedControl
                 legend={m.board.camera.legend}
                 hideLegend
                 size="sm"
                 value={choice}
-                onChange={follow.onChoice}
+                onChange={row.follow.onChoice}
                 options={[
-                  { value: "whole", label: m.board.camera.whole },
+                  { value: "whole", label: m.monthly.wholeArena },
                   { value: "follow", label: follows === "mine" ? m.board.camera.mine : m.board.camera.leader },
                 ]}
               />

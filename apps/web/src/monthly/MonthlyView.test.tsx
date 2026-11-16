@@ -51,10 +51,10 @@ describe("the monthly page", () => {
   test("a visitor sees the board, the day's clock and one action to join", () => {
     const html = render(props());
     expect(html).toContain("data-monthly-board");
-    expect(html).toContain("Today&#x27;s round ends in 05:12:44");
+    expect(html).toContain("05:12:44 left");
     expect(html.match(/data-monthly-join/g)?.length).toBe(1);
     const id = render(props(), "id");
-    expect(id).toContain("Ronde hari ini berakhir dalam 05:12:44");
+    expect(id).toContain("Sisa 05:12:44");
     expect(id).toContain("Ikut arena bulanan");
     // A visitor has no "Your tank" tab.
     expect(html).not.toContain('data-tab="mine"');
@@ -144,7 +144,7 @@ describe("the monthly page", () => {
 
   test("the day's end and a refused stream are said in words", () => {
     const live = fixtureLive(1, 5);
-    expect(render(props({ load: fixtureLoad({ ...live, dayEndsInMs: 0 }, NOW) }), "id")).toContain("Ronde hari ini sedang ditutup");
+    expect(render(props({ load: fixtureLoad({ ...live, dayEndsInMs: 0 }, NOW) }), "id")).toContain("Ronde ditutup");
     const failed = render(props({ load: { kind: "connecting" }, connection: "failed" }));
     expect(failed).toContain("The page cannot show this league right now, so try again.");
     expect(failed).toContain("Try again");
@@ -187,7 +187,7 @@ describe("changing the rules", () => {
       const html = render(props({ seat, onJoin: null, tab }, 16));
       expect([count(html, "data-change-rules"), count(html, "data-change-look")]).toEqual([1, 1]);
     }
-    expect(render(props({ seat, onJoin: null, tab: "arena" }, 16), "id")).toContain(">Ubah penampilan<");
+    expect(render(props({ seat, onJoin: null, tab: "arena" }, 16), "id")).toContain(">Ubah tampilan<");
     expect(count(render(props({}, 16)), "data-change-look")).toBe(0);
   });
 });

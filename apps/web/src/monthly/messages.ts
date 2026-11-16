@@ -17,7 +17,10 @@ export const en = {
   ownLeagueChoice: (n: number) => `League ${n}, your tank`,
   /** `clock` is "05:12:44". */
   endsIn: (clock: string) => `Today's round ends in ${clock}`,
+  /** The phone's line, beside the arena condition: the time left in today's round. */
+  endsInShort: (clock: string) => `${clock} left`,
   dayClosing: "Today's round is ending, and the new round starts in a moment.",
+  dayClosingShort: "Round ending",
   /** The accessible name of the board. */
   board: (league: number) => `The board of League ${league}`,
   connecting: "The page is connecting to the monthly arena.",
@@ -54,12 +57,18 @@ export const en = {
   reshuffled: "Reshuffled",
   /** Over the board's corner: the round rules the league drew for this round (server league-day.ts newRound). */
   condition: (name: string) => `Arena condition: ${name}`,
+  /** The phone's line, after the time left. */
+  conditionShort: (name: string) => `Condition: ${name}`,
+  /** The board's switch on a phone, beside the owner's place: "Whole arena" did not fit that line. */
+  wholeArena: "All",
   /** In the arena condition's note (ArenaCondition.tsx), after what the condition changes. */
   conditionChanges: "The condition changes every time the tanks are reshuffled.",
   own: {
     heading: "Your tank",
     /** `place` is today's place in the league. */
     today: (place: number, score: number) => `Your tank is in place ${place} today with ${points(score)}.`,
+    /** The phone's line beside the board's switch; the badge and its colour say it is the viewer's tank. */
+    todayShort: (place: number, score: number) => `#${place} · ${points(score)}`,
     counts: "Today counts for your monthly points.",
     notCounted: "Today does not count yet, because your tank joined after the round started.",
     /** People thought they had to keep the page open; the tank plays without it. */
@@ -139,7 +148,9 @@ export const id: typeof en = {
   ownLeague: "tank kamu main di sini",
   ownLeagueChoice: (n) => `Liga ${n}, tank kamu`,
   endsIn: (clock) => `Ronde hari ini berakhir dalam ${clock}`,
+  endsInShort: (clock) => `Sisa ${clock}`,
   dayClosing: "Ronde hari ini sedang ditutup, dan ronde baru mulai sebentar lagi.",
+  dayClosingShort: "Ronde ditutup",
   board: (league) => `Papan Liga ${league}`,
   connecting: "Halaman sedang tersambung ke arena bulanan.",
   reconnecting: "Sambungan terputus, jadi halaman sedang menyambung lagi.",
@@ -163,10 +174,13 @@ export const id: typeof en = {
   newDay: "Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.",
   reshuffled: "Diacak ulang",
   condition: (name) => `Kondisi arena: ${name}`,
+  conditionShort: (name) => `Kondisi: ${name}`,
+  wholeArena: "Semua",
   conditionChanges: "Kondisinya berganti setiap kali tank diacak ulang.",
   own: {
     heading: "Tank kamu",
     today: (place, score) => `Tank kamu di peringkat ${place} hari ini dengan ${score} poin.`,
+    todayShort: (place, score) => `#${place} · ${score} poin`,
     counts: "Hari ini masuk hitungan poin bulananmu.",
     notCounted: "Hari ini belum dihitung karena tank kamu masuk setelah ronde dimulai.",
     playsAlone: "Tank kamu main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
@@ -187,8 +201,9 @@ export const id: typeof en = {
       "Tank kamu keluar dari papan sekarang. Poin dari hari-hari sebelumnya tetap tersimpan, dan namamu tetap sama. Kamu bisa masuk lagi nanti. Kalau hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
     confirm: "Keluar dari arena",
   },
-  changeLook: "Ubah penampilan",
-  changeLookFailed: "Penampilan baru tank kamu belum tersimpan, jadi coba Ubah penampilan lagi.",
+  // "tampilan", not "penampilan": the word fits the phone's bottom bar (2026-11-16).
+  changeLook: "Ubah tampilan",
+  changeLookFailed: "Tampilan baru tank kamu belum tersimpan, jadi coba Ubah tampilan lagi.",
   changeRules: {
     open: "Ubah aturan",
     title: "Ubah aturan tank kamu",

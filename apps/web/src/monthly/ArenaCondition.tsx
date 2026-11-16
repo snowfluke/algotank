@@ -9,7 +9,8 @@ import type { RuleSetId } from "@game/engine";
 import { useId } from "react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 
-export function ArenaCondition({ ruleSetId }: { readonly ruleSetId: RuleSetId }) {
+/** `short`: the phone's line beside the time left ("Kondisi: …"); the note names it in full either way. */
+export function ArenaCondition({ ruleSetId, short }: { readonly ruleSetId: RuleSetId; readonly short: boolean }) {
   const m = useMessages();
   const t = m.monthly;
   const rules = m.vocabulary.roundRules[ruleSetId];
@@ -23,7 +24,7 @@ export function ArenaCondition({ ruleSetId }: { readonly ruleSetId: RuleSetId })
         data-arena-condition={ruleSetId}
         className="press -my-2 inline-flex min-h-10 min-w-0 max-w-full items-center gap-1.5 rounded-[var(--radius-control)] font-display font-semibold text-water"
       >
-        <span className="min-w-0 truncate">{t.condition(rules.name)}</span>
+        <span className="min-w-0 truncate">{short ? t.conditionShort(rules.name) : t.condition(rules.name)}</span>
         <Info aria-hidden size={18} strokeWidth={2.5} className="shrink-0" />
       </button>
       <div

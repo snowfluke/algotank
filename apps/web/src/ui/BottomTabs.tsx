@@ -34,6 +34,11 @@ export interface BottomTabsProps<T extends string> {
   readonly tabs: readonly BottomTab<T>[];
   readonly value: NoInfer<T>;
   readonly onChange: (next: NoInfer<T>) => void;
+  /**
+   * True when the tabs share a row with other buttons (the monthly page's two actions): no padding
+   * or width cap of its own, and a label may take two lines, broken between words only.
+   */
+  readonly inline?: boolean;
 }
 
 const tabId = (idBase: string, value: string) => `${idBase}-tab-${value}`;
@@ -54,7 +59,7 @@ export function tabPanelProps(idBase: string, value: string) {
   } as const;
 }
 
-export function BottomTabs<T extends string>({ idBase, label, tabs, value, onChange }: BottomTabsProps<T>) {
+export function BottomTabs<T extends string>({ idBase, label, tabs, value, onChange, inline = false }: BottomTabsProps<T>) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const current = Math.max(0, tabs.findIndex((tab) => tab.value === value));
 
@@ -78,7 +83,7 @@ export function BottomTabs<T extends string>({ idBase, label, tabs, value, onCha
       aria-label={label}
       data-bottom-tabs={idBase}
       onKeyDown={onKeyDown}
-      className="mx-auto grid w-full max-w-xl grid-flow-col auto-cols-fr gap-1 px-2 py-1"
+      className={inline ? "grid w-full grid-flow-col auto-cols-fr gap-1" : "mx-auto grid w-full max-w-xl grid-flow-col auto-cols-fr gap-1 px-2 py-1"}
     >
       {tabs.map((tab, i) => {
         const selected = i === current;
@@ -96,7 +101,7 @@ export function BottomTabs<T extends string>({ idBase, label, tabs, value, onCha
             tabIndex={selected ? 0 : -1}
             data-tab={tab.value}
             onClick={() => choose(tab.value)}
-            className={`press flex min-h-13 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] px-1 font-display text-caption font-semibold leading-tight ${
+            className={`press flex min-h-13 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] ${inline ? "px-0.5" : "px-1"} font-display text-caption font-semibold leading-tight ${
               selected ? "bg-water-soft text-ink" : "text-muted hover:text-ink"
             }`}
           >
@@ -108,7 +113,7 @@ export function BottomTabs<T extends string>({ idBase, label, tabs, value, onCha
                 </span>
               )}
             </span>
-            <span className="max-w-full min-w-0 truncate">{tab.label}</span>
+            <span className={inline ? "max-w-full min-w-0 text-center [word-break:keep-all]" : "max-w-full min-w-0 truncate"}>{tab.label}</span>
             {tab.dot === undefined ? null : <span className="sr-only">{`, ${tab.dot}`}</span>}
             {/* The selected tab also has a bar under its label, so the choice does not depend on colour alone. */}
             <span aria-hidden="true" className={`mt-0.5 block h-1 w-6 rounded-full ${selected ? "bg-water" : "bg-transparent"}`} />

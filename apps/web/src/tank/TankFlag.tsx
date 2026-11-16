@@ -53,10 +53,15 @@ export interface TankFlagDrawingProps {
   readonly bold: boolean;
   /**
    * For the editor's turning tank (mytank/LiveTank.tsx): the flip follows its CSS turn, which
-   * starts facing up (index.css, .flag-turn-flip), instead of `heading`.
+   * starts facing up (index.css, .flag-turn-flip), instead of `heading`, and the cloth waves.
+   * On the board the cloth is a flat rectangle: a clip path on every moving tank cost some 40% of
+   * a phone's main thread with 42 flags (measured 2026-11-16), and at 6 to 10 px the wave does not show.
    */
   readonly turning?: boolean;
 }
+
+/** The flat cloth of the board: the cloth's box at the pole, with no clip. */
+const FLAT = { y: POLE.y, height: 2 * (MIDDLE_Y - POLE.y) } as const;
 
 /** The flag in tank coordinates: draw it inside the group that turns the hull. */
 export function TankFlagDrawing({ country, heading, bold, turning = false }: TankFlagDrawingProps) {
@@ -66,7 +71,15 @@ export function TankFlagDrawing({ country, heading, bold, turning = false }: Tan
   const stroke = bold ? 0.45 : 0.3;
   return (
     <g data-flag={country} aria-hidden="true">
-      <g className={turning ? "flag-turn-flip" : undefined} style={turning ? turn : undefined} transform={!turning && flagFlipped(heading) ? `translate(0 ${2 * MIDDLE_Y}) scale(1 -1)` : undefined}>
+      {turning ? null : (
+        <g transform={flagFlipped(heading) ? `translate(0 ${2 * MIDDLE_Y}) scale(1 -1)` : undefined}>
+          {/* Mirrored, so the flag's pole side (its hoist) is at the pole, which stands at the cloth's right end. */}
+          <image href={flagUrl(country)} x={CLOTH_LEFT} y={FLAT.y} width={POLE.x - CLOTH_LEFT} height={FLAT.height} preserveAspectRatio="none" transform={`translate(${CLOTH_LEFT + POLE.x} 0) scale(-1 1)`} />
+          <rect x={CLOTH_LEFT} y={FLAT.y} width={POLE.x - CLOTH_LEFT} height={FLAT.height} fill="none" strokeWidth={stroke} strokeLinejoin="round" style={{ stroke: OUTLINE }} />
+        </g>
+      )}
+      {!turning ? null : (
+      <g className="flag-turn-flip" style={turn}>
         <clipPath id={clipId}>
           <path d={CLOTH} />
         </clipPath>
@@ -78,6 +91,7 @@ export function TankFlagDrawing({ country, heading, bold, turning = false }: Tan
         </g>
         <path d={CLOTH} fill="none" strokeWidth={stroke} strokeLinejoin="round" style={{ stroke: OUTLINE }} />
       </g>
+      )}
       <circle cx={POLE.x} cy={POLE.y} r={bold ? 0.5 : 0.42} style={{ fill: OUTLINE }} />
     </g>
   );

@@ -654,17 +654,12 @@ export class MonthlyLeagues {
     const quit = this.month.days
       .filter((d) => d.day === this.today.day && d.league === league && !seatedIds.has(d.seatId))
       .map((d) => ({ accountId: d.accountId, seatId: d.seatId, name: d.name, look: d.look, points: d.points, counts: true, seated: false, livePoints: false, order: d.order }));
-    // A player who quit and joined again today has one row: the new tank's, with the quit tank's counted points,
-    // because the new tank's day does not count (protocol LeagueTodayRow.livePoints).
-    const quitOf = new Map(quit.map((row) => [row.accountId, row]));
-    const back = new Set(seated.filter((row) => !row.counts && quitOf.has(row.accountId)).map((row) => row.accountId));
-    const rows = [
-      ...seated.map((row) => {
-        const left = back.has(row.accountId) ? quitOf.get(row.accountId) : undefined;
-        return left === undefined ? row : { ...row, points: left.points, counts: true, livePoints: false, order: left.order };
-      }),
-      ...quit.filter((row) => !back.has(row.accountId)),
-    ];
+    // A player who quit and joined again today has one row: the new tank's, which moves with the board like
+    // every seated row (owner, 2026-11-17: the quit tank's fixed points looked frozen). The quit tank's points
+    // still count at the day's close (withDayClosed); the new tank's day does not.
+    const quitAccounts = new Set(quit.map((row) => row.accountId));
+    const back = new Set(seated.filter((row) => !row.counts && quitAccounts.has(row.accountId)).map((row) => row.accountId));
+    const rows = [...seated, ...quit.filter((row) => !back.has(row.accountId))];
     // A game master's tank stays in the list by its points, but takes no place: the tanks under it keep theirs.
     let place = 0;
     const today = rows

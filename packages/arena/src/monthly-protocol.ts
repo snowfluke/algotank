@@ -174,10 +174,9 @@ export interface LeagueTodayRow {
   /** False for a tank that quit today and whose player has no tank on the board ("Left"). */
   readonly seated: boolean;
   /**
-   * True when the page moves `points` with the board's turns. False for a tank that quit, and for
-   * a player who quit and joined again today: that player has one row (owner, 2026-11-17, two rows
-   * of one player), with the new tank's seat, name and look and the quit tank's counted points,
-   * because the new tank's day does not count.
+   * True when the page moves `points` with the board's turns: every seated tank. False for a tank
+   * that quit. A player who quit and joined again today has one row, the new tank's (owner,
+   * 2026-11-17); the quit tank's points still count at the day's close.
    */
   readonly livePoints: boolean;
   /** The organizer's tank (server monthly/game-masters.ts): a "GM" badge, and no place. */

@@ -268,9 +268,9 @@ describe("the day round", () => {
     // A new seat the same day does not erase the day: its own day does not count.
     take(l, ada);
     for (let i = 0; i < 50; i++) l.ticks.tick();
-    // One row for the player: the new tank's seat with the quit tank's counted points, which the page does not move.
+    // One row for the player: the new tank's, whose points move with the board; its day does not count.
     const rows = l.monthly.ranking(1).today.filter((row) => row.name === seatOf(l, ada).name);
-    expect(rows).toEqual([expect.objectContaining({ seatId: seatOf(l, ada).seatId, points, counts: true, seated: true, livePoints: false })]);
+    expect(rows).toEqual([expect.objectContaining({ seatId: seatOf(l, ada).seatId, points: seatOf(l, ada).points, counts: false, seated: true, livePoints: true })]);
     nextDay(l);
     const days = l.monthly.daysOf(1).days;
     expect(days[0]?.day).toBe("2026-11-15");

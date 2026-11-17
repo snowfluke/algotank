@@ -42,7 +42,7 @@ export const en = {
     mudBomb: { name: "Mud bomb", body: "The first tank in the shooting line gets stuck in mud for 5 turns." },
     whirlwind: { name: "Whirlwind", body: "Every tank within 2 squares gets dizzy for 3 turns." },
     bigUmbrella: { name: "Big umbrella", body: "A big umbrella stops every shot at this tank for 5 turns." },
-    magnet: { name: "Magnet", body: "Every item within 4 squares slides onto the tank's own square." },
+    magnet: { name: "Magnet", body: "The 3 nearest items within 4 squares slide to the tank, which keeps them and uses them in order." },
   } satisfies Record<UltimateId, UltimateText>,
   /** The links to this page. */
   open: "Open the catalogue",
@@ -75,7 +75,7 @@ export const id: typeof en = {
     mudBomb: { name: "Bom lumpur", body: "Tank pertama di garis tembak terjebak lumpur selama 5 giliran." },
     whirlwind: { name: "Angin puyuh", body: "Setiap tank dalam jarak 2 petak jadi pusing selama 3 giliran." },
     bigUmbrella: { name: "Payung besar", body: "Payung besar menahan semua tembakan ke tank ini selama 5 giliran." },
-    magnet: { name: "Magnet", body: "Semua item dalam jarak 4 petak meluncur ke petak tank ini." },
+    magnet: { name: "Magnet", body: "3 item terdekat dalam jarak 4 petak meluncur ke tank, lalu tank menyimpan ketiganya dan memakainya sesuai urutan datangnya." },
   },
   open: "Buka katalog",
   homeTile: { title: "Katalog", body: "Cari tahu apa yang ditemui tank di arena, dengan adegan pendek untuk masing-masing." },

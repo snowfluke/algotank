@@ -18,7 +18,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { ItemKind } from "@game/engine";
 import { CELL, cellCenter, type Point } from "../board/boardHelpers.ts";
 import { JetShape, Puff, Splash } from "../board/boardShapes.tsx";
-import { ItemShape, MudSplats, OpenUmbrella } from "../board/itemShapes.tsx";
+import { HeldBadge, ItemShape, MudSplats, OpenUmbrella } from "../board/itemShapes.tsx";
 
 export interface Square {
   readonly x: number;
@@ -41,7 +41,9 @@ export type UltimateEffect =
   | { readonly kind: "whirlwind"; readonly at: Square; readonly reach: number }
   /** `fresh`: the dome opens on this step. `shooters`: squares whose shot ripples on the dome. */
   | { readonly kind: "bigUmbrella"; readonly at: Square; readonly fresh: boolean; readonly shooters: readonly Square[] }
-  | { readonly kind: "magnet"; readonly at: Square; readonly items: readonly { readonly kind: ItemKind; readonly from: Square }[] };
+  | { readonly kind: "magnet"; readonly at: Square; readonly items: readonly { readonly kind: ItemKind; readonly from: Square }[] }
+  /** The items a magnet stacked on the tank, first to be used first. The board draws one held item; this draws the stack. */
+  | { readonly kind: "stack"; readonly at: Square; readonly items: readonly ItemKind[]; readonly fresh: boolean };
 
 const GOLD = "var(--color-guide)";
 const GOLD_DEEP = "var(--color-guide-deep)";
@@ -71,6 +73,7 @@ const EFFECT_CSS = `
   .ue-smoke-in { animation: ue-smoke-in calc(var(--step) * 0.5) cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: var(--d, 0ms); }
   .ue-smoke-drift { animation: ue-smoke-drift calc(var(--step) * 1.2) ease-in-out infinite alternate; animation-delay: var(--d, 0ms); }
   .ue-jet { animation: ue-jet calc(var(--step) * 0.3) ease-out both; }
+  .ue-in { animation: ue-pop calc(var(--step) * 0.3) cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: var(--d, 0ms); }
   .ue-pop { animation: ue-pop calc(var(--step) * 0.45) cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--step) * 0.25); }
   .ue-wave { animation: ue-wave calc(var(--step) * 0.7) ease-out both; animation-delay: calc(var(--step) * 0.1); }
   .ue-suck { animation: ue-suck calc(var(--step) * 0.55) ease-in both; animation-delay: var(--d, 0ms); }
@@ -369,6 +372,24 @@ function MagnetPull({ square, items }: { readonly square: Square; readonly items
   );
 }
 
+/** The held items as a column down the tank's left side, first to be used on top, clear of the crown above. `fresh`: they pop in one by one. */
+function Stack({ square, items, fresh }: { readonly square: Square; readonly items: readonly ItemKind[]; readonly fresh: boolean }) {
+  const c = at(square);
+  return (
+    <g transform={`translate(${c.x - 5.6} ${c.y - 3.6})`}>
+      {items.map((kind, i) => (
+        <g key={i} transform={`translate(0 ${i * 3.6})`}>
+          <g className={fresh ? "ue-a ue-in" : undefined} style={vars({ "--d": delay(0.12 * i) })}>
+            <g transform="scale(0.8)">
+              <HeldBadge kind={kind} />
+            </g>
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+
 /** The two layers of one step. `stepMs` is the step's length, so every timing follows it. */
 export function ultimateLayers(effects: readonly UltimateEffect[], board: { readonly width: number; readonly height: number }, stepMs: number): { underlay: ReactNode; overlay: ReactNode } {
   if (effects.length === 0) return { underlay: null, overlay: null };
@@ -413,6 +434,9 @@ export function ultimateLayers(effects: readonly UltimateEffect[], board: { read
       case "magnet":
         under.push(<MagnetField key={i} square={effect.at} />);
         over.push(<MagnetPull key={i} square={effect.at} items={effect.items} />);
+        return;
+      case "stack":
+        over.push(<Stack key={i} square={effect.at} items={effect.items} fresh={effect.fresh} />);
         return;
     }
   });

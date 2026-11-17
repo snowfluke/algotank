@@ -245,15 +245,18 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     },
     { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 1, dir: "E", water: 7 }, b: { x: 4, y: 1, dir: "W", water: 7 } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, fresh: false, shooters: [] }] },
   ], 3),
-  magnet: scene("standard", 5, 3, [
-    { tanks: { you: { x: 2, y: 1, dir: "N" } }, items: [{ kind: "bucket", x: 0, y: 0 }, { kind: "pinwheel", x: 4, y: 2 }, { kind: "umbrella", x: 4, y: 0 }] },
-    { tanks: { you: { x: 2, y: 1, dir: "N" } }, items: [{ kind: "bucket", x: 0, y: 0 }, { kind: "pinwheel", x: 4, y: 2 }, { kind: "umbrella", x: 4, y: 0 }], effects: [charge(2, 1)] },
+  // Four items lie within reach; the nearest three come, and the mud ball, one square farther, stays.
+  magnet: scene("standard", 7, 3, [
+    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "bucket", x: 1, y: 0 }, { kind: "pinwheel", x: 5, y: 2 }, { kind: "umbrella", x: 5, y: 0 }, { kind: "mudBall", x: 0, y: 2 }] },
+    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "bucket", x: 1, y: 0 }, { kind: "pinwheel", x: 5, y: 2 }, { kind: "umbrella", x: 5, y: 0 }, { kind: "mudBall", x: 0, y: 2 }], effects: [charge(3, 1)] },
     {
-      tanks: { you: { x: 2, y: 1, dir: "N" } },
-      effects: [aura(2, 1), { kind: "magnet", at: { x: 2, y: 1 }, items: [{ kind: "bucket", from: { x: 0, y: 0 } }, { kind: "pinwheel", from: { x: 4, y: 2 } }, { kind: "umbrella", from: { x: 4, y: 0 } }] }],
+      tanks: { you: { x: 3, y: 1, dir: "N" } },
+      items: [{ kind: "mudBall", x: 0, y: 2 }],
+      effects: [aura(3, 1), { kind: "magnet", at: { x: 3, y: 1 }, items: [{ kind: "bucket", from: { x: 1, y: 0 } }, { kind: "umbrella", from: { x: 5, y: 0 } }, { kind: "pinwheel", from: { x: 5, y: 2 } }] }],
     },
-    { tanks: { you: { x: 2, y: 1, dir: "N", item: "bucket" } } },
-  ], 2),
+    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "mudBall", x: 0, y: 2 }], effects: [{ kind: "stack", at: { x: 3, y: 1 }, items: ["bucket", "umbrella", "pinwheel"], fresh: true }] },
+    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "mudBall", x: 0, y: 2 }], effects: [{ kind: "stack", at: { x: 3, y: 1 }, items: ["bucket", "umbrella", "pinwheel"], fresh: false }] },
+  ], 3),
 };
 
 /** The ids every scene uses, for its names and looks. */

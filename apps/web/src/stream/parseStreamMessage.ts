@@ -139,7 +139,9 @@ function isDecision(value: unknown): boolean {
     // Present only on a turn of a rule's steps in order (engine Decision.step).
     (value["step"] === undefined || (isRecord(value["step"]) && typeof value["step"]["index"] === "number" && typeof value["step"]["count"] === "number")) &&
     // Present only on a turn of a dizzy tank (engine Decision.dizzy).
-    (value["dizzy"] === undefined || value["dizzy"] === true)
+    (value["dizzy"] === undefined || value["dizzy"] === true) &&
+    // Present only on a spinning turn of a dizzy tank (engine Decision.spin).
+    (value["spin"] === undefined || value["spin"] === true)
   );
 }
 

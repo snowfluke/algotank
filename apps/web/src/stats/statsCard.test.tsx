@@ -7,7 +7,7 @@ import { createLanguageStore } from "../i18n/language.ts";
 import { cardRows, hitRate, quietRules } from "./statsCard.ts";
 import { StatsCard } from "./StatsCard.tsx";
 
-const oneMode: StatsView = { turns: 90, shots: 40, hits: 12, timesHit: 8, squaresMoved: 54, noRuleTurns: 47, modes: [{ name: "Only", rules: [12, 31, 0], fallback: 47 }] };
+const oneMode: StatsView = { turns: 90, shots: 40, hits: 12, timesHit: 8, squaresMoved: 54, noRuleTurns: 47, spinTurns: 0, modes: [{ name: "Only", rules: [12, 31, 0], fallback: 47 }] };
 // The tank never entered "Hide", so its rules had no chance to run.
 const twoModes: StatsView = {
   ...oneMode,

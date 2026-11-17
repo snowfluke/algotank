@@ -11,6 +11,7 @@ const preset = (id: string): StrategyInput => {
 /** Statistics that match a strategy, with the turns of each mode's first rule. */
 function statsFor(strategy: StrategyInput, firstRuleTurns: number): StatsView {
   return {
+    spinTurns: 0,
     turns: 60,
     shots: 10,
     hits: 2,

@@ -92,3 +92,12 @@ describe("tank statistics", () => {
     expect(addNumbers(a, b)).toEqual({ turns: 24, shots: 8, hits: 8, timesHit: 8, squaresMoved: 5, noRuleTurns: 8 });
   });
 });
+
+describe("a pinwheel's spin in the statistics", () => {
+  test("a spin turn counts as a turn and as no rule's or fallback's use", () => {
+    const spin = { botId: "a", modeId: "m", ruleId: null, actionId: "turn", move: "R" as const, nextModeId: "m", dizzy: true as const, spin: true as const };
+    const after = addTurn(EMPTY_STATS, { decision: spin, shot: null, timesHit: 0, squaresMoved: 0 });
+    expect(after.turns).toBe(1);
+    expect(after.uses).toEqual([]);
+  });
+});

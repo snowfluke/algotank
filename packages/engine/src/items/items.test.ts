@@ -165,6 +165,28 @@ describe("how long an effect lasts", () => {
   });
 });
 
+describe("a pinwheel's spin", () => {
+  test("a dizzy tank spins right for its first 2 turns, ending turned round, then checks its rules from the bottom up", () => {
+    const always = when("myEffect", { effect: "stuck" }, true);
+    const strategy = strategyOf([mode("main", [rule("first", [always], act("turn", { way: "left" })), rule("second", [always], act("wait"))], act("wait"))]);
+    const me = bot("me", 3, 3, "N");
+    const state = roundWith([{ id: "me", strategy }, { id: "far", strategy: waiter }], [{ ...me, effect: { kind: "dizzy", turnsLeft: ITEM_RULES.effectTurns.dizzy } }, bot("far", 7, 5, "W")]);
+    const turns = Array.from({ length: ITEM_RULES.effectTurns.dizzy }, () => stepRound(state).decisions[0]);
+    // Two right turns of 90 degrees: the tank faces the other way, and no rule ran.
+    expect(turns.slice(0, 2).map((d) => [d?.move, d?.ruleId, d?.spin])).toEqual([["R", null, true], ["R", null, true]]);
+    // The other 4 turns read the rules from the bottom up, so "second" runs before "first".
+    expect(turns.slice(2).map((d) => [d?.ruleId, d?.spin, d?.dizzy])).toEqual(Array.from({ length: 4 }, () => ["second", undefined, true]));
+  });
+
+  test("the spin turns the tank 180 degrees in two turns", () => {
+    const state = roundWith([{ id: "me", strategy: waiter }, { id: "far", strategy: waiter }], [{ ...bot("me", 3, 3, "N"), effect: { kind: "dizzy", turnsLeft: ITEM_RULES.effectTurns.dizzy } }, bot("far", 7, 5, "W")]);
+    stepRound(state);
+    expect(tank(state, "me").direction).toBe("E");
+    stepRound(state);
+    expect(tank(state, "me").direction).toBe("S");
+  });
+});
+
 describe("picking up", () => {
   test("an empty hand takes the item on its square, and a full hand leaves it on the board", () => {
     const carriers: { id: string; x: number; y: number; item: ItemKind | null; itemUses: number }[] = [

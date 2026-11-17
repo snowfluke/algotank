@@ -60,6 +60,8 @@ export interface TankTurn {
 export interface StatsView extends StatsNumbers {
   /** One entry per mode of the strategy, in order. */
   readonly modes: readonly ModeStats[];
+  /** Turns a pinwheel spun the tank round (items/items.ts): no rule and no fallback ran, so no row counts them. */
+  readonly spinTurns: number;
 }
 
 export interface ModeStats {
@@ -112,8 +114,11 @@ function squaresBetween(a: Pick<BotState, "x" | "y">, b: Pick<BotState, "x" | "y
 export function addTurn(stats: TankStats, turn: TankTurn): TankStats {
   const { modeId, ruleId } = turn.decision;
   const at = stats.uses.findIndex((use) => use.modeId === modeId && use.ruleId === ruleId);
+  // A pinwheel's spin ran neither a rule nor the fallback, so it counts as a turn and as no use.
   const uses =
-    at === -1
+    turn.decision.spin === true
+      ? stats.uses
+      : at === -1
       ? [...stats.uses, { modeId, ruleId, turns: 1 }]
       : stats.uses.map((use, i) => (i === at ? { ...use, turns: use.turns + 1 } : use));
   return {
@@ -171,5 +176,7 @@ export function statsView(stats: TankStats, strategy: StrategyInput): StatsView 
       rules: mode.rules.map((rule) => turnsOfRule(mode.id, rule.id)),
       fallback: turnsOfRule(mode.id, null),
     })),
+    // Derived, not stored: every turn is a rule's, a fallback's or a spin's (addTurn), so a saved day needs no new field.
+    spinTurns: stats.turns - stats.uses.reduce((sum, use) => sum + use.turns, 0),
   };
 }

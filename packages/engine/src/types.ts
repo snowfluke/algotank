@@ -43,7 +43,7 @@ export type BotId = string;
 /** The kinds of item, in the order of every table and of the compact tick's item index. A tank holds one until it acts. */
 export const ITEM_KINDS = ["bucket", "umbrella", "pinwheel", "mudBall"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
-/** Dizzy: the rules are checked from the bottom up. Stuck: the tank cannot drive or turn. */
+/** Dizzy: the tank spins round for its first turns, then checks its rules from the bottom up (items/items.ts). Stuck: the tank cannot drive or turn. */
 export const TANK_EFFECT_KINDS = ["dizzy", "stuck"] as const;
 export type TankEffectKind = (typeof TANK_EFFECT_KINDS)[number];
 
@@ -368,6 +368,11 @@ export interface Decision {
    * Absent on every other turn, so a round without items gives the decisions it gave before.
    */
   readonly dizzy?: true;
+  /**
+   * Only on the first turns of a dizzy tank (ITEM_RULES.dizzySpinTurns): it spun round to the right and checked no
+   * rule, so `ruleId` is null without the fallback having run. Absent on every other turn.
+   */
+  readonly spin?: true;
 }
 
 /** The place of a turn in a running sequence: step `index` (from 1) of `count`. */

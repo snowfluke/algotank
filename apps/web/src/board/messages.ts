@@ -35,7 +35,7 @@ export const en = {
     umbrella: { term: "Umbrella", body: "The umbrella opens and stops the next 2 hits on its tank, so no point moves." },
     pinwheel: { term: "Pinwheel", body: "Its holder's next hit makes the other tank dizzy for 6 turns, but 1 in 5 pinwheels make their taker dizzy." },
     mudBall: { term: "Mud ball", body: "Its holder's next hit makes the other tank stuck for 4 turns, but 1 in 5 mud balls stick to their taker." },
-    dizzy: { term: "Dizzy", body: "A dizzy tank checks its rules from the bottom up, so its last rule comes first." },
+    dizzy: { term: "Dizzy", body: "A dizzy tank spins round for 2 turns, then checks its rules from the bottom up for 4 turns." },
     stuck: { term: "Stuck", body: "A stuck tank cannot drive or turn, and it can still shoot straight ahead." },
   },
   /** "/kit?show=board", the page engineers use to check the board without a server. */
@@ -96,7 +96,7 @@ export const id: typeof en = {
     umbrella: { term: "Payung", body: "Payung terbuka dan menahan 2 tembakan berikutnya ke tanknya, jadi tidak ada poin yang pindah." },
     pinwheel: { term: "Kincir", body: "Tembakan kena berikutnya dari tank pembawa kincir membuat lawan pusing 6 giliran, tapi 1 dari 5 kincir membuat pengambilnya pusing." },
     mudBall: { term: "Bola lumpur", body: "Tembakan kena berikutnya dari tank pembawa bola lumpur membuat lawan terjebak 4 giliran, tapi 1 dari 5 bola lumpur menjebak pengambilnya." },
-    dizzy: { term: "Pusing", body: "Tank yang pusing memeriksa aturannya dari bawah ke atas, jadi aturan terakhir dicek lebih dulu." },
+    dizzy: { term: "Pusing", body: "Tank yang pusing berputar selama 2 giliran, lalu memeriksa aturannya dari bawah ke atas selama 4 giliran." },
     stuck: { term: "Terjebak", body: "Tank yang terjebak tidak bisa jalan atau berbelok, tetapi masih bisa menembak lurus ke depan." },
   },
   harness: {

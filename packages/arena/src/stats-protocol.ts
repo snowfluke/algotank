@@ -94,7 +94,10 @@ export function parseStatsView(raw: unknown): StatsView | null {
     if (!Array.isArray(rules) || rules.length > LIMITS.maxRulesPerMode || !rules.every(count) || !count(fallback)) return null;
     modes.push({ name, rules: rules.filter(count), fallback });
   }
-  return { ...numbers, modes };
+  // Absent from a server older than the pinwheel's spin (2026-11-17), which had no spin turns to count.
+  const spinTurns = raw["spinTurns"] === undefined ? 0 : raw["spinTurns"];
+  if (!count(spinTurns) || spinTurns > numbers.turns) return null;
+  return { ...numbers, modes, spinTurns };
 }
 
 export function parseOwnStats(raw: unknown): OwnStats | null {

@@ -65,6 +65,7 @@ export const en = {
     blocked: "An umbrella stopped my shot.",
     bucketHit: "My bucket shot hit, worth 2 points.",
     dizzy: "I was dizzy, so I checked my rules from the bottom up.",
+    spin: "A pinwheel spun me round, so I checked no rule this turn.",
   },
 };
 
@@ -120,5 +121,6 @@ export const id: typeof en = {
     blocked: "Tembakanku ditahan payung.",
     bucketHit: "Tembakan emberku kena dan bernilai 2 poin.",
     dizzy: "Aku sedang pusing, jadi aturanku kubaca dari bawah.",
+    spin: "Kincir membuatku berputar, jadi giliran ini aku tidak membaca aturan.",
   },
 };

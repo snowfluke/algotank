@@ -9,7 +9,7 @@
 // draws one int for the kind and one int for the square of each item it adds, only on a turn that
 // spawns. A round with items off has no item, so neither draws.
 
-import type { BoardItem, BotState, ItemKind, Pickup, Rng, Snapshot, TankEffect, TankEffectKind } from "../types.ts";
+import type { BoardItem, BotState, Decision, ItemKind, Pickup, Rng, Snapshot, TankEffect, TankEffectKind } from "../types.ts";
 import { ITEM_KINDS } from "../types.ts";
 
 export const ITEM_RULES = {
@@ -39,6 +39,12 @@ export const ITEM_RULES = {
   uses: { bucket: 2, umbrella: 2, pinwheel: 1, mudBall: 1 } satisfies Record<ItemKind, number>,
   /** Turns an effect lasts after the hit, or the backfire, that caused it. Doubled on 2026-11-16 (was dizzy 3, stuck 2). */
   effectTurns: { dizzy: 6, stuck: 4 } satisfies Record<TankEffectKind, number>,
+  /**
+   * The first turns of a dizzy tank, in which it spins round to the right (90 degrees a turn, so 180 in all) and
+   * checks no rule; its other dizzy turns check the rules from the bottom up. Owner, 2026-11-17: the pinwheel
+   * was too weak, "the first two turns 180 degree rotation, then the reverse rule (4 more turns left)".
+   */
+  dizzySpinTurns: 2,
   /**
    * Percent chance that a pinwheel or a mud ball backfires when a tank takes it: its effect lands
    * on the tank that took it, and the item is used up. Owner, 2026-11-16: "20% chance the item
@@ -72,6 +78,17 @@ export function effectOfHit(thrower: Pick<BotState, "item">): TankEffectKind | n
 
 export function newEffect(kind: TankEffectKind): TankEffect {
   return { kind, turnsLeft: ITEM_RULES.effectTurns[kind] };
+}
+
+/** True on the first ITEM_RULES.dizzySpinTurns turns of a dizzy tank, which spin it round instead of its rules. */
+export function spinsThisTurn(bot: Pick<BotState, "effect">): boolean {
+  const effect = bot.effect;
+  return effect !== null && effect.kind === "dizzy" && effect.turnsLeft > ITEM_RULES.effectTurns.dizzy - ITEM_RULES.dizzySpinTurns;
+}
+
+/** A spinning tank's turn: a right turn, no rule, the same mode. A running sequence of steps ends with it. */
+export function spinDecision(bot: Pick<BotState, "id" | "modeId">): Decision {
+  return { botId: bot.id, modeId: bot.modeId, ruleId: null, actionId: "turn", move: "R", nextModeId: bot.modeId, dizzy: true, spin: true };
 }
 
 /** The effect after one more turn: one turn less, and none after the last. */

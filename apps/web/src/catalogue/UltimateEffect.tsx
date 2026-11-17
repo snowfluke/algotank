@@ -42,8 +42,11 @@ export type UltimateEffect =
   /** The mud a mud bomb left, after it landed. */
   | { readonly kind: "mudPatch"; readonly at: Square; readonly reach: number }
   | { readonly kind: "whirlwind"; readonly at: Square; readonly reach: number }
-  /** `facing`: the side the dome covers (owner, 2026-11-17: front only, so it differs from smoke). `fresh`: it opens on this step. `shooters`: squares whose shot ripples on the dome. */
-  | { readonly kind: "bigUmbrella"; readonly at: Square; readonly facing: "N" | "E" | "S" | "W"; readonly fresh: boolean; readonly shooters: readonly Square[] }
+  /**
+   * `facing`: the side the dome covers (owner, 2026-11-17: front only, so it differs from smoke). `fresh`: it opens on
+   * this step. `shooters`: squares whose shot ripples on the dome. `left`: the blocks it still has, drawn on a badge.
+   */
+  | { readonly kind: "bigUmbrella"; readonly at: Square; readonly facing: "N" | "E" | "S" | "W"; readonly fresh: boolean; readonly shooters: readonly Square[]; readonly left: number }
   | { readonly kind: "magnet"; readonly at: Square; readonly items: readonly { readonly kind: ItemKind; readonly from: Square }[] }
   /** The items a magnet stacked on the tank, first to be used first. The board draws one held item; this draws the stack. */
   | { readonly kind: "stack"; readonly at: Square; readonly items: readonly ItemKind[]; readonly fresh: boolean };
@@ -351,7 +354,7 @@ function Whirlwind({ square, reach }: { readonly square: Square; readonly reach:
 const FACING_ANGLE = { N: 0, E: 90, S: 180, W: -90 } as const;
 
 /** Big umbrella: a dome twice the size of the item's opens on the side the tank faces, which it covers; each blocked shot ripples on it. */
-function BigUmbrella({ square, facing, fresh, shooters }: { readonly square: Square; readonly facing: keyof typeof FACING_ANGLE; readonly fresh: boolean; readonly shooters: readonly Square[] }) {
+function BigUmbrella({ square, facing, fresh, shooters, left }: { readonly square: Square; readonly facing: keyof typeof FACING_ANGLE; readonly fresh: boolean; readonly shooters: readonly Square[]; readonly left: number }) {
   const c = at(square);
   return (
     <g>
@@ -369,6 +372,15 @@ function BigUmbrella({ square, facing, fresh, shooters }: { readonly square: Squ
         const rim = { x: c.x + ((s.x - c.x) / length) * 8, y: c.y + ((s.y - c.y) / length) * 8 };
         return <circle key={`${shooter.x},${shooter.y}`} className="ue-a ue-halo" cx={rim.x} cy={rim.y} r={2} fill="none" strokeWidth={0.8} style={{ stroke: WATER, ...vars({ "--d": delay(0.25) }) }} />;
       })}
+      {/* The blocks left, on a badge above the tank, so a child can count them down. Keyed by the count, so it pops when it drops. */}
+      <g key={left} transform={`translate(${c.x + 3.6} ${c.y - 4.6})`}>
+        <g className="ue-a ue-in" style={vars({ "--d": delay(0.2) })}>
+          <circle r={2.4} strokeWidth={0.35} style={{ fill: "white", stroke: "var(--color-tank-5-dark)" }} />
+          <text y={1.15} textAnchor="middle" fontSize={3.2} fontWeight={700} style={{ fill: "var(--color-tank-5-dark)", fontFamily: "var(--font-display)" }}>
+            {left}
+          </text>
+        </g>
+      </g>
     </g>
   );
 }
@@ -465,7 +477,7 @@ export function ultimateLayers(effects: readonly UltimateEffect[], board: { read
         over.push(<Whirlwind key={i} square={effect.at} reach={effect.reach} />);
         return;
       case "bigUmbrella":
-        over.push(<BigUmbrella key={i} square={effect.at} facing={effect.facing} fresh={effect.fresh} shooters={effect.shooters} />);
+        over.push(<BigUmbrella key={i} square={effect.at} facing={effect.facing} fresh={effect.fresh} shooters={effect.shooters} left={effect.left} />);
         return;
       case "magnet":
         under.push(<MagnetField key={i} square={effect.at} />);

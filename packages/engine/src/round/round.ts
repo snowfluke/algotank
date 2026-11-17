@@ -45,7 +45,7 @@ import type {
   TickResult,
 } from "../types.ts";
 import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
-import { ageItems, countDown, newEffect, pickUp, spawnItems } from "../items/items.ts";
+import { ageItems, countDown, newEffect, pickUp, spawnItems, spinDecision, spinsThisTurn } from "../items/items.ts";
 import { decide } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
 import { allCells, arenaSize, cellKey, type Cell } from "./grid.ts";
@@ -256,7 +256,8 @@ export function stepRound(state: RoundState): TickResult {
     if (strategy === undefined) throw new Error(`no strategy for bot "${bot.id}"`);
     const ctx = { self: bot, snapshot: before };
     const running = round.sequences.get(bot.id);
-    const decision = running === undefined ? decide(ctx, strategy, round.rng) : continueSequence(ctx, running, round.rng);
+    // A spinning tank checks no rule and draws nothing; its running sequence ends (runningAfter sees no step).
+    const decision = spinsThisTurn(bot) ? spinDecision(bot) : running === undefined ? decide(ctx, strategy, round.rng) : continueSequence(ctx, running, round.rng);
     const after = runningAfter(decision, strategy);
     if (after === null) round.sequences.delete(bot.id);
     else round.sequences.set(bot.id, after);

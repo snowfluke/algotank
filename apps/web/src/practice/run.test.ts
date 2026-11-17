@@ -101,7 +101,8 @@ describe("the statistics of a test match", () => {
     for (const preset of PRESETS) {
       const run = runPractice({ ...settings, strategy: preset.strategy });
       const view = statsView(statsOfRound(run.spawn, run.ticks, PLAYER_ID), run.strategy);
-      const total = view.modes.reduce((sum, mode) => sum + mode.rules.reduce((s, n) => s + n, 0) + mode.fallback, 0);
+      // A pinwheel's spin turns belong to no row (engine stats: spinTurns).
+      const total = view.modes.reduce((sum, mode) => sum + mode.rules.reduce((s, n) => s + n, 0) + mode.fallback, 0) + view.spinTurns;
       expect(total).toBe(run.ticks.length);
     }
   });

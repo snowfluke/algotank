@@ -103,6 +103,7 @@ function scene(ruleSetId: RuleSetId, width: number, height: number, turns: reado
 // --- Items (the board legend says each in words) -------------------------------------------------
 
 const DIZZY: TankEffect = { kind: "dizzy", turnsLeft: 6 };
+const WHIRL: TankEffect = { kind: "dizzy", turnsLeft: 4 };
 const STUCK: TankEffect = { kind: "stuck", turnsLeft: 4 };
 
 export const ITEM_SCENES: Readonly<Record<ItemKind, Scene>> = {
@@ -119,13 +120,15 @@ export const ITEM_SCENES: Readonly<Record<ItemKind, Scene>> = {
     { tanks: { you: { x: 3, y: 1, dir: "W", item: "umbrella" }, a: { x: 0, y: 1, dir: "E", water: 6 } }, shots: [["a", "you", "blocked"]] },
     { tanks: { you: { x: 3, y: 1, dir: "W", item: "umbrella" }, a: { x: 0, y: 1, dir: "E", water: 7 } } },
   ], 1),
-  // Your hit with the pinwheel makes the other tank dizzy.
+  // Your hit with the pinwheel makes the other tank dizzy: it spins round to the right for 2 turns, so it ends
+  // facing away, and then checks its rules from the bottom up (items/items.ts ITEM_RULES.dizzySpinTurns).
   pinwheel: scene("standard", 5, 3, [
     { tanks: { you: { x: 0, y: 1, dir: "E", item: "pinwheel" }, a: { x: 3, y: 1, dir: "W" } } },
     { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 6 }, a: { x: 3, y: 1, dir: "W", score: -1, effect: DIZZY } }, shots: [["you", "a", "hit"]] },
-    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 7 }, a: { x: 3, y: 1, dir: "S", score: -1, effect: DIZZY } } },
-    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 8 }, a: { x: 3, y: 1, dir: "N", score: -1, effect: DIZZY } } },
-  ], 2),
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 7 }, a: { x: 3, y: 1, dir: "N", score: -1, effect: { kind: "dizzy", turnsLeft: 5 } } } },
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 8 }, a: { x: 3, y: 1, dir: "E", score: -1, effect: { kind: "dizzy", turnsLeft: 4 } } } },
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 9 }, a: { x: 4, y: 1, dir: "E", score: -1, effect: { kind: "dizzy", turnsLeft: 3 } } } },
+  ], 3),
   // Your hit with the mud ball sticks the other tank in mud.
   mudBall: scene("standard", 5, 3, [
     { tanks: { you: { x: 0, y: 1, dir: "E", item: "mudBall" }, a: { x: 3, y: 1, dir: "W" } } },
@@ -237,24 +240,32 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
       effects: [{ kind: "mudPatch", at: { x: 3, y: 1 }, reach: 1 }],
     },
   ], 2),
+  // The pinwheel's dizzy for every tank within 2 squares: each spins round to face away, then checks its rules from the bottom up.
   whirlwind: scene("standard", 5, 3, [
     { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E" }, b: { x: 4, y: 1, dir: "W" }, c: { x: 2, y: 2, dir: "N" } } },
     { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E" }, b: { x: 4, y: 1, dir: "W" }, c: { x: 2, y: 2, dir: "N" } }, effects: [charge(2, 1)] },
     { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E" }, b: { x: 4, y: 1, dir: "W" }, c: { x: 2, y: 2, dir: "N" } }, effects: [aura(2, 1), { kind: "whirlwind", at: { x: 2, y: 1 }, reach: 2 }] },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "S", effect: DIZZY }, b: { x: 4, y: 1, dir: "N", effect: DIZZY }, c: { x: 2, y: 2, dir: "W", effect: DIZZY } } },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E", effect: DIZZY }, b: { x: 4, y: 1, dir: "S", effect: DIZZY }, c: { x: 2, y: 2, dir: "E", effect: DIZZY } } },
+    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "S", effect: WHIRL }, b: { x: 4, y: 1, dir: "N", effect: WHIRL }, c: { x: 2, y: 2, dir: "W", effect: WHIRL } } },
+    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "W", effect: WHIRL }, b: { x: 4, y: 1, dir: "E", effect: WHIRL }, c: { x: 2, y: 2, dir: "S", effect: WHIRL } } },
+    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "W", effect: WHIRL }, b: { x: 4, y: 1, dir: "E", effect: WHIRL }, c: { x: 2, y: 2, dir: "S", effect: WHIRL } } },
   ], 2),
-  // The dome covers the front only: B's shot from the front is blocked, C's from behind still hits.
+  // The dome stops the next 4 shots from the front, however long that takes: B's two shots are blocked (4 left,
+  // then 3, then 2), while C's shot from behind still hits.
   bigUmbrella: scene("standard", 5, 3, [
     { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } } },
     { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [charge(2, 1)] },
-    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: true, shooters: [] }] },
+    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: true, shooters: [], left: 4 }] },
     {
       tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 6 }, b: { x: 4, y: 1, dir: "W", water: 6, score: 1 } },
       shots: [["a", "you", "blocked"], ["b", "you", "hit"]],
-      effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [{ x: 0, y: 1 }] }],
+      effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [{ x: 0, y: 1 }], left: 3 }],
     },
-    { tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 7 }, b: { x: 4, y: 1, dir: "W", water: 7, score: 1 } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [] }] },
+    {
+      tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 3 }, b: { x: 4, y: 1, dir: "W", water: 7, score: 1 } },
+      shots: [["a", "you", "blocked"]],
+      effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [{ x: 0, y: 1 }], left: 2 }],
+    },
+    { tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 4 }, b: { x: 4, y: 1, dir: "W", water: 8, score: 1 } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [], left: 2 }] },
   ], 3),
   // Four items lie within reach; the nearest three come, and the mud ball, one square farther, stays.
   magnet: scene("standard", 7, 3, [

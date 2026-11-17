@@ -13,6 +13,7 @@
 //
 // A dizzy tank (an item effect, items/items.ts) checks its rules from the bottom up; the
 // fallback is still last. A running sequence is not affected: its steps never read rules.
+// Its first turns do not come here: the turn loop spins it round instead (round/round.ts).
 //
 // A fallback that cannot act makes the bot throw ahead. A throw keeps the bot in
 // place and spends water only when a bot stands in the line, and every mode must

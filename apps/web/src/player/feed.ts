@@ -72,6 +72,8 @@ export function describeDecision(entry: OwnDecision, strategy: StrategyInput, v:
   const { rule, action } = decisionAction(decision, strategy);
   const stopped = blocked(decision);
   const what = capitalised(stopped ? t.tried(actionText(v, action), actionDoneText(v, action)) : actionDoneText(v, action));
+  // A pinwheel's spin checked no rule: the feed says so and nothing else.
+  if (decision.spin === true) return { turn: entry.tick + 1, text: t.spin };
   let first: string;
   if (decision.ruleId === null) first = t.noRule(what);
   // A later step of a sequence did not read the rules, so it has no "because".

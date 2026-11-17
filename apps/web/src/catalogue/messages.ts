@@ -37,7 +37,7 @@ export const en = {
   ultimates: {
     dash: { name: "Dash", body: "The tank drives up to 3 squares in a straight line in one turn." },
     smoke: { name: "Smoke screen", body: "For 10 turns, a shot at this tank hits only half as often." },
-    splash: { name: "Splash ring", body: "The tank shoots at all 8 squares around it at once, and its water runs out." },
+    splash: { name: "Splash ring", body: "The tank shoots all 8 squares around it, and its water runs out. The square in front is always hit, and each other square 1 time in 3." },
     fullTank: { name: "Full tank", body: "The water fills to the top, and the next 3 shots use no water." },
     mudBomb: { name: "Mud bomb", body: "A mud ball lands on the first tank in line and sticks every tank within 1 square for 5 turns." },
     whirlwind: { name: "Whirlwind", body: "Every tank within 2 squares spins round for 2 turns, then checks its rules from the bottom up for 2." },
@@ -70,7 +70,7 @@ export const id: typeof en = {
   ultimates: {
     dash: { name: "Lari kencang", body: "Tank maju sampai 3 petak lurus dalam satu giliran." },
     smoke: { name: "Kabut", body: "Selama 10 giliran, tembakan ke tank ini hanya separuh yang kena." },
-    splash: { name: "Percikan", body: "Tank menembak ke 8 petak di sekelilingnya sekaligus, lalu airnya habis." },
+    splash: { name: "Percikan", body: "Tank menembak ke 8 petak di sekelilingnya, lalu airnya habis. Petak di depan selalu kena, dan setiap petak lainnya kena 1 dari 3 kali." },
     fullTank: { name: "Tangki penuh", body: "Air terisi penuh, dan 3 tembakan berikutnya tidak memakai air." },
     mudBomb: { name: "Bom lumpur", body: "Bola lumpur jatuh di tank pertama di garis tembak, dan setiap tank dalam jarak 1 petak darinya terjebak selama 5 giliran." },
     whirlwind: { name: "Angin puyuh", body: "Setiap tank dalam jarak 2 petak berputar selama 2 giliran, lalu memeriksa aturannya dari bawah selama 2 giliran." },

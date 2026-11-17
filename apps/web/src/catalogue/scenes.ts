@@ -206,14 +206,15 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E", water: 6 } }, shots: [["a", "you", "miss"]], effects: [aura(3, 1), { kind: "smoke", at: { x: 3, y: 1 }, fresh: false }] },
     { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E", water: 3 } }, shots: [["a", "you", "miss"]], effects: [aura(3, 1), { kind: "smoke", at: { x: 3, y: 1 }, fresh: false }] },
   ], 3),
+  // The tank in front (B) is always hit; D, to the side, is hit by its 1-in-3 roll, and C's roll misses.
   splash: scene("standard", 5, 3, [
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 1, y: 0, dir: "SE" }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE" } } },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 1, y: 0, dir: "SE" }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE" } }, effects: [charge(2, 1)] },
+    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 2, y: 0, dir: "S" }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE" } } },
+    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 2, y: 0, dir: "S" }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE" } }, effects: [charge(2, 1)] },
     {
-      tanks: { you: { x: 2, y: 1, dir: "N", score: 3, water: 0 }, a: { x: 1, y: 0, dir: "SE", score: -1 }, b: { x: 3, y: 1, dir: "W", score: -1 }, c: { x: 1, y: 2, dir: "NE", score: -1 } },
-      effects: [aura(2, 1), { kind: "splash", at: { x: 2, y: 1 }, tanks: [{ x: 1, y: 0 }, { x: 3, y: 1 }, { x: 1, y: 2 }] }],
+      tanks: { you: { x: 2, y: 1, dir: "N", score: 2, water: 0 }, a: { x: 2, y: 0, dir: "S", score: -1 }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE", score: -1 } },
+      effects: [aura(2, 1), { kind: "splash", at: { x: 2, y: 1 }, front: { x: 2, y: 0 }, hits: [{ x: 1, y: 2 }], misses: [{ x: 3, y: 1 }] }],
     },
-    { tanks: { you: { x: 2, y: 1, dir: "N", score: 3, water: 1 }, a: { x: 1, y: 0, dir: "SE", score: -1 }, b: { x: 3, y: 1, dir: "W", score: -1 }, c: { x: 1, y: 2, dir: "NE", score: -1 } } },
+    { tanks: { you: { x: 2, y: 1, dir: "N", score: 2, water: 1 }, a: { x: 2, y: 0, dir: "S", score: -1 }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE", score: -1 } } },
   ], 2),
   fullTank: scene("standard", 5, 3, [
     { tanks: { you: { x: 0, y: 1, dir: "E", water: 1 }, a: { x: 2, y: 1, dir: "W" } } },

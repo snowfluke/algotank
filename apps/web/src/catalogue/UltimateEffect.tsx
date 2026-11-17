@@ -32,8 +32,11 @@ export type UltimateEffect =
   | { readonly kind: "dash"; readonly from: Square; readonly to: Square }
   /** `fresh`: the smoke rolls in on this step; otherwise it hangs there. */
   | { readonly kind: "smoke"; readonly at: Square; readonly fresh: boolean }
-  /** `tanks`: the squares around `at` with a tank on them, which get a splash; the others get a puff. */
-  | { readonly kind: "splash"; readonly at: Square; readonly tanks: readonly Square[] }
+  /**
+   * `front`: the square ahead, always hit (owner, 2026-11-17: hitting all 8 for sure was too strong). `hits` and `misses`:
+   * the other squares with a tank on them, each hit 1 time in 3; an empty square gets a puff.
+   */
+  | { readonly kind: "splash"; readonly at: Square; readonly front: Square; readonly hits: readonly Square[]; readonly misses: readonly Square[] }
   | { readonly kind: "fullTank"; readonly at: Square }
   /** A shot that used no water: a ring of water around the shooter. */
   | { readonly kind: "freeShot"; readonly at: Square }
@@ -222,8 +225,12 @@ function Smoke({ square, fresh }: { readonly square: Square; readonly fresh: boo
   );
 }
 
-/** Splash ring: a jet to each of the 8 squares around the tank, a splash on each tank and a puff on each empty square. */
-function SplashRing({ square, tanks }: { readonly square: Square; readonly tanks: readonly Square[] }) {
+/**
+ * Splash ring: a jet to each of the 8 squares around the tank. The square in front always takes a splash, marked
+ * with a gold ring; a tank elsewhere takes a splash when its 1-in-3 roll hits, and a puff lands past it when it
+ * misses; an empty square takes a puff.
+ */
+function SplashRing({ square, front, hits, misses }: { readonly square: Square; readonly front: Square; readonly hits: readonly Square[]; readonly misses: readonly Square[] }) {
   const c = at(square);
   return (
     <g>
@@ -231,7 +238,10 @@ function SplashRing({ square, tanks }: { readonly square: Square; readonly tanks
       {NEIGHBOURS.map((step) => {
         const target = { x: square.x + step.x, y: square.y + step.y };
         const end = at(target);
-        const tank = tanks.some((t) => t.x === target.x && t.y === target.y);
+        const same = (t: Square) => t.x === target.x && t.y === target.y;
+        const isFront = same(front);
+        const hit = isFront || hits.some(same);
+        const missed = misses.some(same);
         // The jet starts at the tank's edge and stops short of the target's middle, as the board's jets do.
         const from = { x: c.x + step.x * 3, y: c.y + step.y * 3 };
         const to = { x: end.x - step.x * 2.4, y: end.y - step.y * 2.4 };
@@ -239,8 +249,10 @@ function SplashRing({ square, tanks }: { readonly square: Square; readonly tanks
         return (
           <g key={`${step.x},${step.y}`}>
             <JetShape jet={{ from, control, to }} motion="ue-jet" />
-            <g transform={`translate(${end.x} ${end.y})`}>
-              <g className="ue-a ue-pop">{tank ? <Splash /> : <Puff />}</g>
+            {/* A miss lands past the tank, as the board's misses do. */}
+            <g transform={`translate(${end.x + (missed ? step.x * 3.5 : 0)} ${end.y + (missed ? step.y * 3.5 : 0)})`}>
+              <g className="ue-a ue-pop">{hit ? <Splash /> : <Puff />}</g>
+              {isFront ? <circle className="ue-a ue-halo" r={6.2} fill="none" strokeWidth={0.9} style={{ stroke: GOLD_DEEP, ...vars({ "--d": delay(0.3) }) }} /> : null}
             </g>
           </g>
         );
@@ -457,7 +469,7 @@ export function ultimateLayers(effects: readonly UltimateEffect[], board: { read
         over.push(<Smoke key={i} square={effect.at} fresh={effect.fresh} />);
         return;
       case "splash":
-        over.push(<SplashRing key={i} square={effect.at} tanks={effect.tanks} />);
+        over.push(<SplashRing key={i} square={effect.at} front={effect.front} hits={effect.hits} misses={effect.misses} />);
         return;
       case "fullTank":
         over.push(<FullTank key={i} square={effect.at} />);

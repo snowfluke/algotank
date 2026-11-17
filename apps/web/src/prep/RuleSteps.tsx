@@ -176,6 +176,7 @@ function RuleStep(props: RulesEditorProps & { readonly ruleId: string; readonly 
               value={isSequence(rule.action) ? "steps" : "one"}
               onChange={(kind) => change(kind === "steps" ? toSteps(rule) : toOneAction(rule))}
             />
+            {detail.level === 0 && isSequence(rule.action) ? <p className="text-muted">{r.stepsHelp}</p> : null}
             {isSequence(rule.action) ? (
               <StepsEditor rule={rule} change={change} onOpen={(index) => go({ kind: "seqStep", ruleId: rule.id, index })} />
             ) : (

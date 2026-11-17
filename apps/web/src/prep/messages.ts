@@ -113,6 +113,8 @@ export interface PrepText {
     readonly doKindLegend: string;
     readonly oneAction: string;
     readonly stepsInOrder: string;
+    /** Says that a running sequence reads no rule, so the tank cannot react until it ends. */
+    readonly stepsHelp: string;
     /** The name of one step, as the label of its choices. */
     step(n: number): string;
     /** The accessible name of a step block in the editor. */
@@ -262,7 +264,7 @@ export const en: PrepText = {
     helpDistanceSecret: "Aim and Dodge count from a distance that the round rules set.",
   },
   rules: {
-    intro: "Each turn, your tank does the first rule from the top that fits.",
+    intro: "Each turn, your tank starts again at rule 1 and does the first rule that fits.",
     modesIntro: "A mode is one more list of rules, and a rule can switch your tank to another mode.",
     addMode: "Add a mode",
     startWord: "start",
@@ -299,6 +301,7 @@ export const en: PrepText = {
     doKindLegend: "What the tank does",
     oneAction: "One action",
     stepsInOrder: "Steps in order",
+    stepsHelp: "Your tank does one step each turn and reads no rule until the last step is done.",
     step: (n) => `Step ${n}`,
     stepBlock: (n, name) => `Step ${n}: ${name}`,
     stepEarlier: (n) => `Move step ${n} earlier`,
@@ -492,7 +495,7 @@ export const id: PrepText = {
     helpDistanceSecret: "Bidikan dan Hindaran berlaku mulai jarak yang ditentukan aturan ronde.",
   },
   rules: {
-    intro: "Di setiap giliran, tank kamu menjalankan aturan pertama dari atas yang cocok.",
+    intro: "Di setiap giliran, tank kamu mulai lagi dari aturan 1 dan menjalankan aturan pertama yang cocok.",
     modesIntro: "Mode adalah satu daftar aturan lagi, dan sebuah aturan bisa memindahkan tank kamu ke mode lain.",
     addMode: "Tambah mode",
     startWord: "mulai",
@@ -529,6 +532,7 @@ export const id: PrepText = {
     doKindLegend: "Yang dilakukan tank",
     oneAction: "Satu tindakan",
     stepsInOrder: "Langkah berurutan",
+    stepsHelp: "Tank kamu menjalankan satu langkah tiap giliran dan tidak membaca aturan sampai langkah terakhir selesai.",
     step: (n) => `Langkah ${n}`,
     stepBlock: (n, name) => `Langkah ${n}: ${name}`,
     stepEarlier: (n) => `Pindahkan langkah ${n} ke depan`,

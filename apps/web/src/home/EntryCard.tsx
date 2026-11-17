@@ -12,7 +12,8 @@ import { followLink } from "../app/navigation.ts";
 import { playSound } from "../sound/player.ts";
 
 /** "water": Play now; "guide": the tank workshop; "row": the smaller ways in. */
-export type EntryTone = "water" | "guide" | "row";
+/** "water" and "guide": the two large tiles. "row": a plain row. "rowGuide": a row in the workshop's gold, for the catalogue (owner, 2026-11-17: the plain row was easy to miss). */
+export type EntryTone = "water" | "guide" | "row" | "rowGuide";
 
 /** "full": the sentence shows; "brief": no sentence; "compact": no sentence, and a row takes less padding (a main tile draws as "brief"). */
 export type EntryDetail = "full" | "brief" | "compact";
@@ -37,10 +38,11 @@ const SURFACE: Record<EntryTone, string> = {
   water: "border-b-[6px] border-water-deep bg-water text-water-ink hover:bg-water-hover",
   guide: "border-b-[6px] border-guide-deep bg-guide text-guide-ink hover:brightness-95",
   row: "border-2 border-b-4 border-line bg-panel text-ink hover:border-line-strong",
+  rowGuide: "border-2 border-b-4 border-guide-deep bg-guide-soft text-ink hover:brightness-95",
 };
 
 export function EntryCard({ href, title, body, art, tone = "row", note, live = null, detail = "full", coach }: EntryCardProps) {
-  const main = tone !== "row";
+  const main = tone === "water" || tone === "guide";
   const brief = detail !== "full";
   const layout = main ? "flex-col items-start gap-2 p-3 laptop:p-4" : `items-center gap-3 px-3 ${detail === "compact" ? "py-1" : "py-2"}`;
   return (

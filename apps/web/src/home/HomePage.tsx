@@ -94,7 +94,7 @@ export function HomePage() {
           <EntryCard detail={rowDetail} href={paths.monthly()} title={home.watchMonthly.title} body={home.watchMonthly.body} live={monthlyLive} art={<ArenaArt kind="monthly" />} />
           <div className={level >= PAIRED_LEVEL ? "grid min-w-0 grid-cols-2 gap-2" : "contents"}>
             <EntryCard detail={rowDetail} href={paths.join()} title={home.joinCode.title} body={home.joinCode.body} art={<JoinArt />} />
-            <EntryCard detail={rowDetail} href={paths.catalogue()} title={m.catalogue.homeTile.title} body={m.catalogue.homeTile.body} art={<CatalogueArt />} />
+            <EntryCard tone="rowGuide" detail={rowDetail} href={paths.catalogue()} title={m.catalogue.homeTile.title} body={m.catalogue.homeTile.body} art={<CatalogueArt />} />
           </div>
           <EntryCard
             detail={rowDetail}

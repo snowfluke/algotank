@@ -109,14 +109,13 @@ function ListHeading({ className }: { readonly className: string }) {
       <h1 className={`min-w-0 flex-1 ${className}`}>{m.workshop.heading}</h1>
       {/* The catalogue shows each play style, item and arena condition at work (catalogue/CataloguePage.tsx). */}
       <a
-        href={paths.catalogue()}
-        aria-label={m.catalogue.open}
-        title={m.catalogue.open}
+        href={paths.catalogue("playStyles")}
         data-catalogue-link=""
         onClick={followLink}
-        className="press inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border-2 border-transparent text-ink hover:bg-water-soft"
+        className="press inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border-2 border-b-4 border-guide-deep bg-guide-soft px-3 font-display font-semibold text-ink"
       >
-        <BookOpen aria-hidden size={24} />
+        <BookOpen aria-hidden size={20} />
+        {m.catalogue.homeTile.title}
       </a>
       <IconButton label={m.guide.showAround} icon={<CircleHelp aria-hidden size={24} />} variant="quiet" data-show-around="" onClick={() => showAround("workshop")} />
     </div>

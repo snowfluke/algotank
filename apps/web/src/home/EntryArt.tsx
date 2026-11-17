@@ -3,7 +3,7 @@
 // title names the choice. The public arenas' tiles (publicplay/ArenaArt.tsx) draw
 // with the same tile and tank.
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { ItemShape } from "../board/itemShapes.tsx";
 import { TankShape } from "../tank/TankShape.tsx";
 import type { TankColour } from "../tank/colours.ts";
@@ -102,22 +102,32 @@ export function WorkshopArt() {
   );
 }
 
-/** The catalogue: a tank among the four items it can meet. */
+/** The catalogue: a tank among the four items it can meet, which bounce one after another. */
+const CATALOGUE_ART_CSS = `
+.ca-bounce { transform-box: fill-box; transform-origin: center bottom; }
+@media (prefers-reduced-motion: no-preference) {
+  .ca-bounce { animation: ca-bounce 2.4s ease-in-out infinite; animation-delay: var(--d, 0s); }
+}
+@keyframes ca-bounce { 0%, 30%, 100% { transform: translateY(0) scale(1); } 10% { transform: translateY(-3px) scale(1.12); } 20% { transform: translateY(0) scale(0.96, 1.04); } }
+`;
+
 export function CatalogueArt() {
+  const items = [
+    { kind: "bucket", x: 14, y: 14 },
+    { kind: "umbrella", x: 50, y: 14 },
+    { kind: "mudBall", x: 50, y: 50 },
+    { kind: "pinwheel", x: 14, y: 50 },
+  ] as const;
   return (
     <Tile>
-      <g transform="translate(14 14) scale(2.2)">
-        <ItemShape kind="bucket" />
-      </g>
-      <g transform="translate(50 14) scale(2.2)">
-        <ItemShape kind="umbrella" />
-      </g>
-      <g transform="translate(14 50) scale(2.2)">
-        <ItemShape kind="pinwheel" />
-      </g>
-      <g transform="translate(50 50) scale(2.2)">
-        <ItemShape kind="mudBall" />
-      </g>
+      <style>{CATALOGUE_ART_CSS}</style>
+      {items.map((item, i) => (
+        <g key={item.kind} transform={`translate(${item.x} ${item.y}) scale(2.2)`}>
+          <g className="ca-bounce" style={{ "--d": `${i * 0.6}s` } as CSSProperties}>
+            <ItemShape kind={item.kind} />
+          </g>
+        </g>
+      ))}
       <Tank colour={3} x={32} y={32} angle={-30} scale={1.45} self />
     </Tile>
   );

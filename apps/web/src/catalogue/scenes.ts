@@ -220,12 +220,22 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: { you: { x: 0, y: 1, dir: "E", score: 2, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -2 } }, shots: [["you", "a", "hit"]], effects: [aura(0, 1), { kind: "freeShot", at: { x: 0, y: 1 } }] },
     { tanks: { you: { x: 0, y: 1, dir: "E", score: 3, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -3 } }, shots: [["you", "a", "hit"]], effects: [aura(0, 1), { kind: "freeShot", at: { x: 0, y: 1 } }] },
   ], 2),
+  // The ball lands on the first tank in line, and its mud sticks every tank within 1 square of it.
   mudBomb: scene("standard", 5, 3, [
-    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" } } },
-    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" } }, effects: [charge(0, 1)] },
-    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" } }, effects: [aura(0, 1), { kind: "mudBomb", from: { x: 0, y: 1 }, to: { x: 3, y: 1 } }] },
-    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W", effect: STUCK } } },
-    { tanks: { you: { x: 1, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W", effect: STUCK } } },
+    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" }, b: { x: 4, y: 0, dir: "SW" }, c: { x: 4, y: 2, dir: "NW" } } },
+    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" }, b: { x: 4, y: 0, dir: "SW" }, c: { x: 4, y: 2, dir: "NW" } }, effects: [charge(0, 1)] },
+    {
+      tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" }, b: { x: 4, y: 0, dir: "SW" }, c: { x: 4, y: 2, dir: "NW" } },
+      effects: [aura(0, 1), { kind: "mudBomb", from: { x: 0, y: 1 }, to: { x: 3, y: 1 }, reach: 1 }],
+    },
+    {
+      tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W", effect: STUCK }, b: { x: 4, y: 0, dir: "SW", effect: STUCK }, c: { x: 4, y: 2, dir: "NW", effect: STUCK } },
+      effects: [{ kind: "mudPatch", at: { x: 3, y: 1 }, reach: 1 }],
+    },
+    {
+      tanks: { you: { x: 1, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W", effect: STUCK }, b: { x: 4, y: 0, dir: "SW", effect: STUCK }, c: { x: 4, y: 2, dir: "NW", effect: STUCK } },
+      effects: [{ kind: "mudPatch", at: { x: 3, y: 1 }, reach: 1 }],
+    },
   ], 2),
   whirlwind: scene("standard", 5, 3, [
     { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E" }, b: { x: 4, y: 1, dir: "W" }, c: { x: 2, y: 2, dir: "N" } } },

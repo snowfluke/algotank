@@ -37,7 +37,10 @@ export type UltimateEffect =
   | { readonly kind: "fullTank"; readonly at: Square }
   /** A shot that used no water: a ring of water around the shooter. */
   | { readonly kind: "freeShot"; readonly at: Square }
-  | { readonly kind: "mudBomb"; readonly from: Square; readonly to: Square }
+  /** The ball lands on `to` and its mud covers every square within `reach` of it. */
+  | { readonly kind: "mudBomb"; readonly from: Square; readonly to: Square; readonly reach: number }
+  /** The mud a mud bomb left, after it landed. */
+  | { readonly kind: "mudPatch"; readonly at: Square; readonly reach: number }
   | { readonly kind: "whirlwind"; readonly at: Square; readonly reach: number }
   /** `fresh`: the dome opens on this step. `shooters`: squares whose shot ripples on the dome. */
   | { readonly kind: "bigUmbrella"; readonly at: Square; readonly fresh: boolean; readonly shooters: readonly Square[] }
@@ -62,6 +65,7 @@ const EFFECT_CSS = `
 .ue-pull { transform: translate(calc(var(--dx) * 0.6), calc(var(--dy) * 0.6)) scale(0.8); }
 .ue-lob-x { transform: translateX(calc(var(--dx) * 0.55)); }
 .ue-lob-y { transform: translateY(-7px); }
+.ue-fling { transform: translate(var(--dx), var(--dy)); }
 @media (prefers-reduced-motion: no-preference) {
   .ue-glow { animation: ue-glow var(--step) ease-out both; }
   .ue-aura { animation: ue-aura calc(var(--step) * 1.6) ease-in-out infinite alternate; }
@@ -80,6 +84,8 @@ const EFFECT_CSS = `
   .ue-lob-x { animation: ue-lob-x calc(var(--step) * 0.5) linear both; }
   .ue-lob-y { animation: ue-lob-y calc(var(--step) * 0.5) linear both; }
   .ue-splat { animation: ue-pop calc(var(--step) * 0.4) cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--step) * 0.48); }
+  .ue-patch { animation: ue-patch calc(var(--step) * 0.35) ease-out both; animation-delay: calc(var(--step) * 0.48); }
+  .ue-fling { animation: ue-fling calc(var(--step) * 0.3) ease-out both; animation-delay: calc(var(--step) * 0.48); }
   .ue-spin { animation: ue-spin calc(var(--step) * 0.9) cubic-bezier(0.3, 0.6, 0.4, 1) both; }
   .ue-area { animation: ue-area calc(var(--step) * 0.9) ease-out both; }
   .ue-open { animation: ue-open calc(var(--step) * 0.45) cubic-bezier(0.34, 1.56, 0.64, 1) both; }
@@ -102,6 +108,8 @@ const EFFECT_CSS = `
 @keyframes ue-suck { 0% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(0, 0) scale(0.3); opacity: 0.2; } }
 @keyframes ue-lob-x { from { transform: translateX(0); } to { transform: translateX(var(--dx)); } }
 @keyframes ue-lob-y { 0% { transform: translateY(0); animation-timing-function: ease-out; } 50% { transform: translateY(-9px); animation-timing-function: ease-in; } 100% { transform: translateY(0); } }
+@keyframes ue-patch { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 0.5; } }
+@keyframes ue-fling { 0% { transform: translate(0, 0) scale(0.4); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 1; } }
 @keyframes ue-spin { 0% { transform: rotate(0deg) scale(0.2); opacity: 0; } 25% { opacity: 1; } 100% { transform: rotate(540deg) scale(1); opacity: 0.85; } }
 @keyframes ue-area { 0% { opacity: 0; } 100% { opacity: 0.35; } }
 @keyframes ue-open { 0% { transform: scale(0.15, 0.4); } 100% { transform: scale(1); } }
@@ -263,12 +271,33 @@ function FreeShot({ square }: { readonly square: Square }) {
   return <circle className="ue-a ue-halo" cx={c.x} cy={c.y} r={5.5} fill="none" strokeWidth={1.1} opacity={0.8} style={{ stroke: WATER }} />;
 }
 
-/** Mud bomb: a mud ball flies over in an arc and splats on the tank it lands on. */
-function MudBomb({ from, to }: { readonly from: Square; readonly to: Square }) {
+/** The squares within `reach` of `square`, on the board. */
+function areaRect(square: Square, reach: number, board: { readonly width: number; readonly height: number }) {
+  const x0 = Math.max(0, square.x - reach);
+  const y0 = Math.max(0, square.y - reach);
+  const x1 = Math.min(board.width - 1, square.x + reach);
+  const y1 = Math.min(board.height - 1, square.y + reach);
+  return { x: x0 * CELL, y: y0 * CELL, width: (x1 - x0 + 1) * CELL, height: (y1 - y0 + 1) * CELL };
+}
+
+/** Mud bomb, under the tanks: the patch of mud it leaves; `fresh` spreads it when the ball lands. */
+function MudPatch({ square, reach, board, fresh }: { readonly square: Square; readonly reach: number; readonly board: { readonly width: number; readonly height: number }; readonly fresh: boolean }) {
+  const r = areaRect(square, reach, board);
+  return <rect className={fresh ? "ue-a ue-patch" : undefined} x={r.x + 0.8} y={r.y + 0.8} width={r.width - 1.6} height={r.height - 1.6} rx={4} opacity={0.5} strokeWidth={0.5} style={{ fill: "var(--color-tank-10)", stroke: "var(--color-tank-10-dark)" }} />;
+}
+
+/** Mud bomb: a mud ball flies over in an arc, bursts on the tank it lands on and flings mud over every square around it. */
+function MudBomb({ from, to, reach }: { readonly from: Square; readonly to: Square; readonly reach: number }) {
   const a = at(from);
   const b = at(to);
+  const fling = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].flatMap((dx) => (dx === 0 && dy === 0 ? [] : [{ dx: dx * reach * CELL, dy: dy * reach * CELL }])));
   return (
     <g>
+      <g transform={`translate(${b.x} ${b.y})`}>
+        {fling.map((drop) => (
+          <circle key={`${drop.dx},${drop.dy}`} className="ue-fling" r={1.3} strokeWidth={0.3} style={{ fill: "var(--color-tank-10)", stroke: "var(--color-tank-10-dark)", ...vars({ "--dx": `${drop.dx}px`, "--dy": `${drop.dy}px` }) }} />
+        ))}
+      </g>
       <g transform={`translate(${a.x} ${a.y})`}>
         <g className="ue-lob-x" style={vars({ "--dx": `${b.x - a.x}px` })}>
           <g className="ue-lob-y">
@@ -421,8 +450,12 @@ export function ultimateLayers(effects: readonly UltimateEffect[], board: { read
       case "freeShot":
         over.push(<FreeShot key={i} square={effect.at} />);
         return;
+      case "mudPatch":
+        under.push(<MudPatch key={i} square={effect.at} reach={effect.reach} board={board} fresh={false} />);
+        return;
       case "mudBomb":
-        over.push(<MudBomb key={i} from={effect.from} to={effect.to} />);
+        under.push(<MudPatch key={`patch-${i}`} square={effect.to} reach={effect.reach} board={board} fresh />);
+        over.push(<MudBomb key={i} from={effect.from} to={effect.to} reach={effect.reach} />);
         return;
       case "whirlwind":
         under.push(<WhirlwindArea key={i} square={effect.at} reach={effect.reach} width={board.width} height={board.height} />);

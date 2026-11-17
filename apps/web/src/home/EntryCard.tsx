@@ -55,7 +55,7 @@ export function EntryCard({ href, title, body, art, tone = "row", note, live = n
       className={`press group flex min-h-11 min-w-0 rounded-[var(--radius-card)] no-underline ${layout} ${SURFACE[tone]}`}
     >
       <span className={`shrink-0 ${main ? "size-12 laptop:size-16" : brief ? "size-10" : "size-14"}`}>{art}</span>
-      <span className="flex min-w-0 flex-col self-stretch">
+      <span className="flex min-w-0 flex-col justify-center self-stretch">
         <span className={`font-display font-bold leading-tight [overflow-wrap:anywhere] ${main ? "text-title laptop:text-heading" : "text-lead"}`}>{title}</span>
         {brief ? null : <span className={`[overflow-wrap:anywhere] ${main ? "mt-1" : "text-muted"}`}>{body}</span>}
         {live === null ? null : (

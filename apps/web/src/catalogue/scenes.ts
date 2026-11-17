@@ -169,8 +169,8 @@ export const CONDITION_SCENES: Readonly<Record<RuleSetId, Scene>> = {
   downpour: scene("downpour", 5, 3, [
     { tanks: { you: { x: 1, y: 1, dir: "E" }, a: { x: 2, y: 1, dir: "W" } } },
     { tanks: { you: { x: 1, y: 1, dir: "E", score: 1, water: 10 }, a: { x: 2, y: 1, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]] },
-    { tanks: { you: { x: 1, y: 1, dir: "E", score: 2, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -2 } }, shots: [["you", "a", "hit"]] },
-    { tanks: { you: { x: 1, y: 1, dir: "E", score: 3, water: 8 }, a: { x: 2, y: 1, dir: "W", score: -3 } }, shots: [["you", "a", "hit"]] },
+    { tanks: { you: { x: 1, y: 1, dir: "E", score: 2, water: 8 }, a: { x: 2, y: 1, dir: "W", score: -2 } }, shots: [["you", "a", "hit"]] },
+    { tanks: { you: { x: 1, y: 1, dir: "E", score: 3, water: 6 }, a: { x: 2, y: 1, dir: "W", score: -3 } }, shots: [["you", "a", "hit"]] },
   ], 2),
 };
 

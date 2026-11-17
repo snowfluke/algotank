@@ -278,14 +278,16 @@ export function LegendDialog({ onClose, onShowAround }: { onClose: () => void; r
           </h2>
           <IconButton label={m.common.close} icon={<X aria-hidden size={22} />} variant="quiet" autoFocus onClick={onClose} />
         </div>
-        {/* The catalogue says more about each item, with a scene for each one (catalogue/CataloguePage.tsx). */}
+        {/* The catalogue says more about each item, with a scene for each one (catalogue/CataloguePage.tsx). It opens in a new tab because this dialog opens during a live round, a test match and the monthly arena, which must keep running. */}
         <div className="flex shrink-0 flex-wrap gap-2">
           {onShowAround === undefined ? null : (
             <Button variant="secondary" data-show-around="" onClick={onShowAround}>
               {m.guide.showAround}
             </Button>
           )}
-          <LinkButton href={paths.catalogue()}>{m.catalogue.open}</LinkButton>
+          <LinkButton href={paths.catalogue()} newTab>
+            {m.catalogue.open}
+          </LinkButton>
         </div>
         <Pager
           label={l.summary}

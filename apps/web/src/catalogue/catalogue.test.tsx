@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS } from "@game/engine";
+import { canThrow, ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, ruleSet, throwRange, waterAfterTick } from "@game/engine";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
 import { CATALOGUE_SECTIONS, type CatalogueSection } from "./catalogue.tsx";
@@ -58,6 +58,33 @@ describe("catalogue scenes", () => {
         const squares = snapshot.bots.map((bot) => `${bot.x},${bot.y}`);
         expect(new Set(squares).size, `${name}: two tanks on one square`).toBe(squares.length);
       }
+    }
+  });
+});
+
+describe("catalogue scenes follow the arena's rules", () => {
+  // The ultimates are left out: they are a plan that breaks the rules on purpose (a shot that uses no water).
+  const ruled: [string, Scene][] = [...Object.entries(ITEM_SCENES), ...Object.entries(CONDITION_SCENES)];
+
+  test("every shot is in range, and the water after each turn is what the engine leaves", () => {
+    for (const [name, scene] of ruled) {
+      scene.steps.forEach(({ snapshot, throws }, index) => {
+        const rules = ruleSet(snapshot.ruleSetId);
+        const before = index === 0 ? null : scene.steps[index - 1]!.snapshot;
+        for (const shot of throws) {
+          if (shot.outcome === "empty") continue;
+          expect(shot.distance, `${name} step ${index}`).toBeLessThanOrEqual(throwRange({ reach: 0, aim: 0, dodge: 0 }, rules));
+        }
+        if (before === null) return;
+        for (const tank of snapshot.bots) {
+          const was = before.bots.find((b) => b.id === tank.id);
+          if (was === undefined) continue;
+          const shot = throws.find((t) => t.throwerId === tank.id);
+          if (shot?.outcome === "dry") expect(canThrow(was.water, rules), `${name} step ${index}: a dry shot with water`).toBe(false);
+          const spent = shot !== undefined && (shot.outcome === "hit" || shot.outcome === "miss" || shot.outcome === "blocked");
+          expect(tank.water, `${name} step ${index}, tank ${tank.id}`).toBe(waterAfterTick(was.water, spent, rules));
+        }
+      });
     }
   });
 });

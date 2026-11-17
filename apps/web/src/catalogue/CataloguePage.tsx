@@ -120,12 +120,12 @@ function EntryList({ entries, chosen, label, onChoose, layout }: { readonly entr
             aria-pressed={isChosen}
             data-catalogue-card={entry.key}
             onClick={() => onChoose(entry.key)}
-            className={`press flex min-w-0 rounded-[var(--radius-control)] border-2 text-left ${
+            className={`press flex min-w-0 rounded-[var(--radius-control)] border-2 ${
               isChosen ? "border-water bg-water-soft" : "border-transparent bg-panel hover:border-line-strong"
-            } ${layout === "rows" ? "max-h-12 min-h-10 flex-1 items-center gap-3 px-2 py-0.5" : "min-h-11 flex-col items-center gap-1 px-0.5 py-1.5 text-center"}`}
+            } ${layout === "rows" ? "max-h-12 min-h-10 flex-1 items-center gap-3 px-2 py-0.5 text-left" : "min-h-11 flex-col items-center gap-1 px-0.5 py-1.5 text-center"}`}
           >
             <span className={`flex shrink-0 items-center justify-center ${layout === "rows" ? "h-8 w-14" : "h-8 w-full"}`}>{entry.icon}</span>
-            <span className={`min-w-0 font-display font-semibold ${layout === "rows" ? "[overflow-wrap:anywhere]" : "line-clamp-2 w-full text-[0.8125rem] leading-tight [overflow-wrap:break-word]"}`}>
+            <span className={`min-w-0 font-display font-semibold ${layout === "rows" ? "[overflow-wrap:anywhere]" : "line-clamp-2 w-full text-[0.75rem] leading-tight [overflow-wrap:break-word]"}`}>
               {entry.name}
             </span>
           </button>

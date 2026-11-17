@@ -66,7 +66,8 @@ export function ScenePlayer({ scene, label, nextLabel }: { readonly scene: Scene
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
       <div role="img" aria-label={label} data-catalogue-scene="" className="flex min-h-0 min-w-0 flex-1 flex-col">
         <FittedBoard ratio={boardAspect(snapshot.width, snapshot.height)}>
-          <ArenaBoard snapshot={snapshot} throws={step.throws} names={NAMES} highlightId="you" tickMs={Math.round(STEP_MS * 0.6)} tanks={TANKS} />
+          {/* A new board on each loop, so the tanks jump back to the start instead of driving backwards to it. */}
+          <ArenaBoard key={Math.floor(turn / length)} snapshot={snapshot} throws={step.throws} names={NAMES} highlightId="you" tickMs={Math.round(STEP_MS * 0.6)} tanks={TANKS} />
         </FittedBoard>
       </div>
       {reduced ? (

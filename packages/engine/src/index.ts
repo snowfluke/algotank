@@ -24,6 +24,7 @@ export {
   MAX_WATER_CAPACITY,
   POINTS_PER_HIT,
   canThrow,
+  waterAfterTick,
   buildCost,
   throwRange,
   hitChancePercent,

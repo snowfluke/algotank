@@ -31,8 +31,10 @@ import { CatalogueArt, JoinArt, PlayNowArt, PresenterArenaArt, PrivateArenaArt, 
 import { HomeScene } from "./HomeScene.tsx";
 
 /** Level 0 shows every sentence; level 1 leaves out the sentences of the rows; level 2 those of the main tiles too; level 3 is the compact form. */
-const DETAIL_LEVELS = 4;
+const DETAIL_LEVELS = 5;
 const COMPACT_LEVEL = 3;
+/** The last level: "Join with a code" and "Catalogue" share one row, so seven cards fit a 360 by 640 phone. */
+const PAIRED_LEVEL = 4;
 
 /** The monthly tile's live line: the full sentence, or in the compact form the short line, and nothing when no tank plays. */
 export function monthlyLiveLine(tanks: number, compact: boolean, m: Catalog): string | null {
@@ -90,9 +92,8 @@ export function HomePage() {
             <EntryCard tone="guide" detail={mainDetail} coach="home-workshop" href={paths.workshop()} title={home.workshop.title} body={home.workshop.body} art={<WorkshopArt />} />
           </div>
           <EntryCard detail={rowDetail} href={paths.monthly()} title={home.watchMonthly.title} body={home.watchMonthly.body} live={monthlyLive} art={<ArenaArt kind="monthly" />} />
-          <EntryCard detail={rowDetail} href={paths.join()} title={home.joinCode.title} body={home.joinCode.body} art={<JoinArt />} />
-          {/* Under 700px of height the seven cards do not fit, so the catalogue's card gives way; the workshop and the board's help link to it too. */}
-          <div className="min-w-0 [@media(max-height:700px)]:hidden">
+          <div className={level >= PAIRED_LEVEL ? "grid min-w-0 grid-cols-2 gap-2" : "contents"}>
+            <EntryCard detail={rowDetail} href={paths.join()} title={home.joinCode.title} body={home.joinCode.body} art={<JoinArt />} />
             <EntryCard detail={rowDetail} href={paths.catalogue()} title={m.catalogue.homeTile.title} body={m.catalogue.homeTile.body} art={<CatalogueArt />} />
           </div>
           <EntryCard

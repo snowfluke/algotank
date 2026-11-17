@@ -24,6 +24,7 @@ import { Disclosure } from "./monthly/disclosure.ts";
 import { GameMasters } from "./monthly/game-masters.ts";
 import { MONTHLY_TICK_MS, MonthlyLeagues } from "./monthly/monthly.ts";
 import { registerAdminPlayerRoutes } from "./monthly/admin-routes.ts";
+import { registerAdminMeRoute } from "./admin.ts";
 import { MONTHLY_CHANGES_PER_MINUTE, registerMonthlyRoutes } from "./monthly/routes.ts";
 import { LeagueStreams } from "./monthly/streams.ts";
 import { DEFAULT_PUBLIC_ARENA_MAX, PublicArenas } from "./public-arenas.ts";
@@ -220,6 +221,7 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   registerPublicRoutes(router, { publicArenas, monthly, champions, winners });
   registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics, mailOn });
   const adminGate = { auth, adminEmails: new Set(options.adminEmails ?? []), mailOn };
+  registerAdminMeRoute(router, adminGate);
   registerAdminPlayerRoutes(router, { gate: adminGate, monthly });
   registerMetricsRoutes(router, {
     ...adminGate,

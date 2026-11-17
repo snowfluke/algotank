@@ -131,3 +131,16 @@ describe("PUT /api/admin/players/:seatId/name", () => {
     expect(me.name).toMatchObject({ name: "Sunda empire", canChange: false });
   });
 });
+
+describe("GET /api/admin/me", () => {
+  test("says admin to the admin only; a visitor and a player get the 404 of a missing route", async () => {
+    const t = start();
+    expect((await t.api("/api/admin/me")).status).toBe(404);
+    const ada = await seat(t, "ada@example.org", "Ada");
+    expect((await t.api("/api/admin/me", { cookie: ada })).status).toBe(404);
+    const admin = await signUp(t, ADMIN);
+    const response = await t.api("/api/admin/me", { cookie: admin });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ admin: true });
+  });
+});

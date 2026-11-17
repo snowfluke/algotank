@@ -1,7 +1,8 @@
 // The account control at the end of the header. Signed out: a "Sign in" link that
 // returns to this page. Signed in: a small menu with the email, "Verify my email" with one
 // line when the email is not verified and the server can send email, "My arena" when the
-// account owns one, "My results" (the stored results of its tournaments), and "Sign out".
+// account owns one, "My results" (the stored results of its tournaments), for an admin the two
+// admin pages (adminStatus.ts), and "Sign out".
 
 import { LogIn, LogOut, UserRound } from "lucide-react";
 import { useRef, useState } from "react";
@@ -11,6 +12,7 @@ import { paths } from "../app/route.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { playSound } from "../sound/player.ts";
 import { signOut, useAccount, type OwnArena } from "./accountStore.ts";
+import { useIsAdmin } from "./adminStatus.ts";
 import { canSendEmail, useMailCapability } from "./mailCapability.ts";
 
 /** The page of the owner's arena: the room for a private arena, the presenter page otherwise. */
@@ -35,6 +37,7 @@ export function AccountMenu() {
   const mail = useMailCapability();
   const menu = useRef<HTMLDetailsElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const admin = useIsAdmin(account.kind === "signedIn" ? account.account.id : null);
 
   if (account.kind !== "signedIn") {
     const here = currentPath();
@@ -105,6 +108,27 @@ export function AccountMenu() {
         >
           {m.auth.myResults}
         </a>
+        {/* The admin pages, under a line: only an admin's menu has them, and the server checks each page again. */}
+        {admin ? (
+          <div data-admin-links="" className="flex flex-col gap-1 border-t border-line pt-1">
+            {[
+              { href: paths.adminPlayers(), label: m.adminPlayers.pageTitle },
+              { href: paths.adminMetrics(), label: m.metrics.pageTitle },
+            ].map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={(event) => {
+                  close();
+                  followLink(event);
+                }}
+                className={MENU_ITEM}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        ) : null}
         <button
           type="button"
           className={MENU_ITEM}

@@ -6,6 +6,7 @@ import * as adminPlayers from "../adminplayers/messages.ts";
 import * as errors from "../api/messages.ts";
 import * as auth from "../auth/messages.ts";
 import * as board from "../board/messages.ts";
+import * as catalogue from "../catalogue/messages.ts";
 import * as champions from "../champions/messages.ts";
 import * as chat from "../chat/messages.ts";
 import * as create from "../create/messages.ts";
@@ -54,6 +55,7 @@ const en = {
   mytank: mytank.en,
   publicplay: publicplay.en,
   champions: champions.en,
+  catalogue: catalogue.en,
   monthly: monthly.en,
   guide: guide.en,
   chat: chat.en,
@@ -87,6 +89,7 @@ const id: Catalog = {
   mytank: mytank.id,
   publicplay: publicplay.id,
   champions: champions.id,
+  catalogue: catalogue.id,
   monthly: monthly.id,
   guide: guide.id,
   chat: chat.id,

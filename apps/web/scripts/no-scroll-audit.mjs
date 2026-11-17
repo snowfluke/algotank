@@ -689,6 +689,16 @@ export const STATES = [
   { screen: "champions", state: "rows-100-last-page", owner: "P3b", path: () => "/champions", as: "visitor", mock: championsMocks(100, true), steps: [{ wait: "[data-champions-part]" }, { pageToEnd: '[data-champions-part="month"] [data-pager-next]' }] },
   { screen: "champions", state: "months", owner: "P3b", path: () => "/champions", as: "visitor", mock: championsMocks(100, true), steps: [{ wait: "[data-champions-part]" }, tab("months")] },
   { screen: "champions", state: "tournaments", owner: "P3b", path: () => "/champions", as: "visitor", mock: championsMocks(100, true), steps: [{ wait: "[data-champions-part]" }, tab("tournaments")] },
+  // The catalogue: one state per collection; the phone grid of the play styles is the tallest list.
+  ...["playStyles", "items", "conditions", "ultimates"].map((section) => ({
+    screen: "catalogue",
+    state: section,
+    owner: "P3b",
+    path: () => "/catalogue",
+    as: "visitor",
+    ...(section === "playStyles" ? { sweep: true } : {}),
+    steps: [{ wait: "[data-catalogue]" }, { click: `[data-catalogue] label:has(input[value="${section}"])` }, { wait: `[data-catalogue="${section}"]` }],
+  })),
   { screen: "champions", state: "failed", owner: "P3b", path: () => "/champions", as: "visitor", mock: [{ route: "**/api/champions", status: 503, body: { error: "down" } }], steps: [{ wait: "[role=alert], [data-champions] button" }] },
 ];
 

@@ -6,6 +6,7 @@ import { GAME_NAME } from "../brand.ts";
 import { CreateArenaPage } from "../create/CreateArenaPage.tsx";
 import { HomePage } from "../home/HomePage.tsx";
 import { JoinPage } from "../home/JoinPage.tsx";
+import { CataloguePage } from "../catalogue/CataloguePage.tsx";
 import { ChampionsPage } from "../champions/ChampionsPage.tsx";
 import { MonthlyPage } from "../monthly/MonthlyPage.tsx";
 import { useMusicVenue } from "../sound/music.ts";
@@ -55,6 +56,8 @@ function RoutePage({ route }: { route: Route }) {
       return <MyTankPage />;
     case "champions":
       return <ChampionsPage />;
+    case "catalogue":
+      return <CataloguePage />;
     case "monthly":
       return <MonthlyPage />;
     case "result":
@@ -77,7 +80,7 @@ export function App() {
   useMusicVenue(route.page === "screen" ? "bigScreen" : "app");
   // The sign-in page is newer than the shared title list, so its title lives with its own text.
   const title =
-    route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : route.page === "adminPlayers" ? m.adminPlayers.pageTitle : m.common.pageTitles[route.page];
+    route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : route.page === "adminPlayers" ? m.adminPlayers.pageTitle : route.page === "catalogue" ? m.catalogue.pageTitle : m.common.pageTitles[route.page];
   useUsageCounts(route.page);
 
   useEffect(() => {

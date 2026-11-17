@@ -27,7 +27,7 @@ import { hasFinishedGame } from "../publicplay/firstGame.ts";
 import { usePublicStatus } from "../publicplay/usePublicStatus.ts";
 import { useFitDetail } from "../ui/useFitDetail.ts";
 import { EntryCard, type EntryDetail } from "./EntryCard.tsx";
-import { JoinArt, PlayNowArt, PresenterArenaArt, PrivateArenaArt, WorkshopArt } from "./EntryArt.tsx";
+import { CatalogueArt, JoinArt, PlayNowArt, PresenterArenaArt, PrivateArenaArt, WorkshopArt } from "./EntryArt.tsx";
 import { HomeScene } from "./HomeScene.tsx";
 
 /** Level 0 shows every sentence; level 1 leaves out the sentences of the rows; level 2 those of the main tiles too; level 3 is the compact form. */
@@ -91,6 +91,10 @@ export function HomePage() {
           </div>
           <EntryCard detail={rowDetail} href={paths.monthly()} title={home.watchMonthly.title} body={home.watchMonthly.body} live={monthlyLive} art={<ArenaArt kind="monthly" />} />
           <EntryCard detail={rowDetail} href={paths.join()} title={home.joinCode.title} body={home.joinCode.body} art={<JoinArt />} />
+          {/* Under 700px of height the seven cards do not fit, so the catalogue's card gives way; the workshop and the board's help link to it too. */}
+          <div className="min-w-0 [@media(max-height:700px)]:hidden">
+            <EntryCard detail={rowDetail} href={paths.catalogue()} title={m.catalogue.homeTile.title} body={m.catalogue.homeTile.body} art={<CatalogueArt />} />
+          </div>
           <EntryCard
             detail={rowDetail}
             href={paths.create("private")}

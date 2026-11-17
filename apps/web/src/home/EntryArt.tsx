@@ -4,6 +4,7 @@
 // with the same tile and tank.
 
 import type { ReactNode } from "react";
+import { ItemShape } from "../board/itemShapes.tsx";
 import { TankShape } from "../tank/TankShape.tsx";
 import type { TankColour } from "../tank/colours.ts";
 
@@ -97,6 +98,27 @@ export function WorkshopArt() {
       <rect x={32} y={46} width={4} height={9} rx={1} style={{ fill: "var(--color-line-strong)" }} />
       <Tank colour={5} x={25} y={28} angle={-90} scale={1.7} self />
       <Tank colour={4} x={50} y={42} angle={-120} scale={1.2} />
+    </Tile>
+  );
+}
+
+/** The catalogue: a tank among the four items it can meet. */
+export function CatalogueArt() {
+  return (
+    <Tile>
+      <g transform="translate(14 14) scale(2.2)">
+        <ItemShape kind="bucket" />
+      </g>
+      <g transform="translate(50 14) scale(2.2)">
+        <ItemShape kind="umbrella" />
+      </g>
+      <g transform="translate(14 50) scale(2.2)">
+        <ItemShape kind="pinwheel" />
+      </g>
+      <g transform="translate(50 50) scale(2.2)">
+        <ItemShape kind="mudBall" />
+      </g>
+      <Tank colour={3} x={32} y={32} angle={-30} scale={1.45} self />
     </Tile>
   );
 }

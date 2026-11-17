@@ -21,6 +21,7 @@ export type Route =
   | { readonly page: "workshop" }
   | { readonly page: "myTank" }
   | { readonly page: "champions" }
+  | { readonly page: "catalogue" }
   /** The monthly arena: a league that always runs (docs/specs/revamp/77-monthly-league.md). */
   | { readonly page: "monthly" }
   /** A stored tournament result (results-protocol.ts); the id is the only key to it. */
@@ -48,6 +49,7 @@ export const paths = {
   workshop: () => "/workshop",
   myTank: () => "/my-tank",
   champions: () => "/champions",
+  catalogue: () => "/catalogue",
   monthly: () => "/monthly",
   /** The monthly arena with its join step open, where the sign-in page returns to. */
   monthlyJoin: () => "/monthly?join=1",
@@ -74,6 +76,7 @@ const SINGLE_SEGMENT: Readonly<Record<string, Route>> = {
   workshop: { page: "workshop" },
   "my-tank": { page: "myTank" },
   champions: { page: "champions" },
+  catalogue: { page: "catalogue" },
   monthly: { page: "monthly" },
   "my-results": { page: "myResults" },
 };

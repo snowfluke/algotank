@@ -13,7 +13,7 @@
 // A first visit (no play styles yet) starts the workshop tour (guide/tours.ts) and its
 // checklist; finishing the tour shows the happy moment (FirstStyleGuide.tsx) once.
 
-import { CircleHelp, Plus } from "lucide-react";
+import { BookOpen, CircleHelp, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { ACCOUNT_STRATEGY_LIMITS } from "@game/arena";
 import { followLink } from "../app/navigation.ts";
@@ -107,6 +107,17 @@ function ListHeading({ className }: { readonly className: string }) {
   return (
     <div className="flex min-w-0 shrink-0 items-center gap-2">
       <h1 className={`min-w-0 flex-1 ${className}`}>{m.workshop.heading}</h1>
+      {/* The catalogue shows each play style, item and arena condition at work (catalogue/CataloguePage.tsx). */}
+      <a
+        href={paths.catalogue()}
+        aria-label={m.catalogue.open}
+        title={m.catalogue.open}
+        data-catalogue-link=""
+        onClick={followLink}
+        className="press inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border-2 border-transparent text-ink hover:bg-water-soft"
+      >
+        <BookOpen aria-hidden size={24} />
+      </a>
       <IconButton label={m.guide.showAround} icon={<CircleHelp aria-hidden size={24} />} variant="quiet" data-show-around="" onClick={() => showAround("workshop")} />
     </div>
   );

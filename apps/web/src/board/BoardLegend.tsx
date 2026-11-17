@@ -10,7 +10,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ruleSet, STANDARD_RULE_SET_ID } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { TankShape } from "../tank/TankShape.tsx";
-import { Button } from "../ui/Button.tsx";
+import { paths } from "../app/route.ts";
+import { Button, LinkButton } from "../ui/Button.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
 import { Pager } from "../ui/Pager.tsx";
 import type { Jet } from "./boardHelpers.ts";
@@ -277,13 +278,15 @@ export function LegendDialog({ onClose, onShowAround }: { onClose: () => void; r
           </h2>
           <IconButton label={m.common.close} icon={<X aria-hidden size={22} />} variant="quiet" autoFocus onClick={onClose} />
         </div>
-        {onShowAround === undefined ? null : (
-          <div className="shrink-0">
+        {/* The catalogue says more about each item, with a scene for each one (catalogue/CataloguePage.tsx). */}
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {onShowAround === undefined ? null : (
             <Button variant="secondary" data-show-around="" onClick={onShowAround}>
               {m.guide.showAround}
             </Button>
-          </div>
-        )}
+          )}
+          <LinkButton href={paths.catalogue()}>{m.catalogue.open}</LinkButton>
+        </div>
         <Pager
           label={l.summary}
           items={entries}

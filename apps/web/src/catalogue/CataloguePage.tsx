@@ -86,13 +86,13 @@ export function CatalogueView({
         </div>
         {entry === undefined ? null : laptop ? (
           <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,20rem)] gap-6">
-            <Stage entry={entry} />
+            <Stage entry={entry} entries={entries} />
             <EntryList entries={entries} chosen={entry.key} label={t.listLabel(sectionName)} onChoose={(key) => setChosen({ ...chosen, [section]: key })} layout="rows" />
           </div>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
             <EntryList entries={entries} chosen={entry.key} label={t.listLabel(sectionName)} onChoose={(key) => setChosen({ ...chosen, [section]: key })} layout="grid" />
-            <Stage entry={entry} />
+            <Stage entry={entry} entries={entries} />
           </div>
         )}
       </div>
@@ -100,25 +100,39 @@ export function CatalogueView({
   );
 }
 
-/** The chosen card: its name, its sentences and its scene. */
-function Stage({ entry }: { readonly entry: CatalogueEntry }) {
+/**
+ * The chosen card: its name, its sentences and its scene. Every card's text of the collection lies in
+ * the same grid cell and only the chosen one shows, so the text takes the height of the longest and the
+ * scene below stays put when another card is chosen (owner, 2026-11-17: the items, the arena conditions
+ * and the mud bomb and magnet moved the scene).
+ */
+function Stage({ entry, entries }: { readonly entry: CatalogueEntry; readonly entries: readonly CatalogueEntry[] }) {
   const m = useMessages();
   const t = m.catalogue;
   return (
     <section aria-labelledby="catalogue-entry" data-catalogue-entry={entry.key} className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-      <div className="flex min-w-0 shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id="catalogue-entry" className="min-w-0 text-title [overflow-wrap:anywhere]">
-          {entry.name}
-        </h2>
-        {entry.soon ? (
-          <span data-catalogue-soon="" className="shrink-0 rounded-full bg-guide-soft px-2.5 py-0.5 text-caption font-semibold text-guide-ink">
-            {t.soon}
-          </span>
-        ) : null}
+      <div className="grid min-w-0 shrink-0">
+        {entries.map((each) => {
+          const shown = each.key === entry.key;
+          return (
+            <div key={each.key} aria-hidden={!shown} className={`flex min-w-0 flex-col gap-2 [grid-area:1/1] ${shown ? "" : "invisible"}`}>
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 {...(shown ? { id: "catalogue-entry" } : {})} className="min-w-0 text-title [overflow-wrap:anywhere]">
+                  {each.name}
+                </h2>
+                {each.soon ? (
+                  <span {...(shown ? { "data-catalogue-soon": "" } : {})} className="shrink-0 rounded-full bg-guide-soft px-2.5 py-0.5 text-caption font-semibold text-guide-ink">
+                    {t.soon}
+                  </span>
+                ) : null}
+              </div>
+              <p className="max-w-[60ch] [overflow-wrap:anywhere]">{each.body}</p>
+              {/* The quieter line gives way on a short screen, so the scene keeps its room; the tag still says "Coming soon". */}
+              {each.extra === null ? null : <p className="max-w-[60ch] text-caption text-muted [overflow-wrap:anywhere] [@media(max-height:700px)]:hidden">{each.extra}</p>}
+            </div>
+          );
+        })}
       </div>
-      <p className="max-w-[60ch] shrink-0 [overflow-wrap:anywhere]">{entry.body}</p>
-      {/* The quieter line gives way on a short screen, so the scene keeps its room; the tag still says "Coming soon". */}
-      {entry.extra === null ? null : <p className="max-w-[60ch] shrink-0 text-caption text-muted [overflow-wrap:anywhere] [@media(max-height:700px)]:hidden">{entry.extra}</p>}
       {entry.preview.kind === "playStyle" ? (
         // The workshop's scene, 5 by 3 squares; the stage gives it the room that is left.
         <div role="img" aria-label={t.sceneLabel(entry.name)} data-catalogue-scene="" className="flex min-h-0 min-w-0 flex-1 items-center justify-center rounded-[var(--radius-card)] bg-arena-floor p-2">

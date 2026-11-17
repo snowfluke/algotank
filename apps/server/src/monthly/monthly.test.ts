@@ -504,6 +504,25 @@ describe("what anyone may read about a tank (monthly-protocol.ts, the visibility
   });
 });
 
+describe("the host's rename", () => {
+  test("the tank, the board and this month's day records take the new name", () => {
+    const l = startLeague();
+    const [ada, bo] = [newAccount(), newAccount()];
+    take(l, ada, { name: "Prabowo" });
+    take(l, bo, { name: "Bobo" });
+    for (let i = 0; i < 300; i++) l.ticks.tick();
+    nextDay(l);
+    expect(l.monthly.daysOf(1).days.flatMap((d) => d.top.map((p) => p.name))).toContain("Prabowo");
+    l.monthly.adminRename(seatOf(l, ada).seatId, { name: "Sunda empire" });
+    expect(seatOf(l, ada).name).toBe("Sunda empire");
+    expect(l.monthly.live(1).tanks.find((t) => t.id === seatOf(l, ada).seatId)?.name).toBe("Sunda empire");
+    const names = l.monthly.daysOf(1).days.flatMap((d) => d.top.map((p) => p.name));
+    expect(names).toContain("Sunda empire");
+    expect(names).not.toContain("Prabowo");
+    expect(codeOf(() => l.monthly.adminRename(seatOf(l, ada).seatId, { name: "bobo" }))).toBe("name_taken");
+  });
+});
+
 describe("the streams", () => {
   test("`own` follows the stream's account: a seat taken after the stream opened, a quit, and a new seat", async () => {
     const l = startLeague();

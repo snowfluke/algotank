@@ -2,7 +2,7 @@
 // email is verified, and when the account was made, so the host can check who is behind each tank
 // before the month's prizes (owner, 2026-11-16). On a laptop each tank is one row of columns; on a
 // phone it is three short lines. Each row has Remove, for an owner who cannot sign in to quit;
-// it asks first (ui/Dialog.tsx). Nothing scrolls: the list is a Pager. Rows wrap, so they differ in
+// it asks first (ui/Dialog.tsx), and Rename, which sets the tank's name (RenameDialog.tsx). Nothing scrolls: the list is a Pager. Rows wrap, so they differ in
 // height and the Pager measures each one (no uniformHeight); the list changes only on a reload.
 //
 // AdminPlayersView draws any state from props, so the tests render it without a server.
@@ -19,26 +19,29 @@ import { Pager } from "../ui/Pager.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { useToast } from "../ui/Toast.tsx";
 import { NameBadge } from "../standings/StandingsTable.tsx";
+import { RenameDialog } from "./RenameDialog.tsx";
 import { removeAdminPlayer, setAdminGameMaster, useAdminPlayers, type AdminPlayersLoad } from "./useAdminPlayers.ts";
 
 /**
- * Tank, place, email, verified, account made. The last two columns have a fixed width, so the
- * header row and the rows (separate grids) line up. A name or an email wraps and is never cut,
- * because the host reads the whole address.
+ * Tank, place, email, verified, account made, actions. Every column but the first three has a fixed
+ * width, so the header row and the rows (separate grids) line up: an "auto" actions column was wider
+ * in a row with three buttons than in the empty header. The buttons wrap inside it. A name or an
+ * email wraps and is never cut, because the host reads the whole address.
  */
-const ROW_GRID = "grid min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1.6fr)_10rem_10rem_auto] items-center gap-x-4";
+const ROW_GRID = "grid min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1.6fr)_8rem_10rem_25rem] items-center gap-x-4";
 const WRAP = "min-w-0 [overflow-wrap:anywhere]";
 
 /** A date at noon UTC, so no time zone moves it to another day. */
 const noon = (day: string) => `${day}T12:00:00Z`;
 
-/** The row's two actions: the game master switch, which can be undone, and Remove, which asks first. */
+/** The row's actions: Rename (a dialog with the name), the game master switch, which can be undone, and Remove, which asks first. */
 interface RowActions {
+  onRename(player: AdminPlayer): void;
   onRemove(player: AdminPlayer): void;
   onGameMaster(player: AdminPlayer, gm: boolean): void;
 }
 
-function PlayerRow({ player, laptop, onRemove, onGameMaster }: { readonly player: AdminPlayer; readonly laptop: boolean } & RowActions) {
+function PlayerRow({ player, laptop, onRename, onRemove, onGameMaster }: { readonly player: AdminPlayer; readonly laptop: boolean } & RowActions) {
   const m = useMessages();
   const t = m.adminPlayers;
   const f = useFormat();
@@ -61,6 +64,9 @@ function PlayerRow({ player, laptop, onRemove, onGameMaster }: { readonly player
     );
   const remove = (
     <span className="flex min-w-0 flex-wrap justify-end gap-2">
+      <Button variant="secondary" data-admin-rename={player.seatId} aria-label={t.renameLabel(player.name)} onClick={() => onRename(player)}>
+        {t.rename}
+      </Button>
       <Button variant="secondary" data-admin-gm={player.seatId} aria-label={player.gm ? t.gmOffLabel(player.name) : t.gmOnLabel(player.name)} onClick={() => onGameMaster(player, !player.gm)}>
         {player.gm ? t.gmOff : t.gmOn}
       </Button>
@@ -161,6 +167,7 @@ export function AdminPlayersPage() {
   const toast = useToast();
   const { load, retry } = useAdminPlayers();
   const [removing, setRemoving] = useState<AdminPlayer | null>(null);
+  const [renaming, setRenaming] = useState<AdminPlayer | null>(null);
   async function gameMaster(player: AdminPlayer, gm: boolean): Promise<void> {
     if (await setAdminGameMaster(player.seatId, gm)) retry();
     else toast.show({ message: t.gmFailed });
@@ -172,7 +179,15 @@ export function AdminPlayersPage() {
   }
   return (
     <>
-      <AdminPlayersView load={load} onRetry={retry} onRemove={setRemoving} onGameMaster={(player, gm) => void gameMaster(player, gm)} />
+      <AdminPlayersView load={load} onRetry={retry} onRename={setRenaming} onRemove={setRemoving} onGameMaster={(player, gm) => void gameMaster(player, gm)} />
+      <RenameDialog
+        player={renaming}
+        onCancel={() => setRenaming(null)}
+        onDone={() => {
+          setRenaming(null);
+          retry();
+        }}
+      />
       <Dialog
         open={removing !== null}
         hook="admin-remove"

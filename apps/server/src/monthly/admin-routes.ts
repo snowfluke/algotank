@@ -39,6 +39,13 @@ export function registerAdminPlayerRoutes(router: Router, { gate, monthly }: Adm
     return new Response(null, { status: 204 });
   });
 
+  router.add("PUT", "/api/admin/players/:seatId/name", async (ctx) => {
+    requireAdmin(gate, ctx.req);
+    gate.auth.requireAccount(ctx.req);
+    monthly.adminRename(ctx.params["seatId"] ?? "", await readJson(ctx.req));
+    return new Response(null, { status: 204 });
+  });
+
   router.add("PUT", "/api/admin/players/:seatId/gm", async (ctx) => {
     requireAdmin(gate, ctx.req);
     gate.auth.requireAccount(ctx.req);

@@ -105,3 +105,29 @@ describe("PUT /api/admin/players/:seatId/gm", () => {
     expect(after.today.every((r) => !r.gm && r.rank >= 1)).toBe(true);
   });
 });
+
+describe("PUT /api/admin/players/:seatId/name", () => {
+  test("the admin renames a tank, also over this month's fixed name; the ranking and the board take it; the name rule holds", async () => {
+    const t = start();
+    const ada = await seat(t, "ada@example.org", "Ada");
+    await seat(t, "bob@example.org", "Bobo");
+    const seatId = ((await (await t.api("/api/monthly/me", { cookie: ada })).json()) as { seat: { seatId: string } }).seat.seatId;
+    const rename = (cookie: string | undefined, body: unknown, headers?: Record<string, string>) =>
+      t.api(`/api/admin/players/${seatId}/name`, { method: "PUT", ...(cookie === undefined ? {} : { cookie }), body, ...(headers === undefined ? {} : { headers }) });
+    expect((await rename(ada, { name: "Sunda empire" })).status).toBe(404);
+    const admin = await signUp(t, ADMIN);
+    expect((await rename(admin, { name: "Sunda empire" }, { origin: "https://elsewhere.example" })).status).toBe(403);
+    expect((await t.api("/api/admin/players/nobody/name", { method: "PUT", cookie: admin, body: { name: "Sunda empire" } })).status).toBe(404);
+    const codeOf = async (response: Response) => ((await response.json()) as { code?: string }).code;
+    expect(await codeOf(await rename(admin, { name: "x" }))).toBe("name_invalid");
+    expect(await codeOf(await rename(admin, { name: "bobo" }))).toBe("name_taken");
+    expect((await rename(admin, { name: "Sunda empire" })).status).toBe(204);
+
+    const ranking = (await (await t.api("/api/monthly/leagues/1/ranking")).json()) as LeagueRankingResponse;
+    expect(ranking.today.map((r) => r.name)).toContain("Sunda empire");
+    expect(ranking.today.map((r) => r.name)).not.toContain("Ada");
+    const me = (await (await t.api("/api/monthly/me", { cookie: ada })).json()) as { seat: { name: string }; name: { name: string; canChange: boolean } };
+    expect(me.seat.name).toBe("Sunda empire");
+    expect(me.name).toMatchObject({ name: "Sunda empire", canChange: false });
+  });
+});

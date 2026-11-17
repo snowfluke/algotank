@@ -31,6 +31,13 @@ export const en = {
   removeBody: "The tank leaves the board now, as when its owner quits. Its counted days and its name stay, so its owner can take a seat again.",
   removeConfirm: "Remove the tank",
   removeFailed: "The tank was not removed, so try again in a moment.",
+  /** The rename dialog (RenameDialog.tsx): the host sets a tank's name; it replaces the month's fixed name. */
+  rename: "Rename",
+  renameLabel: (name: string) => `Rename ${name}`,
+  renameTitle: (name: string) => `Rename ${name}`,
+  renameBody: "The new name shows on the board and in this month's rankings, and its owner cannot change it before next month.",
+  renameField: "New name",
+  renameSave: "Save name",
 };
 
 export const id: typeof en = {
@@ -55,6 +62,12 @@ export const id: typeof en = {
   retry: "Coba lagi",
   remove: "Keluarkan",
   removeLabel: (name) => `Keluarkan ${name}`,
+  rename: "Ganti nama",
+  renameLabel: (name) => `Ganti nama ${name}`,
+  renameTitle: (name) => `Ganti nama ${name}`,
+  renameBody: "Nama baru muncul di arena dan di peringkat bulan ini, dan pemiliknya tidak bisa menggantinya sebelum bulan depan.",
+  renameField: "Nama baru",
+  renameSave: "Simpan nama",
   removeTitle: (name) => `Keluarkan ${name} dari arena bulanan?`,
   removeBody: "Tank itu keluar dari papan sekarang, sama seperti saat pemiliknya keluar sendiri. Hari yang sudah dihitung dan namanya tetap tersimpan, jadi pemiliknya bisa masuk lagi.",
   removeConfirm: "Keluarkan tank",

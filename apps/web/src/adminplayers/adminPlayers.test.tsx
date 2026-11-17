@@ -21,7 +21,7 @@ const response: AdminPlayersResponse = {
 const render = (load: AdminPlayersLoad, language: "en" | "id" = "en") =>
   renderToStaticMarkup(
     <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
-      <AdminPlayersView load={load} onRetry={() => undefined} onRemove={() => undefined} onGameMaster={() => undefined} />
+      <AdminPlayersView load={load} onRetry={() => undefined} onRename={() => undefined} onRemove={() => undefined} onGameMaster={() => undefined} />
     </I18nProvider>,
   );
 
@@ -61,5 +61,7 @@ describe("the admin's list of monthly players", () => {
     // Each row has its own Remove button, named for a screen reader by its tank.
     expect(html).toContain('data-admin-remove="s-bobo"');
     expect(html).toContain('aria-label="Remove Bobo"');
+    expect(html).toContain('data-admin-rename="s-bobo"');
+    expect(html).toContain('aria-label="Rename Bobo"');
   });
 });

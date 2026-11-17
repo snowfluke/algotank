@@ -537,6 +537,11 @@ export function putMonthlyStrategy(strategy: StrategyInput): Promise<ApiResult<v
   return request<void>({ method: "PUT", path: "/api/monthly/strategy", body: { strategy } });
 }
 
+/** The host renames a seated tank (/admin/players); its month's fixed name and this month's rankings follow. */
+export function putAdminTankName(seatId: string, name: string): Promise<ApiResult<void>> {
+  return request<void>({ method: "PUT", path: `/api/admin/players/${encodeURIComponent(seatId)}/name`, body: { name } });
+}
+
 /** "Change look": the seated tank takes this look; its name and points stay. */
 export function putMonthlyLook(look: TankLook): Promise<ApiResult<void>> {
   return request<void>({ method: "PUT", path: "/api/monthly/look", body: { look } });

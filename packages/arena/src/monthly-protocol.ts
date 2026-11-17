@@ -49,6 +49,10 @@
 //                                                of a route that does not exist.
 // DELETE /api/admin/players/:seatId             (the same account, and the Origin check) -> 204; takes the
 //                                                tank out as its owner's quit does. 404 no_monthly_seat
+// PUT    /api/admin/players/:seatId/name        (the same account, and the Origin check) RenameRequest -> 204;
+//                                                the tank, its month's fixed name and this month's day scores and
+//                                                records take the name. 404 no_monthly_seat, 400 name_invalid,
+//                                                400 name_blocked, 409 name_taken
 // PUT    /api/admin/players/:seatId/gm          (the same account, and the Origin check) SetGameMasterRequest
 //                                                -> 204; makes the seat's account a game master or not.
 //                                                404 no_monthly_seat

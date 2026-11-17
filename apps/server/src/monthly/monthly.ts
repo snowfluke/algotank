@@ -742,6 +742,36 @@ export class MonthlyLeagues {
    * Its tank keeps playing; from now on it takes no place (game-masters.ts). Days it already
    * placed in stay as they were.
    */
+  /**
+   * PUT /api/admin/players/:seatId/name: the host renames a seated tank (owner, 2026-11-17, after a
+   * name had to be changed by hand on the server). The player's own name rule applies (letters,
+   * the block list, not another account's name), but a name fixed this month is replaced, and the
+   * account's day scores and day records of this month take the new name, so the old one leaves
+   * every ranking. The account's later months are not touched.
+   */
+  adminRename(seatId: PlayerId, body: unknown): void {
+    const seat = [...this.seats.seats.values()].find((s) => s.seatId === seatId);
+    if (seat === undefined) throw new HttpError(404, "No tank in the monthly arena has this seat.", { code: "no_monthly_seat" });
+    if (this.closing) throw serviceBusy();
+    const name = this.checkedNewName(seat.accountId, isRecord(body) ? body["name"] : undefined);
+    const next: SeatsState = {
+      ...this.seats,
+      seats: new Map(this.seats.seats).set(seat.accountId, { ...seat, name }),
+      names: new Map(this.seats.names).set(seat.accountId, { month: this.today.month, name }),
+    };
+    const month: MonthState = {
+      ...this.month,
+      days: this.month.days.map((d) => (d.accountId === seat.accountId ? { ...d, name } : d)),
+      records: this.month.records.map((r) => ({ ...r, top: r.top.map((p) => (p.accountId === seat.accountId ? { ...p, name } : p)) })),
+    };
+    this.options.store.writeMonth(month);
+    this.month = month;
+    this.options.store.writeSeats(next);
+    this.seats = next;
+    this.dayOf(seat.league).rename(seat.seatId, name);
+    this.sendState(seat.league);
+  }
+
   setGameMaster(seatId: PlayerId, gm: boolean): void {
     const seat = [...this.seats.seats.values()].find((s) => s.seatId === seatId);
     if (seat === undefined) throw new HttpError(404, "No tank in the monthly arena has this seat.", { code: "no_monthly_seat" });

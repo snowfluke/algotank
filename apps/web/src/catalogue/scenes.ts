@@ -244,16 +244,17 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "S", effect: DIZZY }, b: { x: 4, y: 1, dir: "N", effect: DIZZY }, c: { x: 2, y: 2, dir: "W", effect: DIZZY } } },
     { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E", effect: DIZZY }, b: { x: 4, y: 1, dir: "S", effect: DIZZY }, c: { x: 2, y: 2, dir: "E", effect: DIZZY } } },
   ], 2),
+  // The dome covers the front only: B's shot from the front is blocked, C's from behind still hits.
   bigUmbrella: scene("standard", 5, 3, [
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } } },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [charge(2, 1)] },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, fresh: true, shooters: [] }] },
+    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } } },
+    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [charge(2, 1)] },
+    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: true, shooters: [] }] },
     {
-      tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 1, dir: "E", water: 6 }, b: { x: 4, y: 1, dir: "W", water: 6 } },
-      shots: [["a", "you", "blocked"], ["b", "you", "blocked"]],
-      effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, fresh: false, shooters: [{ x: 0, y: 1 }, { x: 4, y: 1 }] }],
+      tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 6 }, b: { x: 4, y: 1, dir: "W", water: 6, score: 1 } },
+      shots: [["a", "you", "blocked"], ["b", "you", "hit"]],
+      effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [{ x: 0, y: 1 }] }],
     },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 1, dir: "E", water: 7 }, b: { x: 4, y: 1, dir: "W", water: 7 } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, fresh: false, shooters: [] }] },
+    { tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 7 }, b: { x: 4, y: 1, dir: "W", water: 7, score: 1 } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [] }] },
   ], 3),
   // Four items lie within reach; the nearest three come, and the mud ball, one square farther, stays.
   magnet: scene("standard", 7, 3, [

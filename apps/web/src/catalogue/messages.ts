@@ -41,7 +41,7 @@ export const en = {
     fullTank: { name: "Full tank", body: "The water fills to the top, and the next 3 shots use no water." },
     mudBomb: { name: "Mud bomb", body: "A mud ball lands on the first tank in line and sticks every tank within 1 square for 5 turns." },
     whirlwind: { name: "Whirlwind", body: "Every tank within 2 squares gets dizzy for 3 turns." },
-    bigUmbrella: { name: "Big umbrella", body: "A big umbrella stops every shot at this tank for 5 turns." },
+    bigUmbrella: { name: "Big umbrella", body: "For 5 turns, a big umbrella stops every shot from the side the tank faces." },
     magnet: { name: "Magnet", body: "The 3 nearest items within 4 squares slide to the tank, which keeps them and uses them in order." },
   } satisfies Record<UltimateId, UltimateText>,
   /** The links to this page. */
@@ -74,7 +74,7 @@ export const id: typeof en = {
     fullTank: { name: "Tangki penuh", body: "Air terisi penuh, dan 3 tembakan berikutnya tidak memakai air." },
     mudBomb: { name: "Bom lumpur", body: "Bola lumpur jatuh di tank pertama di garis tembak, dan setiap tank dalam jarak 1 petak darinya terjebak selama 5 giliran." },
     whirlwind: { name: "Angin puyuh", body: "Setiap tank dalam jarak 2 petak jadi pusing selama 3 giliran." },
-    bigUmbrella: { name: "Payung besar", body: "Payung besar menahan semua tembakan ke tank ini selama 5 giliran." },
+    bigUmbrella: { name: "Payung besar", body: "Selama 5 giliran, payung besar menahan semua tembakan dari arah depan tank." },
     magnet: { name: "Magnet", body: "3 item terdekat dalam jarak 4 petak meluncur ke tank, lalu tank menyimpan ketiganya dan memakainya sesuai urutan datangnya." },
   },
   open: "Buka katalog",

@@ -42,8 +42,8 @@ export type UltimateEffect =
   /** The mud a mud bomb left, after it landed. */
   | { readonly kind: "mudPatch"; readonly at: Square; readonly reach: number }
   | { readonly kind: "whirlwind"; readonly at: Square; readonly reach: number }
-  /** `fresh`: the dome opens on this step. `shooters`: squares whose shot ripples on the dome. */
-  | { readonly kind: "bigUmbrella"; readonly at: Square; readonly fresh: boolean; readonly shooters: readonly Square[] }
+  /** `facing`: the side the dome covers (owner, 2026-11-17: front only, so it differs from smoke). `fresh`: it opens on this step. `shooters`: squares whose shot ripples on the dome. */
+  | { readonly kind: "bigUmbrella"; readonly at: Square; readonly facing: "N" | "E" | "S" | "W"; readonly fresh: boolean; readonly shooters: readonly Square[] }
   | { readonly kind: "magnet"; readonly at: Square; readonly items: readonly { readonly kind: ItemKind; readonly from: Square }[] }
   /** The items a magnet stacked on the tank, first to be used first. The board draws one held item; this draws the stack. */
   | { readonly kind: "stack"; readonly at: Square; readonly items: readonly ItemKind[]; readonly fresh: boolean };
@@ -348,12 +348,15 @@ function Whirlwind({ square, reach }: { readonly square: Square; readonly reach:
   );
 }
 
-/** Big umbrella: a dome twice the size of the item's opens over the tank; each blocked shot ripples on it. */
-function BigUmbrella({ square, fresh, shooters }: { readonly square: Square; readonly fresh: boolean; readonly shooters: readonly Square[] }) {
+const FACING_ANGLE = { N: 0, E: 90, S: 180, W: -90 } as const;
+
+/** Big umbrella: a dome twice the size of the item's opens on the side the tank faces, which it covers; each blocked shot ripples on it. */
+function BigUmbrella({ square, facing, fresh, shooters }: { readonly square: Square; readonly facing: keyof typeof FACING_ANGLE; readonly fresh: boolean; readonly shooters: readonly Square[] }) {
   const c = at(square);
   return (
     <g>
-      <g transform={`translate(${c.x} ${c.y - 1})`}>
+      {/* The dome is drawn facing up, so it turns to the tank's front and sits a little ahead of the tank. */}
+      <g transform={`translate(${c.x} ${c.y}) rotate(${FACING_ANGLE[facing]}) translate(0 -3.2)`}>
         <g className={`ue-a ${fresh ? "ue-open" : "ue-bob"}`}>
           <g transform="scale(1.9)" opacity={0.92}>
             <OpenUmbrella />
@@ -462,7 +465,7 @@ export function ultimateLayers(effects: readonly UltimateEffect[], board: { read
         over.push(<Whirlwind key={i} square={effect.at} reach={effect.reach} />);
         return;
       case "bigUmbrella":
-        over.push(<BigUmbrella key={i} square={effect.at} fresh={effect.fresh} shooters={effect.shooters} />);
+        over.push(<BigUmbrella key={i} square={effect.at} facing={effect.facing} fresh={effect.fresh} shooters={effect.shooters} />);
         return;
       case "magnet":
         under.push(<MagnetField key={i} square={effect.at} />);

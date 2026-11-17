@@ -101,9 +101,9 @@ describe("the monthly page", () => {
     expect(render(props(), "id")).toMatch(/data-monthly-players=""[^>]*>Liga 1 · \d+ peserta</);
   });
 
-  test("the quit question says the points and the name stay, so a player can come back", () => {
+  test("the quit question says the points and the name stay, and that a return the same day goes on from them", () => {
     expect(en.quit.bodyNotCounted).toContain("Points from earlier days stay saved, and your name stays the same. You can join again later.");
-    expect(en.quit.bodyCounted(4)).toContain("All your points stay saved, including today's 4 points.");
+    expect(en.quit.bodyCounted(4)).toContain("all your points stay saved, including today's 4 points. If you join again today, your tank goes on from those points.");
   });
 
   test("the board legend's button sits beside the information button, and the list points to it for the items", () => {

@@ -265,19 +265,21 @@ describe("the day round", () => {
     l.monthly.quit(ada);
     expect(l.monthly.live(1).tanks.some((t) => t.id === seatId)).toBe(false);
     expect(l.monthly.ranking(1).today.find((row) => row.seatId === seatId)).toMatchObject({ points, counts: true, seated: false });
-    // A new seat the same day does not erase the day: its own day does not count.
+    // Leaving is a pause: a new seat the same day goes on from the saved points, and today counts for it.
     take(l, ada);
+    expect(seatOf(l, ada)).toMatchObject({ points, countsToday: true });
     for (let i = 0; i < 50; i++) l.ticks.tick();
-    // One row for the player: the new tank's, whose points move with the board; its day does not count.
+    // One row for the player: the tank on the board, moving with it.
     const rows = l.monthly.ranking(1).today.filter((row) => row.name === seatOf(l, ada).name);
-    expect(rows).toEqual([expect.objectContaining({ seatId: seatOf(l, ada).seatId, points: seatOf(l, ada).points, counts: false, seated: true, livePoints: true })]);
+    expect(rows).toEqual([expect.objectContaining({ seatId: seatOf(l, ada).seatId, points: seatOf(l, ada).points, counts: true, seated: true, livePoints: true })]);
+    const final = seatOf(l, ada).points;
     nextDay(l);
     const days = l.monthly.daysOf(1).days;
     expect(days[0]?.day).toBe("2026-11-15");
-    // The day's score of the quit is in the month, and the new seat's points of that day are not.
+    // The day's score is the tank's points at the day's end, the turns before and after the pause together.
     const after = seatOf(l, ada);
     expect(after.countedDays).toBe(1);
-    expect(after.score).toBe(points);
+    expect(after.score).toBe(final);
   });
 
   test("a game master's tank plays the day but takes no place: no counted day, no top 3, no month rank", () => {

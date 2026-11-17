@@ -154,6 +154,7 @@ export class LeagueStore {
   private readonly insertMove: Statement<unknown, [string, string, number, number, string]>;
   private readonly selectDayScores: Statement<DayScoreRow, [string, string]>;
   private readonly upsertDayScore: Statement<unknown, [string, string, string, string, string, number, number, number, number | null]>;
+  private readonly removeDayScore: Statement<unknown, [string, string]>;
   private readonly selectDayRecords: Statement<DayRecordRow, [string, string]>;
   private readonly upsertDayRecord: Statement<unknown, [string, number, number, string, string, string, number]>;
   private readonly selectCheckpoint: Statement<{ readonly written_at: number; readonly checkpoint_json: string }, []>;
@@ -184,6 +185,7 @@ export class LeagueStore {
        ON CONFLICT (account_id, day) DO UPDATE SET seat_id = excluded.seat_id, name = excluded.name, look_json = excluded.look_json,
          seat_order = excluded.seat_order, league = excluded.league, points = excluded.points, place = excluded.place`,
     );
+    this.removeDayScore = db.prepare("DELETE FROM league_day_score WHERE account_id = ? AND day = ?");
     this.selectDayRecords = db.prepare(`SELECT ${DAY_RECORD_COLUMNS} FROM league_day_record WHERE day >= ? AND day <= ? ORDER BY day, league, place`);
     this.upsertDayRecord = db.prepare(
       `INSERT INTO league_day_record (${DAY_RECORD_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -278,6 +280,11 @@ export class LeagueStore {
       for (const d of state.days) this.upsertDayScore.run(d.accountId, d.day, d.seatId, d.name, JSON.stringify(d.look), d.order, d.league, d.points, d.place);
       for (const r of state.records) r.top.forEach((p, i) => this.upsertDayRecord.run(r.day, r.league, i + 1, p.accountId, p.name, JSON.stringify(p.look), p.points));
     }).immediate();
+  }
+
+  /** Takes back a day's saved score: a tank that left today and came back goes on with it (monthly.ts takeSeat). */
+  deleteDayScore(accountId: AccountId, day: string): void {
+    this.removeDayScore.run(accountId, day);
   }
 
   readCheckpoint(): Checkpoint | null {

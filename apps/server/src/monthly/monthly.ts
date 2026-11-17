@@ -28,6 +28,9 @@
 // | none   | seated | owner | signed in, no seat, a valid tank, the name rule below; the lowest league |
 // |        |        |       | with a free seat, or a new lowest league when every league is full       |
 // | seated | none   | owner | quit. On a counted day its points now become the day's score at once     |
+// | none   | seated | owner | the same as the first row; after a quit on the same day the tank goes on |
+// |        |        |       | from that day's saved score and today counts again: leaving is a pause, |
+// |        |        |       | like "Change rules" (owner, 2026-11-17)                                  |
 // | seated | seated | server| the month close moves it up, down or not (month-close.ts)                 |
 // Nothing else removes a seat. Named limit: a tank whose owner never returns stays seated.
 //
@@ -433,8 +436,19 @@ export class MonthlyLeagues {
     this.options.store.writeSeats(next);
     this.seats = next;
     if (!this.days.has(league)) this.days.set(league, new LeagueDay(league, this.options.random));
-    // A tank that arrives during the day plays at once; the day does not count for it.
-    this.dayOf(league).seat(dayTankOf(seat), 0, false, this.ticksLeft());
+    // A tank that left today and comes back the same day goes on where it stopped, and today counts again: leaving
+    // is a pause, like "Change rules" (owner, 2026-11-17: a rejoin started over at 0 and its day did not count). The
+    // checkpoint is written before the saved score goes, so a crash in between keeps the points.
+    const paused = this.month.days.find((d) => d.accountId === accountId && d.day === this.today.day);
+    if (paused !== undefined) {
+      this.dayOf(league).seat(dayTankOf(seat), paused.points, true, this.ticksLeft());
+      this.options.store.writeCheckpoint(this.checkpointOf());
+      this.options.store.deleteDayScore(accountId, this.today.day);
+      this.month = { ...this.month, days: this.month.days.filter((d) => d !== paused) };
+    } else {
+      // A tank that arrives during the day plays at once; the day does not count for it.
+      this.dayOf(league).seat(dayTankOf(seat), 0, false, this.ticksLeft());
+    }
     this.sendState(league);
     return this.me(accountId);
   }
@@ -654,12 +668,8 @@ export class MonthlyLeagues {
     const quit = this.month.days
       .filter((d) => d.day === this.today.day && d.league === league && !seatedIds.has(d.seatId))
       .map((d) => ({ accountId: d.accountId, seatId: d.seatId, name: d.name, look: d.look, points: d.points, counts: true, seated: false, livePoints: false, order: d.order }));
-    // A player who quit and joined again today has one row: the new tank's, which moves with the board like
-    // every seated row (owner, 2026-11-17: the quit tank's fixed points looked frozen). The quit tank's points
-    // still count at the day's close (withDayClosed); the new tank's day does not.
-    const quitAccounts = new Set(quit.map((row) => row.accountId));
-    const back = new Set(seated.filter((row) => !row.counts && quitAccounts.has(row.accountId)).map((row) => row.accountId));
-    const rows = [...seated, ...quit.filter((row) => !back.has(row.accountId))];
+    // A player who left today and came back has no saved row any more (takeSeat), so each player has one row.
+    const rows = [...seated, ...quit];
     // A game master's tank stays in the list by its points, but takes no place: the tanks under it keep theirs.
     let place = 0;
     const today = rows

@@ -113,7 +113,7 @@ export const en = {
     /** Today counts for the tank: its points now stay. */
     // The last sentence of each body: leaving is not how to stop watching.
     bodyCounted: (score: number) =>
-      `Your tank leaves the board now. All your points stay saved, including today's ${points(score)}. Your name stays the same, and you can join again later. To stop watching only, close this page, and your tank keeps playing.`,
+      `Your tank leaves the board now, and all your points stay saved, including today's ${points(score)}. If you join again today, your tank goes on from those points. Your name stays the same. To stop watching only, close this page, and your tank keeps playing.`,
     bodyNotCounted:
       "Your tank leaves the board now. Points from earlier days stay saved, and your name stays the same. You can join again later. To stop watching only, close this page, and your tank keeps playing.",
     confirm: "Leave the arena",
@@ -245,7 +245,7 @@ export const id: typeof en = {
     open: "Keluar dari arena bulanan",
     title: "Keluar dari arena bulanan?",
     bodyCounted: (score) =>
-      `Tank kamu keluar dari papan sekarang. Semua poinmu tetap tersimpan, termasuk ${score} poin hari ini. Namamu tetap sama, dan kamu bisa masuk lagi nanti. Kalau hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.`,
+      `Tank kamu keluar dari papan sekarang, dan semua poinmu tetap tersimpan, termasuk ${score} poin hari ini. Kalau kamu masuk lagi hari ini, tank kamu melanjutkan dari poin itu. Namamu tetap sama. Kalau hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.`,
     bodyNotCounted:
       "Tank kamu keluar dari papan sekarang. Poin dari hari-hari sebelumnya tetap tersimpan, dan namamu tetap sama. Kamu bisa masuk lagi nanti. Kalau hanya ingin berhenti menonton, tutup saja halaman ini, dan tank kamu tetap main.",
     confirm: "Keluar dari arena",

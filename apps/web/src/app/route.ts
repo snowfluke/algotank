@@ -49,7 +49,8 @@ export const paths = {
   workshop: () => "/workshop",
   myTank: () => "/my-tank",
   champions: () => "/champions",
-  catalogue: () => "/catalogue",
+  /** The catalogue, opened on one collection (catalogue/catalogue.tsx CATALOGUE_SECTIONS reads "section"). */
+  catalogue: (section?: "playStyles" | "items" | "conditions" | "ultimates") => (section === undefined ? "/catalogue" : `/catalogue?section=${section}`),
   monthly: () => "/monthly",
   /** The monthly arena with its join step open, where the sign-in page returns to. */
   monthlyJoin: () => "/monthly?join=1",

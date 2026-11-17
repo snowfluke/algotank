@@ -1,6 +1,7 @@
 // Props of the arena board components. The live screen and the practice
 // replay both render through these, so the two always look the same.
 
+import type { ReactNode } from "react";
 import type { PublicSnapshot } from "@game/arena";
 import type { BotId, ThrowEvent } from "@game/engine";
 import type { TankLook } from "../tank/look.ts";
@@ -45,6 +46,10 @@ export interface ArenaBoardProps {
   readonly trailIds?: ReadonlySet<BotId>;
   /** A tap on the drawing of a tank (not the square it glides to), after its name tag shows: the monthly board's zoomed view follows that tank (monthly/MonthlyBoard.tsx). */
   readonly onTankTap?: (id: BotId) => void;
+  /** Drawn on the ground under the tanks, in board units (CELL per square): the catalogue's ultimate glow (catalogue/UltimateEffect.tsx). */
+  readonly underlay?: ReactNode;
+  /** Drawn over the tanks and under the gauges, in board units: the catalogue's ultimate effects. */
+  readonly overlay?: ReactNode;
 }
 
 export interface ScoreboardProps {

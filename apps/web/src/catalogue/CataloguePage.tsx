@@ -9,7 +9,7 @@
 // small buttons above the stage. Nothing scrolls: the page fits its box like the other pages.
 
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { goBack } from "../app/navigation.ts";
 import { paths } from "../app/route.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -19,17 +19,38 @@ import { AppShell } from "../ui/AppShell.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
 import { useLaptopLayout } from "../ui/layout.ts";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
-import { catalogueEntries, CATALOGUE_SECTIONS, type CatalogueEntry, type CatalogueSection } from "./catalogue.tsx";
+import { catalogueEntries, CATALOGUE_SECTIONS, placeFromSearch, searchWithPlace, type CatalogueEntry, type CatalogueSection } from "./catalogue.tsx";
 import { ScenePlayer } from "./ScenePlayer.tsx";
 
 const YOU_LOOK = plainTankLook(3);
 
+/**
+ * The address holds the open collection and card ("?section=items&card=umbrella"), so a link or a
+ * reload opens the same card. Each choice replaces the address instead of adding a history step,
+ * so "back" leaves the catalogue at once.
+ */
 export function CataloguePage() {
-  return <CatalogueView initialSection="playStyles" />;
+  const [place] = useState(() => placeFromSearch(window.location.search));
+  return (
+    <CatalogueView
+      initialSection={place.section}
+      {...(place.card === null ? {} : { initialEntry: place.card })}
+      onPlace={(next) => window.history.replaceState(window.history.state, "", `${window.location.pathname}${searchWithPlace(window.location.search, next)}`)}
+    />
+  );
 }
 
 /** The page in any state, so the tests and the audit can open a section and a card. */
-export function CatalogueView({ initialSection, initialEntry }: { readonly initialSection: CatalogueSection; readonly initialEntry?: string }) {
+export function CatalogueView({
+  initialSection,
+  initialEntry,
+  onPlace,
+}: {
+  readonly initialSection: CatalogueSection;
+  readonly initialEntry?: string;
+  /** Told the collection and card on show, after each change. */
+  onPlace?: (place: { readonly section: CatalogueSection; readonly card: string }) => void;
+}) {
   const m = useMessages();
   const t = m.catalogue;
   const laptop = useLaptopLayout();
@@ -38,6 +59,11 @@ export function CatalogueView({ initialSection, initialEntry }: { readonly initi
   const [chosen, setChosen] = useState<Readonly<Partial<Record<CatalogueSection, string>>>>(initialEntry === undefined ? {} : { [initialSection]: initialEntry });
   const entry = entries.find((e) => e.key === chosen[section]) ?? entries[0];
   const sectionName = t.sections[section];
+  const card = entry?.key;
+  useEffect(() => {
+    if (card !== undefined) onPlace?.({ section, card });
+    // onPlace is a new function on each render of the page; only a new place is news.
+  }, [section, card]);
 
   return (
     <AppShell>

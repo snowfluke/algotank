@@ -32,6 +32,46 @@ export const ULTIMATE_DEFAULT_STYLE: Readonly<Record<UltimateId, PresetId>> = {
   magnet: "item-hunter",
 };
 
+/** The cards of a collection, by key, in order: the same keys the page draws. */
+export function catalogueKeys(section: CatalogueSection): readonly string[] {
+  switch (section) {
+    case "playStyles":
+      return PICKER_ORDER;
+    case "items":
+      return ITEM_KINDS;
+    case "conditions":
+      return RULE_SET_IDS;
+    case "ultimates":
+      return ULTIMATE_IDS;
+  }
+}
+
+/** Where the catalogue is open: a collection and, when the address names one, a card of it. */
+export interface CataloguePlace {
+  readonly section: CatalogueSection;
+  readonly card: string | null;
+}
+
+const isSection = (value: string | null): value is CatalogueSection => value !== null && (CATALOGUE_SECTIONS as readonly string[]).includes(value);
+
+/** The place in "?section=items&card=umbrella". A missing or unknown value falls back to the first collection or card. */
+export function placeFromSearch(search: string): CataloguePlace {
+  const params = new URLSearchParams(search);
+  const asked = params.get("section");
+  const section = isSection(asked) ? asked : CATALOGUE_SECTIONS[0];
+  const card = params.get("card");
+  return { section, card: card !== null && catalogueKeys(section).includes(card) ? card : null };
+}
+
+/** `search` with the place written in, keeping its other values (such as "lang"). */
+export function searchWithPlace(search: string, place: CataloguePlace): string {
+  const params = new URLSearchParams(search);
+  params.set("section", place.section);
+  if (place.card === null) params.delete("card");
+  else params.set("card", place.card);
+  return `?${params.toString()}`;
+}
+
 export type CataloguePreview = { readonly kind: "playStyle"; readonly style: PresetId } | { readonly kind: "board"; readonly scene: Scene };
 
 export interface CatalogueEntry {

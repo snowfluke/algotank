@@ -177,7 +177,7 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
  * Memoised: a parent that renders for another reason (the ranking's poll, a notice) leaves the board alone. A turn gives
  * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
  */
-export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap }: ArenaBoardProps) {
+export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap, underlay, overlay }: ArenaBoardProps) {
   // The zoomed view's other tanks, a little dimmer than the followed tank and the viewer's own (props.ts, focusId).
   const dimmed = (id: BotId) => focusId !== null && id !== focusId && id !== highlightId;
   const m = useMessages();
@@ -293,6 +293,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           style={camera === null ? undefined : { transform: `translate(${-camera.x * CELL}px, ${-camera.y * CELL}px)` }}
         >
         <Floor width={width} height={height} ruleSetId={snapshot.ruleSetId} />
+        {underlay}
         {crowd ? (
           <defs>
             {crowdSymbols.map((paint) => (
@@ -449,6 +450,8 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
         <g key={`marks-${tick}`}>
           {shots.map(({ id, shape }) => (crowd && id !== highlightId && shape.kind !== "hit" ? null : <ShotMark key={id} shape={shape} />))}
         </g>
+
+        {overlay}
 
         {/* Gauges and the crown come after every effect, so nothing covers them. On squares too small to read a gauge, only the viewer's tank keeps one. */}
         {drawOrder.map((bot) => {

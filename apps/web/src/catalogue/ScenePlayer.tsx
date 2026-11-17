@@ -12,6 +12,7 @@ import { plainTankLook } from "../tank/look.ts";
 import { Button } from "../ui/Button.tsx";
 import type { Scene, SceneTankId } from "./scenes.ts";
 import { sceneNames } from "./scenes.ts";
+import { ultimateLayers } from "./UltimateEffect.tsx";
 
 const STEP_MS = 1100;
 /** The last step stays this many steps' time, so the end of the story can be read. */
@@ -62,12 +63,18 @@ export function ScenePlayer({ scene, label, nextLabel }: { readonly scene: Scene
   const step = scene.steps[turn % length] ?? scene.steps[0];
   if (step === undefined) return null;
   const snapshot = { ...step.snapshot, tick: turn };
+  // Each step's layer is keyed by the turn inside a group that stays, so it replaces the last step's and its
+  // animation plays again. Keyed directly as the board's child, the old floor layer stayed on the board.
+  const layers = ultimateLayers(step.effects, snapshot, STEP_MS);
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
       <div role="img" aria-label={label} data-catalogue-scene="" className="flex min-h-0 min-w-0 flex-1 flex-col">
         <FittedBoard ratio={boardAspect(snapshot.width, snapshot.height)}>
           {/* A new board on each loop, so the tanks jump back to the start instead of driving backwards to it. */}
-          <ArenaBoard key={Math.floor(turn / length)} snapshot={snapshot} throws={step.throws} names={NAMES} highlightId="you" tickMs={Math.round(STEP_MS * 0.6)} tanks={TANKS} />
+          <ArenaBoard key={Math.floor(turn / length)} snapshot={snapshot} throws={step.throws} names={NAMES} highlightId="you" tickMs={Math.round(STEP_MS * 0.6)} tanks={TANKS}
+            underlay={<g data-scene-under="">{layers.underlay === null ? null : <g key={turn}>{layers.underlay}</g>}</g>}
+            overlay={<g data-scene-over="">{layers.overlay === null ? null : <g key={turn}>{layers.overlay}</g>}</g>}
+          />
         </FittedBoard>
       </div>
       {reduced ? (

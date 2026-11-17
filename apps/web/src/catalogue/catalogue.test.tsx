@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { canThrow, ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, ruleSet, throwRange, waterAfterTick } from "@game/engine";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
-import { CATALOGUE_SECTIONS, type CatalogueSection } from "./catalogue.tsx";
+import { paths } from "../app/route.ts";
+import { CATALOGUE_SECTIONS, placeFromSearch, searchWithPlace, type CatalogueSection } from "./catalogue.tsx";
 import { CatalogueView } from "./CataloguePage.tsx";
 import { ULTIMATE_IDS } from "./messages.ts";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
@@ -86,5 +87,22 @@ describe("catalogue scenes follow the arena's rules", () => {
         }
       });
     }
+  });
+});
+
+describe("the catalogue's address", () => {
+  test("a place survives the trip through the address, and other values stay", () => {
+    const search = searchWithPlace("?lang=id", { section: "items", card: "umbrella" });
+    expect(new URLSearchParams(search).get("lang")).toBe("id");
+    expect(placeFromSearch(search)).toEqual({ section: "items", card: "umbrella" });
+  });
+
+  test("an unknown collection or a card of another collection falls back", () => {
+    expect(placeFromSearch("?section=weapons&card=umbrella")).toEqual({ section: "playStyles", card: null });
+    expect(placeFromSearch("?section=items&card=dash")).toEqual({ section: "items", card: null });
+  });
+
+  test("the app's link to a collection opens that collection", () => {
+    expect(placeFromSearch(new URL(paths.catalogue("items"), "https://x").search)).toEqual({ section: "items", card: null });
   });
 });

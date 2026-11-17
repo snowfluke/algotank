@@ -285,7 +285,7 @@ export function LegendDialog({ onClose, onShowAround }: { onClose: () => void; r
               {m.guide.showAround}
             </Button>
           )}
-          <LinkButton href={paths.catalogue()} newTab>
+          <LinkButton href={paths.catalogue("items")} newTab>
             {m.catalogue.open}
           </LinkButton>
         </div>

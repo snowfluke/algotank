@@ -62,6 +62,7 @@ export const en = {
   newDay: "A new round has started, and every tank starts again at 0 points.",
   /** Over the board for a moment after the board grows. */
   reshuffled: "Reshuffled",
+  weatherChanged: (name: string) => `The arena condition changed to ${name}.`,
   /** Over the board's corner: the round rules the league drew for this round (server league-day.ts newRound). */
   condition: (name: string) => `Arena condition: ${name}`,
   /** The phone's line, after the time left. */
@@ -91,7 +92,7 @@ export const en = {
     loading: "The tank is loading.",
   },
   /** In the arena condition's note (ArenaCondition.tsx), after what the condition changes. */
-  conditionChanges: "The arena draws a condition when a round starts.",
+  conditionChanges: "The arena draws a condition when a round starts and every few minutes.",
   own: {
     heading: "Your tank",
     freshStart: "Your tank went through a tunnel and came out on another square with full water.",
@@ -219,6 +220,7 @@ export const id: typeof en = {
   dayDone: (date) => `Ronde ${date} sudah selesai.`,
   newDay: "Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.",
   reshuffled: "Diacak ulang",
+  weatherChanged: (name) => `Kondisi arena berubah menjadi ${name}.`,
   condition: (name) => `Kondisi arena: ${name}`,
   conditionShort: (name) => `Kondisi: ${name}`,
   wholeArena: "Semua",
@@ -238,7 +240,7 @@ export const id: typeof en = {
     noLastDay: "Tank ini belum menyelesaikan satu hari, jadi angkanya muncul setelah tengah malam berikutnya.",
     loading: "Tank sedang dimuat.",
   },
-  conditionChanges: "Kondisi arena diundi setiap ronde dimulai.",
+  conditionChanges: "Kondisi arena diundi saat ronde dimulai dan setiap beberapa menit.",
   own: {
     heading: "Tank kamu",
     freshStart: "Tank kamu masuk terowongan dan keluar di petak lain dengan air penuh.",

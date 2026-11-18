@@ -46,7 +46,7 @@ interface League {
  * `seatsPerLeague` is 16 unless given, so the tests of several leagues and of the month close need 17
  * tanks, not 513; `null` gives the server's MONTHLY_SEATS.
  */
-function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler; readonly seatsPerLeague?: number | null } = {}): League {
+function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler; readonly seatsPerLeague?: number | null; readonly random?: () => number } = {}): League {
   const ticks = options.ticks ?? manualScheduler(options.at ?? NOV_14 + 10 * 60 * 60 * 1000);
   const db = options.db ?? memoryDatabase();
   const champions = new Champions(db);
@@ -62,7 +62,7 @@ function startLeague(options: { readonly at?: number; readonly db?: Database; re
     scheduler: ticks,
     tickMs: 900,
     // Every draw is 0: no bot, except the one a lone tank always gets (league-day.ts), with the first play style of the lineup.
-    random: () => 0,
+    random: options.random ?? (() => 0),
     ...(options.seatsPerLeague === null ? {} : { seatsPerLeague: options.seatsPerLeague ?? 16 }),
   });
   monthly.start();
@@ -243,6 +243,32 @@ describe("the day round", () => {
     const [start] = fresh[0]?.tick.freshStarts ?? [];
     expect(start?.[0]).toBe(0);
     expect(l.monthly.live(1).board.tick).toBe(RESHUFFLE_TURNS);
+  });
+
+  test("weather and a bot's fresh start share one state at the same turn as the tick", async () => {
+    let draw = 0;
+    const l = startLeague({ random: () => draw });
+    const ada = newAccount();
+    take(l, ada);
+    const start = l.monthly.live(1);
+    const bot = start.tanks.find(({ isBot }) => isBot);
+    if (bot === undefined) throw new Error("expected a bot");
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
+    const page = collect(l.streams.open(1, ada, l.monthly.live(1)));
+    draw = 0.99;
+    l.ticks.tick();
+    l.ticks.tick();
+    const { messages } = await page.take();
+    l.streams.closeAll();
+
+    expect(messages.map(({ type }) => type)).toEqual(["state", "tick", "state", "tick"]);
+    const [, played, changed, next] = messages;
+    if (played?.type !== "tick" || changed?.type !== "state" || next?.type !== "tick") throw new Error("expected a weather state between turns");
+    expect(changed.change).toBe("weather");
+    expect(changed.state.board).toMatchObject({ ...arenaSize(16, ruleSet("open-field")), tick: played.tick.tick + 1, ticksTotal: start.board.ticksTotal, ruleSetId: "open-field" });
+    expect(changed.state.tanks.filter(({ isBot }) => isBot)).toHaveLength(1);
+    expect(changed.state.tanks.some(({ id }) => id === bot.id)).toBe(false);
+    expect(next.tick.tick).toBe(changed.state.board.tick);
   });
 
   test("a rush of joiners marks the rebuild for the reshuffle notice", async () => {

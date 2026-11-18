@@ -10,6 +10,7 @@
 // | connecting   | tick                          | connecting   | a turn before any state cannot be placed   |
 // | ready        | state                         | ready        | own turns kept while the day is the same   |
 // | ready        | state with board growth       | ready        | the board says "Reshuffled" for a moment   |
+// | ready        | state with weather change     | ready        | same turn, new board and condition notice  |
 // | ready        | tick                          | ready        | the board moves; `own` adds a feed line    |
 // | ready        | tick for other tanks          | connecting   | the hook opens the stream again            |
 // | any          | closed                        | closed       | the month close emptied this league        |
@@ -27,7 +28,7 @@ export interface LeagueBoard {
   readonly live: LeagueLive;
   /** The board now: the state's board, then the snapshot of each turn. */
   readonly snapshot: PublicSnapshot;
-  /** The shots of the turn that made `snapshot`; kept through a bot change on that turn. */
+  /** The shots of the turn that made `snapshot`; kept through bot or weather changes on that turn. */
   readonly throws: readonly ThrowEvent[];
   readonly tunnels: readonly TankTunnel[];
   /** When the day round ends, as a Date.now() time: the state's `dayEndsInMs` from when it arrived. */
@@ -38,6 +39,8 @@ export interface LeagueBoard {
   readonly ownFreshStart: { readonly id: PlayerId; readonly tick: number } | null;
   /** The rebuilds for board growth seen on this stream today. */
   readonly reshuffles: number;
+  /** When the weather notice ends, as a Date.now() time. */
+  readonly weatherUntil: number;
 }
 
 export type LeagueLiveLoad =
@@ -47,6 +50,8 @@ export type LeagueLiveLoad =
   | { readonly kind: "closed"; readonly leagues: number };
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+/** A full sentence over a live board needs a little longer than the rebuild notice. */
+const WEATHER_NOTICE_MS = 4_000;
 
 /** Reads one event's data. Returns null for data that is not a league message, which the page ignores. */
 export function parseLeagueMessage(data: string): LeagueStreamMessage | null {
@@ -62,7 +67,7 @@ export function parseLeagueMessage(data: string): LeagueStreamMessage | null {
     if (activity === null) return null;
     const state = raw["state"] as unknown as LeagueLive;
     const change = raw["change"];
-    if (change !== undefined && change !== "growth" && change !== "botFreshStart") return null;
+    if (change !== undefined && change !== "growth" && change !== "botFreshStart" && change !== "weather") return null;
     return { type: "state", state: { ...state, activity }, ...(change === undefined ? {} : { change }) };
   }
   if (raw["type"] === "tick" && isRecord(raw["tick"])) return raw as unknown as LeagueStreamMessage;
@@ -79,7 +84,7 @@ export function nextLeagueLoad(load: LeagueLiveLoad, message: LeagueStreamMessag
     const same = load.kind === "ready" && load.board.live.day === state.day && load.board.live.league === state.league;
     const sameTurn = same && load.board.snapshot.tick === state.board.tick && message.change !== "growth";
     const tunnels = sameTurn ? [...load.board.tunnels] : [];
-    if (sameTurn && message.change === "botFreshStart") {
+    if (sameTurn && (message.change === "botFreshStart" || message.change === "weather")) {
       const current = new Set(state.board.bots.map(({ id }) => id));
       const previous = new Map(load.board.snapshot.bots.map((bot) => [bot.id, bot]));
       for (const tank of load.board.live.tanks) {
@@ -90,17 +95,24 @@ export function nextLeagueLoad(load: LeagueLiveLoad, message: LeagueStreamMessag
         if (tank.isBot && !previous.has(tank.id)) tunnels.push({ kind: "enter", id: tank.id });
       }
     }
+    const sameCondition = same && load.board.snapshot.ruleSetId === state.board.ruleSetId;
+    const weatherUntil = sameTurn && message.change === "weather" && !sameCondition
+      ? now + WEATHER_NOTICE_MS
+      : sameCondition && message.change !== "growth" && state.board.tick >= load.board.snapshot.tick
+        ? load.board.weatherUntil
+        : 0;
     return {
       kind: "ready",
       board: {
         live: state,
         snapshot: state.board,
-        throws: sameTurn && tunnels.length > 0 ? load.board.throws : [],
+        throws: sameTurn && (tunnels.length > 0 || message.change === "weather") ? load.board.throws : [],
         tunnels,
         dayEndsAt: now + state.dayEndsInMs,
         own: same ? load.board.own : [],
         ownFreshStart: same ? load.board.ownFreshStart : null,
         reshuffles: same ? load.board.reshuffles + (message.change === "growth" ? 1 : 0) : 0,
+        weatherUntil,
       },
     };
   }

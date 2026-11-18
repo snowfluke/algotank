@@ -1,6 +1,7 @@
 // The event streams of the leagues: GET /api/monthly/leagues/:league/events. A stream starts with
 // the league's state and then gets every turn; a join, a quit or a new day sends the state again
-// before the next turn. A fresh start moves the tank's index to the end for the next turn.
+// before the next turn. Weather sends a state after the tick at the same turn. A fresh start
+// moves the tank's index to the end for the next turn.
 // Nothing is kept per turn: a turn is encoded once and written to the open streams.
 // Watching needs no session and no presence is tracked, so nothing depends on an open page.
 //

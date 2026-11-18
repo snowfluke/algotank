@@ -610,8 +610,7 @@ export type PublicBot = Pick<
 
 /**
  * A snapshot as every viewer sees it. A full Snapshot can be passed where this is expected.
- * `ruleSetId` is public because a round's rules are known from its first tick; ruleSet(id)
- * from @game/engine gives the numbers.
+ * `ruleSetId` names the rules now. ruleSet(id) from @game/engine gives the numbers.
  */
 export interface PublicSnapshot
   extends Pick<Snapshot, "width" | "height" | "tick" | "ticksTotal" | "survivorsAfterRound" | "ruleSetId" | "items"> {
@@ -634,7 +633,7 @@ export interface PublicTick {
   /** Items taken on this tick (docs/specs/revamp/84-items.md). Every viewer sees an item on the board and on its tank. */
   readonly pickups: readonly Pickup[];
   readonly snapshot: PublicSnapshot;
-  /** In rotation order. The snapshot is from after the moves, before the tunnels. */
+  /** In tunnel order. The snapshot is from after the moves, before the tunnels. */
   readonly freshStarts?: readonly FreshStart[];
 }
 

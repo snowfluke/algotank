@@ -211,7 +211,8 @@ export class MonthlyLeagues {
         const turn = day.step();
         if (turn !== null) {
           this.options.streams.sendTick(league, turn, this.seatIdsIn(league));
-          if (turn.botsChanged) this.sendState(league, "botFreshStart");
+          if (turn.weatherChanged) this.sendState(league, "weather");
+          else if (turn.botsChanged) this.sendState(league, "botFreshStart");
         }
       } catch (error) {
         // A bug in the engine: this league's round starts again with the points kept, the others go on.

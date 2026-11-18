@@ -120,6 +120,34 @@ describe("the arena condition", () => {
     day.rebuild(1000);
     expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
   });
+
+  test("draws once on each weather turn and leaves the round alone when the draw repeats", () => {
+    let draw = 0;
+    let draws = 0;
+    const day = new LeagueDay(1, () => {
+      draws++;
+      return draw;
+    });
+    const total = 2 * RESHUFFLE_TURNS + 1;
+    day.start(two, total);
+    draws = 0;
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) expect(day.step()?.weatherChanged).toBe(false);
+    expect(draws).toBe(0);
+    expect(day.step()?.weatherChanged).toBe(false);
+    expect(draws).toBe(1);
+    expect(day.view(total).board).toMatchObject({ tick: RESHUFFLE_TURNS, ticksTotal: total, ruleSetId: "standard" });
+
+    draw = 0.5;
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    const turn = day.step();
+    expect(turn?.weatherChanged).toBe(true);
+    expect(draws).toBe(2);
+    const board = day.view(total).board;
+    expect(board).toMatchObject({ tick: turn?.snapshot.tick, ticksTotal: total, ruleSetId: "dry-spell" });
+    const scores = (bots: typeof board.bots) => Object.fromEntries(bots.map(({ id, score }) => [id, score]));
+    expect(scores(board.bots)).toEqual(scores(turn?.snapshot.bots ?? []));
+    expect(day.statsOf("seat-1").turns).toBe(2 * RESHUFFLE_TURNS);
+  });
 });
 
 describe("new rules for a seated tank", () => {

@@ -1,7 +1,9 @@
 /// <reference types="bun" />
 // The page's states as the phone (and a server render) draws them, in both languages.
 import { describe, expect, test } from "bun:test";
+import { arenaSize, ruleSet } from "@game/engine";
 import { renderToStaticMarkup } from "react-dom/server";
+import { boardAspect } from "../board/FittedBoard.tsx";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
 import { FIXTURE_MOVE, fixtureActivity, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureRanking, fixtureSeat, OWN_SEAT } from "./monthlyFixtures.ts";
@@ -28,6 +30,7 @@ function props(over: Partial<MonthlyViewProps> = {}, tanks = 5): MonthlyViewProp
     onJoin: () => undefined,
     dayChange: null,
     reshuffled: false,
+    weatherChanged: false,
     onQuit: () => undefined,
     onChangeRules: () => undefined,
     onChangeLook: () => undefined,
@@ -203,8 +206,23 @@ describe("the arena condition", () => {
     expect(render(props())).toMatch(/<button[^>]*data-arena-condition="standard"[^>]*>[\s\S]*?Arena condition: Standard</);
     const id = render(props(), "id");
     expect(id).toContain(">Kondisi arena: Standar<");
-    expect(id).toMatch(/data-arena-condition-note[\s\S]*Tembakan sampai 3 petak[\s\S]*Kondisi arena diundi setiap ronde dimulai/);
+    expect(id).toMatch(/data-arena-condition-note[\s\S]*Tembakan sampai 3 petak[\s\S]*Kondisi arena diundi saat ronde dimulai dan setiap beberapa menit/);
     expect(render(props({ reshuffled: true }), "id")).toMatch(/data-reshuffled[\s\S]*>Diacak ulang<[\s\S]*>Kondisi arena: Standar</);
+  });
+
+  test("weather names the new condition in both languages and fits the board to its new size", () => {
+    const live = fixtureLive(1, 16, "open-field");
+    const { width, height } = arenaSize(16, ruleSet("open-field"));
+    const changed = props({ load: fixtureLoad(live, NOW), weatherChanged: true });
+    const en = render(changed);
+    const id = render(changed, "id");
+    expect(en).toMatch(/data-weather-changed[^>]*>The arena condition changed to Open field\.</);
+    expect(id).toMatch(/data-weather-changed[^>]*>Kondisi arena berubah menjadi Lapangan luas\.</);
+    expect(id).toMatch(/data-arena-condition="open-field"[^>]*>[\s\S]*?Kondisi arena: Lapangan luas</);
+    expect(en).toContain(`aspect-ratio:${boardAspect(width, height)}`);
+    expect(en).toContain(`viewBox="-3 -3 ${width * 10 + 6} ${height * 10 + 6}"`);
+    expect(id).not.toContain("data-reshuffled");
+    expect(render({ ...changed, weatherChanged: false })).not.toContain("data-weather-changed");
   });
 });
 

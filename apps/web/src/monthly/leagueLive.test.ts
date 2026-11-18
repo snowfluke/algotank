@@ -113,6 +113,42 @@ describe("a league's live state", () => {
     expect(changed.board.reshuffles).toBe(0);
   });
 
+  test("a weather state keeps the turn, tunnels and feed without counting a reshuffle", () => {
+    const wide = { ...live, board: { ...board, width: 17, height: 13, ruleSetId: "open-field" as const } };
+    const withBot = { ...wide, tanks: wide.tanks.map((tank) => tank.id === "b" ? { ...tank, isBot: true } : tank) };
+    const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: withBot }, 0);
+    const own: Decision = { botId: "a", modeId: "main", nextModeId: "main", ruleId: null, actionId: "wait", move: "W" };
+    const outside = tick.bots.map((values, i) => i === 0 ? [16, ...values.slice(1)] : values);
+    const moved = nextLeagueLoad(ready, { type: "tick", tick: { ...tick, bots: outside, freshStarts: [[0, 4, 2]] }, own }, 0);
+    const state: LeagueLive = {
+      ...live,
+      tanks: [...live.tanks.slice(0, 1), { id: "c", name: "Cy", look: plainTankLook(3), isBot: true }],
+      board: { ...next, ruleSetId: "dry-spell", bots: [{ ...bot("a", 4), y: 2, water: 6 }, bot("c", 5)] },
+    };
+    const weather = parseLeagueMessage(JSON.stringify({ type: "state", state, change: "weather" }));
+    if (weather?.type !== "state") throw new Error("expected a weather state");
+    const changed = nextLeagueLoad(moved, weather, 1000);
+    if (changed.kind !== "ready" || moved.kind !== "ready") throw new Error("expected a board");
+    expect(changed.board.snapshot).toEqual(state.board);
+    expect(changed.board.snapshot.tick).toBe(moved.board.snapshot.tick);
+    expect(changed.board.tunnels).toMatchObject([
+      { kind: "through", from: { id: "a", x: 16 } },
+      { kind: "exit", from: { id: "b" } },
+      { kind: "enter", id: "c" },
+    ]);
+    expect(changed.board.own).toEqual(moved.board.own);
+    expect(changed.board.ownFreshStart).toEqual({ id: "a", tick: 0 });
+    expect(changed.board.reshuffles).toBe(0);
+    expect(changed.board.weatherUntil).toBeGreaterThan(1000);
+
+    const refreshed = nextLeagueLoad(changed, { type: "state", state: weather.state }, 1500);
+    expect(refreshed.kind === "ready" && refreshed.board.weatherUntil).toBe(changed.board.weatherUntil);
+    const tomorrow = nextLeagueLoad(changed, { type: "state", state: { ...weather.state, day: "2026-11-15" } }, 2000);
+    expect(tomorrow.kind === "ready" && tomorrow.board.weatherUntil).toBe(0);
+    const connected = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: weather.state }, 2500);
+    expect(connected.kind === "ready" && connected.board.weatherUntil).toBe(0);
+  });
+
   test("a closed league ends the load with the number of leagues left", () => {
     const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: live }, 0);
     expect(nextLeagueLoad(ready, { type: "closed", leagues: 2 }, 0)).toEqual({ kind: "closed", leagues: 2 });

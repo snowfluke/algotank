@@ -6,7 +6,7 @@
 // move (seated, with the month close's notice), dayDone (the finished day over the board),
 // closing (the day's end is being recorded), failed (the stream was refused), crowd (40 tanks on
 // the board a full tournament league grows to, the owner's tank among them), ranked (the owner's
-// tank with a place in the month and 12 turns in its feed: the longest own pane);
+// tank with a place in the month and 12 turns in its feed: the longest own pane), weather (a notice over Open field);
 // `tanks` = a number of tanks in place of the case's own, and `field` = open puts the board on the
 // open-field rules, whose board is larger (27 tanks give 23 x 17, 40 give 28 x 21);
 // `stream=<url>` replays a recorded league (apps/server/scripts/perf-stream.ts) turn by turn, with the
@@ -28,7 +28,7 @@ import type { LeagueLiveLoad } from "./leagueLive.ts";
 import { useStreamReplay } from "./useStreamReplay.ts";
 import { MonthlyPhoneBar, MonthlyView, type DayChange, type MonthlySide, type MonthlyTab } from "./MonthlyView.tsx";
 
-const CASES = ["visitor", "empty", "one", "seated", "other", "move", "dayDone", "closing", "failed", "crowd", "ranked", "reshuffled"] as const;
+const CASES = ["visitor", "empty", "one", "seated", "other", "move", "dayDone", "closing", "failed", "crowd", "ranked", "reshuffled", "weather"] as const;
 type Case = (typeof CASES)[number];
 
 function param<T extends string>(name: string, values: readonly T[], fallback: T): T {
@@ -36,7 +36,7 @@ function param<T extends string>(name: string, values: readonly T[], fallback: T
   return values.find((v) => v === value) ?? fallback;
 }
 
-const TANKS: Record<Case, number> = { visitor: 5, empty: 0, one: 1, seated: 16, other: 16, move: 16, dayDone: 16, closing: 16, failed: 5, crowd: 40, ranked: 16, reshuffled: 16 };
+const TANKS: Record<Case, number> = { visitor: 5, empty: 0, one: 1, seated: 16, other: 16, move: 16, dayDone: 16, closing: 16, failed: 5, crowd: 40, ranked: 16, reshuffled: 16, weather: 16 };
 
 /** `tanks=27` in the address puts that many tanks on the board in place of the case's own. */
 function tanksParam(fallback: number): number {
@@ -66,7 +66,7 @@ export function MonthlyHarness() {
   // Memoised: a seat holds the statistics of 300 simulated turns, and the page gets one seat per read, not one per render.
   const seat = useMemo(() => (which === "ranked" ? fixtureRankedSeat(league) : seated ? fixtureSeat(which === "other" ? 2 : league) : null), [which, league, seated]);
   // rules=<id>: the round's arena condition, so the audit can show the longest name (open-field).
-  const rules = param<RuleSetId>("rules", RULE_SET_IDS, STANDARD_RULE_SET_ID);
+  const rules = param<RuleSetId>("rules", RULE_SET_IDS, which === "weather" ? "open-field" : STANDARD_RULE_SET_ID);
   const tanks = tanksParam(TANKS[which]);
   const field = param("field", ["standard", "open"], "standard");
   // field=open draws the larger open-field board; rules=<id> only names another condition over the same board.
@@ -107,6 +107,7 @@ export function MonthlyHarness() {
         onJoin={onJoin}
         dayChange={dayChange}
         reshuffled={which === "reshuffled"}
+        weatherChanged={which === "weather"}
         onQuit={() => setQuitting("leave")}
         onChangeRules={() => undefined}
         onChangeLook={() => undefined}

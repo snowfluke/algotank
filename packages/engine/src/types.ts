@@ -12,8 +12,8 @@
 //    A fallback that cannot act makes the bot throw ahead, which stands still.
 //    A throw at a bot spends water from the thrower's tank (see combat/rule-sets.ts),
 //    so a throw from a tank that holds too little water does nothing.
-// 4. One rule set per round. RoundConfig.ruleSetId picks a row of RULE_SETS, and
-//    every number that decides a throw or the arena size comes from that row.
+// 4. Each turn reads one rule set, from its snapshot. RoundConfig.ruleSetId picks the
+//    initial row of RULE_SETS. Monthly weather can change that row between turns.
 //
 // The rules of play for the eight directions are a table in directions.ts.
 
@@ -330,7 +330,7 @@ export interface RoundConfig {
   readonly seed: number;
   readonly ticksTotal: number;
   readonly survivorsAfterRound: number | null;
-  /** The rule set of this round. createRound throws on an id that is not in RULE_SETS. */
+  /** The starting rule set. createRound throws on an id that is not in RULE_SETS. */
   readonly ruleSetId: RuleSetId;
   /** At least two players, with unique ids. */
   readonly players: readonly RoundPlayer[];

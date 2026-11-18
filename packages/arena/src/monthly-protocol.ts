@@ -146,7 +146,7 @@ export function parseLeagueActivity(value: unknown): readonly LeagueActivityEven
   return activity;
 }
 
-/** What a viewer sees of a league now: sent on connect and after every join, quit and day change. */
+/** What a viewer sees of a league now: sent on connect and after joins, quits and changes of day or weather. */
 export interface LeagueLive {
   /** 1 is the top league. */
   readonly league: number;
@@ -167,8 +167,8 @@ export interface LeagueLive {
   readonly board: PublicSnapshot;
 }
 
-/** What triggered a state broadcast when the board grows or a bot changes after a turn. */
-export type LeagueStateChange = "growth" | "botFreshStart";
+/** Why the board changed. A weather state also carries any bot changes on the same turn. */
+export type LeagueStateChange = "growth" | "botFreshStart" | "weather";
 
 /**
  * Messages on GET /api/monthly/leagues/:league/events, one server-sent event each, named by `type`.
@@ -178,6 +178,7 @@ export type LeagueStateChange = "growth" | "botFreshStart";
  * |--------|---------|--------|----------------------------------------------------------------------|
  * | (open) | state   | open   | always the first message                                             |
  * | open   | state   | open   | a join, a quit, a rename or a new day: the tanks of later turns      |
+ * | open   | state   | open   | weather changed after the tick: the new rules and board, same turn    |
  * | open   | tick    | open   | moves, then fresh starts which change the order for the next tick   |
  * | open   | closed  | (end)  | the month close left this league empty; the server ends the stream   |
  * Terminal: closed. An ended connection without `closed` is a dropped one; the browser opens it again.

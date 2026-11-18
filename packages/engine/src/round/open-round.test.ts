@@ -3,9 +3,9 @@ import { STANDARD_RULE_SET_ID, ruleSet } from "../combat/rule-sets.ts";
 import { PRESETS } from "../strategy/presets.ts";
 import { act, bot, mode, rule, snapshotOf, strategyOf, when } from "../strategy/test-helpers.ts";
 import { TARGET_SELECTORS } from "../strategy/vocabulary.ts";
-import type { RoundState, Strategy } from "../types.ts";
-import { arenaSize } from "./grid.ts";
-import { createOpenRound, createRound, freshStartRound, joinRound, leaveRound, replaceStrategy, roundHoldings, standings, stepRound } from "./round.ts";
+import type { BoardItem, RoundState, Strategy } from "../types.ts";
+import { arenaSize, cellKey, isInside } from "./grid.ts";
+import { changeRoundRules, createOpenRound, createRound, freshStartRound, joinRound, leaveRound, replaceStrategy, roundHoldings, standings, stepRound } from "./round.ts";
 
 const strategyAt = (i: number): Strategy => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
 const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false });
@@ -129,6 +129,71 @@ describe("an open round", () => {
     expect(late.strategies).toBe(early.strategies);
     expect(late.tieBreaks).toBe(early.tieBreaks);
     expect(late.sequences).toBeLessThanOrEqual(16);
+  });
+});
+
+describe("weather in an open round", () => {
+  const sequence = strategyOf([mode("main", [rule("go", [when("myWater", { compare: "atLeast", n: 0 })], { steps: [act("wait"), act("wait"), act("wait")] })], act("wait"))]);
+
+  test("changing to Dry spell cuts water in place and the next turn reads the new rules", () => {
+    const round = open();
+    const readsWeather = strategyOf([mode("main", [rule("dry", [when("ruleSet", { set: "dry-spell" })], act("wait"))], act("wait"))]);
+    joinRound(round, { id: "a", strategy: sequence }, 12);
+    joinRound(round, { id: "b", strategy: readsWeather }, -3);
+    const first = stepRound(round);
+    expect(first.decisions[1]?.ruleId).toBeNull();
+    const [a, b] = first.snapshot.bots;
+    if (a === undefined || b === undefined) throw new Error("expected two tanks");
+    const low = { ...b, water: 4 };
+    const before = { ...first.snapshot, bots: [a, low] };
+    Object.assign(round, { snapshot: before });
+
+    expect(changeRoundRules(round, "standard", 16)).toEqual([]);
+    expect(round.snapshot).toBe(before);
+    expect(changeRoundRules(round, "dry-spell", 16)).toEqual([]);
+    expect(round.snapshot).toEqual({ ...before, ruleSetId: "dry-spell", bots: [{ ...a, water: 6 }, low] });
+    const after = stepRound(round);
+    expect(after.tick).toBe(1);
+    expect(after.decisions[0]?.step?.index).toBe(2);
+    expect(after.decisions[1]?.ruleId).toBe("dry");
+  });
+
+  test("Open field adds squares at the edges and shrinking tunnels only tanks on removed squares", () => {
+    const play = () => {
+      const round = open();
+      for (const id of ["kept", "right", "bottom"]) joinRound(round, { id, strategy: sequence }, 12);
+      const played = stepRound(round).snapshot;
+      const item: BoardItem = { kind: "bucket", x: 0, y: 0, turnsLeft: 15 };
+      const before = { ...played, items: [item] };
+      Object.assign(round, { snapshot: before });
+      const large = arenaSize(16, ruleSet("open-field"));
+      expect(changeRoundRules(round, "open-field", 16)).toEqual([]);
+      expect(round.snapshot).toEqual({ ...before, ...large, ruleSetId: "open-field" });
+      expect(large.width).toBeGreaterThan(before.width);
+      expect(large.height).toBeGreaterThan(before.height);
+
+      const [a, b, c] = round.snapshot.bots;
+      if (a === undefined || b === undefined || c === undefined) throw new Error("expected three tanks");
+      const kept = { ...a, x: 1, y: 1, water: 4 };
+      const right = { ...b, x: large.width - 1, y: 0, hitsLanded: 2, water: 1 };
+      const bottom = { ...c, x: 0, y: large.height - 1, hitsTaken: 3, water: 2 };
+      Object.assign(round, { snapshot: { ...round.snapshot, bots: [kept, right, bottom], items: [item, { ...item, x: right.x, y: 1 }] } });
+      const moved = changeRoundRules(round, "dry-spell", 16);
+      expect(moved.map(({ id }) => id)).toEqual([right.id, bottom.id]);
+      expect(round.snapshot).toEqual({ ...before, ruleSetId: "dry-spell", bots: [kept, ...moved] });
+      for (const [index, old] of [right, bottom].entries()) {
+        const tank = moved[index];
+        if (tank?.tieRank === undefined) throw new Error("expected a tank to move and draw a tie rank");
+        expect(isInside(before, tank)).toBe(true);
+        expect(tank.tieRank).not.toBe(old.tieRank);
+        expect(tank).toEqual({ ...old, x: tank.x, y: tank.y, tieRank: tank.tieRank, water: 6 });
+      }
+      expect(new Set([...round.snapshot.bots, ...round.snapshot.items].map(cellKey)).size).toBe(4);
+      expect(roundHoldings(round).sequences).toBe(1);
+      expect(stepRound(round).decisions.map((decision) => decision.step?.index)).toEqual([2, 1, 1]);
+      return moved;
+    };
+    expect(play()).toEqual(play());
   });
 });
 

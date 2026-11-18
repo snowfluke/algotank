@@ -6,7 +6,7 @@
 //   a tap on a tank there follows that tank (owner, 2026-11-17). The board starts whole, so
 //   nobody's view changes without a tap.
 // - On a phone the switch stands in a row of its own that is always there, empty when no switch is
-//   needed, so the board does not move when a reshuffle or a new tank changes the board's size. On a
+//   needed, so the board's box stays put when weather, a reshuffle or a new tank changes its size. On a
 //   laptop it stands in the header beside the clock and the condition, so the board keeps its height.
 //   No map of the whole arena is drawn: it would sit over the window's corner, and "Whole arena"
 //   is one tap away.
@@ -69,7 +69,7 @@ export interface MonthlyBoardProps {
   readonly highlightId: BotId | null;
   readonly tickMs: number;
   readonly tanks: ReadonlyMap<BotId, TankInfo>;
-  /** Drawn over the board's area, the board and the space around it (the midnight notice, "Reshuffled"). */
+  /** Drawn over the board's area, including the space around the board. */
   readonly overlay: ReactNode;
   readonly row: BoardRow;
   /** The game masters' tanks, which leave tread marks (board/tankTrail.ts). */
@@ -85,6 +85,8 @@ export function MonthlyBoard({ snapshot, throws, tunnels, names, highlightId, ti
   // Outside the fixed-height layout the board takes the width and its shape gives the height, so the box says nothing about height.
   const orientation = fit ? bestOrientation(box, snapshot) : "sideways";
   const shown = useMemo(() => (orientation === "upright" ? rotateSnapshot(snapshot) : snapshot), [snapshot, orientation]);
+  // ponytail: a shrink clips the old tunnel mouth with the removed floor. Keeping the sink
+  // visible there would need the old floor to stay briefly while the tank rises on the new one.
   const shownTunnels = useMemo(
     () => orientation === "upright" ? tunnels.map((tunnel) => tunnel.kind === "enter" ? tunnel : { ...tunnel, from: rotateBot(tunnel.from, snapshot.height) }) : tunnels,
     [tunnels, orientation, snapshot.height],
@@ -116,6 +118,9 @@ export function MonthlyBoard({ snapshot, throws, tunnels, names, highlightId, ti
   const followLabel = followsOther ? shortName(names[focused.id] ?? focused.id) : follows === "mine" ? m.board.camera.mine : m.board.camera.leader;
 
   const ratio = boardAspect(arena.width, arena.height);
+  // A quarter turn puts the bottom edge at the picture's left. When that edge moves, start
+  // the drawing again so the tanks do not glide across squares they never crossed.
+  const boardKey = orientation === "upright" ? `${orientation}-${snapshot.height}` : orientation;
   const whole = camera === null && fit && box !== null ? fittedSize(box, ratio) : null;
   const boardStyle =
     camera !== null && box !== null
@@ -162,7 +167,7 @@ export function MonthlyBoard({ snapshot, throws, tunnels, names, highlightId, ti
       >
         <div className="relative min-w-0" style={boardStyle}>
           {/* A new orientation starts a new board: tanks would otherwise glide across it and spin a quarter. */}
-          <ArenaBoard key={orientation} snapshot={shown} throws={throws} tunnels={shownTunnels} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} trailIds={trailIds} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
+          <ArenaBoard key={boardKey} snapshot={shown} throws={throws} tunnels={shownTunnels} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} trailIds={trailIds} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
         </div>
         {/* Over the board's whole area, not only the board: a small board on a short phone cut the midnight notice. */}
         {overlay}

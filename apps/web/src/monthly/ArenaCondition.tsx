@@ -1,5 +1,5 @@
 // The round's arena condition (its round rules) beside the day clock. The league draws a new one
-// at every new round (server league-day.ts newRound). A tap opens a short note on what it changes.
+// at every new round and every few minutes (server league-day.ts). A tap opens a short note on what it changes.
 // A native popover: it sits in the top layer, so opening it moves nothing on the page, and the
 // browser closes it on Escape and on a tap outside. Owner, 2026-11-16: "beside the timer ... with
 // click to show what that means", after a label over the board's corner covered tanks.

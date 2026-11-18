@@ -16,6 +16,8 @@
 // | withBot or   | withBot or   | server (turns)   | after the moves, the next tanks in the rotation go through |
 // | withoutBot   | withoutBot   |                  | a tunnel and keep points and stats; a bot is redrawn or    |
 // |              |              |                  | leaves if the draw is 0. The round keeps counting.         |
+// | withBot or   | the same     | server (turns)   | every RESHUFFLE_TURNS turns, draw the weather. If it       |
+// | withoutBot   |              |                  | changes, apply it between turns and keep the turn number. |
 // | any          | closing      | server (clock)   | the day's end: monthly.ts records the day; no turn runs   |
 // | closing      | idle, withBot| server           | the records are saved: a new day round with every seated  |
 // |              | or withoutBot|                  | tank at 0 points (closing stays while a save fails)       |
@@ -36,7 +38,7 @@
 // Board size: every new round (a new day, a restart, a rebuild) gets a board for the
 // tanks seated then (boardTanksFor), so a few tanks still meet and a full league has room. A board
 // for N tanks has about 6.7 N squares (round/grid.ts), so the seats can pass N by half before the
-// rebuild with up to MAX_BOTS bots and never run out of squares.
+// rebuild with up to MAX_BOTS bots and never run out of squares, even when open-field ends.
 //
 // Bot rule (owner, 2026-11-14: bots come and go every few minutes; a bot never appears in a ranking):
 // | Seated tanks | Bots drawn at each new round (a new day, a restart, a rebuild)           |
@@ -51,7 +53,7 @@
 
 import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, arenaSize, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS } from "@game/arena";
 
@@ -90,9 +92,10 @@ interface LeagueBot {
 }
 
 /**
- * Turns between a tank's fresh starts: 333 turns are 5 minutes at 900 ms a turn. A day is
- * one round of about 96,000 turns, and two or three tanks could settle into a loop that ran for
- * the rest of it: in one measured field the same tank hit the same target 15,833 times in a row.
+ * Turns between weather draws and between a tank's fresh starts: 333 turns are 5 minutes at
+ * 900 ms a turn. A day is one round of about 96,000 turns, and two or three tanks could settle
+ * into a loop that ran for the rest of it: in one measured field the same tank hit the same
+ * target 15,833 times in a row.
  * Measured on 14 November 2026 over 3 seeds with a new start every 1,000 turns: that run was at
  * most 70, and fields without a loop kept their result. 333 turns cut a loop shorter still.
  */
@@ -103,6 +106,8 @@ export interface LeagueTurn extends TickResult {
   readonly freshStarts: readonly FreshStart[];
   /** Bot quits and joins still use a state message after the tick. */
   readonly botsChanged: boolean;
+  /** A new condition needs a state at the same turn, including any bot quits and joins. */
+  readonly weatherChanged: boolean;
 }
 
 /** A seat that makes the seated tanks more than this many times the board's tanks rebuilds the round at once. */
@@ -172,15 +177,18 @@ export class LeagueDay {
 
   /**
    * A round on a board for `tanks` tanks (boardTanksFor), under an arena condition (round rules)
-   * drawn for it, each one as likely: owner, 2026-11-16, "randomize the arena condition each
-   * reshuffle". The draw comes first, before the seating order and the bots. A tunnel keeps
-   * the round's condition (2026-11-19). "open-field" makes the board about twice as large.
+   * drawn for it. A new round draws before the seating order and the bots, as before the
+   * between-turn weather changes (77-monthly-league.md, owner 2026-11-19).
    */
   private newRound(tanks: number, ticksLeft: number): RoundState {
     this.boardFor = boardTanksFor(tanks);
     this.freshStartRemainder = 0;
-    const ruleSetId = MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
+    const ruleSetId = this.drawCondition();
     return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true });
+  }
+
+  private drawCondition(): RuleSetId {
+    return MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */
@@ -267,8 +275,18 @@ export class LeagueDay {
     const count = Math.floor(credit / RESHUFFLE_TURNS);
     this.freshStartRemainder = credit % RESHUFFLE_TURNS;
     const freshStarts: FreshStart[] = [];
+    const nextRules = result.snapshot.tick % RESHUFFLE_TURNS === 0 ? this.drawCondition() : before.ruleSetId;
+    const weatherChanged = nextRules !== before.ruleSetId;
+    // Shrink first so no tank tunnels into a square about to disappear. Grow last so the
+    // compact tick's tunnel destinations still fit the board the viewer has before the state.
+    if (weatherChanged && ruleSet(nextRules).gridFillRatio > ruleSet(before.ruleSetId).gridFillRatio) {
+      for (const { id, x, y } of changeRoundRules(round, nextRules, this.boardFor)) freshStarts.push({ id, x, y });
+    }
+    const displaced = freshStarts.length === 0 ? null : new Set(freshStarts.map(({ id }) => id));
     let botsChanged = false;
     for (const { id } of before.bots.slice(0, count)) {
+      // A tank that just lost its square already went through a tunnel on this turn.
+      if (displaced?.has(id)) continue;
       if (this.seated.has(id)) {
         const { x, y } = freshStartRound(round, id);
         freshStarts.push({ id, x, y });
@@ -277,7 +295,8 @@ export class LeagueDay {
         botsChanged = true;
       }
     }
-    return { ...result, freshStarts, botsChanged };
+    if (weatherChanged && round.snapshot.ruleSetId !== nextRules) changeRoundRules(round, nextRules, this.boardFor);
+    return { ...result, freshStarts, botsChanged, weatherChanged };
   }
 
   /**

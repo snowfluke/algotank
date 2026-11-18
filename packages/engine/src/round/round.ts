@@ -16,6 +16,7 @@
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
 //   freshStartRound: one free cell (int), then one tie rank (next).
+//   changeRoundRules: freshStartRound's draws for each tank outside a smaller board, in board order.
 //
 // An open round (createOpenRound) is a round of the monthly league
 // (docs/specs/revamp/77-monthly-league.md): it starts with no tank on a board sized for a
@@ -50,7 +51,7 @@ import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
 import { ageItems, countDown, newEffect, pickUp, spawnItems, spinDecision, spinsThisTurn } from "../items/items.ts";
 import { decide } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
-import { allCells, arenaSize, cellKey, type Cell } from "./grid.ts";
+import { allCells, arenaSize, cellKey, isInside, type Cell } from "./grid.ts";
 import { createRng } from "./rng.ts";
 import { resolveTick } from "./resolve.ts";
 import type { Placement } from "./resolve.ts";
@@ -71,7 +72,7 @@ class RoundRuntime implements RoundState {
     readonly rng: Rng,
     /** Changed only by joinRound and leaveRound. */
     readonly strategies: Map<BotId, Strategy>,
-    /** Changed only by joinRound and leaveRound. */
+    /** Changed by joinRound, leaveRound and freshStartRound. */
     readonly tieBreaks: Map<BotId, number>,
   ) {
     this.snapshot = spawn;
@@ -154,7 +155,7 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
   };
 }
 
-/** An open round: no tank at the start, a board that never changes size. See the header. */
+/** An open round: no tank at the start, a board sized for a fixed number of tanks. See the header. */
 export interface OpenRoundConfig {
   /** A safe integer. */
   readonly seed: number;
@@ -241,6 +242,28 @@ export function freshStartRound(state: RoundState, id: BotId): BotState {
   round.sequences.delete(id);
   round.snapshot = { ...before, bots: [...before.bots.filter((b) => b.id !== id), bot] };
   return bot;
+}
+
+/**
+ * Monthly weather between turns (77-monthly-league.md, owner 2026-11-19). Keep the origin so
+ * tanks and items stay on their squares as the right and bottom edges move. Only tanks on
+ * removed squares need a fresh start. Returns those tanks in tunnel order.
+ */
+export function changeRoundRules(state: RoundState, ruleSetId: RuleSetId, boardFor: number): readonly BotState[] {
+  const round = runtimeOf(state);
+  const before = round.snapshot;
+  if (ruleSetId === before.ruleSetId) return [];
+  const rules = ruleSet(ruleSetId);
+  const size = arenaSize(boardFor, rules);
+  const shrinks = size.width < before.width || size.height < before.height;
+  const outside = shrinks ? before.bots.filter((bot) => !isInside(size, bot)) : [];
+  const items = shrinks ? before.items.filter((item) => isInside(size, item)) : before.items;
+  if (shrinks && before.bots.length + items.length > size.width * size.height) {
+    throw new Error("the smaller board has too few free squares");
+  }
+  const bots = before.bots.map((bot) => bot.water <= rules.waterCapacity ? bot : { ...bot, water: rules.waterCapacity });
+  round.snapshot = { ...before, ...size, ruleSetId, bots, items };
+  return outside.map(({ id }) => freshStartRound(round, id));
 }
 
 /**

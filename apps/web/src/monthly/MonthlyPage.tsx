@@ -130,8 +130,9 @@ export function MonthlyPage() {
     }
   }, [reshuffles, streamDay, streamLeague]);
   const reshuffledUntil = reshuffle !== null && reshuffle.day === streamDay && reshuffle.league === streamLeague && reshuffles > 0 ? reshuffle.until : 0;
+  const weatherUntil = board?.weatherUntil ?? 0;
   // The clock of the notices only: the day's clock ticks inside MonthlyView.tsx, so a second does not render the board.
-  const now = useNowUntil(Math.max(dayChange?.until ?? 0, reshuffledUntil));
+  const now = useNowUntil(Math.max(dayChange?.until ?? 0, reshuffledUntil, weatherUntil));
   const shownDayChange: DayChange | null =
     dayChange !== null && now < dayChange.until ? { kind: "done", day: dayChange.day, winner: data.days.data?.days.find((d) => d.day === dayChange.day) ?? null } : null;
 
@@ -325,6 +326,7 @@ export function MonthlyPage() {
         onJoin={onJoin}
         dayChange={shownDayChange}
         reshuffled={now < reshuffledUntil}
+        weatherChanged={now < weatherUntil}
         onQuit={() => dispatch({ type: "askQuit" })}
         onChangeRules={() => {
           if (seat !== null) changeRules(seat.strategy);

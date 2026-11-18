@@ -7,14 +7,15 @@
 //   switch and the one action, then the board as tall as the area beside a pane with the
 //   ranking ("Hari ini", "Bulan ini") and, for an owner, "Tank kamu".
 // - A phone (and the scrolling fallback) has a status row (switch and clock), one pane at a
-//   time behind BottomTabs (Arena, Peringkat, Tank kamu), and the action above the tabs.
+//   time behind BottomTabs (Arena, Peringkat, Tank kamu, Aktivitas). Join stays above the tabs
+//   for a visitor; an owner changes rules and look in "Tank kamu".
 // The board is first in both. A seated owner's tank is ringed on the board and kept in view in
 // the ranking; when the owner shows another league, "Tank kamu" says where the tank plays and
 // offers the way back, and the turn feed waits for the own league, because a league's stream
 // carries `own` only for tanks in that league. A switch in "Tank kamu" shows today's statistics
 // card (K2, stats/StatsCard.tsx) in place of the summary; the numbers come from /api/monthly/me.
 
-import { History, ListOrdered, Palette, SlidersHorizontal, Swords, UserRound } from "lucide-react";
+import { History, ListOrdered, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { FIRST_PUBLISHED_RULES_MONTH, MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
 import { ArenaCondition } from "./ArenaCondition.tsx";
@@ -23,7 +24,7 @@ import { TankSheet, type SheetSource, type SheetTank } from "./TankSheet.tsx";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import type { TankInfo } from "../board/props.ts";
-import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
+import { useFormat, useLanguage, useMessages } from "../i18n/I18nProvider.tsx";
 import { SCREEN_SCALE_STYLE } from "../screen/screenScale.ts";
 import { PagedRanking } from "../standings/StandingsTable.tsx";
 import { tankLetters } from "../tank/look.ts";
@@ -34,6 +35,7 @@ import { useFitLayout, useLaptopLayout } from "../ui/layout.ts";
 import { Picker } from "../ui/Picker.tsx";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
+import { useFitDetail } from "../ui/useFitDetail.ts";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
 import { MonthlyBoard, type BoardRow, type FollowSwitch } from "./MonthlyBoard.tsx";
@@ -72,7 +74,7 @@ export interface MonthlyViewProps {
   /** True for a moment after a new round of today put every tank on a new square (leagueLive.ts, `reshuffles`). */
   readonly reshuffled: boolean;
   onQuit(): void;
-  /** A seated owner's way to new rules (flow.ts, askChangeRules). Its button stands where a visitor's Join button stands. */
+  /** A seated owner's way to new rules (flow.ts, askChangeRules). */
   onChangeRules(): void;
   /** A seated owner's way to a new look: the tank editor, whose look the seat follows (server monthly.ts followLook). */
   onChangeLook(): void;
@@ -327,21 +329,29 @@ function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: num
 }
 
 /** The owner's tank: today, the counted days, the turns, and the way out. */
-function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
+function OwnPane({ seat, league, ranking, onLeague, onQuit, actions }: {
   seat: MonthlySeat;
   league: number;
   ranking: LeagueRankingResponse | null;
   onLeague(next: number): void;
   onQuit(): void;
+  actions?: ReactNode;
 }) {
   const m = useMessages();
   const t = m.monthly.own;
+  const [language] = useLanguage();
   const here = seat.league === league;
   const todayRow = ranking?.today.find((row) => row.seatId === seat.seatId) ?? null;
   // K2: today's statistics card in place of the summary, so each has the pane's height.
   const [part, setPart] = useState<"summary" | "stats">("summary");
+  // The autoplay tip gives way first. In another league it is already absent, so the counting note goes first.
+  const countingLevel = here ? 2 : 1;
+  const detail = useFitDetail<HTMLElement>(
+    countingLevel + 1,
+    `${language}|${part}|${here}|${seat.league}|${todayRow === null}|${seat.countsToday}|${seat.rank === null}`,
+  );
   return (
-    <section data-own-pane="" aria-label={t.heading} className={PANE}>
+    <section ref={detail.ref} data-own-pane="" aria-label={t.heading} className={`${PANE} fit:overflow-hidden`}>
       {/* One row: the name gives way (ellipsis) to the switch, so the summary below keeps its height. */}
       <div className="flex min-w-0 shrink-0 items-center gap-x-3">
         <TankBadge look={seat.look} label={tankLetters(seat.name)} size={44} name={null} self detail="full" angle={-90} className="h-[2em] w-[2em] shrink-0" />
@@ -362,6 +372,7 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
           />
         </div>
       </div>
+      {actions}
       {part === "stats" ? (
         <StatsCard heading={m.stats.today} numbers={seat.stats} rules={seat.stats} />
       ) : (
@@ -376,9 +387,9 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
               </div>
             )}
             {todayRow === null ? null : <p>{todayRow.gm ? t.todayGm(todayRow.points) : t.today(todayRow.rank, todayRow.points)}</p>}
-            <p className="text-muted">{seat.countsToday ? t.counts : t.notCounted}</p>
+            {detail.level < countingLevel ? <p className="text-muted">{seat.countsToday ? t.counts : t.notCounted}</p> : null}
             {/* Only beside the own league: the other league's view spends this room on the way back, and the help dialog says it too. */}
-            {here ? (
+            {here && detail.level === 0 ? (
               <p data-own-plays-alone="" className="text-muted">
                 {t.playsAlone}
               </p>
@@ -389,7 +400,6 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
           <div className="min-h-0 flex-1" />
         </>
       )}
-      {/* Change rules and Change look sit in the phone's bar and the laptop's header; this pane keeps the way out. */}
       <div className="flex min-w-0 shrink-0 flex-wrap gap-2">
         <Button variant="secondary" data-quit-open="" onClick={onQuit}>
           {m.monthly.quit.open}
@@ -543,22 +553,7 @@ const TAB_ICONS: Record<MonthlyTab, ReactNode> = {
 };
 
 /** The phone's bottom bar: the visitor's action above the tabs. MonthlyPage puts it in AppShell's `bottom`. */
-/** A button in the phone's bottom bar that looks like its tabs: an icon over a label of up to two lines. */
-function BarAction({ hook, icon, label, onClick }: { readonly hook: "change-rules" | "change-look"; readonly icon: ReactNode; readonly label: string; onClick(): void }) {
-  return (
-    <button
-      type="button"
-      {...(hook === "change-rules" ? { "data-change-rules": "" } : { "data-change-look": "" })}
-      onClick={onClick}
-      className="press flex min-h-13 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] px-0.5 text-center font-display text-caption font-semibold leading-tight text-muted [word-break:keep-all] hover:text-ink max-[359px]:col-span-2"
-    >
-      {icon}
-      <span className="min-w-0">{label}</span>
-    </button>
-  );
-}
-
-export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab, onTab }: Pick<MonthlyViewProps, "seat" | "onJoin" | "onChangeRules" | "onChangeLook" | "tab" | "onTab">) {
+export function MonthlyPhoneBar({ seat, onJoin, tab, onTab }: Pick<MonthlyViewProps, "seat" | "onJoin" | "tab" | "onTab">) {
   const m = useMessages();
   const t = m.monthly;
   const laptop = useLaptopLayout();
@@ -574,19 +569,7 @@ export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab
           </Button>
         </div>
       )}
-      {/* One row: the tabs, then the seated owner's two ways to change the tank (owner, 2026-11-16: a row of two large
-          buttons above the tabs took too much of the phone). They are buttons beside the tab list, not tabs: each opens a step. */}
-      {seat === null ? (
-        <BottomTabs idBase="monthly" label={t.tabs.label} value={seat === null && tab === "mine" ? "arena" : tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
-      ) : (
-        <div className="mx-auto grid w-full max-w-xl min-w-0 grid-cols-4 gap-1 px-2 py-1 min-[360px]:grid-cols-6">
-          <div className="col-span-4 min-w-0">
-            <BottomTabs inline idBase="monthly" label={t.tabs.label} value={tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
-          </div>
-          <BarAction hook="change-rules" icon={<SlidersHorizontal aria-hidden size={22} />} label={t.changeRules.open} onClick={onChangeRules} />
-          <BarAction hook="change-look" icon={<Palette aria-hidden size={22} />} label={t.changeLook} onClick={onChangeLook} />
-        </div>
-      )}
+      <BottomTabs idBase="monthly" label={t.tabs.label} value={seat === null && tab === "mine" ? "arena" : tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
     </>
   );
 }
@@ -605,7 +588,27 @@ function PhoneLayout(props: MonthlyViewProps) {
   const leagueTitle = leagueTitleOf(t, league, leagues);
   let pane: ReactNode;
   if (tab === "mine" && seat !== null) {
-    pane = <OwnPane seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />;
+    pane = (
+      <OwnPane
+        seat={seat}
+        league={league}
+        ranking={props.ranking}
+        onLeague={props.onLeague}
+        onQuit={props.onQuit}
+        actions={
+          // A row above the tabs took too much height (owner, 2026-11-16). Putting the buttons beside
+          // the tabs crowded the bar (2026-11-18, 77-monthly-league.md), so both live with the tank.
+          <div className="flex min-w-0 shrink-0 flex-wrap gap-2">
+            <Button variant="secondary" className="max-w-full flex-1" data-change-rules="" onClick={props.onChangeRules}>
+              <span className="min-w-0">{t.changeRules.open}</span>
+            </Button>
+            <Button variant="secondary" className="max-w-full flex-1" data-change-look="" onClick={props.onChangeLook}>
+              <span className="min-w-0">{t.changeLook}</span>
+            </Button>
+          </div>
+        }
+      />
+    );
   } else if (tab === "ranking") {
     pane = (
       <section aria-label={t.ranking.label} className={PANE}>

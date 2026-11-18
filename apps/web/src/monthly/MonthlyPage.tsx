@@ -301,9 +301,7 @@ export function MonthlyPage() {
     <AppShell
       width="full"
       header={<AppHeader {...(presenter ? {} : { title: m.common.pageTitles.monthly })} />}
-      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} onChangeRules={() => {
-          if (seat !== null) changeRules(seat.strategy);
-        }} onChangeLook={() => setEditingTank(true)} tab={tab} onTab={setTab} />}
+      bottom={presenter ? undefined : <MonthlyPhoneBar seat={seat} onJoin={onJoin} tab={tab} onTab={setTab} />}
     >
       <MonthlyView
         league={league}

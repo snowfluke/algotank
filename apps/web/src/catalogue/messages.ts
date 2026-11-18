@@ -35,13 +35,13 @@ export const en = {
   /** Under reduced motion the scene does not play by itself. */
   nextStep: "Next step",
   ultimates: {
-    dash: { name: "Dash", body: "The tank drives up to 3 squares in a straight line in one turn." },
+    dash: { name: "Dash", body: "The tank drives up to 3 squares in a straight line in one turn, and no shot can hit it in that turn." },
     smoke: { name: "Smoke screen", body: "For 10 turns, a shot at this tank hits only half as often." },
     splash: { name: "Splash ring", body: "The tank shoots all 8 squares around it, and its water runs out. The square in front is always hit, and each other square 1 time in 3." },
     fullTank: { name: "Full tank", body: "The water fills to the top, and the next 3 shots use no water." },
     mudBomb: { name: "Mud bomb", body: "A mud ball lands on the first tank in line and sticks every tank within 1 square for 5 turns." },
     whirlwind: { name: "Whirlwind", body: "Every tank within 2 squares spins round for 2 turns, then checks its rules from the bottom up for 2." },
-    bigUmbrella: { name: "Big umbrella", body: "A big umbrella stops the next 4 shots from the side the tank faces, however long that takes." },
+    bigUmbrella: { name: "Big umbrella", body: "A big umbrella stops the next 4 shots that do not come from behind the tank, however long that takes." },
     magnet: { name: "Magnet", body: "The 3 nearest items within 4 squares slide to the tank, which keeps them and uses them in order." },
   } satisfies Record<UltimateId, UltimateText>,
   /** The links to this page. */
@@ -68,13 +68,13 @@ export const id: typeof en = {
   sceneLabel: (name) => `Papan kecil memperlihatkan ${name}.`,
   nextStep: "Langkah berikutnya",
   ultimates: {
-    dash: { name: "Lari kencang", body: "Tank maju sampai 3 petak lurus dalam satu giliran." },
+    dash: { name: "Lari kencang", body: "Tank maju sampai 3 petak lurus dalam satu giliran, dan tidak ada tembakan yang bisa mengenainya di giliran itu." },
     smoke: { name: "Kabut", body: "Selama 10 giliran, tembakan ke tank ini hanya separuh yang kena." },
     splash: { name: "Percikan", body: "Tank menembak ke 8 petak di sekelilingnya, lalu airnya habis. Petak di depan selalu kena, dan setiap petak lainnya kena 1 dari 3 kali." },
     fullTank: { name: "Tangki penuh", body: "Air terisi penuh, dan 3 tembakan berikutnya tidak memakai air." },
     mudBomb: { name: "Bom lumpur", body: "Bola lumpur jatuh di tank pertama di garis tembak, dan setiap tank dalam jarak 1 petak darinya terjebak selama 5 giliran." },
     whirlwind: { name: "Angin puyuh", body: "Setiap tank dalam jarak 2 petak berputar selama 2 giliran, lalu memeriksa aturannya dari bawah selama 2 giliran." },
-    bigUmbrella: { name: "Payung besar", body: "Payung besar menahan 4 tembakan berikutnya dari arah depan tank, berapa lama pun itu." },
+    bigUmbrella: { name: "Payung besar", body: "Payung besar menahan 4 tembakan berikutnya yang tidak datang dari belakang tank, berapa lama pun itu." },
     magnet: { name: "Magnet", body: "3 item terdekat dalam jarak 4 petak meluncur ke tank, lalu tank menyimpan ketiganya dan memakainya sesuai urutan datangnya." },
   },
   open: "Buka katalog",

@@ -154,7 +154,20 @@ Before the real migration runs, a dry run on a copy of the newest backup counts 
 
 - `PublicBot` gets the tank's ultimate: its id, ready or turns left, and its active effect. A `TickResult` lists each fire with what the board needs to draw it: the Dash path and ram target, outcome and points, the Splash squares hit and missed, the Mud Bomb area, the Whirlwind area and points, and the items Magnet moved. The compact tick gets its own field for this, not the effect bits (2 bits, room for one kind only). `dodged` is appended to `COMPACT_OUTCOMES`.
 - A bundle from before this change must not crash on the new shape. It shows the "new version" notice.
-- The board draws the catalogue's ultimate effects (`catalogue/UltimateEffect.tsx`), which move to the board's folder because the board and the catalogue both use them. A ready tank glows gold. When it fires, the floor under it glows (the catalogue's charge), then the effect plays.
+- The board draws the catalogue's ultimate effects (`catalogue/UltimateEffect.tsx`), which move to the board's folder because the board and the catalogue both use them. A ready tank shows a gold ring. When it fires, the floor under it glows (the catalogue's charge), then the effect plays.
+- Owner, 2026-11-19, on the monthly board: "I think you need to rework the visual when the skills active … the quality is dropping". On a board of 33 tanks with small squares the drawings must read at a glance:
+
+  | Drawing | Rule |
+  |---------|------|
+  | Ready | A thin gold ring with a soft fill inside the tank's own square (radius 4.9 of 5), so ready neighbours never merge into one gold patch. |
+  | Charge | The floor glow reaches just past the hull and fades in half a turn; the ultimate's own shape carries the rest of the turn. |
+  | Smoke screen | A ring of puffs over the hull's edge for every smoked turn, with a grey shade under the square. The middle of the tank and its gauge stay visible. |
+  | Whirlwind | A three-arm vortex inside the reach and one dashed outline around the area, not a tint on every square. |
+  | Big umbrella | A purple canopy with one scallop per blocked eighth, under the hull, plus the blocks-left badge. |
+  | Magnet | A horseshoe magnet over the tank and rings that close in on it. |
+  | All | Every effect stops at the board's edge. |
+
+- Sound (owner, 2026-11-19: "if your tank triggering a ulti or affected by others, it should spawn a sound effect"). A player hears their own tank's fire (`ultimate`), and a sound when another tank's ultimate reaches their tank: a Dash ram (`ram`), a Splash ring hit (`splash`), a Mud bomb (`mud`), a Whirlwind (`wind`). A viewer without a tank hears one `ultimate` cue in a turn with any fire. The rule is `ultimateSounds` in `apps/web/src/board/turnSounds.ts`.
 - The live feed says which ultimate the player's tank used. The board legend ("Bantuan") gets one line about ultimates and a link to the catalogue's ultimates section.
 
 ## Balance gates

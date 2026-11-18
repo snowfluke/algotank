@@ -26,6 +26,8 @@ Owner's feedback, verbatim: "the sfx should only for the player tank to avoid co
 | A player with a tank in the round (room page, test match) | Only for events of their own tank: it shoots (shot, miss or dry shot) and it is hit or lands a hit (splash) |
 | A viewer with no tank in the round (big screen, presenter page, a spectator, a player who is out or waiting) | All tanks, as now, at most a few per turn |
 
+Ultimates follow the same rule (85-ultimates.md, Stream and board): a player hears their own tank's fire and an ultimate that reaches their tank; a viewer with no tank hears one cue in a turn with any fire.
+
 The countdown, round start, round end and win sounds are unchanged. The rule lives in `src/board/turnSounds.ts` with a test for both rows. S2 owns it.
 
 ### No scroll

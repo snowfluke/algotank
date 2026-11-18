@@ -13,6 +13,10 @@ const namesEn: Record<SoundName, string> = {
   roundEnd: "Round end",
   win: "Win",
   tap: "Button tap",
+  ultimate: "Ultimate",
+  ram: "Dash ram",
+  mud: "Mud bomb",
+  wind: "Whirlwind",
 };
 
 export const en = {
@@ -55,5 +59,9 @@ export const id: typeof en = {
     roundEnd: "Ronde selesai",
     win: "Menang",
     tap: "Ketukan tombol",
+    ultimate: "Jurus pamungkas",
+    ram: "Tabrakan Lari kencang",
+    mud: "Bom lumpur",
+    wind: "Angin puyuh",
   },
 };

@@ -1,7 +1,7 @@
 // Which sound effects a turn on the board makes. One small table, so a turn
 // with many shots stays a few sounds and the rule is tested without audio.
 
-import type { BotId, ThrowEvent } from "@game/engine";
+import type { BotId, ThrowEvent, UltimateFire } from "@game/engine";
 import type { SoundName } from "../sound/sounds.ts";
 
 /**
@@ -29,6 +29,38 @@ export function turnSounds(throws: readonly ThrowEvent[], ownId: BotId | null): 
   else if (outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked")) sounds.push("miss");
   if (outcomes.has("dry")) sounds.push("dry");
   return sounds;
+}
+
+/**
+ * The ultimate sounds of one turn (owner, 2026-11-19: "if your tank triggering a ulti or affected by others, it
+ * should spawn a sound effect"). At most two, after the shot sounds:
+ *
+ * | Viewer (`ownId`)  | Event                                                   | Sound    |
+ * |-------------------|---------------------------------------------------------|----------|
+ * | a tank            | its own tank fires any ultimate                         | ultimate |
+ * | a tank            | another tank's Dash rams it                             | ram      |
+ * | a tank            | another tank's Splash ring hits it                      | splash   |
+ * | a tank            | a Mud bomb sticks it                                    | mud      |
+ * | a tank            | a Whirlwind catches it                                  | wind     |
+ * | no tank (null)    | any tank fires                                          | ultimate, once per turn |
+ *
+ * Without a tank the viewer watches up to 512 tanks, so one cue per turn says "an ultimate went off" without noise.
+ */
+export function ultimateSounds(fires: readonly UltimateFire[], ownId: BotId | null): SoundName[] {
+  if (fires.length === 0) return [];
+  if (ownId === null) return ["ultimate"];
+  const sounds = new Set<SoundName>();
+  for (const fire of fires) {
+    if (fire.botId === ownId) {
+      sounds.add("ultimate");
+      continue;
+    }
+    if (fire.kind === "dash" && fire.shot.outcome === "hit" && fire.shot.targetId === ownId) sounds.add("ram");
+    if (fire.kind === "splash" && fire.squares.some((square) => square.outcome === "hit" && square.targetId === ownId)) sounds.add("splash");
+    if (fire.kind === "mudBomb" && fire.affected.includes(ownId)) sounds.add("mud");
+    if (fire.kind === "whirlwind" && fire.affected.includes(ownId)) sounds.add("wind");
+  }
+  return [...sounds].slice(0, 2);
 }
 
 /**

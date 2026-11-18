@@ -71,7 +71,7 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
       })),
     };
     const html = renderBoard({ snapshot, throws: [] });
-    expect(html).toContain('data-ultimate-tank="a"><circle data-ultimate-ready=""');
+    expect(html).toContain('data-ultimate-tank="a"><g data-ultimate-ready=""');
     expect(html.match(/data-ultimate-ready=/g)).toHaveLength(1);
     expect(html).not.toContain('data-ultimate-tank="you"');
   });

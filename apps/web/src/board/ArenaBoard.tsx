@@ -51,10 +51,10 @@ import type { ShotShape } from "./boardHelpers.ts";
 import { Crown, DryDrops, JetShape, Puff, Splash } from "./boardShapes.tsx";
 import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import type { ArenaBoardProps } from "./props.ts";
-import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
+import { countdownSound, playsTurnSounds, turnSounds, ultimateSounds } from "./turnSounds.ts";
 import { botAtPoint, nameTagSpot, useTankPeek, type BoardView } from "./tankPeek.ts";
 import { useCellPixels } from "./useCellPixels.ts";
-import { HELD_ITEM_AT, UltimateBadges, UltimateFireDrawing, TankUltimateFloor } from "./ultimates/UltimateEffect.tsx";
+import { HELD_ITEM_AT, UltimateBadges, UltimateFireDrawing, TankUltimateFloor, TankUltimateOver } from "./ultimates/UltimateEffect.tsx";
 import { fireInWindow } from "./ultimates/boardUltimates.ts";
 import { ULTIMATE_MOTION_CSS } from "./ultimates/ultimateMotion.ts";
 import { WaterGauge } from "./WaterGauge.tsx";
@@ -140,8 +140,10 @@ function useTurnAngles(bots: readonly PublicBot[]): ReadonlyMap<BotId, number> {
   return stored.current;
 }
 
+const NO_FIRES: readonly UltimateFire[] = [];
+
 /** Plays the turn's sounds when a live board moves on by exactly one turn, and the countdown's beeps. `ownId` is the viewer's tank, whose events alone make sound. */
-function useBoardSounds(tick: number, throws: readonly ThrowEvent[], ownId: BotId | null, paused: boolean, countdown: number | null): void {
+function useBoardSounds(tick: number, throws: readonly ThrowEvent[], fires: readonly UltimateFire[], ownId: BotId | null, paused: boolean, countdown: number | null): void {
   const lastTick = useRef<number | null>(null);
   useEffect(() => {
     const previous = lastTick.current;
@@ -149,11 +151,11 @@ function useBoardSounds(tick: number, throws: readonly ThrowEvent[], ownId: BotI
     if (previous === tick) return;
     lastTick.current = tick;
     if (paused || !playsTurnSounds(previous, tick)) return;
-    for (const sound of turnSounds(throws, ownId)) {
+    for (const sound of [...turnSounds(throws, ownId), ...ultimateSounds(fires, ownId)]) {
       // The music dips under the viewer's own tank's sounds; a viewer without a tank hears every tank, so no dip there.
       if (playSound(sound) && ownId !== null) duckMusicUnder(sound);
     }
-  }, [tick, throws, ownId, paused]);
+  }, [tick, throws, fires, ownId, paused]);
 
   const lastCountdown = useRef<number | null>(null);
   useEffect(() => {
@@ -194,7 +196,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
   const { ref, cellPx } = useCellPixels(spanX, spanY);
   const detail = boardDetail(cellPx);
   const counting = countdown !== null && countdown > 0;
-  useBoardSounds(tick, throws, highlightId, paused, countdown);
+  useBoardSounds(tick, throws, fires ?? NO_FIRES, highlightId, paused, countdown);
   // A crowd: squares too small for a label (a big arena seen whole, up to 512 tanks). Every other tank is then
   // one <use> of a shared drawing in one gliding group, without a title, and only the effects that read at that
   // size play: the jets of hits and misses and the splash. The viewer's tank keeps everything.
@@ -328,7 +330,11 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
         <Floor width={width} height={height} ruleSetId={snapshot.ruleSetId} />
         {underlay}
         {ultimateArt ? (
-          <g aria-hidden="true" pointerEvents="none">
+          // Effects stop at the board's edge: a whirlwind or magnet beside the wall must not paint over the frame.
+          <g aria-hidden="true" pointerEvents="none" clipPath={`url(#${symbolBase}-floor)`}>
+            <clipPath id={`${symbolBase}-floor`}>
+              <rect x={0} y={0} width={width * CELL} height={height * CELL} />
+            </clipPath>
             <g key={tick}>
               {drawnFires.map((fire) => <UltimateFireDrawing key={fire.botId} fire={fire} bots={botsById} board={snapshot} layer="floor" />)}
             </g>
@@ -501,11 +507,14 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
           {shots.map(({ id, shape }) => (crowd && id !== highlightId && shape.kind !== "hit" ? null : <ShotMark key={id} shape={shape} />))}
         </g>
 
-        {drawnFires.length === 0 ? null : (
-          <g key={`ultimates-${tick}`} aria-hidden="true" pointerEvents="none">
-            {drawnFires.map((fire) => <UltimateFireDrawing key={fire.botId} fire={fire} bots={botsById} board={snapshot} layer="over" />)}
+        {ultimateArt ? (
+          <g aria-hidden="true" pointerEvents="none" clipPath={`url(#${symbolBase}-floor)`}>
+            {drawOrder.map((bot) => <TankUltimateOver key={bot.id} bot={bot} motion={tankMotion(bot.id)} fire={firesById.get(bot.id)} />)}
+            <g key={`ultimates-${tick}`}>
+              {drawnFires.map((fire) => <UltimateFireDrawing key={fire.botId} fire={fire} bots={botsById} board={snapshot} layer="over" />)}
+            </g>
           </g>
-        )}
+        ) : null}
         {overlay}
 
         {/* Gauges and the crown come after every effect, so nothing covers them. On squares too small to read a gauge, only the viewer's tank keeps one. */}

@@ -2,7 +2,7 @@
 // audio files. Each effect stays under 400 ms except `win` (about 1.2 s). Levels
 // are low: these play on phones in a room full of other phones.
 
-export const SOUND_NAMES = ["shot", "splash", "miss", "dry", "countdown", "roundStart", "roundEnd", "win", "tap"] as const;
+export const SOUND_NAMES = ["shot", "splash", "miss", "dry", "countdown", "roundStart", "roundEnd", "win", "tap", "ultimate", "ram", "mud", "wind"] as const;
 export type SoundName = (typeof SOUND_NAMES)[number];
 
 interface ToneOptions {
@@ -104,4 +104,26 @@ export const SYNTHS: Record<SoundName, Synth> = {
     });
   },
   tap: (ctx, at) => tone(ctx, { type: "sine", from: 1250, start: at, duration: 0.03, gain: 0.03 }),
+  // The viewer's tank fires its ultimate (owner, 2026-11-19): a quick rising run with a shimmer, brighter than a shot.
+  ultimate: (ctx, at) => {
+    [587.33, 783.99, 1174.66].forEach((frequency, i) => {
+      tone(ctx, { type: "triangle", from: frequency, start: at + i * 0.06, duration: i === 2 ? 0.26 : 0.09, gain: 0.16 });
+    });
+    noise(ctx, { filter: "highpass", from: 4000, to: 7000, start: at + 0.1, duration: 0.24, gain: 0.05 });
+  },
+  // Another tank's Dash rams the viewer's tank: a low thump.
+  ram: (ctx, at) => {
+    tone(ctx, { type: "sine", from: 170, to: 55, start: at, duration: 0.22, gain: 0.32 });
+    noise(ctx, { filter: "lowpass", from: 900, to: 150, start: at, duration: 0.14, gain: 0.18 });
+  },
+  // A mud bomb sticks the viewer's tank: a wet, low squelch.
+  mud: (ctx, at) => {
+    noise(ctx, { filter: "lowpass", from: 1100, to: 180, start: at, duration: 0.24, gain: 0.26 });
+    tone(ctx, { type: "sine", from: 260, to: 80, start: at + 0.03, duration: 0.18, gain: 0.18 });
+  },
+  // A whirlwind catches the viewer's tank: a whoosh that rises and falls.
+  wind: (ctx, at) => {
+    noise(ctx, { filter: "bandpass", from: 500, to: 2200, start: at, duration: 0.2, gain: 0.16 });
+    noise(ctx, { filter: "bandpass", from: 2200, to: 600, start: at + 0.17, duration: 0.2, gain: 0.12 });
+  },
 };

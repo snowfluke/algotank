@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import type { ThrowEvent } from "@game/engine";
-import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
+import type { ThrowEvent, UltimateFire } from "@game/engine";
+import { countdownSound, playsTurnSounds, turnSounds, ultimateSounds } from "./turnSounds.ts";
 
 const hit: ThrowEvent = { throwerId: "a", outcome: "hit", targetId: "b", distance: 1, hitChance: 90 };
 const miss: ThrowEvent = { throwerId: "c", outcome: "miss", targetId: "d", distance: 2, hitChance: 60 };
@@ -93,5 +93,30 @@ describe("countdownSound", () => {
     expect(countdownSound(1, null)).toBe("roundStart");
     expect(countdownSound(1, 0)).toBe("roundStart");
     expect(countdownSound(null, null)).toBeNull();
+  });
+});
+
+describe("ultimateSounds", () => {
+  const dash = (botId: string, targetId: string, outcome: "hit" | "miss"): UltimateFire => ({ botId, at: { x: 0, y: 0 }, kind: "dash", path: [], shot: { outcome, targetId } }) as unknown as UltimateFire;
+  const mud = (botId: string, affected: string[]): UltimateFire => ({ botId, at: { x: 0, y: 0 }, kind: "mudBomb", center: { x: 1, y: 0 }, area: [], affected, points: affected.length }) as UltimateFire;
+  const wind = (botId: string, affected: string[]): UltimateFire => ({ botId, at: { x: 0, y: 0 }, kind: "whirlwind", area: [], affected, points: 0 }) as UltimateFire;
+
+  test("the viewer's own fire plays the ultimate sound", () => {
+    expect(ultimateSounds([mud("me", ["a"])], "me")).toEqual(["ultimate"]);
+  });
+
+  test("another tank's ultimate that reaches the viewer's tank plays its own sound", () => {
+    expect(ultimateSounds([dash("a", "me", "hit")], "me")).toEqual(["ram"]);
+    expect(ultimateSounds([mud("a", ["me"])], "me")).toEqual(["mud"]);
+    expect(ultimateSounds([wind("a", ["b", "me"])], "me")).toEqual(["wind"]);
+  });
+
+  test("a fire that does not reach the viewer's tank is silent, and a miss of the ram too", () => {
+    expect(ultimateSounds([dash("a", "me", "miss"), mud("b", ["c"])], "me")).toEqual([]);
+  });
+
+  test("a viewer without a tank hears one cue for a turn of many fires", () => {
+    expect(ultimateSounds([mud("a", ["b"]), wind("c", ["d"]), dash("e", "f", "hit")], null)).toEqual(["ultimate"]);
+    expect(ultimateSounds([], null)).toEqual([]);
   });
 });

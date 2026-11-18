@@ -126,7 +126,14 @@ The balance script (800 finals of 60 turns, mixed field, items on) compares ulti
 - How often each ultimate fires per tank per 100 turns.
 - The big umbrella against the smoke screen and the item umbrella: the points each saves per fire.
 
-Gates: the strongest play style stays under 40% in the mixed field. No ultimate fires less than once per tank per 100 turns. The big umbrella saves more than the item umbrella, and the owner sees its number next to the smoke screen's ("not far beyond smoke screen", 2026-11-18).
+Owner, 2026-11-18: "it's okay to be unbalanced for the ultimate skills, but with certain luck, not straight overpowered". So the ultimates do not have to be equal, and a strong one is allowed. The gates check only that luck still decides:
+
+- No play style wins 40% or more of the mixed field with ultimates on (luck is 12.5% for 8 tanks).
+- No play style's win rate with ultimates on is more than twice its win rate with them off.
+- No ultimate fires less than once per tank per 100 turns.
+- The big umbrella saves more than the item umbrella. The owner sees its number next to the smoke screen's ("not far beyond smoke screen", 2026-11-18).
+
+A gate that fails is reported to the owner with the numbers, and the numbers in `ULTIMATE_RULES` change. The design of an ultimate does not change.
 
 ## Later
 

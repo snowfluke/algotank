@@ -70,6 +70,7 @@ function outcomeText(t: FeedText, entry: OwnDecision): string | null {
 
 export function describeDecision(entry: OwnDecision, strategy: StrategyInput, v: VocabularyText, t: FeedText): FeedLine {
   const { decision } = entry;
+  if (decision.ultimate !== undefined) return { turn: entry.tick + 1, text: t.ultimate(decision.ultimate) };
   const { rule, action } = decisionAction(decision, strategy);
   const stopped = blocked(decision);
   const what = capitalised(stopped ? t.tried(actionText(v, action), actionDoneText(v, action)) : actionDoneText(v, action));

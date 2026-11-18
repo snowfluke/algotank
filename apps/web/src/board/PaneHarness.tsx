@@ -23,7 +23,7 @@ import { expandTick, isFinalRound, survivorCount } from "@game/arena";
 import type { CompactTick } from "@game/arena";
 import { DEFAULT_PRESET_ID, PRESETS, STANDARD_RULE_SET_ID, runRound } from "@game/engine";
 import type { PublicBot } from "@game/arena";
-import type { Decision, Standing, ThrowEvent } from "@game/engine";
+import type { Decision, Standing, ThrowEvent, UltimateFire } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { ArenaPane, FinalRankingPane, MyTankPane, RankingPane, ResultPane, roundClock, useRoundTitle } from "../live/panes.tsx";
 import { Practice } from "../practice/Practice.tsx";
@@ -59,6 +59,7 @@ function oneOf<T extends string>(value: string | null, options: readonly T[], fa
 interface HarnessTick {
   readonly decisions: readonly Decision[];
   readonly throws: readonly ThrowEvent[];
+  readonly fires: readonly UltimateFire[];
   readonly snapshot: PublicSnapshot;
 }
 
@@ -102,7 +103,7 @@ function harnessData(count: number, tankName: (n: number) => string): HarnessDat
     ready: false,
     look: harnessLook(i, i % 3 === 2),
   }));
-  const ticks = round.ticks.map((tick): HarnessTick => ({ decisions: tick.decisions, throws: tick.throws, snapshot: grow(tick.snapshot) }));
+  const ticks = round.ticks.map((tick): HarnessTick => ({ decisions: tick.decisions, throws: tick.throws, fires: tick.fires ?? [], snapshot: grow(tick.snapshot) }));
   const last = ticks.at(-1)?.snapshot ?? grow(round.spawn);
   const standings = [...last.bots]
     .sort((a, b) => b.score - a.score || b.hitsLanded - a.hitsLanded || a.id.localeCompare(b.id))
@@ -155,7 +156,7 @@ function recordedData(round: RecordedRound, tankName: (n: number) => string): Ha
   const ticks = round.ticks.map((compact, i): HarnessTick => {
     const tick = expandTick(compact, spawn);
     const own = round.own[i] ?? null;
-    return { decisions: own === null ? [] : [own], throws: tick.throws, snapshot: tick.snapshot };
+    return { decisions: own === null ? [] : [own], throws: tick.throws, fires: tick.fires ?? [], snapshot: tick.snapshot };
   });
   const players: PublicPlayer[] = spawn.bots.map((bot, i) => ({
     id: bot.id,
@@ -273,7 +274,7 @@ function RunningScene({ data }: { data: HarnessData }) {
     snapshot: tick?.snapshot ?? data.spawn,
     roundSpawn: data.spawn,
     throws: tick?.throws ?? [],
-    fires: [],
+    fires: tick?.fires ?? [],
     ownDecisions: viewerId === null ? [] : ownDecisions(data.ticks, frame),
     protocolError: null,
     firstTurnAt: null,

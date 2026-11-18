@@ -4,22 +4,15 @@
 // the dizzy stars, the mud, the water gauge and the ground of the condition. The play styles do
 // not use these: the workshop's scenes act them out already (prep/PlayStyleScene.tsx).
 //
-// The scenes of the ultimates are drawings of a plan: the game does not have ultimates yet, so
-// they reuse what the board can draw (a long glide, misses, several jets, a full gauge, mud,
-// stars, the umbrella, items that move).
-//
 // Each scene loops. Its steps are turns; ScenePlayer.tsx numbers them, so every loop replays them.
 
-import { ruleSet, type BoardItem, type BotId, type BotState, type Direction, type ItemKind, type RuleSetId, type Snapshot, type TankEffect, type ThrowEvent } from "@game/engine";
-import type { UltimateId } from "@game/engine";
-import type { UltimateEffect } from "./UltimateEffect.tsx";
+import { ULTIMATE_RULES, itemHandOf, ruleSet, type BoardItem, type BotId, type BotState, type Direction, type ItemKind, type RuleSetId, type Snapshot, type TankEffect, type ThrowEvent, type UltimateEffect, type UltimateFire, type UltimateId, type WaitingItems } from "@game/engine";
 
 /** One turn of a scene: the board after it, and the shots of it. */
 export interface SceneStep {
   readonly snapshot: Snapshot;
   readonly throws: readonly ThrowEvent[];
-  /** What the ultimates draw on this step (UltimateEffect.tsx); empty in every other scene. */
-  readonly effects: readonly UltimateEffect[];
+  readonly fires: readonly UltimateFire[];
 }
 
 export interface Scene {
@@ -29,7 +22,7 @@ export interface Scene {
 }
 
 /** The scene's tanks: "you" wears the orange ring; the others are plain tanks. */
-export const SCENE_TANKS = ["you", "a", "b", "c"] as const;
+export const SCENE_TANKS = ["you", "a", "b", "c", "d", "e", "f", "g", "h"] as const;
 export type SceneTankId = (typeof SCENE_TANKS)[number];
 
 interface Pose {
@@ -41,15 +34,17 @@ interface Pose {
   readonly water?: number;
   readonly item?: ItemKind;
   readonly effect?: TankEffect;
+  readonly active?: UltimateEffect;
+  readonly waiting?: WaitingItems;
 }
 
-type Shot = readonly [from: SceneTankId, to: SceneTankId, outcome: "hit" | "miss" | "blocked" | "dry", bucket?: true];
+type Shot = readonly [from: SceneTankId, to: SceneTankId, outcome: "hit" | "miss" | "blocked" | "dry" | "dodged", bucket?: true];
 
 interface Turn {
   readonly tanks: Partial<Record<SceneTankId, Pose>>;
   readonly items?: readonly Omit<BoardItem, "turnsLeft">[];
   readonly shots?: readonly Shot[];
-  readonly effects?: readonly UltimateEffect[];
+  readonly fire?: UltimateFire;
 }
 
 function tank(id: SceneTankId, pose: Pose, ruleSetId: RuleSetId, hit: boolean): BotState {
@@ -70,31 +65,40 @@ function tank(id: SceneTankId, pose: Pose, ruleSetId: RuleSetId, hit: boolean): 
     hitsLanded: 0,
     hitsTaken: 0,
     ticksSinceLandedHit: null,
-    item: pose.item ?? null,
+    ...itemHandOf({ item: pose.item ?? null, itemsWaiting: pose.waiting }),
     itemUses: pose.item === undefined ? 0 : 2,
     effect: pose.effect ?? null,
+    ...(pose.active === undefined ? {} : { ultimateEffect: pose.active }),
   };
 }
 
-function scene(ruleSetId: RuleSetId, width: number, height: number, turns: readonly Turn[], keyStep: number): Scene {
+function scene(ruleSetId: RuleSetId, width: number, height: number, turns: readonly Turn[], keyStep: number, ultimate?: UltimateId): Scene {
   const steps = turns.map((turn, index): SceneStep => {
     const throws = (turn.shots ?? []).map(([from, to, outcome, bucket]): ThrowEvent => {
       const a = turn.tanks[from];
       const b = turn.tanks[to];
       if (a === undefined || b === undefined) throw new Error(`A shot of a scene names a tank that is not on the board: ${from} at ${to}.`);
       const distance = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-      if (outcome === "dry") return { throwerId: from, outcome, targetId: to, distance };
-      return { throwerId: from, outcome, targetId: to, distance, hitChance: 60, ...(bucket === true ? { bucket } : {}) };
+      if (outcome === "dry" || outcome === "dodged") return { throwerId: from, outcome, targetId: to, distance };
+      const hitChance = b.active?.kind === "smoke" ? Math.floor(60 / ULTIMATE_RULES.smoke.chanceDivisor) : 60;
+      return { throwerId: from, outcome, targetId: to, distance, hitChance, ...(bucket === true ? { bucket } : {}) };
     });
+    if (turn.fire?.kind === "dash") throws.push(turn.fire.shot);
     const hitIds = new Set(throws.filter((t) => t.outcome === "hit").map((t) => (t.outcome === "hit" ? t.targetId : "")));
-    const bots = SCENE_TANKS.flatMap((id) => {
+    const bots = SCENE_TANKS.flatMap<BotState>((id) => {
       const pose = turn.tanks[id];
-      return pose === undefined ? [] : [tank(id, pose, ruleSetId, hitIds.has(id))];
+      if (pose === undefined) return [];
+      const state = tank(id, pose, ruleSetId, hitIds.has(id));
+      if (id !== "you" || ultimate === undefined) return [state];
+      return [{
+        ...state,
+        ultimate: index === 0 ? { kind: "ready", id: ultimate } : { kind: "charging", id: ultimate, turnsLeft: ULTIMATE_RULES.rechargeTurns },
+      }];
     });
     return {
       snapshot: { width, height, tick: index, ticksTotal: turns.length, survivorsAfterRound: null, ruleSetId, bots, items: (turn.items ?? []).map((item) => ({ ...item, turnsLeft: 20 })) },
       throws,
-      effects: turn.effects ?? [],
+      fires: turn.fire === undefined ? [] : [turn.fire],
     };
   });
   return { steps, keyStep };
@@ -103,7 +107,6 @@ function scene(ruleSetId: RuleSetId, width: number, height: number, turns: reado
 // --- Items (the board legend says each in words) -------------------------------------------------
 
 const DIZZY: TankEffect = { kind: "dizzy", turnsLeft: 6 };
-const WHIRL: TankEffect = { kind: "dizzy", turnsLeft: 4 };
 const STUCK: TankEffect = { kind: "stuck", turnsLeft: 4 };
 
 export const ITEM_SCENES: Readonly<Record<ItemKind, Scene>> = {
@@ -182,107 +185,151 @@ export const CONDITION_SCENES: Readonly<Record<RuleSetId, Scene>> = {
   ], 2),
 };
 
-// --- Ultimates (a plan; UltimateEffect.tsx draws what the board cannot) ---------------------------------
+// --- Ultimates (85-ultimates.md) --------------------------------------------------------------------
 //
-// Each one: the tanks as they stand, then the charge (the floor lights up under the tank), then the
-// effect, then what it left. The effect step is the key step. Hits an ultimate makes off the tank's
-// line are drawn by the effect, not as board shots, because the board aims every jet straight ahead.
+// The scene's turn carries the same fire as a live turn. The board draws the charge, the effect
+// and the points from it, then shows what is left on the tanks in the following turns.
 
-const charge = (x: number, y: number): UltimateEffect => ({ kind: "charge", at: { x, y } });
-const aura = (x: number, y: number): UltimateEffect => ({ kind: "aura", at: { x, y } });
+type Square = UltimateFire["at"];
+
+function squareArea({ x, y }: Square, reach: number, width: number, height: number): Square[] {
+  const area: Square[] = [];
+  for (let row = Math.max(0, y - reach); row <= Math.min(y + reach, height - 1); row++) {
+    for (let col = Math.max(0, x - reach); col <= Math.min(x + reach, width - 1); col++) area.push({ x: col, y: row });
+  }
+  return area;
+}
+
+const DASH_SHOT = { throwerId: "you", outcome: "hit", targetId: "a", distance: 1, hitChance: 100 } as const;
+
+const RING_TANKS = {
+  a: { x: 0, y: 0, dir: "SE" },
+  b: { x: 1, y: 0, dir: "S" },
+  c: { x: 2, y: 0, dir: "SW" },
+  d: { x: 0, y: 1, dir: "E" },
+  e: { x: 2, y: 1, dir: "W" },
+  f: { x: 0, y: 2, dir: "NE" },
+  g: { x: 1, y: 2, dir: "N" },
+  h: { x: 2, y: 2, dir: "NW" },
+} as const satisfies Partial<Record<SceneTankId, Pose>>;
+const RING_HITS = Object.entries(RING_TANKS).map(([targetId, { x, y }]) => ({ x, y, targetId, outcome: "hit" as const }));
+const RING_AFTER = Object.fromEntries(Object.entries(RING_TANKS).map(([id, pose]) => [id, { ...pose, score: -1 }]));
+
+const MUD_TARGET = { x: 3, y: 1 };
+const MUD_TANKS: Turn["tanks"] = {
+  you: { x: 0, y: 1, dir: "E" },
+  a: { ...MUD_TARGET, dir: "W" },
+  b: { x: 4, y: 0, dir: "SW" },
+  c: { x: 4, y: 2, dir: "NW" },
+};
+function mudAfter(turnsLeft: number): Turn["tanks"] {
+  const effect = { kind: "stuck", turnsLeft } as const;
+  return {
+    you: { x: 0, y: 1, dir: "E", score: 3 },
+    a: { ...MUD_TARGET, dir: "W", score: -1, effect },
+    b: { x: 4, y: 0, dir: "SW", score: -1, effect },
+    c: { x: 4, y: 2, dir: "NW", score: -1, effect },
+  };
+}
+
+const WIND_START: Turn["tanks"] = {
+  you: { x: 2, y: 1, dir: "N" },
+  a: { x: 0, y: 0, dir: "E" },
+  b: { x: 4, y: 1, dir: "W" },
+  c: { x: 2, y: 2, dir: "N" },
+};
+function windAfter(turn: number, a: Direction, b: Direction, c: Direction): Turn["tanks"] {
+  const effect = { kind: "dizzy", turnsLeft: 4 - turn, spinTurnsLeft: Math.max(0, 2 - turn) } as const;
+  return {
+    you: { x: 2, y: 1, dir: "N", score: 1 },
+    a: { x: 0, y: 0, dir: a, effect },
+    b: { x: 4, y: 1, dir: b, effect },
+    c: { x: 2, y: 2, dir: c, score: -1, effect },
+  };
+}
+
+const MAGNET_ITEMS = [
+  { kind: "bucket", from: { x: 1, y: 0 } },
+  { kind: "umbrella", from: { x: 5, y: 0 } },
+  { kind: "pinwheel", from: { x: 5, y: 2 } },
+] as const;
+const LEFT_ITEM = { kind: "mudBall", x: 0, y: 2 } as const;
+const MAGNET_HAND = { x: 3, y: 1, dir: "N", item: "bucket", waiting: ["umbrella", "pinwheel"] } as const;
 
 export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
   dash: scene("standard", 5, 3, [
     { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 4, y: 1, dir: "W" } } },
-    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 4, y: 1, dir: "W" } }, effects: [charge(0, 1)] },
-    { tanks: { you: { x: 3, y: 1, dir: "E" }, a: { x: 4, y: 1, dir: "W" } }, effects: [{ kind: "dash", from: { x: 0, y: 1 }, to: { x: 3, y: 1 } }] },
-    { tanks: { you: { x: 3, y: 1, dir: "E", score: 1, water: 6 }, a: { x: 4, y: 1, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]], effects: [aura(3, 1)] },
-    { tanks: { you: { x: 3, y: 1, dir: "E", score: 1, water: 7 }, a: { x: 4, y: 1, dir: "W", score: -1 } } },
-  ], 2),
+    {
+      tanks: { you: { x: 3, y: 1, dir: "E", score: 2 }, a: { x: 4, y: 1, dir: "W", score: -2, water: 6 } },
+      shots: [["a", "you", "dodged"]],
+      fire: { botId: "you", kind: "dash", at: { x: 0, y: 1 }, path: [{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }], shot: DASH_SHOT, points: 2 },
+    },
+    { tanks: { you: { x: 3, y: 1, dir: "E", score: 2 }, a: { x: 4, y: 1, dir: "W", score: -2, water: 7 } } },
+  ], 1, "dash"),
   smoke: scene("standard", 5, 3, [
     { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" } } },
-    { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" } }, effects: [charge(3, 1)] },
-    { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" } }, effects: [aura(3, 1), { kind: "smoke", at: { x: 3, y: 1 }, fresh: true }] },
-    { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E", water: 6 } }, shots: [["a", "you", "miss"]], effects: [aura(3, 1), { kind: "smoke", at: { x: 3, y: 1 }, fresh: false }] },
-    { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E", water: 3 } }, shots: [["a", "you", "miss"]], effects: [aura(3, 1), { kind: "smoke", at: { x: 3, y: 1 }, fresh: false }] },
-  ], 3),
-  // The tank in front (B) is always hit; D, to the side, is hit by its 1-in-3 roll, and C's roll misses.
-  splash: scene("standard", 5, 3, [
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 2, y: 0, dir: "S" }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE" } } },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 2, y: 0, dir: "S" }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE" } }, effects: [charge(2, 1)] },
     {
-      tanks: { you: { x: 2, y: 1, dir: "N", score: 2, water: 0 }, a: { x: 2, y: 0, dir: "S", score: -1 }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE", score: -1 } },
-      effects: [aura(2, 1), { kind: "splash", at: { x: 2, y: 1 }, front: { x: 2, y: 0 }, hits: [{ x: 1, y: 2 }], misses: [{ x: 3, y: 1 }] }],
+      tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 14 } }, a: { x: 0, y: 1, dir: "E", water: 6 } },
+      shots: [["a", "you", "miss"]],
+      fire: { botId: "you", kind: "smoke", at: { x: 3, y: 1 } },
     },
-    { tanks: { you: { x: 2, y: 1, dir: "N", score: 2, water: 1 }, a: { x: 2, y: 0, dir: "S", score: -1 }, b: { x: 3, y: 1, dir: "W" }, c: { x: 1, y: 2, dir: "NE", score: -1 } } },
-  ], 2),
+    { tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 13 } }, a: { x: 0, y: 1, dir: "E", water: 3 } }, shots: [["a", "you", "miss"]] },
+    { tanks: { you: { x: 3, y: 1, dir: "W", score: -1, active: { kind: "smoke", turnsLeft: 12 } }, a: { x: 0, y: 1, dir: "E", score: 1, water: 0 } }, shots: [["a", "you", "hit"]] },
+  ], 1, "smoke"),
+  splash: scene("standard", 3, 3, [
+    { tanks: { you: { x: 1, y: 1, dir: "N" }, ...RING_TANKS } },
+    {
+      tanks: { you: { x: 1, y: 1, dir: "N", score: 8, water: 6 }, ...RING_AFTER },
+      fire: { botId: "you", kind: "splash", at: { x: 1, y: 1 }, squares: RING_HITS },
+    },
+    { tanks: { you: { x: 1, y: 1, dir: "N", score: 8, water: 7 }, ...RING_AFTER } },
+  ], 1, "splash"),
   fullTank: scene("standard", 5, 3, [
     { tanks: { you: { x: 0, y: 1, dir: "E", water: 1 }, a: { x: 2, y: 1, dir: "W" } } },
-    { tanks: { you: { x: 0, y: 1, dir: "E", water: 2 }, a: { x: 2, y: 1, dir: "W" } }, effects: [charge(0, 1)] },
-    { tanks: { you: { x: 0, y: 1, dir: "E", water: 9 }, a: { x: 2, y: 1, dir: "W" } }, effects: [aura(0, 1), { kind: "fullTank", at: { x: 0, y: 1 } }] },
-    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]], effects: [aura(0, 1), { kind: "freeShot", at: { x: 0, y: 1 } }] },
-    { tanks: { you: { x: 0, y: 1, dir: "E", score: 2, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -2 } }, shots: [["you", "a", "hit"]], effects: [aura(0, 1), { kind: "freeShot", at: { x: 0, y: 1 } }] },
-    { tanks: { you: { x: 0, y: 1, dir: "E", score: 3, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -3 } }, shots: [["you", "a", "hit"]], effects: [aura(0, 1), { kind: "freeShot", at: { x: 0, y: 1 } }] },
-  ], 2),
-  // The ball lands on the first tank in line, and its mud sticks every tank within 1 square of it.
+    {
+      tanks: { you: { x: 0, y: 1, dir: "E", water: 9, active: { kind: "fullTank", freeShots: 3 } }, a: { x: 2, y: 1, dir: "W" } },
+      fire: { botId: "you", kind: "fullTank", at: { x: 0, y: 1 } },
+    },
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]] },
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 2, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -2 } }, shots: [["you", "a", "hit"]] },
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 3, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -3 } }, shots: [["you", "a", "hit"]] },
+  ], 1, "fullTank"),
   mudBomb: scene("standard", 5, 3, [
-    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" }, b: { x: 4, y: 0, dir: "SW" }, c: { x: 4, y: 2, dir: "NW" } } },
-    { tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" }, b: { x: 4, y: 0, dir: "SW" }, c: { x: 4, y: 2, dir: "NW" } }, effects: [charge(0, 1)] },
-    {
-      tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W" }, b: { x: 4, y: 0, dir: "SW" }, c: { x: 4, y: 2, dir: "NW" } },
-      effects: [aura(0, 1), { kind: "mudBomb", from: { x: 0, y: 1 }, to: { x: 3, y: 1 }, reach: 1 }],
-    },
-    {
-      tanks: { you: { x: 0, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W", effect: STUCK }, b: { x: 4, y: 0, dir: "SW", effect: STUCK }, c: { x: 4, y: 2, dir: "NW", effect: STUCK } },
-      effects: [{ kind: "mudPatch", at: { x: 3, y: 1 }, reach: 1 }],
-    },
-    {
-      tanks: { you: { x: 1, y: 1, dir: "E" }, a: { x: 3, y: 1, dir: "W", effect: STUCK }, b: { x: 4, y: 0, dir: "SW", effect: STUCK }, c: { x: 4, y: 2, dir: "NW", effect: STUCK } },
-      effects: [{ kind: "mudPatch", at: { x: 3, y: 1 }, reach: 1 }],
-    },
-  ], 2),
-  // The pinwheel's dizzy for every tank within 2 squares: each spins round to face away, then checks its rules from the bottom up.
+    { tanks: MUD_TANKS },
+    { tanks: mudAfter(5), fire: { botId: "you", kind: "mudBomb", at: { x: 0, y: 1 }, center: MUD_TARGET, area: squareArea(MUD_TARGET, 1, 5, 3), affected: ["a", "b", "c"], points: 3 } },
+    { tanks: mudAfter(4) },
+    { tanks: mudAfter(3) },
+  ], 1, "mudBomb"),
   whirlwind: scene("standard", 5, 3, [
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E" }, b: { x: 4, y: 1, dir: "W" }, c: { x: 2, y: 2, dir: "N" } } },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E" }, b: { x: 4, y: 1, dir: "W" }, c: { x: 2, y: 2, dir: "N" } }, effects: [charge(2, 1)] },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "E" }, b: { x: 4, y: 1, dir: "W" }, c: { x: 2, y: 2, dir: "N" } }, effects: [aura(2, 1), { kind: "whirlwind", at: { x: 2, y: 1 }, reach: 2 }] },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "S", effect: WHIRL }, b: { x: 4, y: 1, dir: "N", effect: WHIRL }, c: { x: 2, y: 2, dir: "W", effect: WHIRL } } },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "W", effect: WHIRL }, b: { x: 4, y: 1, dir: "E", effect: WHIRL }, c: { x: 2, y: 2, dir: "S", effect: WHIRL } } },
-    { tanks: { you: { x: 2, y: 1, dir: "N" }, a: { x: 0, y: 0, dir: "W", effect: WHIRL }, b: { x: 4, y: 1, dir: "E", effect: WHIRL }, c: { x: 2, y: 2, dir: "S", effect: WHIRL } } },
-  ], 2),
-  // The dome stops the next 4 shots from the front, however long that takes: B's two shots are blocked (4 left,
-  // then 3, then 2), while C's shot from behind still hits.
+    { tanks: WIND_START },
+    {
+      tanks: windAfter(0, "E", "W", "N"),
+      fire: { botId: "you", kind: "whirlwind", at: { x: 2, y: 1 }, area: squareArea({ x: 2, y: 1 }, 2, 5, 3), affected: ["a", "b", "c"], points: 1 },
+    },
+    { tanks: windAfter(1, "S", "N", "E") },
+    { tanks: windAfter(2, "W", "E", "S") },
+    { tanks: windAfter(3, "W", "E", "S") },
+  ], 1, "whirlwind"),
+  // A shot from the tank's side uses a block. The shot from behind still lands.
   bigUmbrella: scene("standard", 5, 3, [
-    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } } },
-    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [charge(2, 1)] },
-    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 4, y: 1, dir: "W" } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: true, shooters: [], left: 4 }] },
+    { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 2, y: 0, dir: "S" }, b: { x: 4, y: 1, dir: "W" } } },
     {
-      tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 6 }, b: { x: 4, y: 1, dir: "W", water: 6, score: 1 } },
+      tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: 3 } }, a: { x: 2, y: 0, dir: "S", water: 6 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 6 } },
       shots: [["a", "you", "blocked"], ["b", "you", "hit"]],
-      effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [{ x: 0, y: 1 }], left: 3 }],
+      fire: { botId: "you", kind: "bigUmbrella", at: { x: 2, y: 1 } },
     },
-    {
-      tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 3 }, b: { x: 4, y: 1, dir: "W", water: 7, score: 1 } },
-      shots: [["a", "you", "blocked"]],
-      effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [{ x: 0, y: 1 }], left: 2 }],
-    },
-    { tanks: { you: { x: 2, y: 1, dir: "W", score: -1 }, a: { x: 0, y: 1, dir: "E", water: 4 }, b: { x: 4, y: 1, dir: "W", water: 8, score: 1 } }, effects: [aura(2, 1), { kind: "bigUmbrella", at: { x: 2, y: 1 }, facing: "W", fresh: false, shooters: [], left: 2 }] },
-  ], 3),
-  // Four items lie within reach; the nearest three come, and the mud ball, one square farther, stays.
+    { tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: 3 } }, a: { x: 2, y: 0, dir: "S", water: 7 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 7 } } },
+  ], 1, "bigUmbrella"),
   magnet: scene("standard", 7, 3, [
-    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "bucket", x: 1, y: 0 }, { kind: "pinwheel", x: 5, y: 2 }, { kind: "umbrella", x: 5, y: 0 }, { kind: "mudBall", x: 0, y: 2 }] },
-    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "bucket", x: 1, y: 0 }, { kind: "pinwheel", x: 5, y: 2 }, { kind: "umbrella", x: 5, y: 0 }, { kind: "mudBall", x: 0, y: 2 }], effects: [charge(3, 1)] },
+    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [...MAGNET_ITEMS.map(({ kind, from }) => ({ kind, ...from })), LEFT_ITEM] },
     {
-      tanks: { you: { x: 3, y: 1, dir: "N" } },
-      items: [{ kind: "mudBall", x: 0, y: 2 }],
-      effects: [aura(3, 1), { kind: "magnet", at: { x: 3, y: 1 }, items: [{ kind: "bucket", from: { x: 1, y: 0 } }, { kind: "umbrella", from: { x: 5, y: 0 } }, { kind: "pinwheel", from: { x: 5, y: 2 } }] }],
+      tanks: { you: MAGNET_HAND }, items: [LEFT_ITEM],
+      fire: { botId: "you", kind: "magnet", at: { x: 3, y: 1 }, items: MAGNET_ITEMS },
     },
-    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "mudBall", x: 0, y: 2 }], effects: [{ kind: "stack", at: { x: 3, y: 1 }, items: ["bucket", "umbrella", "pinwheel"], fresh: true }] },
-    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [{ kind: "mudBall", x: 0, y: 2 }], effects: [{ kind: "stack", at: { x: 3, y: 1 }, items: ["bucket", "umbrella", "pinwheel"], fresh: false }] },
-  ], 3),
+    { tanks: { you: MAGNET_HAND }, items: [LEFT_ITEM] },
+  ], 1, "magnet"),
 };
 
-/** The ids every scene uses, for its names and looks. */
-export function sceneNames(): Readonly<Record<BotId, string>> {
-  return { you: "A", a: "B", b: "C", c: "D" };
+export function sceneNames(): Readonly<Record<SceneTankId, string>> {
+  return { you: "A", a: "B", b: "C", c: "D", d: "E", e: "F", f: "G", g: "H", h: "I" };
 }

@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { PublicSnapshot } from "@game/arena";
-import type { BotId, ThrowEvent } from "@game/engine";
+import type { BotId, ThrowEvent, UltimateFire } from "@game/engine";
 import type { TankLook } from "../tank/look.ts";
 import type { CameraWindow } from "./camera.ts";
 
@@ -18,6 +18,8 @@ export interface ArenaBoardProps {
   readonly snapshot: PublicSnapshot;
   /** The shots of the turn that produced this snapshot. Empty for the start state. */
   readonly throws: readonly ThrowEvent[];
+  /** The ultimate fires of the same turn. Older rounds send none. */
+  readonly fires?: readonly UltimateFire[];
   readonly names: Readonly<Record<BotId, string>>;
   /** The viewer's own tank, drawn so it stands out, or null for a spectator. */
   readonly highlightId: BotId | null;
@@ -46,9 +48,9 @@ export interface ArenaBoardProps {
   readonly trailIds?: ReadonlySet<BotId>;
   /** A tap on the drawing of a tank (not the square it glides to), after its name tag shows: the monthly board's zoomed view follows that tank (monthly/MonthlyBoard.tsx). */
   readonly onTankTap?: (id: BotId) => void;
-  /** Drawn on the ground under the tanks, in board units (CELL per square): the catalogue's ultimate glow (catalogue/UltimateEffect.tsx). */
+  /** Drawn on the ground under the tanks, in board units (CELL per square): extra scene art. */
   readonly underlay?: ReactNode;
-  /** Drawn over the tanks and under the gauges, in board units: the catalogue's ultimate effects. */
+  /** Drawn over the tanks and under the gauges, in board units: extra scene art. */
   readonly overlay?: ReactNode;
 }
 

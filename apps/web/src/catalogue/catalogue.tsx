@@ -4,7 +4,7 @@
 // - Play styles: the workshop's order (PICKER_ORDER) and texts (vocabulary playStyles).
 // - Items: the board legend's texts (board/messages.ts legend), and the item drawings.
 // - Arena conditions: every rule set (RULE_SET_IDS) with its name and note (vocabulary roundRules).
-// - Ultimates: not in the game yet, so "Coming soon"; each names the play style it is the default of.
+// - Ultimates: each names its starting play style, with a tag and note before release (85-ultimates.md).
 
 import type { ReactNode } from "react";
 import { ITEM_KINDS, PICKER_ORDER, PRESETS, RULE_SET_IDS, ULTIMATE_IDS, type ItemKind, type PresetId, type RuleSetId, type UltimateId } from "@game/engine";
@@ -118,7 +118,7 @@ function GroundIcon({ ruleSetId }: { readonly ruleSetId: RuleSetId }) {
   );
 }
 
-export function catalogueEntries(m: ReturnType<typeof useMessages>, section: CatalogueSection): readonly CatalogueEntry[] {
+export function catalogueEntries(m: ReturnType<typeof useMessages>, section: CatalogueSection, released: boolean): readonly CatalogueEntry[] {
   const v = m.vocabulary;
   const legend = m.board.legend;
   switch (section) {
@@ -161,8 +161,8 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
         key: id,
         name: m.catalogue.ultimates[id].name,
         body: m.catalogue.ultimates[id].body,
-        extra: `${m.catalogue.defaultFor(v.playStyles[ULTIMATE_DEFAULT_STYLE[id]].name)} ${m.catalogue.ultimatesNote}`,
-        soon: true,
+        extra: `${m.catalogue.defaultFor(v.playStyles[ULTIMATE_DEFAULT_STYLE[id]].name)}${released ? "" : ` ${m.catalogue.ultimatesNote}`}`,
+        soon: !released,
         icon: <span className="flex size-9 items-center justify-center rounded-[0.5rem] bg-guide-soft text-guide-ink">{ULTIMATE_ICONS[id]}</span>,
         preview: { kind: "board", scene: ULTIMATE_SCENES[id] },
       }));

@@ -2,6 +2,9 @@
 // running round on a phone and on the big screen, the viewer's own status, and the
 // feed of what the viewer's tank did. `en` is the source; `id` has the same shape.
 
+import type { UltimateId } from "@game/engine";
+import { en as catalogueEn, id as catalogueId } from "../catalogue/messages.ts";
+
 export const en = {
   heading: (round: number, isFinal: boolean) => (isFinal ? "Final" : `Round ${round}`),
   /** A game of only one round (live/roundHeading.ts, roundKind). */
@@ -65,6 +68,7 @@ export const en = {
     blocked: "An umbrella stopped my shot.",
     bucketHit: "My bucket shot hit, worth 2 points.",
     dizzy: "I was dizzy, so I checked my rules from the bottom up.",
+    ultimate: (id: UltimateId) => `I used ${catalogueEn.ultimates[id].name}.`,
     spin: "A pinwheel spun me round, so I checked no rule this turn.",
   },
 };
@@ -121,6 +125,7 @@ export const id: typeof en = {
     blocked: "Tembakanku ditahan payung.",
     bucketHit: "Tembakan emberku kena dan bernilai 2 poin.",
     dizzy: "Aku sedang pusing, jadi aturanku kubaca dari bawah.",
+    ultimate: (id) => `Aku memakai jurus ${catalogueId.ultimates[id].name}.`,
     spin: "Kincir membuatku berputar, jadi giliran ini aku tidak membaca aturan.",
   },
 };

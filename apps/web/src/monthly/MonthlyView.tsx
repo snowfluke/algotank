@@ -22,6 +22,7 @@ import { ActivityList } from "./ActivityList.tsx";
 import { TankSheet, type SheetSource, type SheetTank } from "./TankSheet.tsx";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
+import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import type { TankInfo } from "../board/props.ts";
 import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
 import { SCREEN_SCALE_STYLE } from "../screen/screenScale.ts";
@@ -218,6 +219,7 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row, ranking }
       <MonthlyBoard
         snapshot={board.snapshot}
         throws={board.throws}
+        fires={board.fires}
         names={names}
         highlightId={ownSeatId}
         tickMs={live.tickMs}
@@ -506,7 +508,7 @@ function PresenterLayout(props: MonthlyViewProps) {
         )}
         <MonthlyAbout />
         {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
-        <LegendButton />
+        <LegendButton ultimates={hasUltimates(board?.live.board ?? null) || hasUltimates(board?.snapshot ?? null)} />
       </div>
       <div className="flex min-w-0 shrink-0 flex-col gap-2 empty:hidden">
         {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
@@ -647,7 +649,7 @@ function PhoneLayout(props: MonthlyViewProps) {
         </div>
         <MonthlyAbout />
         {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
-        <LegendButton />
+        <LegendButton ultimates={hasUltimates(board?.live.board ?? null) || hasUltimates(board?.snapshot ?? null)} />
       </div>
       {/* One full-width line of time left and condition (owner, 2026-11-16: four lines were too many). It does not wrap,
           so a longer condition name at a reshuffle is cut short instead of moving the page. */}

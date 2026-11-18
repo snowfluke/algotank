@@ -44,6 +44,13 @@ const say = (d: Decision, throwEvent: ThrowEvent | null = null, tick = 11) =>
   describeDecision({ tick, decision: d, throwEvent }, strategy, vocabularyEn, liveEn.feed);
 
 describe("describeDecision", () => {
+  test("a fire is a single line in the tank's voice, named in its language", () => {
+    const fired: Decision = { ...decision({ actionId: "ultimate", ruleId: null }), move: "W", ultimate: "mudBomb" };
+    const entry = { tick: 7, decision: fired, throwEvent: null };
+    expect(describeDecision(entry, strategy, vocabularyEn, liveEn.feed)).toEqual({ turn: 8, text: "I used Mud bomb." });
+    expect(describeDecision(entry, strategy, vocabularyId, liveId.feed)).toEqual({ turn: 8, text: "Aku memakai jurus Bom lumpur." });
+  });
+
   test("a fallback says no rule fits, with the action's words and the 1-based turn", () => {
     const line = say(decision({ ruleId: null, actionId: "moveAway", move: "F" }));
     expect(line.turn).toBe(12);

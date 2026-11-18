@@ -41,6 +41,7 @@ import type { PlayerId, PublicArena, PublicPlayer } from "@game/arena";
 import type { StrategyInput } from "@game/engine";
 import { ArenaView } from "../board/ArenaView.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
+import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { DecisionFeed } from "../player/DecisionFeed.tsx";
 import { RankingAfterRound, ResultSummary } from "../player/ResultViews.tsx";
@@ -128,11 +129,12 @@ export function ArenaPane({ arena, stream, viewerId, onShowAround }: ArenaPanePr
         <div data-coach="own-status" className="min-w-0 flex-1">
           {own === null ? null : <OwnStatusRow own={own} beforeFirstTurn={snapshot.tick === 0} />}
         </div>
-        <LegendButton {...(onShowAround === undefined ? {} : { onShowAround })} />
+        <LegendButton ultimates={hasUltimates(stream.roundSpawn ?? snapshot)} {...(onShowAround === undefined ? {} : { onShowAround })} />
       </div>
       <ArenaView
         snapshot={snapshot}
         throws={stream.throws}
+        fires={stream.fires}
         names={names}
         highlightId={viewerId}
         tickMs={arena.settings.tickMs}

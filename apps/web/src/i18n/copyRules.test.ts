@@ -13,6 +13,7 @@
 // A message function is called with sample values, so its sentences are checked too.
 
 import { describe, expect, test } from "bun:test";
+import { ULTIMATE_IDS } from "@game/engine";
 import { CATALOGS } from "./catalog.ts";
 import { LANGUAGES, type Language } from "./language.ts";
 
@@ -34,6 +35,7 @@ const SPECIAL_ARGS: Readonly<Record<string, readonly (readonly unknown[])[]>> = 
     [["my water is at least 3", "the nearest tank is at most 2 squares away"], "all", "shoot"],
     [["my water is at least 3", "the nearest tank is at most 2 squares away"], "any", "shoot"],
   ],
+  "live.feed.ultimate": ULTIMATE_IDS.map((id) => [id]),
   // The second value is a whole rule sentence.
   "practice.rule": [[2, "When my water is at least 3, shoot."]],
   "vocabulary.rule.moreConditions": [

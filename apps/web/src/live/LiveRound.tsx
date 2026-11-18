@@ -7,10 +7,11 @@
 
 import { useMemo, type ReactNode } from "react";
 import type { PublicArena, PublicSnapshot } from "@game/arena";
-import type { RuleSetId, ThrowEvent } from "@game/engine";
+import type { RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
 import { ArenaView } from "../board/ArenaView.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
+import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { LiveRanking } from "../standings/StandingsTable.tsx";
 import { liveRanking, playerNames, tankInfos } from "../standings/standings.ts";
@@ -33,6 +34,8 @@ interface LiveRoundProps {
   /** Null until the first snapshot of this round arrives. */
   readonly snapshot: PublicSnapshot | null;
   readonly throws: readonly ThrowEvent[];
+  readonly fires?: readonly UltimateFire[];
+  readonly roundSpawn?: PublicSnapshot | null;
   /** "screen" on a projector (fixed height), "narrow" in a window that scrolls. */
   readonly layout: "screen" | "narrow";
   /** When the first turn plays, from the stream state's `firstTurnAt`. Without it no countdown shows. */
@@ -42,7 +45,7 @@ interface LiveRoundProps {
 /** The board's wall adds 0.3 of a square on each side. */
 const WALL_SQUARES = 0.6;
 
-export function LiveRound({ arena, phase, snapshot, throws, layout, firstTurnAt = null }: LiveRoundProps) {
+export function LiveRound({ arena, phase, snapshot, throws, fires = [], roundSpawn, layout, firstTurnAt = null }: LiveRoundProps) {
   const m = useMessages();
   const isScreen = layout === "screen";
   const { tickMs } = arena.settings;
@@ -81,7 +84,7 @@ export function LiveRound({ arena, phase, snapshot, throws, layout, firstTurnAt 
 
   const ranking = liveRanking(arena, snapshot);
   const ratio = (snapshot.width + WALL_SQUARES) / (snapshot.height + WALL_SQUARES);
-  const boardProps = { snapshot, throws, names, highlightId: null, tickMs, tanks, countdown: counting ? countdown : null } as const;
+  const boardProps = { snapshot, throws, fires, names, highlightId: null, tickMs, tanks, countdown: counting ? countdown : null } as const;
   // Before the first turn every tank ties at 0, so the tie note would only add noise.
   const rankingNote = phase.isFinal ? m.results.table.finalRule : ranking.tieAtCut && snapshot.tick > 0 ? m.results.table.tieAtCut : null;
 
@@ -100,7 +103,7 @@ export function LiveRound({ arena, phase, snapshot, throws, layout, firstTurnAt 
     <div className="flex min-w-0 flex-col gap-5">
       {header}
       <div className="flex min-w-0 justify-end">
-        <LegendButton />
+        <LegendButton ultimates={hasUltimates(roundSpawn ?? snapshot)} />
       </div>
       <div className="flex min-w-0 flex-col gap-2">
         <ArenaView {...boardProps} />

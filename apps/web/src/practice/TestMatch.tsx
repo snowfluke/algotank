@@ -12,6 +12,7 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { statsView, type BotId } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
+import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import { boardAspect, FittedBoard } from "../board/FittedBoard.tsx";
 import type { TankInfo } from "../board/props.ts";
 import { Scoreboard } from "../board/Scoreboard.tsx";
@@ -125,6 +126,7 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
           <ArenaBoard
             snapshot={snapshot}
             throws={tick?.throws ?? []}
+            fires={tick?.fires ?? []}
             names={run.names}
             highlightId={PLAYER_ID}
             tickMs={tickMs}
@@ -154,7 +156,7 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
           onSpeed={setSpeedId}
           extra={
             <>
-              <LegendButton />
+              <LegendButton ultimates={hasUltimates(run.spawn)} />
               <Button data-test-show-result="" onClick={() => setPage("result")}>
                 {p.showResult}
               </Button>

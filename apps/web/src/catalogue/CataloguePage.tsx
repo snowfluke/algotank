@@ -1,6 +1,5 @@
 // "/catalogue": everything a tank meets in the arena, for a child who wants to look things up
-// (owner, 2026-11-17): the play styles, the items, the arena conditions, and the ultimates the
-// game will have ("Coming soon"). A switch picks the collection; a list of picture buttons picks
+// (owner, 2026-11-17): the play styles, the items, the arena conditions, and the ultimates. A switch picks the collection; a list of picture buttons picks
 // one card; the stage shows its name, its sentence and a scene that acts it out:
 // - a play style: the workshop's own scene (prep/PlayStyleScene.tsx), so it looks the same there;
 // - an item, a condition or an ultimate: a few turns on the game's board (ScenePlayer.tsx).
@@ -8,6 +7,7 @@
 // differently. On a laptop the stage stands beside the list; on a phone the list is a grid of
 // small buttons above the stage. Nothing scrolls: the page fits its box like the other pages.
 
+import { ultimatesOn } from "@game/arena";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { goBack } from "../app/navigation.ts";
@@ -44,10 +44,12 @@ export function CataloguePage() {
 export function CatalogueView({
   initialSection,
   initialEntry,
+  nowMs = Date.now(),
   onPlace,
 }: {
   readonly initialSection: CatalogueSection;
   readonly initialEntry?: string;
+  readonly nowMs?: number;
   /** Told the collection and card on show, after each change. */
   onPlace?: (place: { readonly section: CatalogueSection; readonly card: string }) => void;
 }) {
@@ -55,7 +57,7 @@ export function CatalogueView({
   const t = m.catalogue;
   const laptop = useLaptopLayout();
   const [section, setSection] = useState<CatalogueSection>(initialSection);
-  const entries = catalogueEntries(m, section);
+  const entries = catalogueEntries(m, section, ultimatesOn(nowMs));
   const [chosen, setChosen] = useState<Readonly<Partial<Record<CatalogueSection, string>>>>(initialEntry === undefined ? {} : { [initialSection]: initialEntry });
   const entry = entries.find((e) => e.key === chosen[section]) ?? entries[0];
   const sectionName = t.sections[section];
@@ -127,7 +129,7 @@ function Stage({ entry, entries }: { readonly entry: CatalogueEntry; readonly en
                 ) : null}
               </div>
               <p className="max-w-[60ch] [overflow-wrap:anywhere]">{each.body}</p>
-              {/* The quieter line gives way on a short screen, so the scene keeps its room; the tag still says "Coming soon". */}
+              {/* The quieter line gives way on a short screen, so the scene keeps its room; the pre-release tag still shows. */}
               {each.extra === null ? null : <p className="max-w-[60ch] text-caption text-muted [overflow-wrap:anywhere] [@media(max-height:700px)]:hidden">{each.extra}</p>}
             </div>
           );

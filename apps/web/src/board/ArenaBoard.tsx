@@ -54,6 +54,9 @@ import type { ArenaBoardProps } from "./props.ts";
 import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
 import { botAtPoint, nameTagSpot, useTankPeek, type BoardView } from "./tankPeek.ts";
 import { useCellPixels } from "./useCellPixels.ts";
+import { UltimateBadges, UltimateFireDrawing, TankUltimateFloor } from "./ultimates/UltimateEffect.tsx";
+import { fireInWindow } from "./ultimates/boardUltimates.ts";
+import { ULTIMATE_MOTION_CSS } from "./ultimates/ultimateMotion.ts";
 import { WaterGauge } from "./WaterGauge.tsx";
 
 /**
@@ -177,7 +180,7 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
  * Memoised: a parent that renders for another reason (the ranking's poll, a notice) leaves the board alone. A turn gives
  * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
  */
-export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap, underlay, overlay }: ArenaBoardProps) {
+export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap, underlay, overlay }: ArenaBoardProps) {
   // The zoomed view's other tanks, a little dimmer than the followed tank and the viewer's own (props.ts, focusId).
   const dimmed = (id: BotId) => focusId !== null && id !== focusId && id !== highlightId;
   const m = useMessages();
@@ -217,14 +220,35 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
   const shots: { id: BotId; shape: ShotShape }[] = [];
   const hitTargets = new Set<BotId>();
   const shooters = new Set<BotId>();
+  const scores = new Map<BotId, { points: number; ultimate: boolean }>();
+  const firesById = new Map(fires?.map((fire) => [fire.botId, fire]));
+  // A turn can end the round and clear every tank's state while still carrying its fires.
+  const ultimateArt = !hidden && (firesById.size > 0 || drawn.some((bot) => bot.ultimate !== undefined || bot.itemsWaiting !== undefined));
+  const drawnFires = hidden ? [] : fires?.filter((fire) =>
+    drawnIds === null || drawnIds.has(fire.botId) || (camera !== null && fireInWindow(fire, camera, drawnIds))) ?? [];
+  const tankMotion = (id: BotId) => firesById.get(id)?.kind === "dash" ? "ab-move ue-dash-move" : "ab-move";
   for (const event of throws) {
     // An unknown shooter cannot happen in a snapshot from the engine; skipping keeps the screen alive.
     const shooter = botsById.get(event.throwerId);
     if (shooter === undefined || hidden || (drawnIds !== null && !drawnIds.has(shooter.id))) continue;
     if (crowd && shooter.id !== highlightId && (event.outcome === "dry" || event.outcome === "empty")) continue;
-    shots.push({ id: event.throwerId, shape: shotShape(shooter, event, snapshot) });
+    // Dash puts its ram in the throws list for scoring. Its own drawing uses the path and plays after the drive.
+    if (firesById.get(shooter.id)?.kind !== "dash") {
+      shots.push({ id: event.throwerId, shape: shotShape(shooter, event, snapshot) });
+      if (event.outcome !== "dry") shooters.add(event.throwerId);
+      if (event.outcome === "hit" && !scores.has(event.throwerId)) {
+        scores.set(event.throwerId, { points: event.bucket === true ? 2 : 1, ultimate: false });
+      }
+    }
     if (event.outcome === "hit") hitTargets.add(event.targetId);
-    if (event.outcome !== "dry") shooters.add(event.throwerId);
+  }
+  for (const fire of drawnFires) {
+    if ("points" in fire && fire.points > 0) scores.set(fire.botId, { points: fire.points, ultimate: true });
+    if (fire.kind === "splash") {
+      for (const square of fire.squares) {
+        if (square.outcome === "hit") hitTargets.add(square.targetId);
+      }
+    }
   }
 
   const ownBot = highlightId === null ? undefined : botsById.get(highlightId);
@@ -267,7 +291,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
         aria-label={label}
         viewBox={camera === null ? `${-WALL} ${-WALL} ${width * CELL + 2 * WALL} ${height * CELL + 2 * WALL}` : `0 0 ${camera.width * CELL} ${camera.height * CELL}`}
         className={`block h-full w-full min-w-0 ${paused ? "" : "ab-live"}`}
-        style={{ "--tick-ms": `${tickMs}ms`, "--fx-ms": `${fxMs}ms` } as CSSProperties}
+        style={{ "--tick-ms": `${tickMs}ms`, "--fx-ms": `${fxMs}ms`, ...(ultimateArt ? { "--step": `${tickMs}ms` } : {}) } as CSSProperties}
         // A mouse shows the name of the tank it is over at once (the browser's own tooltip comes late). A click,
         // a tap or a pen shows it too, and one on the floor hides it.
         onPointerMove={(event) => {
@@ -285,15 +309,24 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
         }}
       >
         <style>{ARENA_MOTION_CSS}</style>
+        {ultimateArt ? <style>{ULTIMATE_MOTION_CSS}</style> : null}
         {/* The window glides with the same transition as the tanks, so the followed tank stays still in the middle.
             Keyed by the view, so a switch between the window and the whole arena does not glide. */}
         <g
           key={camera === null ? "whole" : "window"}
-          className={camera === null ? undefined : "ab-move"}
+          className={camera === null ? undefined : tankMotion(focusId ?? highlightId ?? leader ?? "")}
           style={camera === null ? undefined : { transform: `translate(${-camera.x * CELL}px, ${-camera.y * CELL}px)` }}
         >
         <Floor width={width} height={height} ruleSetId={snapshot.ruleSetId} />
         {underlay}
+        {ultimateArt ? (
+          <g aria-hidden="true" pointerEvents="none">
+            <g key={tick}>
+              {drawnFires.map((fire) => <UltimateFireDrawing key={fire.botId} fire={fire} bots={botsById} board={snapshot} layer="floor" />)}
+            </g>
+            {drawOrder.map((bot) => <TankUltimateFloor key={bot.id} bot={bot} motion={tankMotion(bot.id)} fire={firesById.get(bot.id)} />)}
+          </g>
+        ) : null}
         {crowd ? (
           <defs>
             {crowdSymbols.map((paint) => (
@@ -362,6 +395,8 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
 
         {drawOrder.map((bot) => {
           const isSelf = bot.id === highlightId;
+          const fire = firesById.get(bot.id);
+          const pulled = fire?.kind === "magnet" ? fire.items.length : 0;
           const angle = angles.get(bot.id) ?? directionDegrees(bot.direction);
           const centre = cellCenter(bot.x, bot.y);
           const look = looks.get(bot.id) ?? FALLBACK_LOOK;
@@ -372,12 +407,13 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           const stuck = bot.effect?.kind === "stuck";
           if (crowd && !isSelf) {
             // The same transform as the nested groups below in one list, so one transition moves and turns the tank.
-            return (
+            const badges = bot.ultimateEffect?.kind === "bigUmbrella" || bot.itemsWaiting !== undefined;
+            return [
               <g
                 // Its own key: the full drawing below keeps the turn on an inner group, and the browser glided between
                 // the two transforms, turning a tank's day of turns (rotate(3600deg)) back to 0 in one glide (2026-11-17).
                 key={`crowd-${bot.id}`}
-                className="ab-move"
+                className={tankMotion(bot.id)}
                 data-bot-id={bot.id}
                 opacity={dimmed(bot.id) ? DIM_OPACITY : undefined}
                 style={{ transform: `translate(${centre.x}px, ${centre.y - TANK_LIFT}px) scale(${TANK_SCALE}) rotate(${angle}deg)` }}
@@ -385,13 +421,18 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
                 <g key={reaction === undefined ? "rest" : `react-${tick}`} className={reaction}>
                   <use href={`#${symbolBase}-tank-${paintKey(look)}`} />
                 </g>
-              </g>
-            );
+              </g>,
+              badges ? (
+                <g key={`badges-${bot.id}`} className={tankMotion(bot.id)} pointerEvents="none" style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
+                  <UltimateBadges bot={bot} pulled={pulled} />
+                </g>
+              ) : null,
+            ];
           }
           return (
             <g
               key={bot.id}
-              className="ab-move"
+              className={tankMotion(bot.id)}
               data-bot-id={bot.id}
               data-self={isSelf ? "true" : undefined}
               opacity={dimmed(bot.id) ? DIM_OPACITY : undefined}
@@ -438,11 +479,12 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
               {bot.item === null ? null : (
                 // Keyed by the item, so the disc pops in on the turn the tank takes it.
                 <g key={`held-${bot.item}`} transform={`translate(${BADGE_AT.x} ${BADGE_AT.y}) scale(${BADGE_SCALE})`} data-held={bot.item}>
-                  <g className="ab-anim ab-item-in">
+                  <g className={pulled > (bot.itemsWaiting?.length ?? 0) ? "ue-held" : "ab-anim ab-item-in"}>
                     <HeldBadge kind={bot.item} />
                   </g>
                 </g>
               )}
+              {ultimateArt ? <UltimateBadges bot={bot} pulled={pulled} /> : null}
             </g>
           );
         })}
@@ -451,6 +493,11 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           {shots.map(({ id, shape }) => (crowd && id !== highlightId && shape.kind !== "hit" ? null : <ShotMark key={id} shape={shape} />))}
         </g>
 
+        {drawnFires.length === 0 ? null : (
+          <g key={`ultimates-${tick}`} aria-hidden="true" pointerEvents="none">
+            {drawnFires.map((fire) => <UltimateFireDrawing key={fire.botId} fire={fire} bots={botsById} board={snapshot} layer="over" />)}
+          </g>
+        )}
         {overlay}
 
         {/* Gauges and the crown come after every effect, so nothing covers them. On squares too small to read a gauge, only the viewer's tank keeps one. */}
@@ -459,7 +506,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           if (!gauge && bot.id !== leader) return null;
           const centre = cellCenter(bot.x, bot.y);
           return (
-            <g key={bot.id} className="ab-move" opacity={dimmed(bot.id) ? DIM_OPACITY : undefined} style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
+            <g key={bot.id} className={tankMotion(bot.id)} opacity={dimmed(bot.id) ? DIM_OPACITY : undefined} style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
               {gauge ? <WaterGauge water={bot.water} rules={rules} small={!detail.labels} /> : null}
               {bot.id === leader ? (
                 <g transform={`translate(0 ${-CELL / 2 + 0.6})`} data-leader="true">
@@ -472,17 +519,15 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
         })}
 
         <g key={`plus-${tick}`} aria-hidden="true">
-          {[...shooters].flatMap((id) => {
+          {[...scores].flatMap(([id, { points, ultimate }]) => {
             const shooter = botsById.get(id);
-            if (crowd && id !== highlightId) return [];
-            const hit = throws.find((event) => event.throwerId === id && event.outcome === "hit");
-            if (shooter === undefined || hit === undefined) return [];
+            if (shooter === undefined || (drawnIds !== null && !drawnIds.has(id)) || (crowd && id !== highlightId && !ultimate)) return [];
             const at = tankCenter(shooter.x, shooter.y);
             // In the top row the "+1" stays inside the wall instead of leaving the picture.
             return [
               <g key={id} transform={`translate(${at.x + CELL * 0.3} ${Math.max(at.y - CELL * 0.65, plusSize * 0.6 + topEdge)})`}>
                 <text
-                  className="ab-anim ab-plus"
+                  className={ultimate ? "ab-anim ab-plus ue-plus" : "ab-anim ab-plus"}
                   textAnchor="middle"
                   dominantBaseline="central"
                   fontFamily="var(--font-display)"
@@ -492,7 +537,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
                   paintOrder="stroke"
                   style={{ fill: id === highlightId ? "var(--color-self-ink)" : "var(--color-ink)", stroke: "var(--color-panel)" }}
                 >
-                  {hit.outcome === "hit" && hit.bucket === true ? m.board.plusTwo : m.board.plusOne}
+                  {points === 1 ? m.board.plusOne : points === 2 ? m.board.plusTwo : m.board.plusPoints(points)}
                 </text>
               </g>,
             ];
@@ -552,6 +597,8 @@ function ShotMark({ shape }: { shape: ShotShape }) {
         </g>
       );
     case "blocked":
+      // ponytail: compact throws omit which umbrella blocked a shot. Keep the existing impact
+      // mark, including on the last block, and read the persistent dome from the tank state.
       return (
         <g data-mark="blocked" transform={`translate(${shape.umbrella.x} ${shape.umbrella.y}) rotate(${shape.angle}) scale(${UMBRELLA_SCALE})`}>
           <OpenUmbrella motion="ab-anim ab-umbrella" />

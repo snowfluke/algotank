@@ -205,7 +205,7 @@ function useLegendEntries(): readonly LegendEntry[] {
 }
 
 /** The help button beside the board and the legend dialog it opens. `onShowAround` replays the screen's tour from the dialog. */
-export function LegendButton({ onShowAround }: { readonly onShowAround?: () => void }) {
+export function LegendButton({ onShowAround, ultimates = false }: { readonly onShowAround?: () => void; readonly ultimates?: boolean }) {
   const m = useMessages();
   const l = m.board.legend;
   const [open, setOpen] = useState(false);
@@ -223,6 +223,7 @@ export function LegendButton({ onShowAround }: { readonly onShowAround?: () => v
       />
       {open ? (
         <LegendDialog
+          ultimates={ultimates}
           onClose={() => {
             setOpen(false);
             // The dialog is gone after this render, so focus goes back to the button that opened it.
@@ -244,7 +245,7 @@ export function LegendButton({ onShowAround }: { readonly onShowAround?: () => v
 }
 
 /** Exported for its test; screens use LegendButton. */
-export function LegendDialog({ onClose, onShowAround }: { onClose: () => void; readonly onShowAround?: () => void }) {
+export function LegendDialog({ onClose, onShowAround, ultimates = false }: { onClose: () => void; readonly onShowAround?: () => void; readonly ultimates?: boolean }) {
   const m = useMessages();
   const l = m.board.legend;
   const entries = useLegendEntries();
@@ -285,10 +286,11 @@ export function LegendDialog({ onClose, onShowAround }: { onClose: () => void; r
               {m.guide.showAround}
             </Button>
           )}
-          <LinkButton href={paths.catalogue("items")} newTab>
+          <LinkButton href={paths.catalogue(ultimates ? "ultimates" : "items")} newTab>
             {m.catalogue.open}
           </LinkButton>
         </div>
+        {ultimates ? <p data-legend-ultimate="" className="shrink-0 text-caption text-muted">{l.ultimate}</p> : null}
         <Pager
           label={l.summary}
           items={entries}

@@ -1,8 +1,7 @@
 // Interface text for "/catalogue", the catalogue of what a tank meets in the arena. Catalog slot:
 // `catalogue`. The play styles, items and arena conditions keep their names and sentences where
 // the game already says them (vocabulary/messages.ts, board/messages.ts legend), so the catalogue
-// never words a rule differently from the game. Only the ultimates, which the game does not have
-// yet (owner, 2026-11-17: "coming soon"), are worded here.
+// never words a rule differently from the game. The live feed reuses the ultimate names from here.
 
 import type { UltimateId } from "@game/engine";
 
@@ -23,23 +22,23 @@ export const en = {
   short: { playStyles: "Styles", items: "Items", conditions: "Arena", ultimates: "Ultimate" },
   /** The list of one section's cards. */
   listLabel: (section: string) => `${section} to choose from`,
-  /** The tag on every ultimate: the game does not have them yet. */
+  /** The tag shown until ultimates release (85-ultimates.md). */
   soon: "Coming soon",
   ultimatesNote: "Ultimates are not in the game yet, so their scenes show the plan.",
   /** `style` is a play style's name. */
-  defaultFor: (style: string) => `${style} starts with this ultimate, and any play style may pick it.`,
+  defaultFor: (style: string) => `${style} starts with this ultimate. Any play style may pick it.`,
   /** The board scene, for a screen reader: the sentence under it says the same in words. */
   sceneLabel: (name: string) => `A small board shows ${name}.`,
   /** Under reduced motion the scene does not play by itself. */
   nextStep: "Next step",
   ultimates: {
-    dash: { name: "Dash", body: "The tank drives up to 3 squares straight ahead in one turn, and no shot can hit it on that turn." },
-    smoke: { name: "Smoke screen", body: "For 10 turns, a shot at this tank hits only half as often." },
-    splash: { name: "Splash ring", body: "The tank shoots all 8 squares around it, and its water runs out. The square in front is always hit, and each other square 1 time in 3." },
+    dash: { name: "Dash", body: "The tank drives up to 3 squares, then rams the first tank ahead for 2 points. Nothing can touch it that turn." },
+    smoke: { name: "Smoke screen", body: "For 15 turns, shots hit this tank a quarter as often." },
+    splash: { name: "Splash ring", body: "The tank hits every tank in the 8 squares around it with the water of one shot. A tank can still dodge or block the shot." },
     fullTank: { name: "Full tank", body: "The water fills to the top, and the next 3 shots use no water." },
-    mudBomb: { name: "Mud bomb", body: "A mud ball lands on the first tank in line and sticks every tank within 1 square for 5 turns." },
-    whirlwind: { name: "Whirlwind", body: "Every tank within 2 squares spins round for 2 turns, then checks its rules from the bottom up for 2." },
-    bigUmbrella: { name: "Big umbrella", body: "A big umbrella stops the next 4 shots that do not come from behind the tank, however long that takes." },
+    mudBomb: { name: "Mud bomb", body: "Your tank sticks the first tank in line and every other tank within 1 square of it for 5 turns. Each stuck tank gives 1 point." },
+    whirlwind: { name: "Whirlwind", body: "Tanks within 2 squares spin for 2 turns, then check their rules from the bottom up for 2 turns. Each tank within 1 square gives 1 point." },
+    bigUmbrella: { name: "Big umbrella", body: "The umbrella stops the next 4 shots from ahead or from either side." },
     magnet: { name: "Magnet", body: "The 3 nearest items within 4 squares slide to the tank, which keeps them and uses them in order." },
   } satisfies Record<UltimateId, UltimateText>,
   /** The links to this page. */
@@ -62,17 +61,17 @@ export const id: typeof en = {
   listLabel: (section) => `Pilihan ${section.toLowerCase()}`,
   soon: "Segera hadir",
   ultimatesNote: "Jurus pamungkas belum ada di permainan, jadi adegannya menunjukkan rencananya.",
-  defaultFor: (style) => `${style} memakai jurus ini sejak awal, dan gaya main lain juga boleh memilihnya.`,
+  defaultFor: (style) => `${style} memulai dengan jurus ini. Semua gaya main boleh memilihnya.`,
   sceneLabel: (name) => `Papan kecil memperlihatkan ${name}.`,
   nextStep: "Langkah berikutnya",
   ultimates: {
-    dash: { name: "Lari kencang", body: "Tank maju sampai 3 petak lurus dalam satu giliran, dan tidak ada tembakan yang bisa mengenainya di giliran itu." },
-    smoke: { name: "Kabut", body: "Selama 10 giliran, tembakan ke tank ini hanya separuh yang kena." },
-    splash: { name: "Percikan", body: "Tank menembak ke 8 petak di sekelilingnya, lalu airnya habis. Petak di depan selalu kena, dan setiap petak lainnya kena 1 dari 3 kali." },
+    dash: { name: "Lari kencang", body: "Tank melaju hingga 3 petak, lalu menabrak tank pertama di depannya dan mengambil 2 poin. Tank kebal selama giliran itu." },
+    smoke: { name: "Kabut", body: "Selama 15 giliran, peluang tembakan mengenai tank ini tinggal seperempat." },
+    splash: { name: "Percikan", body: "Dengan air untuk satu tembakan, tank mengenai semua tank di 8 petak sekelilingnya. Tank lain masih bisa menghindar atau menahan tembakannya." },
     fullTank: { name: "Tangki penuh", body: "Air terisi penuh, dan 3 tembakan berikutnya tidak memakai air." },
-    mudBomb: { name: "Bom lumpur", body: "Bola lumpur jatuh di tank pertama di garis tembak, dan setiap tank dalam jarak 1 petak darinya terjebak selama 5 giliran." },
-    whirlwind: { name: "Angin puyuh", body: "Setiap tank dalam jarak 2 petak berputar selama 2 giliran, lalu memeriksa aturannya dari bawah selama 2 giliran." },
-    bigUmbrella: { name: "Payung besar", body: "Payung besar menahan 4 tembakan berikutnya yang tidak datang dari belakang tank, berapa lama pun itu." },
+    mudBomb: { name: "Bom lumpur", body: "Bom menjebak tank pertama di garis tembak beserta tank lain dalam jarak 1 petak darinya selama 5 giliran. Tiap tank yang terjebak memberi 1 poin." },
+    whirlwind: { name: "Angin puyuh", body: "Tank dalam jarak 2 petak berputar selama 2 giliran, lalu memeriksa aturan dari bawah ke atas selama 2 giliran. Tiap tank dalam jarak 1 petak memberi 1 poin." },
+    bigUmbrella: { name: "Payung besar", body: "Payung menahan 4 tembakan berikutnya dari depan atau dari samping." },
     magnet: { name: "Magnet", body: "3 item terdekat dalam jarak 4 petak meluncur ke tank, lalu tank menyimpan ketiganya dan memakainya sesuai urutan datangnya." },
   },
   open: "Buka katalog",

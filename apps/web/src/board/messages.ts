@@ -10,6 +10,7 @@ export const en = {
   plusOne: "+1",
   /** A hit from a tank with a bucket (84-items.md). */
   plusTwo: "+2",
+  plusPoints: (points: number) => `+${points}`,
   scoreboard: "Points",
   ownWater: (water: number, max: number) => `Water: ${water} of ${max}`,
   /** The switch of a big arena between a window around one tank and the whole arena (board/camera.ts). */
@@ -24,6 +25,7 @@ export const en = {
     summary: "What the board shows",
     /** The short word on the help button from 480px wide; the button's name is `summary`. */
     button: "Help",
+    ultimate: "Each tank has one ultimate. A gold glow means it is ready.",
     gauge: { term: "Water gauge", body: "The bar under each tank shows its water, and a shot needs water up to the mark." },
     hit: { term: "Hit", body: "The jet splashes a tank, and the shooter takes 1 point from it." },
     miss: { term: "Miss", body: "The jet flies past the tank and lands on the floor." },
@@ -73,6 +75,7 @@ export const id: typeof en = {
   leaderTitle: (name) => `${name} memimpin`,
   plusOne: "+1",
   plusTwo: "+2",
+  plusPoints: (points) => `+${points}`,
   scoreboard: "Poin",
   ownWater: (water, max) => `Air: ${water} dari ${max}`,
   camera: {
@@ -85,6 +88,7 @@ export const id: typeof en = {
   legend: {
     summary: "Arti tanda di arena",
     button: "Bantuan",
+    ultimate: "Tiap tank punya satu jurus pamungkas. Cahaya emas berarti jurusnya siap.",
     gauge: { term: "Takaran air", body: "Batang di bawah tank menunjukkan airnya, dan tank bisa menembak kalau airnya sampai garis." },
     hit: { term: "Kena", body: "Semburan air mengenai tank lain, lalu penembak mengambil 1 poin dari tank itu." },
     miss: { term: "Meleset", body: "Semburan air melewati tank dan jatuh ke lantai." },

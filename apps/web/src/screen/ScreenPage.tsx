@@ -60,6 +60,8 @@ export function ScreenPage({ arenaId }: { arenaId: ArenaId }) {
                 phase={arena.phase}
                 snapshot={snapshotFor(stream, arena.phase.round)}
                 throws={stream.throws}
+                fires={stream.fires}
+                roundSpawn={stream.roundSpawn}
                 layout={wide ? "screen" : "narrow"}
                 firstTurnAt={stream.firstTurnAt}
               />

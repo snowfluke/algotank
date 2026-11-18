@@ -421,6 +421,24 @@ export const STATES = [
   { screen: "big-screen", state: "running-512", owner: "L2", path: (f) => `/a/${f.presenterRunning512.id}/screen`, as: "visitor", fixture: "presenterRunning512", bigScreen: true },
   { screen: "big-screen", state: "break-512", owner: "L2", path: (f) => `/a/${f.presenterBreak512.id}/screen`, as: "visitor", fixture: "presenterBreak512", bigScreen: true },
 
+  // D2: each fire on a paused board, including the static peak the reduced-motion audit sees.
+  ...["dash", "smoke", "splash", "fullTank", "mudBomb", "whirlwind", "bigUmbrella", "magnet"].map((id) => ({
+    screen: "board",
+    state: `ultimate-${id}`,
+    owner: "D2",
+    path: () => `/kit?show=board&ultimate=${id}`,
+    as: "visitor",
+    sizes: SIZES.filter((size) => size.pages === "app" || size.pages === "screen").map((size) => size.name),
+    steps: [{ wait: `[data-ultimate-fire="${id}"]` }],
+  })),
+  {
+    screen: "board",
+    state: "ultimates-legend",
+    owner: "D2",
+    path: () => "/kit?show=board&ultimate=bigUmbrella",
+    as: "visitor",
+    steps: [{ click: "[data-legend-open]" }, { wait: "dialog[open] [data-legend-ultimate]" }],
+  },
   // S2: the watch panes and the test match in a room-like frame on /kit?show=board (board/PaneHarness.tsx),
   // so they are checked at every size before the room frame is rebuilt. Every choice is a URL parameter.
   ...[

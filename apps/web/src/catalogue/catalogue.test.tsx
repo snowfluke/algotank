@@ -1,3 +1,4 @@
+import { ULTIMATES_FROM } from "@game/arena";
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { canThrow, ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, ruleSet, throwRange, waterAfterTick } from "@game/engine";
@@ -9,10 +10,10 @@ import { CatalogueView } from "./CataloguePage.tsx";
 import { ULTIMATE_IDS } from "@game/engine";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
 
-const render = (section: CatalogueSection, language: "en" | "id" = "en", entry?: string) =>
+const render = (section: CatalogueSection, language: "en" | "id" = "en", entry?: string, nowMs = ULTIMATES_FROM - 1) =>
   renderToStaticMarkup(
     <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
-      <CatalogueView initialSection={section} {...(entry === undefined ? {} : { initialEntry: entry })} />
+      <CatalogueView nowMs={nowMs} initialSection={section} {...(entry === undefined ? {} : { initialEntry: entry })} />
     </I18nProvider>,
   );
 
@@ -26,11 +27,20 @@ describe("CatalogueView", () => {
     expect(cards(render("ultimates"))).toEqual([...ULTIMATE_IDS]);
   });
 
-  test("only the ultimates carry the coming-soon tag, in both languages", () => {
+  test("the ultimate tag and note disappear at the release time in both languages", () => {
     for (const section of CATALOGUE_SECTIONS) {
       expect(render(section).includes("data-catalogue-soon")).toBe(section === "ultimates");
     }
-    expect(render("ultimates", "id")).toContain("Segera hadir");
+    for (const language of ["en", "id"] as const) {
+      const soon = render("ultimates", language, "dash");
+      expect(soon).toContain("data-catalogue-soon");
+      expect(soon).toContain(language === "en" ? "not in the game yet" : "belum ada di permainan");
+      expect(soon).toContain(language === "en" ? "Coming soon" : "Segera hadir");
+      const released = render("ultimates", language, "dash", ULTIMATES_FROM);
+      expect(released).not.toContain("data-catalogue-soon");
+      expect(released).not.toContain(language === "en" ? "not in the game yet" : "belum ada di permainan");
+      expect(released).toContain(language === "en" ? "starts with this ultimate" : "memulai dengan jurus ini");
+    }
   });
 
   test("the chosen card's name and the game's own sentence head the stage", () => {
@@ -64,7 +74,7 @@ describe("catalogue scenes", () => {
 });
 
 describe("catalogue scenes follow the arena's rules", () => {
-  // The ultimates are left out: they are a plan that breaks the rules on purpose (a shot that uses no water).
+  // Ultimate turns carry fires and can spend different amounts of water (85-ultimates.md).
   const ruled: [string, Scene][] = [...Object.entries(ITEM_SCENES), ...Object.entries(CONDITION_SCENES)];
 
   test("every shot is in range, and the water after each turn is what the engine leaves", () => {

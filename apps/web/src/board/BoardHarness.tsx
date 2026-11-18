@@ -7,7 +7,7 @@ import { plainTankLook } from "../tank/look.ts";
 import { useEffect, useMemo, useState } from "react";
 import type { PublicSnapshot } from "@game/arena";
 import { isFinalRound, survivorCount } from "@game/arena";
-import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, STANDARD_RULE_SET_ID, runRound } from "@game/engine";
+import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, STANDARD_RULE_SET_ID, isUltimateId, runRound } from "@game/engine";
 import type { BoardItem, BotId, Direction, ItemKind, RuleSetId, TankEffect, ThrowEvent, TickResult } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { Practice } from "../practice/Practice.tsx";
@@ -17,6 +17,7 @@ import { Page } from "../ui/Page.tsx";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { ArenaBoard } from "./ArenaBoard.tsx";
 import { LegendButton } from "./BoardLegend.tsx";
+import { UltimateHarness } from "./ultimates/UltimateHarness.tsx";
 import { PaneHarness } from "./PaneHarness.tsx";
 import { Scoreboard } from "./Scoreboard.tsx";
 
@@ -106,8 +107,11 @@ function pausedTurn(tankName: (n: number) => string): { snapshot: PublicSnapshot
 }
 
 export function BoardHarness() {
+  const params = new URLSearchParams(window.location.search);
+  const ultimate = params.get("ultimate");
+  if (isUltimateId(ultimate)) return <UltimateHarness id={ultimate} />;
   // "&pane=…" shows the watch panes in a room-like frame instead (board/PaneHarness.tsx).
-  return new URLSearchParams(window.location.search).has("pane") ? <PaneHarness /> : <BoardScenes />;
+  return params.has("pane") ? <PaneHarness /> : <BoardScenes />;
 }
 
 function BoardScenes() {

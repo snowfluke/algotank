@@ -489,12 +489,13 @@ function PresenterLayout(props: MonthlyViewProps) {
               {leagueTitle}
             </span>
           </h1>
-          <div className="flex min-w-0 flex-wrap items-end gap-x-4">
+          {/* The board's switch leads the row, at the board's left edge (owner, 2026-11-19). */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-4">
+            <div ref={setSwitchSlot} data-camera-switch-slot="" className="flex shrink-0 empty:hidden" />
             <div className="flex min-w-0 flex-1 basis-56 flex-col">
               <DayClock board={board} fixedNow={props.now} dayChange={props.dayChange} short={false} />
               <ConditionLine board={board} short={false} />
             </div>
-            <div ref={setSwitchSlot} data-camera-switch-slot="" className="flex shrink-0 empty:hidden" />
           </div>
         </div>
         <LeagueSwitch league={league} leagues={leagues} ownLeague={seat?.league ?? null} onLeague={props.onLeague} />

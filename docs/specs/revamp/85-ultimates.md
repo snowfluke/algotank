@@ -36,7 +36,52 @@ A trigger reads only the snapshot from before the turn and draws no random numbe
 
 ## When an ultimate fires
 
-In this version the ultimate fires automatically. A player cannot write a rule for it yet. The follow-up is a rule action "Use my ultimate" and a condition "My ultimate is ready" (see Later).
+Owner, 2026-11-19: "i want player to maximize and craft the potential of their ulti for their strategy, not just default automatic". So a player can fire the ultimate from a rule. A strategy is in one of two firing modes:
+
+| Firing mode | When | What fires the ultimate |
+|---|---|---|
+| automatic | no rule in any mode has the action `useUltimate` | the trigger table below, as before |
+| by rules | at least one rule has the action `useUltimate` | only a rule with `useUltimate` that matches; the trigger table is off for this tank |
+
+The automatic mode stays, so the 32 monthly seats and 57 saved styles of 2026-11-17 still fire on 22 November without a change by their players. The presets stay automatic in this release, because `assignUltimate` ranks by rule ids and a new rule in a preset would change what migration 11 assigns.
+
+### Conditions and the action for the ultimate
+
+| Id | Text (en / id) | Parameter | True when |
+|---|---|---|---|
+| `ultimateReady` | My ultimate is ready / Jurusku siap | none | the state is `ready` |
+| `ultimateCharged` | My ultimate is at least {n}% charged / Jurusku terisi minimal {n}% | n in 25, 50, 75 | the state is `ready`, or charging with `(turnsTotal − turnsLeft) / turnsTotal × 100 ≥ n` |
+| `ultimateCatches` | My ultimate would catch at least {n} tanks / Jurusku bisa kena minimal {n} tank | n in 1 to 4 | the tank count of the ultimate, computed now, is at least n (table below) |
+| action `useUltimate` | Use my ultimate / Pakai jurus pamungkas | none | the rule matches only when the state is `ready` and the ultimate can act now; otherwise the tank reads the next rule |
+
+With ultimates off, the three conditions are false and `useUltimate` never matches, so a round plays as before.
+
+`turnsTotal` is a new field of the charging state: `firstReadyTurn` for the first charge and after a change of ultimate, `rechargeTurns` after a fire. The stream carries it with `turnsLeft`.
+
+The tank count of `ultimateCatches` is one function, `ultimateReach`, which the automatic triggers also call:
+
+| Ultimate | Tanks it would catch now |
+|---|---|
+| Dash | 1 if the first tank ahead is within `triggerMaxDistance`, else 0 |
+| Splash ring | the tanks in the 8 squares around |
+| Mud bomb | the first tank in line within throw range, plus every tank within 1 square of it |
+| Whirlwind | the tanks within `reach` squares |
+| Smoke screen, Full tank, Big umbrella, Magnet | 0: these do not hit tanks, so the editor does not offer `ultimateCatches` for them |
+
+"Can act now" for `useUltimate` is the hard part of each trigger, without the "is it a good moment" part:
+
+| Ultimate | Can act now |
+|---|---|
+| Dash | not stuck, and the square ahead is free |
+| Smoke screen | no smoke is active on the tank |
+| Splash ring | the tank has the water for a shot |
+| Full tank | always |
+| Mud bomb | a tank is in line within throw range |
+| Whirlwind | always |
+| Big umbrella | no big umbrella is active on the tank |
+| Magnet | the hand has space |
+
+`useUltimate` is one action with an optional mode switch, like `throw`. It cannot be a step of "steps in order".
 
 ### State of one tank's ultimate
 
@@ -55,8 +100,8 @@ No other transition exists. A hit does not stop the charge. A ready ultimate wai
 
 1. A dizzy tank in a spin turn spins. Its ultimate waits.
 2. A tank in the middle of steps in order does its next step. Its ultimate waits.
-3. A ready tank whose trigger holds fires its ultimate. That is its move for this turn: it does not drive, turn or throw.
-4. Otherwise the tank checks its rules (`decide`).
+3. A ready tank in the automatic firing mode whose trigger holds fires its ultimate. That is its move for this turn: it does not drive, turn or throw.
+4. Otherwise the tank checks its rules (`decide`). A matching `useUltimate` rule fires the ultimate, with the same effect as step 3.
 
 A stuck tank can fire every ultimate except Dash.
 
@@ -118,12 +163,12 @@ Until 2026-11-18, Splash resolved after pickups. Spending the last umbrella bloc
 
 `StrategyInput.ultimate: UltimateId` is required. `parseStrategy` rejects a strategy without it (a new issue code). `UltimateId` and `ULTIMATE_IDS` move from `apps/web/src/catalogue/messages.ts` to the engine. Each preset carries its ultimate, so `ULTIMATE_DEFAULT_STYLE` in the catalogue is derived from the presets.
 
-**Immutable.** A strategy keeps the ultimate it was made with:
+**The player chooses, and can change it** (owner, 2026-11-19, replacing "1 immutable ultimate per strategy" of 2026-11-17). Each strategy has exactly one ultimate at a time:
 
-- A saved play style (`account_strategy`, keyed by account and id): an upsert of an existing id keeps the stored ultimate, whatever the body says.
-- A monthly seat: `takeSeat` fixes the seat's ultimate. `changeStrategy` ("Ubah aturan") keeps the seat's ultimate and takes only the new rules and build.
-- A room player: `submitStrategy` takes the ultimate of the strategy it is sent, because a room is one round and nothing carries over.
-- A new play style takes the ultimate of the play style it starts from. When it starts empty, the player picks one. The editor shows the ultimate and never lets the player change it after the first save.
+- A saved play style (`account_strategy`): an upsert takes the ultimate of the body. The editor shows the ultimate picker before and after the first save.
+- A monthly seat: `takeSeat` takes the strategy's ultimate. `changeStrategy` ("Ubah aturan") takes the new strategy's ultimate too. When the ultimate changes, the tank's charge starts again at `firstReadyTurn`, so a player cannot swap a ready ultimate for another ready one. When it stays the same, the charge continues.
+- A room player: `submitStrategy` takes the ultimate of the strategy it is sent.
+- A new play style takes the ultimate of the play style it starts from. When it starts empty, the player picks one.
 
 **Assigning an ultimate to a strategy that has none** (`assignUltimate(strategy, random)`, in the engine, one function used by every boundary below):
 
@@ -186,7 +231,3 @@ Owner, 2026-11-18: "it's okay to be unbalanced for the ultimate skills, but with
 - The big umbrella saves more than the item umbrella. The owner sees its number next to the smoke screen's ("not far beyond smoke screen", 2026-11-18).
 
 A gate that fails is reported to the owner with the numbers, and the numbers in `ULTIMATE_RULES` change. The design of an ultimate does not change.
-
-## Later
-
-- A rule action "Use my ultimate" and a condition "My ultimate is ready", so a player chooses the moment. When a mode has that action, the automatic trigger is off for that tank.

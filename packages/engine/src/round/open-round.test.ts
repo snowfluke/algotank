@@ -8,7 +8,7 @@ import { arenaSize } from "./grid.ts";
 import { createOpenRound, createRound, joinRound, leaveRound, replaceStrategy, roundHoldings, standings, stepRound } from "./round.ts";
 
 const strategyAt = (i: number): Strategy => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
-const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false });
+const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false, ultimates: false });
 
 describe("an open round", () => {
   test("starts with no tank on a board sized for 16 that keeps its size", () => {
@@ -123,7 +123,7 @@ describe("target ties in an open round", () => {
   });
 
   test("a round of fixed players carries no tie rank, so it settles ties by id as before", () => {
-    const round = createRound({ seed: 3, ticksTotal: 5, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: [{ id: "a", strategy: strategyAt(0) }, { id: "b", strategy: strategyAt(1) }], items: false });
+    const round = createRound({ seed: 3, ticksTotal: 5, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: [{ id: "a", strategy: strategyAt(0) }, { id: "b", strategy: strategyAt(1) }], items: false, ultimates: false });
     expect(round.snapshot.bots.map((t) => t.tieRank)).toEqual([undefined, undefined]);
   });
 

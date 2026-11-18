@@ -238,7 +238,8 @@ export function shotShape(shooter: PublicBot, event: ThrowEvent, bounds: ArenaBo
       const target = along(centre, cellStep(shooter.direction), event.distance * CELL);
       return { kind: "hit", jet: arcJet(nozzle, along(target, unit, -HIT_SHORT), HIT_ARC), splash: target };
     }
-    case "miss": {
+    case "miss":
+    case "dodged": {
       const target = along(centre, cellStep(shooter.direction), event.distance * CELL);
       return { kind: "miss", jet: arcJet(nozzle, clampToFloor(along(target, unit, MISS_PAST), bounds), MISS_ARC) };
     }

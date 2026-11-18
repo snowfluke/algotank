@@ -355,12 +355,13 @@ function roundConfig(raw: unknown, path: string): RoundConfig {
     survivorsAfterRound: survivors === null ? null : int(survivors, `${path}.survivorsAfterRound`, 1),
     ruleSetId: ruleSetId(c["ruleSetId"], `${path}.ruleSetId`),
     players,
-    items: itemsOn(c["items"], `${path}.items`),
+    items: roundOption(c["items"], `${path}.items`),
+    ultimates: roundOption(c["ultimates"], `${path}.ultimates`),
   };
 }
 
-/** A config stored before items (docs/specs/revamp/84-items.md) has no key: that round played without items, so its replay does too. */
-function itemsOn(raw: unknown, path: string): boolean {
+/** A config saved before a round feature was added replays with that feature off. */
+function roundOption(raw: unknown, path: string): boolean {
   if (raw === undefined) return false;
   if (typeof raw !== "boolean") fail(path, "true or false");
   return raw;

@@ -37,6 +37,7 @@ export function largeRoundConfig(players: number, ticks: number, seed: number, r
     // The fixture of large-round.test.ts was recorded before items, so it plays without them and keeps checking
     // that such a round draws the same. The bench passes --items to time a round as the arenas play it.
     items,
+    ultimates: false,
     players: Array.from({ length: players }, (_, i) => {
       const preset = recordedPresets[i % recordedPresets.length];
       if (preset === undefined) throw new Error("no presets");

@@ -79,6 +79,7 @@ function harnessData(count: number, tankName: (n: number) => string): HarnessDat
     ticksTotal: TURNS,
     survivorsAfterRound: isFinalRound(count) ? null : survivorCount(count),
     items: true,
+    ultimates: false,
     players: ids.map((id, i) => {
       const preset = PRESETS[i % PRESETS.length];
       if (preset === undefined) throw new Error("The engine has no play styles.");

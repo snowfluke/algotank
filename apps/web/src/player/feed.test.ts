@@ -30,7 +30,7 @@ const strategy: StrategyInput = {
   ],
 };
 
-const decision = (over: Partial<Decision>): Decision => ({
+const decision = (over: Partial<Omit<Decision, "ultimate">>): Decision => ({
   botId: "p",
   modeId: "m1",
   ruleId: "r2",

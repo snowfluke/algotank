@@ -54,6 +54,7 @@ export function engineRound(count: number, turns: number): { spawn: PublicSnapsh
   const round = runRound({
     seed: 7,
     items: true,
+    ultimates: false,
     ruleSetId: STANDARD_RULE_SET_ID,
     ticksTotal: turns,
     survivorsAfterRound: null,

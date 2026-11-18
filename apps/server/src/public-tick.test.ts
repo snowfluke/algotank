@@ -12,6 +12,7 @@ const { spawn, ticks } = runRound({
   seed: 5,
   ticksTotal: 12,
   items: true,
+  ultimates: false,
   survivorsAfterRound: null,
   ruleSetId: "dry-spell",
   players: ["a", "b", "c"].map((id) => ({ id, strategy })),
@@ -34,7 +35,7 @@ test("a public snapshot carries exactly the allowed fields, and the rule set is 
 
 test("every rule set reaches the public snapshot unchanged", () => {
   for (const ruleSetId of RULE_SET_IDS) {
-    const round = runRound({ seed: 5, ticksTotal: 3, survivorsAfterRound: null, ruleSetId, players: ["a", "b"].map((id) => ({ id, strategy })), items: true });
+    const round = runRound({ seed: 5, ticksTotal: 3, survivorsAfterRound: null, ruleSetId, players: ["a", "b"].map((id) => ({ id, strategy })), items: true, ultimates: false });
     expect(toPublicSnapshot(round.spawn).ruleSetId).toBe(ruleSetId);
   }
 });

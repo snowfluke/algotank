@@ -47,7 +47,7 @@ function playRound(ruleSetId: (typeof RULE_SET_IDS)[number], seed: number) {
     id: `p${i}`,
     strategy: (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy,
   }));
-  const { spawn, ticks } = runRound({ seed, ticksTotal: 60, survivorsAfterRound: 12, ruleSetId, players, items: true });
+  const { spawn, ticks } = runRound({ seed, ticksTotal: 60, survivorsAfterRound: 12, ruleSetId, players, items: true, ultimates: false });
   return { spawn: publicSnapshot(spawn), ticks: ticks.map(publicTick) };
 }
 
@@ -74,7 +74,15 @@ describe("compactTick and expandTick", () => {
     for (const ruleSetId of RULE_SET_IDS) {
       for (const tick of playRound(ruleSetId, 11).ticks) for (const t of tick.throws) seen.add(t.outcome === "hit" && t.bucket === true ? "bucketHit" : t.outcome);
     }
-    expect([...seen].sort()).toEqual([...COMPACT_OUTCOMES].sort());
+    expect([...seen].sort()).toEqual(COMPACT_OUTCOMES.filter((outcome) => outcome !== "dodged").sort());
+  });
+
+  test("a dodge uses the appended outcome and carries no hit chance", () => {
+    const { spawn, ticks } = playRound("standard", 7);
+    const tick: PublicTick = { ...ticks[0]!, throws: [{ throwerId: "p0", targetId: "p1", distance: 2, outcome: "dodged" }] };
+    const compact = compactTick(tick, spawn.bots.map((bot) => bot.id));
+    expect(compact.throws).toEqual([[0, 6, 1, 2, -1]]);
+    expect(expandTick(compact, spawn)).toEqual(tick);
   });
 
   test("items, pickups, held items and both effects take part in the round trips above", () => {

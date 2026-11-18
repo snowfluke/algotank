@@ -166,7 +166,7 @@ export class LeagueDay {
   private newRound(tanks: number, ticksLeft: number): RoundState {
     this.boardFor = boardTanksFor(tanks);
     const ruleSetId = MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
-    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true });
+    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: false });
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */

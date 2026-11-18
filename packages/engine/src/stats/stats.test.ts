@@ -29,6 +29,7 @@ const ROUND: RoundConfig = {
   survivorsAfterRound: null,
   ruleSetId: STANDARD_RULE_SET_ID,
   items: false,
+  ultimates: false,
   players: [
     { id: "a", strategy: preset("ambusher") },
     { id: "b", strategy: preset("charger") },
@@ -69,7 +70,7 @@ describe("tank statistics", () => {
   });
 
   test("a tank that joins an open round counts from its first turn", () => {
-    const round = createOpenRound({ seed: 3, ticksTotal: 20, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 8, items: false });
+    const round = createOpenRound({ seed: 3, ticksTotal: 20, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 8, items: false, ultimates: false });
     joinRound(round, { id: "a", strategy: preset("picker") });
     joinRound(round, { id: "b", strategy: preset("charger") });
     let stats = EMPTY_STATS;

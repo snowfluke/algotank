@@ -57,6 +57,7 @@ function outcomeText(t: FeedText, entry: OwnDecision): string | null {
     case "blocked":
       return t.blocked;
     case "miss":
+    case "dodged":
       return t.miss;
     case "empty":
       return t.nothing;

@@ -28,6 +28,7 @@ function finishedStored(): StoredArena {
     ruleSetId: "downpour",
     players: ["a", "b", "c"].map((id) => ({ id, strategy })),
     items: true,
+    ultimates: false,
   };
   apply({ kind: "roundCompleted", standings: runRound(config).standings, nextRuleSetId: null });
   return {
@@ -62,6 +63,14 @@ describe("parseStoredArena", () => {
     expect(parsed.stored.roundConfigs[0]?.config.items).toBe(false);
     const wrong = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.items = "yes")));
     expect(wrong.ok ? "" : wrong.error).toMatch(/items/);
+  });
+
+  test("a round config stored before ultimates replays with them off", () => {
+    const parsed = parseStoredArena(damaged((p) => delete p.roundConfigs[0].config.ultimates));
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.stored.roundConfigs[0]?.config.ultimates).toBe(false);
+    const wrong = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.ultimates = "yes")));
+    expect(wrong.ok ? "" : wrong.error).toMatch(/ultimates/);
   });
 
   test("returns strategies that parseStrategy granted, not the parsed object itself", () => {

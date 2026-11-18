@@ -93,6 +93,7 @@ export function runPractice(settings: PracticeSettings): PracticeRun {
     seed: settings.seed,
     // The Try it match plays like an arena round, items included (84-items.md).
     items: true,
+    ultimates: false,
     ruleSetId: settings.ruleSetId,
     ticksTotal: settings.ticks,
     // The cut-line conditions read this, so it follows the arena's own rule.

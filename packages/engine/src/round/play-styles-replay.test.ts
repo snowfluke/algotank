@@ -74,7 +74,7 @@ function asRecorded(value: unknown): unknown {
 
 function replay(seed: number, index: number) {
   const ruleSetId = RULE_SET_IDS[(index * 2) % RULE_SET_IDS.length] as RuleSetId;
-  const state = createRound({ seed, ticksTotal: 90, survivorsAfterRound: 4, ruleSetId, players: recordedPlayers, items: false });
+  const state = createRound({ seed, ticksTotal: 90, survivorsAfterRound: 4, ruleSetId, players: recordedPlayers, items: false, ultimates: false });
   const hasher = new Bun.CryptoHasher("sha256");
   hasher.update(canonical(asRecorded(state.snapshot)));
   while (!state.isOver) hasher.update(canonical(asRecorded(stepRound(state))));

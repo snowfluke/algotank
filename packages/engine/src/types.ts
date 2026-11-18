@@ -19,6 +19,7 @@
 
 import type { UltimateId } from "./ultimates/ultimates.ts";
 import type { RuleSetId } from "./combat/rule-sets.ts";
+import type { Cell } from "./round/grid.ts";
 
 /** The eight facings, clockwise from north. Each is 45 degrees from the next. directions.ts holds the geometry. */
 export const DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
@@ -48,11 +49,20 @@ export type ItemKind = (typeof ITEM_KINDS)[number];
 export const TANK_EFFECT_KINDS = ["dizzy", "stuck"] as const;
 export type TankEffectKind = (typeof TANK_EFFECT_KINDS)[number];
 
-export interface TankEffect {
-  readonly kind: TankEffectKind;
-  /** Turns the effect still acts on, from 1 up. */
-  readonly turnsLeft: number;
-}
+/** Turns left include spin turns. Older pinwheel snapshots derive spins from turnsLeft. */
+export type TankEffect =
+  | { readonly kind: "stuck"; readonly turnsLeft: number }
+  | { readonly kind: "dizzy"; readonly turnsLeft: number; readonly spinTurnsLeft?: number };
+
+export type UltimateState = { readonly id: UltimateId } & (
+  | { readonly kind: "charging"; readonly turnsLeft: number }
+  | { readonly kind: "ready" }
+);
+
+export type UltimateEffect =
+  | { readonly kind: "smoke"; readonly turnsLeft: number }
+  | { readonly kind: "bigUmbrella"; readonly blocksLeft: number }
+  | { readonly kind: "fullTank"; readonly freeShots: number };
 
 /** An item that lies on a square nobody holds. */
 export interface BoardItem {
@@ -295,8 +305,12 @@ export interface BotState {
   readonly item: ItemKind | null;
   /** Uses left of the held item (ITEM_RULES.uses); 0 when it holds none. Not sent to the pages. */
   readonly itemUses: number;
-  /** What an item did to the tank, while it lasts, or null. */
+  /** Dizzy or stuck, while it lasts, or null. */
   readonly effect: TankEffect | null;
+  /** Present during a round with ultimates on. The id is fixed at spawn. */
+  readonly ultimate?: UltimateState;
+  /** The tank's own active ultimate, independent of dizziness or mud. */
+  readonly ultimateEffect?: UltimateEffect | null;
   /**
    * Only in an open round (joinRound): a number from the round seed, drawn at join, that settles a
    * target selector's tie in place of the id (strategy/targets.ts). A monthly seat keeps its id all
@@ -341,14 +355,15 @@ export interface RoundConfig {
    * seed fixtures: such a round draws exactly what it drew before items existed.
    */
   readonly items: boolean;
+  readonly ultimates: boolean;
 }
 
 /** What one bot decided on one tick, and why. */
-export interface Decision {
+export type Decision = TurnAction & {
   readonly botId: BotId;
   /** The mode the bot was in when it decided. */
   readonly modeId: string;
-  /** The rule that ran, or null when the fallback ran. On every turn of a sequence, the rule whose sequence it is. */
+  /** The rule that ran, including its steps. Null on fallback, spin and ultimate turns. */
   readonly ruleId: string | null;
   /**
    * The action behind the move; on a turn of a sequence, the step's action. When the fallback cannot act, this is still the
@@ -356,7 +371,6 @@ export interface Decision {
    * fallback from the strategy.
    */
   readonly actionId: string;
-  readonly move: Move;
   /** The mode the bot is in after this tick. */
   readonly nextModeId: string;
   /**
@@ -366,16 +380,19 @@ export interface Decision {
    */
   readonly step?: SequenceStep;
   /**
-   * Only when the tank was dizzy (an item effect) and checked its rules from the bottom up.
-   * Absent on every other turn, so a round without items gives the decisions it gave before.
+   * A dizzy tank checked its rules from the bottom up, or spun during the first turns of the effect.
    */
   readonly dizzy?: true;
   /**
-   * Only on the first turns of a dizzy tank (ITEM_RULES.dizzySpinTurns): it spun round to the right and checked no
-   * rule, so `ruleId` is null without the fallback having run. Absent on every other turn.
+   * Only when a dizzy tank spun right in place and checked no rule.
    */
   readonly spin?: true;
-}
+};
+
+/** Ultimate decisions use the wait move on the existing move table. */
+export type TurnAction =
+  | { readonly move: Move; readonly ultimate?: never }
+  | { readonly move: "W"; readonly ultimate: UltimateId };
 
 /** The place of a turn in a running sequence: step `index` (from 1) of `count`. */
 export interface SequenceStep {
@@ -383,21 +400,21 @@ export interface SequenceStep {
   readonly count: number;
 }
 
-/**
- * What one throw did. "empty": no bot stood in the line within range. "dry": a
- * bot stood there and the thrower's tank held less than the round's waterPerThrow, so the
- * throw did nothing and drew no random number. "miss" and "hit": the throw spent
- * water and rolled against hitChance.
- */
+/** Points a defense stopped on this roll, using the points the shot would have moved. */
+export interface ShotProtection {
+  readonly kind: "smoke" | "bigUmbrella" | "umbrella";
+  readonly pointsSaved: number;
+}
+
+/** Empty, dry and dodged throws draw no roll. A dodged throw still costs a shot. */
 export type ThrowEvent =
   | { readonly throwerId: BotId; readonly outcome: "empty" }
   | {
       readonly throwerId: BotId;
-      readonly outcome: "dry";
       /** The first bot in the line within range. */
       readonly targetId: BotId;
       readonly distance: number;
-    }
+    } & ({ readonly outcome: "dry" } | { readonly outcome: "dodged" })
   | {
       readonly throwerId: BotId;
       /** "blocked": the roll hit, and the target's umbrella stopped it, so no point moved. */
@@ -412,7 +429,22 @@ export type ThrowEvent =
        * The key is absent on every other throw, so a round without items gives the throws it gave before.
        */
       readonly bucket?: true;
+      /** Recorded in rounds with ultimates on, for the balance comparison. */
+      readonly protection?: ShotProtection;
     };
+
+export type SplashSquare = Cell & (
+  | { readonly outcome: "empty"; readonly targetId?: never; readonly protection?: never }
+  | { readonly outcome: "miss" | "hit" | "blocked" | "dodged"; readonly targetId: BotId; readonly protection?: ShotProtection }
+);
+
+export type UltimateFire = { readonly botId: BotId; readonly at: Cell } & (
+  | { readonly kind: "dash"; readonly path: readonly Cell[] }
+  | { readonly kind: "splash"; readonly squares: readonly SplashSquare[] }
+  | { readonly kind: "mudBomb"; readonly center: Cell | null; readonly area: readonly Cell[]; readonly affected: readonly BotId[] }
+  | { readonly kind: "whirlwind"; readonly area: readonly Cell[]; readonly affected: readonly BotId[] }
+  | { readonly kind: "smoke" | "fullTank" | "bigUmbrella" }
+);
 
 export interface TickResult {
   /** The tick just played, starting at 0. */
@@ -424,6 +456,8 @@ export interface TickResult {
   readonly throws: readonly ThrowEvent[];
   /** Items taken on this tick, in the order of the board's item list. A backfired one is listed too. */
   readonly pickups: readonly Pickup[];
+  /** In move order, present in rounds with ultimates on. */
+  readonly fires?: readonly UltimateFire[];
   /** The state after the tick. */
   readonly snapshot: Snapshot;
 }

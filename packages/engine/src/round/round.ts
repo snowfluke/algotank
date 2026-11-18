@@ -4,15 +4,18 @@
 // the same round. All draws come from one generator:
 //   createRound: for each player in config order, one spawn cell (int) and one
 //                direction (int); then one tie-break number (next) per player.
-//   stepRound:   the draws of decide() for each bot in snapshot order, except a
-//                bot in the middle of a sequence, whose step draws nothing; then the
+//   stepRound:   the draws of decide() for each bot in snapshot order. A spin, sequence
+//                step or ultimate fire skips decide and draws nothing at this point. Then the
 //                shuffle of the move order; then one chance roll for each throw that
-//                has a target and enough water, in move order. A dry throw draws nothing.
+//                has a target and enough water or a free shot, in move order. A dry throw
+//                or a throw at a dashing tank draws nothing. Smoke changes the same roll.
 //                Then one chance for each pinwheel or mud ball taken on the turn (its
 //                backfire, items/items.ts pickUp), and, in a round with items on and only on
 //                a spawn turn, one int for the item's kind and one int for its square
 //                (spawnItems, once per item it adds). A round with items off has no item,
-//                so it draws neither.
+//                so it draws neither. After all these draws, fire order gives the ultimate
+//                draws: Splash rolls once per occupied side square, clockwise from the
+//                front, and for an occupied front square only when it is under smoke.
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
 //
@@ -40,12 +43,14 @@ import type {
   Snapshot,
   Standing,
   Strategy,
-  TankEffectKind,
+  TankEffect,
   ThrowEvent,
   TickResult,
+  UltimateFire,
 } from "../types.ts";
 import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
-import { ageItems, countDown, newEffect, pickUp, spawnItems, spinDecision, spinsThisTurn } from "../items/items.ts";
+import { countDown, newEffect, spinDecision, spinsThisTurn } from "../items/items.ts";
+import { ULTIMATE_RULES, chargeAfterTurn, ultimateDecision, ultimateEffectAfterTurn, type UltimateId } from "../ultimates/ultimates.ts";
 import { decide } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
 import { allCells, arenaSize, cellKey, type Cell } from "./grid.ts";
@@ -106,7 +111,7 @@ export function createRound(config: RoundConfig): RoundState {
     if (cell === undefined || direction === undefined || firstMode === undefined) {
       throw new Error(`could not place player "${id}"`);
     }
-    return spawnedBot(id, cell, direction, firstMode.id, strategy.build, 0, rules.waterCapacity);
+    return spawnedBot(id, cell, direction, firstMode.id, strategy.build, 0, rules.waterCapacity, config.ultimates ? strategy.ultimate : undefined);
   });
 
   const tieBreaks = new Map<BotId, number>();
@@ -127,7 +132,7 @@ export function createRound(config: RoundConfig): RoundState {
 }
 
 /** A tank as it spawns: full water, nothing happened to it yet. `score` is 0 except for a tank that resumes its day (joinRound). */
-function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string, build: Build, score: number, water: number): BotState {
+function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string, build: Build, score: number, water: number, ultimate: UltimateId | undefined): BotState {
   // The key order is the order of every stored snapshot; keep it.
   return {
     id,
@@ -149,6 +154,7 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
     item: null,
     itemUses: 0,
     effect: null,
+    ...(ultimate === undefined ? {} : { ultimate: { id: ultimate, kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn }, ultimateEffect: null }),
   };
 }
 
@@ -163,6 +169,7 @@ export interface OpenRoundConfig {
   readonly boardFor: number;
   /** As RoundConfig.items. */
   readonly items: boolean;
+  readonly ultimates: boolean;
 }
 
 /**
@@ -175,7 +182,7 @@ export function createOpenRound(config: OpenRoundConfig): RoundState {
   }
   const rules = ruleSet(config.ruleSetId);
   const { width, height } = arenaSize(config.boardFor, rules);
-  const roundConfig: RoundConfig = { seed: config.seed, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, players: [], items: config.items };
+  const roundConfig: RoundConfig = { seed: config.seed, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, players: [], items: config.items, ultimates: config.ultimates };
   const spawn: Snapshot = { width, height, tick: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, bots: [], items: [] };
   return new RoundRuntime(roundConfig, spawn, createRng(config.seed), new Map(), new Map());
 }
@@ -200,7 +207,8 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   if (cell === undefined || direction === undefined || firstMode === undefined) throw new Error(`could not place player "${player.id}"`);
   // The tie-break number also settles target ties in this round (BotState.tieRank), so a join draws nothing more.
   const tieRank = round.rng.next();
-  const bot: BotState = { ...spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, ruleSet(before.ruleSetId).waterCapacity), tieRank };
+  const ultimate = round.config.ultimates ? player.strategy.ultimate : undefined;
+  const bot: BotState = { ...spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, ruleSet(before.ruleSetId).waterCapacity, ultimate), tieRank };
   round.tieBreaks.set(player.id, tieRank);
   round.strategies.set(player.id, player.strategy);
   round.snapshot = { ...before, bots: [...before.bots, bot] };
@@ -220,7 +228,7 @@ export function leaveRound(state: RoundState, id: BotId): void {
 
 /**
  * Gives a tank on the board new rules between two turns. It keeps its square, facing, points,
- * water, item, effect and hit history, so new rules are never a way out of danger or a refill
+ * water, item, effects, ultimate and hit history, so new rules are never a way out of danger or a refill
  * (monthly "Ubah aturan", owner 2026-11-16). It starts in the new strategy's first mode, with the
  * new strategy's upgrades and no running step sequence. Throws when the id is not on the board.
  */
@@ -257,7 +265,9 @@ export function stepRound(state: RoundState): TickResult {
     const ctx = { self: bot, snapshot: before };
     const running = round.sequences.get(bot.id);
     // A spinning tank checks no rule and draws nothing; its running sequence ends (runningAfter sees no step).
-    const decision = spinsThisTurn(bot) ? spinDecision(bot) : running === undefined ? decide(ctx, strategy, round.rng) : continueSequence(ctx, running, round.rng);
+    const decision = spinsThisTurn(bot) ? spinDecision(bot)
+      : running !== undefined ? continueSequence(ctx, running, round.rng)
+      : ultimateDecision(before, bot) ?? decide(ctx, strategy, round.rng);
     const after = runningAfter(decision, strategy);
     if (after === null) round.sequences.delete(bot.id);
     else round.sequences.set(bot.id, after);
@@ -267,28 +277,27 @@ export function stepRound(state: RoundState): TickResult {
   // 2. A random order decides who moves first.
   const order = round.rng.shuffle(before.bots.map((bot) => bot.id));
 
-  // 3. Moves resolve one at a time.
-  const { placements, throws, inflicted } = resolveTick(before, decisions, order, round.rng);
+  // 3. Moves, then item draws, then the queued Splash rolls.
+  const { placements, throws, inflicted, fires, items, pickups, backfires } = resolveTick(before, decisions, order, round.rng,
+    { items: before.items, tick: before.tick, spawn: round.config.items });
 
-  // 4. Items: tanks take what lies on their square, effects count down and new ones start,
-  //    items age, and on a spawn turn one more appears.
-  const carriers: { -readonly [K in keyof Placement]: Placement[K] }[] = placements.map((place) => ({ ...place }));
-  const { items: left, pickups, backfires } = pickUp(before.items, carriers, round.rng);
-  const aged = ageItems(left);
-  const spawned = round.config.items ? spawnItems(before, before.tick, carriers, aged, round.rng) : [];
-
-  // 5. Next snapshot.
-  const hits = tallyHits(throws);
+  // 4. Next snapshot.
+  const hits = tallyHits(throws, fires);
+  const ends = before.tick + 1 >= round.config.ticksTotal;
   const next: Snapshot = {
     ...before,
     tick: before.tick + 1,
-    // Pickups come after the throws, so a backfire replaces an effect a hit gave on the same turn.
-    bots: before.bots.map((bot, i) => nextBotState(bot, carriers[i], decisions[i], hits, backfires.get(bot.id) ?? inflicted.get(bot.id) ?? null)),
-    items: [...aged, ...spawned],
+    // A backfire from a pickup replaces an effect given during the moves.
+    bots: before.bots.map((bot, i) => {
+      const backfire = backfires.get(bot.id);
+      const effect = backfire === undefined ? inflicted.get(bot.id) ?? null : newEffect(backfire, bot.ultimate !== undefined);
+      return nextBotState(bot, placements[i], decisions[i], hits, effect, ends);
+    }),
+    items,
   };
   round.snapshot = next;
 
-  return { tick: before.tick, order, decisions, throws, pickups, snapshot: next };
+  return { tick: before.tick, order, decisions, throws, pickups, ...(round.config.ultimates ? { fires } : {}), snapshot: next };
 }
 
 /** What the throws of one tick did to each bot. A bot can be hit more than once in a tick. */
@@ -299,15 +308,19 @@ interface HitTally {
   readonly lastHitBy: ReadonlyMap<BotId, BotId>;
 }
 
-function tallyHits(throws: readonly ThrowEvent[]): HitTally {
+function tallyHits(throws: readonly ThrowEvent[], fires: readonly UltimateFire[]): HitTally {
   const landed = new Map<BotId, number>();
   const taken = new Map<BotId, number>();
   const lastHitBy = new Map<BotId, BotId>();
-  for (const event of throws) {
-    if (event.outcome !== "hit") continue;
-    landed.set(event.throwerId, (landed.get(event.throwerId) ?? 0) + 1);
-    taken.set(event.targetId, (taken.get(event.targetId) ?? 0) + 1);
-    lastHitBy.set(event.targetId, event.throwerId);
+  function add(throwerId: BotId, targetId: BotId): void {
+    landed.set(throwerId, (landed.get(throwerId) ?? 0) + 1);
+    taken.set(targetId, (taken.get(targetId) ?? 0) + 1);
+    lastHitBy.set(targetId, throwerId);
+  }
+  for (const event of throws) if (event.outcome === "hit") add(event.throwerId, event.targetId);
+  for (const fire of fires) {
+    if (fire.kind !== "splash") continue;
+    for (const square of fire.squares) if (square.outcome === "hit") add(fire.botId, square.targetId);
   }
   return { landed, taken, lastHitBy };
 }
@@ -317,7 +330,8 @@ function nextBotState(
   placement: Placement | undefined,
   decision: Decision | undefined,
   hits: HitTally,
-  inflicted: TankEffectKind | null,
+  inflicted: TankEffect | null,
+  ends: boolean,
 ): BotState {
   if (placement === undefined || decision === undefined || placement.id !== bot.id || decision.botId !== bot.id) {
     throw new Error(`tick results do not line up for bot "${bot.id}"`);
@@ -325,8 +339,9 @@ function nextBotState(
   const hitter = hits.lastHitBy.get(bot.id);
   const wasHit = hitter !== undefined;
   const landedNow = hits.landed.get(bot.id) ?? 0;
+  const { ultimate, ultimateEffect: _previousUltimateEffect, ...withoutUltimate } = bot;
   return {
-    ...bot,
+    ...withoutUltimate,
     x: placement.x,
     y: placement.y,
     direction: placement.direction,
@@ -347,7 +362,11 @@ function nextBotState(
     item: placement.item,
     itemUses: placement.itemUses,
     // The effect from before the tick counts down; a hit on this tick starts a new one in its place.
-    effect: inflicted === null ? countDown(bot.effect) : newEffect(inflicted),
+    effect: inflicted ?? countDown(bot.effect),
+    ...(ultimate === undefined || ends ? {} : {
+      ultimate: chargeAfterTurn(ultimate, decision.ultimate),
+      ultimateEffect: ultimateEffectAfterTurn(placement.ultimateEffect ?? null),
+    }),
   };
 }
 

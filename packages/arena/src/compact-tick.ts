@@ -51,7 +51,7 @@ export const COMPACT_DIRECTIONS: readonly Direction[] = DIRECTIONS;
 /** Move index to move. The engine's own table. */
 export const COMPACT_MOVES: readonly Move[] = MOVES;
 /** Outcome index to throw outcome. Appended values keep the older indexes. "bucketHit" is a hit with `bucket: true`. */
-export const COMPACT_OUTCOMES = ["empty", "dry", "miss", "hit", "blocked", "bucketHit"] as const;
+export const COMPACT_OUTCOMES = ["empty", "dry", "miss", "hit", "blocked", "bucketHit", "dodged"] as const;
 type CompactOutcome = (typeof COMPACT_OUTCOMES)[number];
 /** Item index to item kind. The engine's own table. */
 export const COMPACT_ITEMS: readonly ItemKind[] = ITEM_KINDS;
@@ -143,7 +143,7 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
     throws: tick.throws.map((t) => {
       const outcome = indexIn(COMPACT_OUTCOMES, wireOutcome(t), "outcome");
       if (t.outcome === "empty") return [idx(t.throwerId), outcome, NONE, NONE, NONE];
-      if (t.outcome === "dry") return [idx(t.throwerId), outcome, idx(t.targetId), t.distance, NONE];
+      if (t.outcome === "dry" || t.outcome === "dodged") return [idx(t.throwerId), outcome, idx(t.targetId), t.distance, NONE];
       return [idx(t.throwerId), outcome, idx(t.targetId), t.distance, t.hitChance];
     }),
     items: tick.snapshot.items.map((item) => [indexIn(COMPACT_ITEMS, item.kind, "item"), item.x, item.y, item.turnsLeft]),
@@ -211,7 +211,7 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
     const outcome = entry(COMPACT_OUTCOMES, outcomeIndex, "outcome");
     if (outcome === "empty") return { throwerId, outcome };
     const targetId = botAt(target, "target").id;
-    if (outcome === "dry") return { throwerId, outcome, targetId, distance: integer(distance, "distance") };
+    if (outcome === "dry" || outcome === "dodged") return { throwerId, outcome, targetId, distance: integer(distance, "distance") };
     const rolled = { throwerId, targetId, distance: integer(distance, "distance"), hitChance: integer(hitChance, "hit chance") };
     return outcome === "bucketHit" ? { ...rolled, outcome: "hit", bucket: true } : { ...rolled, outcome };
   });

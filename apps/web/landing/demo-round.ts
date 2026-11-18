@@ -96,6 +96,7 @@ function playOrder(order: DemoOrder, seed: number, bots: readonly RoundPlayer[])
     players: [{ id: YOU, strategy: demoStrategy(order) }, ...bots],
     // The demo tells one story, the order of three rules, so no item may change a rule's turn (84-items.md).
     items: false,
+    ultimates: false,
   });
   const own = round.standings.find((standing) => standing.botId === YOU);
   if (own === undefined) throw new Error("The demo tank is missing from the standings.");

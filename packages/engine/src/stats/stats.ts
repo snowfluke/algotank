@@ -11,11 +11,12 @@
 // | Number        | One turn adds                                                              |
 // |---------------|----------------------------------------------------------------------------|
 // | turns         | 1                                                                          |
-// | shots         | 1 for a throw that hit or missed; a throw into nothing or a dry one adds 0  |
+// | shots         | 1 for an aimed throw that could fire, including blocks and dodges           |
 // | hits          | 1 for a throw that hit                                                     |
 // | timesHit      | the throws of other tanks that hit this tank on this turn                  |
-// | squaresMoved  | the squares between the square before the turn and after it (0 or 1)       |
+// | squaresMoved  | the distance between the square before the turn and after it               |
 // | uses          | 1 to the rule that ran in its mode, or to the mode's "If no rule fits"     |
+// | ultimateTurns | 1 for each ultimate fire, tracked outside rule uses and spin turns          |
 // Statistics only read a turn's result; they never change how a round plays.
 
 import type { BotId, BotState, Decision, Snapshot, StrategyInput, TickResult } from "../types.ts";
@@ -46,6 +47,8 @@ export interface TankStats {
   readonly timesHit: number;
   readonly squaresMoved: number;
   readonly uses: readonly RuleUse[];
+  /** Present after the tank has fired an ultimate. */
+  readonly ultimateTurns?: number;
 }
 
 /** What one turn did for one tank, read from the turn's result (turnsOf). */
@@ -60,7 +63,7 @@ export interface TankTurn {
 export interface StatsView extends StatsNumbers {
   /** One entry per mode of the strategy, in order. */
   readonly modes: readonly ModeStats[];
-  /** Turns a pinwheel spun the tank round (items/items.ts): no rule and no fallback ran, so no row counts them. */
+  /** Turns a pinwheel or whirlwind spun the tank round. */
   readonly spinTurns: number;
 }
 
@@ -89,7 +92,7 @@ export function turnsOf(before: Snapshot, result: TickResult): Map<BotId, TankTu
   const hitsOn = new Map<BotId, number>();
   for (const event of result.throws) {
     if (event.outcome === "empty" || event.outcome === "dry") continue;
-    // A throw an umbrella stopped spent water and rolled, so it is a shot, and it hit nobody.
+    // An umbrella block or a dodge still costs a shot, and it hit nobody.
     shots.set(event.throwerId, event.outcome === "hit" ? "hit" : "miss");
     if (event.outcome === "hit") hitsOn.set(event.targetId, (hitsOn.get(event.targetId) ?? 0) + 1);
   }
@@ -114,9 +117,11 @@ function squaresBetween(a: Pick<BotState, "x" | "y">, b: Pick<BotState, "x" | "y
 export function addTurn(stats: TankStats, turn: TankTurn): TankStats {
   const { modeId, ruleId } = turn.decision;
   const at = stats.uses.findIndex((use) => use.modeId === modeId && use.ruleId === ruleId);
-  // A pinwheel's spin ran neither a rule nor the fallback, so it counts as a turn and as no use.
+  const fired = turn.decision.ultimate !== undefined;
+  const ultimateTurns = (stats.ultimateTurns ?? 0) + (fired ? 1 : 0);
+  // A spin or an ultimate takes the whole turn without running a rule or the fallback.
   const uses =
-    turn.decision.spin === true
+    turn.decision.spin === true || fired
       ? stats.uses
       : at === -1
       ? [...stats.uses, { modeId, ruleId, turns: 1 }]
@@ -128,6 +133,7 @@ export function addTurn(stats: TankStats, turn: TankTurn): TankStats {
     timesHit: stats.timesHit + turn.timesHit,
     squaresMoved: stats.squaresMoved + turn.squaresMoved,
     uses,
+    ...(ultimateTurns === 0 ? {} : { ultimateTurns }),
   };
 }
 
@@ -176,7 +182,6 @@ export function statsView(stats: TankStats, strategy: StrategyInput): StatsView 
       rules: mode.rules.map((rule) => turnsOfRule(mode.id, rule.id)),
       fallback: turnsOfRule(mode.id, null),
     })),
-    // Derived, not stored: every turn is a rule's, a fallback's or a spin's (addTurn), so a saved day needs no new field.
-    spinTurns: stats.turns - stats.uses.reduce((sum, use) => sum + use.turns, 0),
+    spinTurns: stats.turns - (stats.ultimateTurns ?? 0) - stats.uses.reduce((sum, use) => sum + use.turns, 0),
   };
 }

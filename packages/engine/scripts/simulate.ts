@@ -153,7 +153,7 @@ function playFinal(
   shape?: Shape,
 ): void {
   const players: RoundPlayer[] = seatPresets.map((preset, seat) => ({ id: `seat${seat}`, strategy: preset.strategy }));
-  const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId: rules, players, items });
+  const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId: rules, players, items, ultimates: false });
   const last = result.ticks[result.ticks.length - 1]?.snapshot;
   if (last === undefined) throw new Error("a round has at least one tick");
   const hitsOf = new Map(last.bots.map((bot) => [bot.id, bot.hitsLanded]));

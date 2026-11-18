@@ -89,7 +89,7 @@ describe("presets", () => {
     for (let seed = 1; seed <= seeds; seed++) {
       const seat = seed % 8;
       const players = Array.from({ length: 8 }, (_, i) => ({ id: `seat${i}`, strategy: (i === seat ? hunter : charger).strategy }));
-      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players, items: false });
+      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players, items: false, ultimates: false });
       total += result.standings.find((s) => s.botId === `seat${seat}`)?.score ?? 0;
     }
     // The measured mean over 1000 finals is about +18. The charger's mean against itself is 0 by symmetry.
@@ -100,7 +100,7 @@ describe("presets", () => {
     const strategies = PRESETS.map((p) => ({ id: p.id, strategy: p.strategy }));
     let wins = 0;
     for (let seed = 1; seed <= 60; seed++) {
-      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: strategies, items: true });
+      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: strategies, items: true, ultimates: false });
       if (result.standings[0]?.botId === DEFAULT_PRESET_ID) wins += 1;
     }
     expect(wins).toBeGreaterThan(0);
@@ -191,7 +191,7 @@ describe("presets", () => {
     const landed = new Map<string, number>(designed.map((p) => [p.id, 0]));
     for (let seed = 1; seed <= 6; seed++) {
       const players = PRESETS.map((p, i) => ({ id: `${p.id}`, strategy: p.strategy, seat: i }));
-      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: id, players, items: false });
+      const result = runRound({ seed, ticksTotal: 150, survivorsAfterRound: null, ruleSetId: id, players, items: false, ultimates: false });
       const last = result.ticks[result.ticks.length - 1]?.snapshot;
       if (!last) throw new Error("test setup");
       for (const b of last.bots) if (landed.has(b.id)) landed.set(b.id, (landed.get(b.id) ?? 0) + b.hitsLanded);

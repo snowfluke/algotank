@@ -34,6 +34,8 @@ const round = runRound({
   ruleSetId: STANDARD_RULE_SET_ID,
   ticksTotal: turns,
   survivorsAfterRound: isFinalRound(count) ? null : survivorCount(count),
+  items: false,
+  ultimates: false,
   players: Array.from({ length: count }, (_, i) => {
     const preset = PRESETS[i % PRESETS.length];
     if (preset === undefined) throw new Error("The engine has no play styles.");

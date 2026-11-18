@@ -19,6 +19,7 @@ function config(count: number, seed: number, ticksTotal = 40, ruleSetId: RuleSet
     survivorsAfterRound: null,
     ruleSetId,
     items: false,
+    ultimates: false,
     players: Array.from({ length: count }, (_, i) => ({
       id: `p${i}`,
       strategy: (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy,
@@ -445,7 +446,7 @@ describe("rule sets in a round", () => {
           if (event.outcome === "empty") continue;
           // The preset builds reach at most 1 cell farther than the base range (the random walker has Reach 1).
           expect(event.distance).toBeLessThanOrEqual(rules.baseRange + 1);
-          if (event.outcome === "dry") continue;
+          if (event.outcome === "dry" || event.outcome === "dodged") continue;
           const thrower = before.bots.find((bot) => bot.id === event.throwerId);
           const target = before.bots.find((bot) => bot.id === event.targetId);
           if (!thrower || !target) throw new Error("test setup");

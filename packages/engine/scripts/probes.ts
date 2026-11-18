@@ -77,7 +77,7 @@ function winPercentOfReplacement(ruleSetId: RuleSetId, replacement: Strategy, re
       id: `seat${seat}`,
       strategy: preset.id === replacedId ? replacement : preset.strategy,
     }));
-    const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId, players, items });
+    const result = runRound({ seed, ticksTotal, survivorsAfterRound: null, ruleSetId, players, items, ultimates: false });
     const winner = result.standings.find((standing) => standing.rank === 1)?.botId;
     const seat = field.findIndex((preset) => preset.id === replacedId);
     if (winner === `seat${seat}`) wins += 1;

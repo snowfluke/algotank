@@ -20,7 +20,7 @@ const bucketAt = (x: number, y: number, turnsLeft = 5): BoardItem => ({ kind: "b
  * so the test replaces the spawn snapshot before the first turn; the round plays on from it.
  */
 function roundWith(players: readonly { id: string; strategy: Strategy }[], bots: readonly BotState[], items: readonly BoardItem[] = [], seed = 1): RoundState {
-  const state = createRound({ seed, ticksTotal: 60, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players, items: true });
+  const state = createRound({ seed, ticksTotal: 60, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players, items: true, ultimates: false });
   (state as { snapshot: Snapshot }).snapshot = { ...state.snapshot, width: 8, height: 6, bots, items };
   return state;
 }
@@ -71,7 +71,7 @@ describe("a hit with an item", () => {
     for (const [item, effect] of [["mudBall", "stuck"], ["pinwheel", "dizzy"]] as const) {
       const result = resolveTick(snapshotOf([holding(a, item), b]), moves, ["a", "b"], stubRng({ chance: [true] }));
       expect(result.throws[0]?.outcome).toBe("hit");
-      expect(result.inflicted.get("b")).toBe(effect);
+      expect(result.inflicted.get("b")).toEqual({ kind: effect, turnsLeft: ITEM_RULES.effectTurns[effect] });
       expect(result.placements[0]?.item).toBeNull();
     }
   });
@@ -268,7 +268,7 @@ describe("with items, the game stays zero-sum", () => {
   test("in rounds of every play style with items on, the points of all tanks add up to 0 on every turn", () => {
     let bucketHits = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const state = createRound({ seed, ticksTotal: 90, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: PRESETS.slice(0, 8).map((p, i) => ({ id: `s${i}`, strategy: p.strategy })), items: true });
+      const state = createRound({ seed, ticksTotal: 90, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: PRESETS.slice(0, 8).map((p, i) => ({ id: `s${i}`, strategy: p.strategy })), items: true, ultimates: false });
       while (!state.isOver) {
         const turn = stepRound(state);
         bucketHits += turn.throws.filter((t) => t.outcome === "hit" && t.bucket === true).length;
@@ -326,12 +326,12 @@ describe("appearing and vanishing", () => {
   });
 
   test("a round with items off never shows an item", () => {
-    const state = createRound({ seed: 5, ticksTotal: 60, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: [{ id: "a", strategy: driver }, { id: "b", strategy: driver }], items: false });
+    const state = createRound({ seed: 5, ticksTotal: 60, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, players: [{ id: "a", strategy: driver }, { id: "b", strategy: driver }], items: false, ultimates: false });
     while (!state.isOver) expect(stepRound(state).snapshot.items).toEqual([]);
   });
 
   test("a round with items on shows them, and a joining tank never lands on one", () => {
-    const state = createOpenRound({ seed: 5, ticksTotal: 200, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 2, items: true });
+    const state = createOpenRound({ seed: 5, ticksTotal: 200, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 2, items: true, ultimates: false });
     joinRound(state, { id: "a", strategy: waiter });
     joinRound(state, { id: "b", strategy: waiter });
     for (let turn = 0; turn < 10; turn++) stepRound(state);

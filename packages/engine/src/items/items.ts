@@ -76,14 +76,17 @@ export function effectOfHit(thrower: Pick<BotState, "item">): TankEffectKind | n
   return thrower.item === null ? null : EFFECT_OF_ITEM[thrower.item];
 }
 
-export function newEffect(kind: TankEffectKind): TankEffect {
-  return { kind, turnsLeft: ITEM_RULES.effectTurns[kind] };
+export function newEffect(kind: TankEffectKind, recordSpins = false): TankEffect {
+  const turnsLeft = ITEM_RULES.effectTurns[kind];
+  if (kind === "dizzy" && recordSpins) return { kind, turnsLeft, spinTurnsLeft: ITEM_RULES.dizzySpinTurns };
+  return { kind, turnsLeft };
 }
 
-/** True on the first ITEM_RULES.dizzySpinTurns turns of a dizzy tank, which spin it round instead of its rules. */
+/** A dizzy tank spins before it reads rules in reverse. The legacy pinwheel shape uses its original timing. */
 export function spinsThisTurn(bot: Pick<BotState, "effect">): boolean {
   const effect = bot.effect;
-  return effect !== null && effect.kind === "dizzy" && effect.turnsLeft > ITEM_RULES.effectTurns.dizzy - ITEM_RULES.dizzySpinTurns;
+  return effect?.kind === "dizzy" &&
+    (effect.spinTurnsLeft ?? effect.turnsLeft - (ITEM_RULES.effectTurns.dizzy - ITEM_RULES.dizzySpinTurns)) > 0;
 }
 
 /** A spinning tank's turn: a right turn, no rule, the same mode. A running sequence of steps ends with it. */
@@ -94,6 +97,9 @@ export function spinDecision(bot: Pick<BotState, "id" | "modeId">): Decision {
 /** The effect after one more turn: one turn less, and none after the last. */
 export function countDown(effect: TankEffect | null): TankEffect | null {
   if (effect === null || effect.turnsLeft <= 1) return null;
+  if (effect.kind === "dizzy" && effect.spinTurnsLeft !== undefined) {
+    return { ...effect, turnsLeft: effect.turnsLeft - 1, spinTurnsLeft: Math.max(0, effect.spinTurnsLeft - 1) };
+  }
   return { kind: effect.kind, turnsLeft: effect.turnsLeft - 1 };
 }
 

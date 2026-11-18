@@ -26,6 +26,7 @@ function play(strategy: Strategy, ticksTotal: number, seed = 7, extra: RoundConf
     survivorsAfterRound: null,
     ruleSetId: STANDARD_RULE_SET_ID,
     items: false,
+    ultimates: false,
     players: [{ id: "me", strategy }, { id: "other", strategy: waiter }, ...extra],
   });
 }

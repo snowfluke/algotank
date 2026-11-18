@@ -118,13 +118,13 @@ describe("compactTick and expandTick", () => {
     const at = { x: 2, y: 2 };
     const front = { x: 2, y: 1 };
     const side = { x: 3, y: 2 };
-    const shot = { throwerId: "p0", outcome: "hit", targetId: "p1", distance: 1, hitChance: 90, bucket: true } as const;
+    const shot = { throwerId: "p0", outcome: "hit", targetId: "p1", distance: 1, hitChance: 100 } as const;
     const fires: NonNullable<PublicTick["fires"]> = [
       { botId: "p7", kind: "magnet", at, items: [{ kind: "bucket", from: front }] },
       { botId: "p5", kind: "splash", at, squares: [{ ...front, targetId: "p1", outcome: "hit" }, { ...side, targetId: "p2", outcome: "miss" }] },
-      { botId: "p0", kind: "dash", at, path: [front], shot },
+      { botId: "p0", kind: "dash", at, path: [front], shot, points: 2 },
       { botId: "p3", kind: "mudBomb", at, center: front, area: [at, front], affected: ["p1"], points: 1 },
-      { botId: "p2", kind: "whirlwind", at, area: [at, front], affected: ["p3", "p4"] },
+      { botId: "p2", kind: "whirlwind", at, area: [at, front], affected: ["p3", "p4"], points: 1 },
       { botId: "p4", kind: "smoke", at },
       { botId: "p6", kind: "bigUmbrella", at },
       { botId: "p1", kind: "fullTank", at },

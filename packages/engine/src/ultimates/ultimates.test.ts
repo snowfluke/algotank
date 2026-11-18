@@ -3,7 +3,7 @@ import {
   ACTIONS, CONDITIONS, DIRECTIONS, ITEM_RULES, PRESETS, STANDARD_RULE_SET_ID, ULTIMATE_RULES, createOpenRound, createRound,
   joinRound, parseStrategy, replaceStrategy, runRound, statsOfRound, statsView, stepRound, waterAfterTick,
 } from "../index.ts";
-import type { BoardItem, BotState, Direction, ItemKind, Move, RoundState, Snapshot, Strategy, ThrowEvent, UltimateId } from "../index.ts";
+import type { BoardItem, BotState, Direction, ItemKind, Move, RoundState, Snapshot, Strategy, UltimateId } from "../index.ts";
 import { rotate } from "../directions.ts";
 import { cellAhead } from "../round/grid.ts";
 import { resolveTick, type TickMove } from "../round/resolve.ts";
@@ -25,11 +25,13 @@ function placedRound(
   bots: readonly BotState[],
   strategies: Readonly<Record<string, Strategy>> = {},
   options: Partial<Snapshot> = {},
+  ultimates = true,
+  seed = 42,
 ): RoundState {
   const players = bots.map((tank) => ({ id: tank.id, strategy: strategies[tank.id] ?? waiting(tank.ultimate?.id ?? "magnet") }));
   const state = createRound({
-    seed: 42, ticksTotal: options.ticksTotal ?? 100, survivorsAfterRound: null,
-    ruleSetId: STANDARD_RULE_SET_ID, players, items: false, ultimates: true,
+    seed, ticksTotal: options.ticksTotal ?? 100, survivorsAfterRound: null,
+    ruleSetId: STANDARD_RULE_SET_ID, players, items: false, ultimates,
   });
   const placed = state.snapshot.bots.map(({ itemsWaiting: _queue, ...spawn }, i) => ({ ...spawn, ...bots[i]! }));
   (state as { snapshot: Snapshot }).snapshot = snapshotOf(placed, { survivorsAfterRound: null, ...options });
@@ -172,7 +174,7 @@ describe("Magnet hand", () => {
 
   test("keeps the current item's remaining uses and fills only the free slots", () => {
     const left = itemAt("mudBall", 4, 3);
-    const observer = bot("enemy", 6, 3, "W");
+    const observer = tankWith("fullTank", { id: "enemy", x: 6, direction: "W" });
     const state = placedRound([tankWith("magnet", { item: "bucket", itemUses: 1 }), observer], {}, {
       items: [left, itemAt("pinwheel", 3, 2), itemAt("umbrella", 2, 2)],
     });
@@ -282,6 +284,25 @@ describe("Magnet hand", () => {
     expect(roundTank(state, second!).item).toBeNull();
     expect(roundTank(state, second!).ultimate?.kind).toBe("charging");
   });
+
+  test("the nearer Magnet wins even when it moves second and can only take floor items", () => {
+    const near = tankWith("magnet", { id: "near", x: 5 });
+    const far = tankWith("magnet", { id: "far", x: 2 });
+    const holder = bot("holder", 6, 3, "W", { item: "pinwheel" });
+    const result = resolveTick(snapshotOf([near, far, holder]), [fire("near", "magnet"), fire("far", "magnet"), move("holder")],
+      ["far", "near", "holder"], stubRng(), { items: [itemAt("umbrella", 4, 3)], tick: 0, spawn: false });
+    expect(result.fires).toMatchObject([{ botId: "far", items: [] }, { botId: "near", items: [{ kind: "umbrella" }] }]);
+    expect(placement(result, "holder")).toMatchObject({ item: "pinwheel", itemUses: ITEM_RULES.uses.pinwheel });
+  });
+
+  test("a nearer Magnet with one slot reserves its nearest item and leaves the rest for the farther Magnet", () => {
+    const near = tankWith("magnet", { id: "near", x: 5, item: "mudBall", itemsWaiting: ["bucket"] });
+    const far = tankWith("magnet", { id: "far", x: 2 });
+    const result = resolveTick(snapshotOf([near, far]), [fire("near", "magnet"), fire("far", "magnet")],
+      ["far", "near"], stubRng(), { items: [itemAt("umbrella", 5, 4), itemAt("pinwheel", 5, 5)], tick: 0, spawn: false });
+    expect(placement(result, "near").itemsWaiting).toEqual(["bucket", "umbrella"]);
+    expect(placement(result, "far").item).toBe("pinwheel");
+  });
 });
 
 describe("Dash", () => {
@@ -294,7 +315,7 @@ describe("Dash", () => {
       const result = resolveTick(snapshotOf([dashing, shooter]), moves, order, stubRng());
       expect(result.fires).toEqual([{ botId: "self", kind: "dash", at: { x: 2, y: 3 }, path: [
         { x: 3, y: 3 }, { x: 4, y: 3 }, { x: 5, y: 3 },
-      ], shot: { throwerId: "self", outcome: "empty" } }]);
+      ], shot: { throwerId: "self", outcome: "empty" }, points: 0 }]);
       expect(result.throws.find((shot) => shot.throwerId === "shooter")).toEqual({ throwerId: "shooter", targetId: "self", distance, outcome: "dodged" });
       expect(placement(result, "shooter").water).toBe(waterCapacity - waterPerThrow);
       expect(placement(result, "self").score).toBe(0);
@@ -304,7 +325,7 @@ describe("Dash", () => {
   test("a blocker arriving during the turn can stop the dash at zero without removing immunity", () => {
     const block = bot("block", 3, 2, "S");
     const result = resolveTick(snapshotOf([dashing, shooter, block]), [...moves, move("block", "F")],
-      ["block", "self", "shooter"], stubRng({ chance: [false] }));
+      ["block", "self", "shooter"], stubRng());
     expect(result.fires[0]).toMatchObject({ path: [] });
     expect(result.throws.find((shot) => shot.throwerId === "shooter")?.outcome).toBe("dodged");
   });
@@ -314,65 +335,92 @@ describe("Dash", () => {
       const block = bot("block", 4, 3, "W");
       const bots = width === 4 ? [dashing, shooter] : [dashing, shooter, block];
       const result = resolveTick(snapshotOf(bots, { width }), bots.map(({ id }) => id === "self" ? fire(id, "dash") : move(id)),
-        bots.map(({ id }) => id), stubRng({ chance: [false] }));
+        bots.map(({ id }) => id), stubRng());
       expect(result.fires[0]).toMatchObject({ path: [{ x: 3, y: 3 }] });
     }
   });
 
-  test("shoots from the last square with the normal roll, water and held item", () => {
-    const target = bot("target", 6, 3, "W");
-    for (const [outcome, water, enemy, chances, expectedWater, points] of [
-      ["hit", waterCapacity, target, [true], waterCapacity - waterPerThrow, 2],
-      ["miss", waterCapacity, target, [false], waterCapacity - waterPerThrow, 0],
-      ["dry", 0, target, [], waterAfterTick(0, false, STANDARD), 0],
-      ["empty", waterCapacity, { ...target, y: 4 }, [], waterCapacity, 0],
-    ] as const) {
-      const source = { ...dashing, water, item: "bucket" as const, itemUses: ITEM_RULES.uses.bucket };
-      const rng = stubRng({ chance: [...chances] });
-      const result = resolveTick(snapshotOf([source, enemy]), [fire("self", "dash"), move("target")], ["self", "target"], rng);
-      const aimed = { throwerId: "self", targetId: "target", distance: 1 };
-      const shot: ThrowEvent = outcome === "empty" ? { throwerId: "self", outcome }
-        : outcome === "dry" ? { ...aimed, outcome }
-        : { ...aimed, outcome, hitChance: 90, ...(outcome === "hit" ? { bucket: true } : {}) };
+  test("rams the first tank in range from the last square without using water, smoke chance or held items", () => {
+    const target = bot("target", 7, 3, "W", { ultimateEffect: { kind: "smoke", turnsLeft: 4 } });
+    const farther = bot("farther", 8, 3, "W");
+    for (const item of ["bucket", "pinwheel", "mudBall"] as const) {
+      const source = tankWith("dash", { x: 2, water: 0, item });
+      const rng = stubRng();
+      const result = resolveTick(snapshotOf([source, target, farther]), [fire("self", "dash"), move("target"), move("farther")],
+        ["self", "target", "farther"], rng);
+      const shot = { throwerId: "self", targetId: "target", distance: 2, outcome: "hit", hitChance: 100 } as const;
       expect(result.throws).toEqual([shot]);
-      expect(result.fires[0]).toMatchObject({ shot });
-      expect(rng.calls).toEqual(chances.length === 0 ? [] : ["chance:90"]);
+      expect(result.fires[0]).toMatchObject({ shot, points: ULTIMATE_RULES.dash.points });
+      expect(rng.calls).toEqual([]);
       expect(placement(result, "self")).toMatchObject({
-        x: 5, water: expectedWater, score: points, itemUses: ITEM_RULES.uses.bucket - (outcome === "hit" ? 1 : 0),
+        x: 5, water: waterAfterTick(0, false, STANDARD), score: ULTIMATE_RULES.dash.points, item, itemUses: ITEM_RULES.uses[item],
       });
-      expect(placement(result, "target").score).toBe(0 - points);
+      expect(placement(result, "target").score).toBe(-ULTIMATE_RULES.dash.points);
+      expect(placement(result, "farther").score).toBe(0);
+      expect(result.inflicted.size).toBe(0);
     }
   });
 
-  test("a dash shot rolls between the ordinary throws on either side of it in move order", () => {
+  test("a ram resolves between ordinary throws without rolling", () => {
     const tanks = [dashing, bot("target", 6, 3, "S"), bot("before", 6, 2, "S"), bot("after", 6, 4, "N")];
-    const rng = stubRng({ chance: [false, true, false] });
+    const rng = stubRng({ chance: [false, false] });
     const result = resolveTick(snapshotOf(tanks), [fire("self", "dash"), move("target"), move("before", "T"), move("after", "T")],
       ["before", "self", "after", "target"], rng);
     expect(result.throws.map(({ throwerId, outcome }) => [throwerId, outcome])).toEqual([
       ["before", "miss"], ["self", "hit"], ["after", "miss"],
     ]);
+    expect(rng.calls).toEqual(["chance:90", "chance:90"]);
+  });
+
+  test("the Big Umbrella checks the ram direction before the item umbrella", () => {
+    for (const [direction, kind] of [["W", "bigUmbrella"], ["E", "umbrella"]] as const) {
+      const target = bot("target", 6, 3, direction, { ultimateEffect: { kind: "bigUmbrella", blocksLeft: 1 }, item: "umbrella" });
+      const result = resolveTick(snapshotOf([dashing, target]), [fire("self", "dash"), move("target")], ["self", "target"], stubRng());
+      expect(result.fires[0]).toMatchObject({ points: 0, shot: { outcome: "blocked", targetId: "target", protection: { kind, pointsSaved: 2 } } });
+      expect(placement(result, "target")).toMatchObject({ score: 0, itemUses: kind === "umbrella" ? 1 : 2,
+        ultimateEffect: kind === "bigUmbrella" ? null : { kind: "bigUmbrella", blocksLeft: 1 } });
+    }
+  });
+
+  test("a ram and normal shots from effect items leave a dashing tank untouched", () => {
+    for (const item of ["pinwheel", "mudBall"] as const) {
+      const target = bot("target", 6, 3, "E");
+      const armed = bot("armed", 6, 2, "S", { item });
+      const result = resolveTick(snapshotOf([dashing, target, armed]), [fire("self", "dash"), fire("target", "dash"), move("armed", "T")],
+        ["armed", "self", "target"], stubRng());
+      expect(result.throws.slice(0, 2)).toMatchObject([{ outcome: "dodged", targetId: "target" }, { outcome: "dodged", targetId: "target" }]);
+      expect(placement(result, "armed").itemUses).toBe(ITEM_RULES.uses[item]);
+      expect(placement(result, "target").score).toBe(0);
+      expect(result.inflicted.size).toBe(0);
+    }
+  });
+
+  test("a pickup on the final Dash square still rolls, and its backfire cannot stick the tank", () => {
+    const state = placedRound([tankWith("dash"), bot("target", 6, 3, "W")], {}, { items: [itemAt("mudBall", 5, 3)] }, true, 1);
+    const tick = stepRound(state);
+    expect(tick.pickups).toEqual([{ botId: "self", item: "mudBall" }]);
+    expect(roundTank(state, "self")).toMatchObject({ x: 5, item: null, effect: null });
   });
 });
 
 describe("Smoke", () => {
-  test("halves and rounds down the existing throw roll while the tank is stuck", () => {
+  test("quarters and rounds down the existing throw roll even when Smoke moves second", () => {
     const smoked = tankWith("smoke", { x: 4, effect: { kind: "stuck", turnsLeft: 2 } });
     const shooter = bot("shooter", 0, 3, "E", { build: { reach: 1, aim: 0, dodge: 0 }, item: "bucket" });
     const rng = stubRng();
-    const result = resolveTick(snapshotOf([smoked, shooter]), [fire("self", "smoke"), move("shooter", "T")], ["self", "shooter"],
-      { ...rng, next: () => { rng.calls.push("next"); return 0.17; } });
+    const result = resolveTick(snapshotOf([smoked, shooter]), [fire("self", "smoke"), move("shooter", "T")], ["shooter", "self"],
+      { ...rng, next: () => { rng.calls.push("next"); return 0.08; } });
     expect(rng.calls).toEqual(["next"]);
-    expect(result.throws[0]).toMatchObject({ outcome: "miss", hitChance: 17, protection: { kind: "smoke", pointsSaved: 2 } });
-    expect(placement(result, "self").ultimateEffect).toEqual({ kind: "smoke", turnsLeft: 10 });
+    expect(result.throws[0]).toMatchObject({ outcome: "miss", hitChance: 8, protection: { kind: "smoke", pointsSaved: 2 } });
+    expect(placement(result, "self").ultimateEffect).toEqual({ kind: "smoke", turnsLeft: 15 });
     expect(placement(result, "shooter").itemUses).toBe(ITEM_RULES.uses.bucket);
   });
 
-  test("smoke counts its activation turn and expires after ten turns", () => {
+  test("smoke counts its activation turn and expires after fifteen turns", () => {
     const state = placedRound([tankWith("smoke"), bot("threat", 4, 3, "W")]);
-    for (let turn = 1; turn <= 10; turn++) {
+    for (let turn = 1; turn <= ULTIMATE_RULES.smoke.turns; turn++) {
       stepRound(state);
-      expect(roundTank(state, "self").ultimateEffect).toEqual(turn === 10 ? null : { kind: "smoke", turnsLeft: 10 - turn });
+      expect(roundTank(state, "self").ultimateEffect).toEqual(turn === ULTIMATE_RULES.smoke.turns ? null : { kind: "smoke", turnsLeft: ULTIMATE_RULES.smoke.turns - turn });
     }
   });
 });
@@ -390,7 +438,7 @@ describe("Big Umbrella", () => {
       for (const item of [null, "umbrella"] as const) {
         const withItem = { ...withoutQueue, item, itemUses: item === null ? 0 : ITEM_RULES.uses.umbrella };
         const result = resolveTick(snapshotOf([withItem, shooter]), [fire("self", "bigUmbrella"), move("shooter", "T")],
-          ["self", "shooter"], stubRng({ chance: [true] }));
+          ["shooter", "self"], stubRng({ chance: [true] }));
         expect(result.throws[0]?.outcome).toBe(covered[eighth] || item !== null ? "blocked" : "hit");
         expect(placement(result, "self").ultimateEffect).toEqual({ kind: "bigUmbrella", blocksLeft: covered[eighth] ? 3 : 4 });
         expect(placement(result, "self").itemUses).toBe(item === null ? 0 : covered[eighth] ? 2 : 1);
@@ -413,11 +461,12 @@ describe("Big Umbrella", () => {
 });
 
 test("Full Tank fills up and grants three free aimed shots, including misses and blocks", () => {
-  const empty = tankWith("fullTank", { water: 0 });
+  const empty = tankWith("fullTank", { water: 0, item: "bucket" });
   const away = bot("target", 7, 5, "W");
   const result = resolveTick(snapshotOf([empty, away]), [fire("self", "fullTank"), move("target")], ["target", "self"], stubRng());
   let source = withPlacement(empty, placement(result, "self"));
   expect(source.water).toBe(waterCapacity);
+  expect(source.itemUses).toBe(ITEM_RULES.uses.bucket);
   expect(source.ultimateEffect).toEqual({ kind: "fullTank", freeShots: 3 });
 
   const moves = [move("self", "T"), move("target")];
@@ -431,6 +480,11 @@ test("Full Tank fills up and grants three free aimed shots, including misses and
     const turn = resolveTick(snapshotOf([source, defender]), moves, ["self", "target"], rng);
     expect(turn.throws[0]?.outcome).toBe(outcome);
     expect(rng.calls).toEqual(["chance:90"]);
+    if (shots === 2) {
+      expect(turn.throws[0]).toMatchObject({ bucket: true });
+      expect(placement(turn, "target").score).toBe(-ITEM_RULES.bucketHitPoints);
+      expect(placement(turn, "self").itemUses).toBe(ITEM_RULES.uses.bucket - 1);
+    }
     source = withPlacement(source, placement(turn, "self"));
     expect(source.ultimateEffect).toEqual(shots === 0 ? null : { kind: "fullTank", freeShots: shots });
     expect(source.water).toBe(outcome === "hit" && shots === 0 ? waterCapacity - waterPerThrow : waterCapacity);
@@ -452,18 +506,17 @@ describe("Splash Ring", () => {
     ]);
     expect(rng.calls).toEqual([]);
     expect(result.throws).toEqual([]);
-    expect(placement(result, "self")).toMatchObject({ score: 4, water: 0, item: "bucket", itemUses: 2 });
+    expect(placement(result, "self")).toMatchObject({ score: 4, water: waterCapacity - waterPerThrow, item: "bucket", itemUses: 2 });
     expect(placement(result, "front").score).toBe(-1);
   });
 
-  test("only smoked tanks roll, front and side both at one in two, clockwise", () => {
-    const smoke = { kind: "smoke", turnsLeft: 4 } as const;
-    const bots = [tankWith("splash"), bot("front", 4, 3, "W", { ultimateEffect: smoke }),
-      bot("plain", 4, 4, "N"), bot("side", 3, 4, "N", { ultimateEffect: smoke })];
+  test("only smoked tanks roll, front and side both at one in four, clockwise", () => {
+    const bots = [tankWith("splash"), bot("front", 4, 3, "W"),
+      bot("plain", 4, 4, "N"), bot("side", 3, 4, "N", { ultimateEffect: { kind: "smoke", turnsLeft: 4 } })];
     const expected = [["front", "miss"], ["plain", "hit"], ["side", "hit"]];
-    const values = [0.5, 0.49];
+    const values = [0.25, 0.24];
     const rng = stubRng();
-    const result = resolveTick(snapshotOf(bots), [fire("self", "splash"), move("front"), move("side"), move("plain")],
+    const result = resolveTick(snapshotOf(bots), [fire("self", "splash"), fire("front", "smoke"), move("side"), move("plain")],
       ["self", "side", "front", "plain"], { ...rng, next: () => { const roll = values.shift(); if (roll === undefined) throw new Error("unexpected roll"); return roll; } });
     const event = result.fires[0];
     if (event?.kind !== "splash") throw new Error("expected Splash");
@@ -475,24 +528,24 @@ describe("Splash Ring", () => {
   test("held attack items stay and defenses block a ring hit as they do a throw", () => {
     for (const item of ["bucket", "pinwheel", "mudBall"] as const) {
       const source = tankWith("splash", { item });
-      const front = bot("front", 4, 3, "W", { item: "umbrella", ultimateEffect: { kind: "bigUmbrella", blocksLeft: 1 } });
+      const front = bot("front", 4, 3, "W", { item: "umbrella" });
       const side = bot("side", 3, 4, "S", { item: "umbrella" });
       const dash = bot("dash", 4, 4, "S");
       const result = resolveTick(snapshotOf([source, front, side, dash]),
-        [fire("self", "splash"), move("front"), move("side"), fire("dash", "dash")],
+        [fire("self", "splash"), fire("front", "bigUmbrella"), move("side"), fire("dash", "dash")],
         ["self", "front", "side", "dash"], stubRng());
       const event = result.fires[0];
       if (event?.kind !== "splash") throw new Error("expected Splash");
       expect(event.squares.filter((square) => square.outcome !== "empty").map(({ targetId, outcome }) => [targetId, outcome]))
         .toEqual([["front", "blocked"], ["dash", "dodged"], ["side", "blocked"]]);
-      expect(placement(result, "self")).toMatchObject({ score: 0, water: 0, item, itemUses: ITEM_RULES.uses[item] });
-      expect(placement(result, "front")).toMatchObject({ ultimateEffect: null, itemUses: 2 });
+      expect(placement(result, "self")).toMatchObject({ score: 0, water: waterCapacity - waterPerThrow, item, itemUses: ITEM_RULES.uses[item] });
+      expect(placement(result, "front")).toMatchObject({ ultimateEffect: { kind: "bigUmbrella", blocksLeft: 3 }, itemUses: 2 });
       expect(placement(result, "side").itemUses).toBe(1);
       expect(result.inflicted.size).toBe(0);
     }
   });
 
-  test("existing throw, pickup and spawn draws come before the fires' rolls in move order", () => {
+  test("Splash rolls share move order with normal throws before pickup and spawn draws", () => {
     const smoke = { kind: "smoke", turnsLeft: 4 } as const;
     const tanks = [
       bot("left", 2, 2, "E"), bot("left-side", 2, 3, "N", { ultimateEffect: smoke }),
@@ -501,8 +554,8 @@ describe("Splash Ring", () => {
     ];
     const moves = [fire("left", "splash"), move("left-side"), fire("right", "splash"), move("right-side"), move("picker", "F"), move("shooter", "T")];
     const rng = stubRng({ chance: [false, true], int: [0, 0] });
-    const rolls = [0.4, 0.6];
-    const result = resolveTick(snapshotOf(tanks), moves, ["right", "left", "left-side", "right-side", "picker", "shooter"],
+    const rolls = [0.2, 0.3];
+    const result = resolveTick(snapshotOf(tanks), moves, ["right", "shooter", "left", "left-side", "right-side", "picker"],
       { ...rng, next: () => {
         rng.calls.push("next");
         const roll = rolls.shift();
@@ -511,7 +564,7 @@ describe("Splash Ring", () => {
       } }, {
       items: [{ kind: "pinwheel", x: 5, y: 5, turnsLeft: 3 }], tick: 9, spawn: true,
     });
-    expect(rng.calls).toEqual(["chance:90", "chance:20", "int:10", "int:57", "next", "next"]);
+    expect(rng.calls).toEqual(["next", "chance:90", "next", "chance:20", "int:10", "int:57"]);
     expect(result.fires.map(({ botId }) => botId)).toEqual(["right", "left"]);
     expect(placement(result, "right").score).toBe(1);
     const left = result.fires[1];
@@ -528,28 +581,42 @@ describe("Splash Ring", () => {
     expect(placement(result, "front")).toMatchObject({ x: 5, score: -1, item: "umbrella", itemUses: 2 });
   });
 
-  test("a tank that lost its last umbrella block after pickups can take the item under it next turn", () => {
+  test("Splash uses the last umbrella block before the tank picks up an item under it", () => {
     const front = bot("front", 4, 3, "W", { item: "umbrella", itemUses: 1 });
     const picker = waiting("magnet", mode("main", [], act("goToItem", { item: "any" })));
     const state = placedRound([tankWith("splash"), front, bot("side", 3, 4, "N")], { front: picker }, {
       items: [itemAt("bucket", front.x, front.y)],
     });
     const splash = stepRound(state);
-    expect(splash.pickups).toEqual([]);
-    expect(roundTank(state, "front").item).toBeNull();
-    expect(splash.snapshot.items).toHaveLength(1);
+    expect(splash.pickups).toEqual([{ botId: "front", item: "bucket" }]);
+    expect(roundTank(state, "front").item).toBe("bucket");
+    expect(splash.snapshot.items).toEqual([]);
+  });
 
-    const pickup = stepRound(state);
-    expect(pickup.decisions.find((d) => d.botId === "front")).toMatchObject({ actionId: "goToItem", move: "W" });
-    expect(pickup.pickups).toEqual([{ botId: "front", item: "bucket" }]);
+  test("goToItem cannot act when the nearest item is under the tank, and pickup still takes it", () => {
+    const self = bot("self", 3, 3, "E");
+    const picker = waiting("magnet", mode("main", [rule("get", [when("itemNear", { item: "any", n: 4 })], act("goToItem", { item: "any" }))], act("wait")));
+    const state = placedRound([self, bot("far", 7, 7, "N")], { self: picker },
+      { items: [itemAt("bucket", self.x, self.y), itemAt("umbrella", self.x + 1, self.y)] });
+    const tick = stepRound(state);
+    expect(tick.decisions[0]).toMatchObject({ ruleId: null, actionId: "wait", move: "W" });
+    expect(tick.pickups).toEqual([{ botId: "self", item: "bucket" }]);
   });
 
   test("a ring hit updates the round's hit history", () => {
     const state = placedRound([tankWith("splash"), bot("front", 4, 3, "W"), bot("side", 3, 4, "N")]);
     stepRound(state);
-    expect(roundTank(state, "self")).toMatchObject({ water: 0, ticksSinceLandedHit: 0 });
+    expect(roundTank(state, "self")).toMatchObject({ water: waterCapacity - waterPerThrow, ticksSinceLandedHit: 0 });
     expect(roundTank(state, "self").hitsLanded).toBeGreaterThanOrEqual(1);
     expect(roundTank(state, "front")).toMatchObject({ wasHit: true, hitsTaken: 1, lastHitBy: "self" });
+  });
+
+  test("the last hitter is chosen in move order when a normal throw and Splash both land", () => {
+    const tanks = [bot("shooter", 4, 2, "S"), bot("target", 4, 3, "W"), bot("side", 3, 4, "N"), tankWith("splash")];
+    const state = placedRound(tanks, { shooter: waiting("magnet", mode("main", [], act("throw"))) });
+    const tick = stepRound(state);
+    expect(tick.order.slice(0, 2)).toEqual(["self", "shooter"]);
+    expect(roundTank(state, "target")).toMatchObject({ wasHit: true, hitsTaken: 2, lastHitBy: "shooter" });
   });
 });
 
@@ -610,11 +677,88 @@ describe("Mud Bomb and Whirlwind", () => {
     expect(statsView(statsOfRound(before, ticks, "near"), waiting("magnet", normal)).spinTurns).toBe(2);
   });
 
+  test("Whirlwind takes points only within one square, through Smoke and both umbrellas, and skips Dash", () => {
+    for (const item of ["bucket", "pinwheel", "mudBall"] as const) {
+      const source = tankWith("whirlwind", { item });
+      const smoke = bot("smoke", 4, 3, "W", { item: "umbrella" });
+      const umbrella = bot("umbrella", 2, 2, "SE");
+      const dashing = bot("dash", 3, 4, "S");
+      const outer = bot("outer", 5, 5, "NW", { item: "bucket" });
+      const result = resolveTick(snapshotOf([source, smoke, umbrella, dashing, outer]),
+        [fire("self", "whirlwind"), fire("smoke", "smoke"), fire("umbrella", "bigUmbrella"), fire("dash", "dash"), move("outer")],
+        ["self", "smoke", "umbrella", "dash", "outer"], stubRng());
+      expect(result.fires[0]).toMatchObject({ kind: "whirlwind", points: 2, affected: ["umbrella", "smoke", "outer"] });
+      expect(result.placements.map(({ score }) => score)).toEqual([2, -1, -1, 0, 0]);
+      expect(result.inflicted.has("dash")).toBe(false);
+      expect(placement(result, "umbrella").ultimateEffect).toEqual({ kind: "bigUmbrella", blocksLeft: 4 });
+      expect(placement(result, "smoke").itemUses).toBe(ITEM_RULES.uses.umbrella);
+      expect(placement(result, "self")).toMatchObject({ item, itemUses: ITEM_RULES.uses[item] });
+    }
+  });
+
+  test("Mud Bomb keeps held attack items while a non-umbrella item provides no protection", () => {
+    for (const item of ["bucket", "pinwheel", "mudBall"] as const) {
+      const source = tankWith("mudBomb", { item });
+      const target = bot("target", 4, 3, "W", { item });
+      const result = resolveTick(snapshotOf([source, target]), [fire("self", "mudBomb"), fire("target", "bigUmbrella")],
+        ["self", "target"], stubRng());
+      expect(result.fires[0]).toMatchObject({ points: 1, affected: ["target"] });
+      expect(result.inflicted.get("target")).toEqual({ kind: "stuck", turnsLeft: 5 });
+      expect(placement(result, "self")).toMatchObject({ item, itemUses: ITEM_RULES.uses[item] });
+      expect(placement(result, "target")).toMatchObject({ score: -1, item, itemUses: ITEM_RULES.uses[item],
+        ultimateEffect: { kind: "bigUmbrella", blocksLeft: 4 } });
+    }
+  });
+
   test("the pinwheel still gives six turns, with the first two marked as spins in an enabled round", () => {
     const a = bot("a", 0, 1, "E", { item: "pinwheel" });
     const b = tankWith("magnet", { x: 1, y: 1 });
     const result = resolveTick(snapshotOf([a, b]), [move("a", "T"), move("self")], ["a", "self"], stubRng({ chance: [true] }));
     expect(result.inflicted.get("self")).toEqual({ kind: "dizzy", turnsLeft: 6, spinTurnsLeft: 2 });
+  });
+});
+
+describe("effect collisions", () => {
+  test("Mud Bomb's five stuck turns beat Whirlwind's four dizzy turns in either order", () => {
+    const tanks = [bot("mud", 2, 3, "E"), bot("target", 3, 3, "N"), bot("wind", 4, 3, "W")];
+    const moves = [fire("mud", "mudBomb"), move("target"), fire("wind", "whirlwind")];
+    for (const order of [["mud", "target", "wind"], ["wind", "target", "mud"]]) {
+      const result = resolveTick(snapshotOf(tanks), moves, order, stubRng());
+      expect(result.inflicted.get("target")).toEqual({ kind: "stuck", turnsLeft: 5 });
+      expect(result.placements.map(({ score }) => score)).toEqual([2, -2, 0]);
+    }
+  });
+
+  test("simultaneous item hits keep the longer effect with ultimates on and the last effect with them off", () => {
+    const target = bot("target", 3, 3, "N");
+    const pinwheel = bot("pinwheel", 2, 3, "E", { item: "pinwheel" });
+    const mud = bot("mud", 4, 3, "W", { item: "mudBall" });
+    for (const ultimates of [false, true]) {
+      const tank = ultimates ? { ...target, ultimate: { id: "dash", kind: "ready" } } as const : target;
+      const result = resolveTick(snapshotOf([tank, pinwheel, mud]), [move("target"), move("pinwheel", "T"), move("mud", "T")],
+        ["target", "pinwheel", "mud"], stubRng({ chance: [true, true] }));
+      expect(result.inflicted.get("target")).toEqual(ultimates ? { kind: "dizzy", turnsLeft: 6, spinTurnsLeft: 2 } : { kind: "stuck", turnsLeft: 4 });
+      expect(placement(result, "mud").item).toBeNull();
+    }
+  });
+
+  test("an existing effect counts down first and keeps a tie with a new item hit only with ultimates on", () => {
+    const mud = bot("mud", 2, 3, "E", { item: "mudBall" });
+    const target = bot("target", 3, 3, "N", { effect: { kind: "dizzy", turnsLeft: 5 } });
+    for (const ultimates of [false, true]) {
+      const state = placedRound([mud, target], { mud: waiting("magnet", mode("main", [], act("throw"))) }, {}, ultimates);
+      expect(stepRound(state).throws[0]?.outcome).toBe("hit");
+      expect(roundTank(state, "target").effect).toEqual(ultimates ? { kind: "dizzy", turnsLeft: 4 } : { kind: "stuck", turnsLeft: 4 });
+    }
+  });
+
+  test("a pickup backfire competes with an existing effect only with ultimates on", () => {
+    const target = bot("target", 3, 3, "N", { effect: { kind: "dizzy", turnsLeft: 6 } });
+    for (const ultimates of [false, true]) {
+      const state = placedRound([target, bot("other", 7, 7, "N")], {}, { items: [itemAt("mudBall", 3, 3)] }, ultimates, 1);
+      expect(stepRound(state).pickups).toEqual([{ botId: "target", item: "mudBall" }]);
+      expect(roundTank(state, "target")).toMatchObject({ item: null, effect: ultimates ? { kind: "dizzy", turnsLeft: 5 } : { kind: "stuck", turnsLeft: 4 } });
+    }
   });
 });
 
@@ -669,17 +813,20 @@ describe("ultimate lifetime and precedence", () => {
   });
 
   test("first charge and recharge finish at end of turn, and the final snapshot clears ultimate state", () => {
-    const state = placedRound([bot("self", 3, 3, "E"), enemy], { self: waiting("mudBomb") }, { ticksTotal: 58 });
-    expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: 15 });
+    const { firstReadyTurn, rechargeTurns } = ULTIMATE_RULES;
+    const firstFire = firstReadyTurn + 1;
+    const secondFire = firstFire + rechargeTurns + 1;
+    const state = placedRound([bot("self", 3, 3, "E"), enemy], { self: waiting("mudBomb") }, { ticksTotal: secondFire + 1 });
+    expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: firstReadyTurn });
     const fireTurns: number[] = [];
     while (!state.isOver) {
       const result = stepRound(state);
       const turn = result.tick + 1;
       if (result.fires?.some((event) => event.botId === "self")) fireTurns.push(turn);
-      if (turn === 15 || turn === 56) expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "ready" });
-      if (turn === 16 || turn === 57) expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: 40 });
+      if (turn === firstFire - 1 || turn === secondFire - 1) expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "ready" });
+      if (turn === firstFire || turn === secondFire) expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: rechargeTurns });
     }
-    expect(fireTurns).toEqual([16, 57]);
+    expect(fireTurns).toEqual([firstFire, secondFire]);
     expect(roundTank(state, "self")).not.toHaveProperty("ultimate");
     expect(roundTank(state, "self")).not.toHaveProperty("ultimateEffect");
   });
@@ -688,9 +835,9 @@ describe("ultimate lifetime and precedence", () => {
     const round = createOpenRound({ seed: 9, ticksTotal: 30, boardFor: 8, ruleSetId: STANDARD_RULE_SET_ID, items: false, ultimates: true });
     stepRound(round);
     const joined = joinRound(round, { id: "self", strategy: waiting("smoke") });
-    expect(joined.ultimate).toEqual({ id: "smoke", kind: "charging", turnsLeft: 15 });
-    stepRound(round);
-    expect(replaceStrategy(round, "self", waiting("dash")).ultimate).toEqual({ id: "smoke", kind: "charging", turnsLeft: 14 });
+    expect(joined.ultimate).toEqual({ id: "smoke", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn });
+    for (let i = 0; i < ULTIMATE_RULES.firstReadyTurn; i++) stepRound(round);
+    expect(replaceStrategy(round, "self", waiting("dash")).ultimate).toEqual({ id: "smoke", kind: "ready" });
   });
 });
 

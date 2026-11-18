@@ -310,8 +310,8 @@ const defs = withLiteralIds<ActionDef>()([
     toMove: (ctx, params) => {
       const item = canTake(ctx.self) ? nearestItem(ctx.snapshot, ctx.self, itemValue(params)) : undefined;
       if (item === undefined) return null;
-      // Splash can use the last umbrella block after pickups (85-ultimates.md). Stay on the item to take it this turn.
-      if (item.x === ctx.self.x && item.y === ctx.self.y) return "W";
+      // The end-of-turn pickup can take an item already under the tank (84-items.md).
+      if (item.x === ctx.self.x && item.y === ctx.self.y) return null;
       return stepTowards(ctx, stepToward(ctx.self, item));
     },
   },

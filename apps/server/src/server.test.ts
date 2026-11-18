@@ -741,7 +741,9 @@ describe("saving to a data directory", () => {
 describe("real timer", () => {
   test("plays a round at tickMs after the pause, without a test scheduler", async () => {
     const { startServer } = await import("./server.ts");
-    const server = startServer({ port: 0, roundStartDelayMs: 500 });
+    const testEpoch = Date.parse("2026-11-11T09:00:00Z");
+    const clockStartedAt = performance.now();
+    const server = startServer({ port: 0, roundStartDelayMs: 500, now: () => testEpoch + Math.floor(performance.now() - clockStartedAt) });
     try {
       const t = { api: clientOf(server.url) };
       const cookie = await signUp(t);

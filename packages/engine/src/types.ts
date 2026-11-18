@@ -428,7 +428,7 @@ export type ThrowEvent =
       /** The first bot in the line within range. */
       readonly targetId: BotId;
       readonly distance: number;
-      /** The probability used for the roll, 0 to 100. */
+      /** The probability used for the roll, 0 to 100. A Dash ram is sure and draws nothing. */
       readonly hitChance: number;
       /**
        * Only on a hit from a tank with a bucket: the hit moved ITEM_RULES.bucketHitPoints points.
@@ -453,10 +453,10 @@ export interface MagnetFire {
 }
 
 export type UltimateFire = { readonly botId: BotId; readonly at: Cell } & (
-  | { readonly kind: "dash"; readonly path: readonly Cell[]; readonly shot: ThrowEvent }
+  | { readonly kind: "dash"; readonly path: readonly Cell[]; readonly shot: ThrowEvent; readonly points: number }
   | { readonly kind: "splash"; readonly squares: readonly SplashSquare[] }
   | { readonly kind: "mudBomb"; readonly center: Cell | null; readonly area: readonly Cell[]; readonly affected: readonly BotId[]; readonly points: number }
-  | { readonly kind: "whirlwind"; readonly area: readonly Cell[]; readonly affected: readonly BotId[] }
+  | { readonly kind: "whirlwind"; readonly area: readonly Cell[]; readonly affected: readonly BotId[]; readonly points: number }
   | { readonly kind: "smoke" | "fullTank" | "bigUmbrella" }
 ) | MagnetFire;
 

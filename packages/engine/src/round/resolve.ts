@@ -1,6 +1,5 @@
 // Resolve the chosen moves one at a time against the positions as already changed
-// in this turn. Splash records its targets at its move, then rolls after the item
-// draws. Ordinary throws get first use of the umbrella blocks shared with Splash.
+// in this turn. Smoke, Big Umbrella and Dash protect from the start of the turn.
 
 import { POINTS_PER_HIT, canThrow, hitChancePercent, throwRange, waterAfterTick } from "../combat/combat.ts";
 import { rulesOf } from "../combat/rule-sets.ts";
@@ -10,9 +9,9 @@ import type {
   BoardItem, BotId, BotState, Build, MagnetFire, Pickup, Rng, ShotProtection, Snapshot,
   SplashSquare, TankEffect, TankEffectKind, ThrowEvent, TurnAction, UltimateFire,
 } from "../types.ts";
-import { ITEM_RULES, actsOnOwnHit, ageItems, effectOfHit, holdItem, holderBlocks, nearestItems, newEffect, pickUp, spawnItems, useOnce } from "../items/items.ts";
+import { ITEM_RULES, actsOnOwnHit, ageItems, effectOfHit, holdItem, holderBlocks, nearestItems, newEffect, pickUp, receiveEffect, spawnItems, useOnce } from "../items/items.ts";
 import { ULTIMATE_RULES, bigUmbrellaCovers, magnetSpace, type UltimateId } from "../ultimates/ultimates.ts";
-import { TURN_EIGHTHS, rotate } from "../directions.ts";
+import { TURN_EIGHTHS, chebyshev, rotate } from "../directions.ts";
 import { cellAhead, cellKey, isInside } from "./grid.ts";
 import type { ArenaSize, Cell } from "./grid.ts";
 
@@ -24,9 +23,9 @@ export type TickMove = { readonly botId: BotId } & TurnAction;
 export interface TickResolution {
   /** One entry per bot, in the snapshot's bot order. */
   readonly placements: readonly Placement[];
-  /** Throws, including the shot after a dash, in resolution order. */
+  /** Throws, including Dash rams, in resolution order. */
   readonly throws: readonly ThrowEvent[];
-  /** New effects from moves, in move order. A later effect replaces an earlier one. */
+  /** The surviving new effect from this turn's moves on each tank. */
   readonly inflicted: ReadonlyMap<BotId, TankEffect>;
   readonly fires: readonly UltimateFire[];
   readonly items: readonly BoardItem[];
@@ -47,23 +46,9 @@ interface Slot {
   readonly stuck: boolean;
   readonly ultimatesOn: boolean;
   waterChange: "refill" | "spend" | "keep";
-  freshUmbrella: boolean;
 }
 
-interface ShotDefenses {
-  readonly smoked: boolean;
-  readonly bigUmbrellaCovers: boolean;
-}
-
-type PendingSplash = {
-  readonly kind: "pendingSplash";
-  readonly source: Slot;
-  readonly at: Cell;
-  readonly squares: readonly (
-    | { readonly cell: Cell; readonly target?: never }
-    | { readonly cell: Cell; readonly target: Slot; readonly defenses: ShotDefenses }
-  )[];
-};
+const SURE_HIT = 100;
 
 /** Every snapshot bot needs exactly one move and exactly one place in order. */
 export function resolveTick(
@@ -80,6 +65,7 @@ export function resolveTick(
     byId.set(action.botId, action);
   }
 
+  const ultimatesOn = snapshot.bots.some((bot) => bot.ultimate !== undefined) || moves.some((action) => action.ultimate !== undefined);
   const slots = new Map<BotId, Slot>();
   const occupant = new Map<string, Slot>();
   for (const bot of snapshot.bots) {
@@ -97,9 +83,12 @@ export function resolveTick(
       action,
       waterChange: "refill",
       stuck: bot.effect?.kind === "stuck",
-      ultimatesOn: bot.ultimate !== undefined || action.ultimate !== undefined,
-      freshUmbrella: false,
+      ultimatesOn,
     };
+    // Activate defenses here so earlier shots count too (85-ultimates.md, owner 2026-11-18).
+    // The fire in move order only records the event, since the shots can already spend blocks.
+    if (action.ultimate === "smoke") slot.place.ultimateEffect = { kind: "smoke", turnsLeft: ULTIMATE_RULES.smoke.turns };
+    if (action.ultimate === "bigUmbrella") slot.place.ultimateEffect = { kind: "bigUmbrella", blocksLeft: ULTIMATE_RULES.bigUmbrella.blocks };
     slots.set(bot.id, slot);
     occupant.set(cellKey(bot), slot);
   }
@@ -108,20 +97,26 @@ export function resolveTick(
 
   const throws: ThrowEvent[] = [];
   const inflicted = new Map<BotId, TankEffect>();
-  const pendingFires: (UltimateFire | PendingSplash)[] = [];
+  const fires: UltimateFire[] = [];
   const boardItems = itemTurn?.items ?? [];
   let remainingItems: Set<BoardItem> | undefined;
+  let remainingMagnets: Set<Slot> | undefined;
   for (const botId of order) {
     const slot = slots.get(botId);
     if (slot === undefined) throw new Error(`order names a bot that is not in the snapshot: "${botId}"`);
     const { action, place, stuck } = slot;
     if (action.ultimate === "magnet") {
       remainingItems ??= new Set(boardItems);
-      pendingFires.push(resolveMagnet(slot, remainingItems));
+      remainingMagnets ??= new Set(order.flatMap((id) => {
+        const magnet = slots.get(id);
+        return magnet?.action.ultimate === "magnet" ? [magnet] : [];
+      }));
+      fires.push(resolveMagnet(slot, remainingItems, remainingMagnets));
+      remainingMagnets.delete(slot);
     } else if (action.ultimate !== undefined) {
       const fire = resolveUltimate(action.ultimate, slot, snapshot, rules, occupant, rng, inflicted);
       if (fire !== null) {
-        pendingFires.push(fire);
+        fires.push(fire);
         if (fire.kind === "dash") throws.push(fire.shot);
       }
     } else if (action.move === "T") {
@@ -139,13 +134,8 @@ export function resolveTick(
     return slot.place;
   });
   const { items: left, pickups, backfires } = pickUp(remainingItems ?? boardItems, placements, rng);
-  for (const pickup of pickups) {
-    const slot = slots.get(pickup.botId);
-    if (slot !== undefined && pickup.item === "umbrella") slot.freshUmbrella = true;
-  }
   const aged = ageItems(left);
   const spawned = itemTurn?.spawn === true ? spawnItems(snapshot, itemTurn.tick, placements, aged, rng) : [];
-  const fires = pendingFires.map((fire) => fire.kind === "pendingSplash" ? resolveSplash(fire, rng) : fire);
   return { placements, throws, inflicted, fires, items: [...aged, ...spawned], pickups, backfires };
 }
 
@@ -200,16 +190,15 @@ function resolveThrow(
   }
   if (isDashing(target)) return { ...info, outcome: "dodged" };
 
-  const defenses = defensesAt(target, me);
   const baseChance = hitChancePercent(thrower.build, target.build, distance, rules);
-  const hitChance = defenses.smoked ? Math.floor(baseChance / ULTIMATE_RULES.smoke.chanceDivisor) : baseChance;
+  const hitChance = chanceThroughSmoke(target, baseChance);
   const bucket = me.item === "bucket";
   const points = bucket ? ITEM_RULES.bucketHitPoints : POINTS_PER_HIT;
-  const impact = rollImpact(target, defenses, baseChance, hitChance, points, rng);
+  const impact = rollImpact(target, me, baseChance, hitChance, points, rng);
   if (impact.outcome === "hit") {
     movePoints(thrower, target, points);
     const effect = effectOfHit(me);
-    if (effect !== null) inflicted.set(info.targetId, newEffect(effect, target.ultimatesOn));
+    if (effect !== null) inflict(target, inflicted, newEffect(effect, target.ultimatesOn));
     if (actsOnOwnHit(me.item)) useOnce(me);
   }
   // Keep the existing throw key order for seeded replays.
@@ -220,41 +209,45 @@ function resolveThrow(
   };
 }
 
-function defensesAt(target: Slot, from: Cell): ShotDefenses {
-  return {
-    smoked: target.place.ultimateEffect?.kind === "smoke",
-    bigUmbrellaCovers: target.place.ultimateEffect?.kind === "bigUmbrella" && bigUmbrellaCovers(target.place, from),
-  };
+function chanceThroughSmoke(target: Slot, baseChance: number): number {
+  return target.place.ultimateEffect?.kind === "smoke" ? Math.floor(baseChance / ULTIMATE_RULES.smoke.chanceDivisor) : baseChance;
 }
 
-function umbrellaAt(target: Slot, defenses: ShotDefenses): "bigUmbrella" | "umbrella" | null {
-  if (defenses.bigUmbrellaCovers && target.place.ultimateEffect?.kind === "bigUmbrella") return "bigUmbrella";
-  if (!target.freshUmbrella && holderBlocks(target.place)) return "umbrella";
+function umbrellaAt(target: Slot, from: Cell): "bigUmbrella" | "umbrella" | null {
+  if (target.place.ultimateEffect?.kind === "bigUmbrella" && bigUmbrellaCovers(target.place, from)) return "bigUmbrella";
+  if (holderBlocks(target.place)) return "umbrella";
   return null;
 }
 
+type Impact =
+  | { readonly outcome: "hit"; readonly protection?: never }
+  | { readonly outcome: "blocked"; readonly protection: ShotProtection };
+
 function rollImpact(
   target: Slot,
-  defenses: ShotDefenses,
+  from: Cell,
   baseChance: number,
   hitChance: number,
   points: number,
   rng: Rng,
-  guaranteed = false,
-): { readonly outcome: "miss" | "hit" | "blocked"; readonly protection?: ShotProtection } {
-  if (defenses.smoked) {
+): Impact | { readonly outcome: "miss"; readonly protection?: ShotProtection } {
+  if (hitChance < baseChance) {
     // Use the existing roll for both chances to measure what smoke saved, with no extra draw.
     const roll = rng.next() * 100;
     if (roll >= hitChance) {
-      return roll < baseChance && umbrellaAt(target, defenses) === null
+      return roll < baseChance && umbrellaAt(target, from) === null
         ? { outcome: "miss", protection: { kind: "smoke", pointsSaved: points } }
         : { outcome: "miss" };
     }
-  } else if (!guaranteed && !rng.chance(hitChance)) {
+  } else if (!rng.chance(hitChance)) {
     return { outcome: "miss" };
   }
 
-  const umbrella = umbrellaAt(target, defenses);
+  return resolveHit(target, from, points);
+}
+
+function resolveHit(target: Slot, from: Cell, points: number): Impact {
+  const umbrella = umbrellaAt(target, from);
   if (umbrella === null) return { outcome: "hit" };
   if (umbrella === "bigUmbrella") {
     const effect = target.place.ultimateEffect;
@@ -270,6 +263,24 @@ function movePoints(source: Slot, target: Slot, points: number): void {
   target.place.score -= points;
 }
 
+function inflict(target: Slot, inflicted: Map<BotId, TankEffect>, effect: TankEffect): void {
+  const id = target.place.id;
+  inflicted.set(id, receiveEffect(inflicted.get(id) ?? null, effect, target.ultimatesOn));
+}
+
+function resolveRam(source: Slot, size: ArenaSize, rules: RoundRules, occupant: ReadonlyMap<string, Slot>): ThrowEvent {
+  const throwerId = source.place.id;
+  const found = firstTarget(source, size, rules, occupant);
+  if (found === null) return { throwerId, outcome: "empty" };
+  const { target, distance } = found;
+  const aimed = { throwerId, targetId: target.place.id, distance };
+  if (isDashing(target)) return { ...aimed, outcome: "dodged" };
+  const points = ULTIMATE_RULES.dash.points;
+  const impact = resolveHit(target, source.place, points);
+  if (impact.outcome === "hit") movePoints(source, target, points);
+  return { ...aimed, hitChance: SURE_HIT, ...impact };
+}
+
 function resolveUltimate(
   kind: Exclude<UltimateId, "magnet">,
   source: Slot,
@@ -278,7 +289,7 @@ function resolveUltimate(
   occupant: Map<string, Slot>,
   rng: Rng,
   inflicted: Map<BotId, TankEffect>,
-): UltimateFire | PendingSplash | null {
+): UltimateFire | null {
   const me = source.place;
   const at = { x: me.x, y: me.y };
   const fire = { botId: me.id, at };
@@ -291,53 +302,41 @@ function resolveUltimate(
         if (cell === null) break;
         path.push(cell);
       }
-      // The dash shot uses the same water, held item and roll as a throw from its last square (85-ultimates.md).
-      const shot = resolveThrow(source, size, rules, occupant, rng, inflicted);
-      return { ...fire, kind, path, shot };
+      const shot = resolveRam(source, size, rules, occupant);
+      return { ...fire, kind, path, shot, points: shot.outcome === "hit" ? ULTIMATE_RULES.dash.points : 0 };
     }
     case "smoke":
-      me.ultimateEffect = { kind, turnsLeft: ULTIMATE_RULES.smoke.turns };
-      return { ...fire, kind };
     case "bigUmbrella":
-      me.ultimateEffect = { kind, blocksLeft: ULTIMATE_RULES.bigUmbrella.blocks };
       return { ...fire, kind };
     case "fullTank":
       me.water = rules.waterCapacity;
       me.ultimateEffect = { kind, freeShots: ULTIMATE_RULES.fullTank.freeShots };
       return { ...fire, kind };
     case "splash": {
-      me.water = 0;
-      source.waterChange = "keep";
-      const squares = DIRECTIONS.flatMap((_, eighths): PendingSplash["squares"] => {
-        const cell = cellAhead(me, rotate(me.direction, eighths), ULTIMATE_RULES.splash.reach);
-        if (!isInside(size, cell)) return [];
-        const target = occupant.get(cellKey(cell));
-        return target === undefined ? [{ cell }] : [{ cell, target, defenses: defensesAt(target, me) }];
-      });
-      return { kind: "pendingSplash", source, at, squares };
+      source.waterChange = "spend";
+      return { ...fire, kind, squares: resolveSplash(source, size, occupant, rng) };
     }
     case "mudBomb": {
       const hit = firstTarget(source, size, rules, occupant);
       if (hit === null) return { ...fire, kind, center: null, area: [], affected: [], points: 0 };
       const center = { x: hit.target.place.x, y: hit.target.place.y };
       const area = squaresWithin(size, center, ULTIMATE_RULES.mudBomb.reach);
-      const affected = inflictInArea(area, occupant, source, inflicted, { kind: "stuck", turnsLeft: ULTIMATE_RULES.mudBomb.stuckTurns });
-      return { ...fire, kind, center, area, affected, points: affected.length * POINTS_PER_HIT };
+      const outcome = inflictInArea(area, occupant, source, inflicted, { kind: "stuck", turnsLeft: ULTIMATE_RULES.mudBomb.stuckTurns });
+      return { ...fire, kind, center, area, ...outcome };
     }
     case "whirlwind": {
-      const { reach, dizzyTurns, spinTurns } = ULTIMATE_RULES.whirlwind;
+      const { reach, dizzyTurns, spinTurns, pointReach } = ULTIMATE_RULES.whirlwind;
       const area = squaresWithin(size, at, reach);
-      const affected = inflictInArea(area, occupant, source, inflicted, { kind: "dizzy", turnsLeft: dizzyTurns, spinTurnsLeft: spinTurns });
-      return { ...fire, kind, area, affected };
+      const outcome = inflictInArea(area, occupant, source, inflicted, { kind: "dizzy", turnsLeft: dizzyTurns, spinTurnsLeft: spinTurns }, pointReach);
+      return { ...fire, kind, area, ...outcome };
     }
   }
 }
 
-function resolveMagnet({ place }: Slot, boardItems: Set<BoardItem>): MagnetFire {
-  // The trigger saw the old board. The first Magnet in move order gets first pick, and the
-  // items it took are already off the board when driving pickups run (85-ultimates.md, 2026-11-18).
+function resolveMagnet(source: Slot, boardItems: Set<BoardItem>, magnets: ReadonlySet<Slot>): MagnetFire {
+  const { place } = source;
   const at = { x: place.x, y: place.y };
-  const items = nearestItems(boardItems, at, ULTIMATE_RULES.magnet.reach, magnetSpace(place));
+  const items = magnetItems(source, boardItems, magnets);
   return {
     botId: place.id, at, kind: "magnet",
     items: items.map((item) => {
@@ -346,6 +345,29 @@ function resolveMagnet({ place }: Slot, boardItems: Set<BoardItem>): MagnetFire 
       return { kind: item.kind, from: { x: item.x, y: item.y } };
     }),
   };
+}
+
+function magnetItems(source: Slot, boardItems: ReadonlySet<BoardItem>, magnets: ReadonlySet<Slot>): BoardItem[] {
+  if (boardItems.size === 0) return [];
+  const { reach } = ULTIMATE_RULES.magnet;
+  if (magnets.size === 1) return nearestItems(boardItems, source.place, reach, magnetSpace(source.place));
+
+  const space = new Map([...magnets].map((slot) => [slot, magnetSpace(slot.place)]));
+  const candidates = [...magnets].flatMap((slot) =>
+    nearestItems(boardItems, slot.place, reach, boardItems.size).map((item) => ({ slot, item, distance: chebyshev(slot.place, item) })));
+  // Stable sorting keeps move order, then row and column, at equal distances. Reserve for
+  // later Magnets so the nearer tank can win, while each pull takes effect at its own move.
+  candidates.sort((a, b) => a.distance - b.distance);
+  const claimed = new Set<BoardItem>();
+  const items: BoardItem[] = [];
+  for (const { slot, item } of candidates) {
+    const free = space.get(slot) ?? 0;
+    if (free === 0 || claimed.has(item)) continue;
+    space.set(slot, free - 1);
+    claimed.add(item);
+    if (slot === source) items.push(item);
+  }
+  return items;
 }
 
 function squaresWithin(size: ArenaSize, center: Cell, reach: number): Cell[] {
@@ -362,36 +384,45 @@ function inflictInArea(
   source: Slot,
   inflicted: Map<BotId, TankEffect>,
   effect: TankEffect,
-): BotId[] {
+  pointReach?: number,
+): { readonly affected: readonly BotId[]; readonly points: number } {
   const affected: BotId[] = [];
+  let points = 0;
   for (const cell of area) {
     const target = occupant.get(cellKey(cell));
-    if (target === undefined || target === source || (effect.kind === "stuck" && isDashing(target))) continue;
-    const id = target.place.id;
-    inflicted.set(id, effect);
-    // Mud Bomb takes a point from each tank it sticks (owner, 2026-11-18).
-    if (effect.kind === "stuck") movePoints(source, target, POINTS_PER_HIT);
-    affected.push(id);
+    if (target === undefined || target === source || isDashing(target)) continue;
+    inflict(target, inflicted, effect);
+    // Mud scores throughout its area. Whirlwind scores within one square (85-ultimates.md).
+    if (pointReach === undefined || chebyshev(source.place, cell) <= pointReach) {
+      movePoints(source, target, POINTS_PER_HIT);
+      points += POINTS_PER_HIT;
+    }
+    affected.push(target.place.id);
   }
-  return affected;
+  return { affected, points };
 }
 
-function resolveSplash(fire: PendingSplash, rng: Rng): UltimateFire {
-  const squares = fire.squares.map((square): SplashSquare => {
-    const { cell, target } = square;
-    if (target === undefined) return { ...cell, outcome: "empty" };
-    const { defenses } = square;
-    const baseChance = 100;
-    const hitChance = defenses.smoked ? baseChance / ULTIMATE_RULES.smoke.chanceDivisor : baseChance;
+function resolveSplash(source: Slot, size: ArenaSize, occupant: ReadonlyMap<string, Slot>, rng: Rng): SplashSquare[] {
+  const me = source.place;
+  const squares: SplashSquare[] = [];
+  for (let eighths = 0; eighths < DIRECTIONS.length; eighths++) {
+    const cell = cellAhead(me, rotate(me.direction, eighths), ULTIMATE_RULES.splash.reach);
+    if (!isInside(size, cell)) continue;
+    const target = occupant.get(cellKey(cell));
+    if (target === undefined) {
+      squares.push({ ...cell, outcome: "empty" });
+      continue;
+    }
     const targetId = target.place.id;
     if (isDashing(target)) {
-      // A smoked square draws even if its tank dashes (85-ultimates.md, Splash ring).
-      if (defenses.smoked) rng.next();
-      return { ...cell, targetId, outcome: "dodged" };
+      squares.push({ ...cell, targetId, outcome: "dodged" });
+      continue;
     }
-    const impact = rollImpact(target, defenses, baseChance, hitChance, POINTS_PER_HIT, rng, true);
-    if (impact.outcome === "hit") movePoints(fire.source, target, POINTS_PER_HIT);
-    return { ...cell, targetId, ...impact };
-  });
-  return { botId: fire.source.place.id, at: fire.at, kind: "splash", squares };
+    const hitChance = chanceThroughSmoke(target, SURE_HIT);
+    const impact = hitChance === SURE_HIT ? resolveHit(target, me, POINTS_PER_HIT)
+      : rollImpact(target, me, SURE_HIT, hitChance, POINTS_PER_HIT, rng);
+    if (impact.outcome === "hit") movePoints(source, target, POINTS_PER_HIT);
+    squares.push({ ...cell, targetId, ...impact });
+  }
+  return squares;
 }

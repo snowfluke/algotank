@@ -22,7 +22,7 @@ export type CompactFire =
   | readonly [number, "dash", number, number, Area]
   | readonly [number, "splash", number, number, readonly SplashRow[]]
   | readonly [number, "mudBomb", number, number, CellRow | null, Area, Affected, number]
-  | readonly [number, "whirlwind", number, number, Area, Affected]
+  | readonly [number, "whirlwind", number, number, Area, Affected, points: number]
   | readonly [number, "smoke" | "fullTank" | "bigUmbrella", number, number];
 
 const count = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
@@ -73,7 +73,8 @@ export function hasCompactUltimateFields(states: unknown, fires: unknown, botCou
       case "mudBomb": return row.length === 8 && affected(row[6]) && row[7] === row[6].length * POINTS_PER_HIT &&
         (row[4] === null ? Array.isArray(row[5]) && row[5].length === 0 && row[6].length === 0 :
           isCellRow(row[4]) && isArea(row[5], areaSize(ULTIMATE_RULES.mudBomb.reach)));
-      case "whirlwind": return row.length === 6 && isArea(row[4], areaSize(ULTIMATE_RULES.whirlwind.reach)) && affected(row[5]);
+      case "whirlwind": return row.length === 7 && isArea(row[4], areaSize(ULTIMATE_RULES.whirlwind.reach)) &&
+        affected(row[5]) && count(row[6]) && row[6] <= row[5].length * POINTS_PER_HIT;
       case "smoke":
       case "bigUmbrella":
       case "fullTank": return row.length === 4;
@@ -117,13 +118,13 @@ export function compactFire(fire: NonMagnetFire, indexOf: TankIndex): CompactFir
   const { kind, at: { x, y } } = fire;
   const tank = indexOf(fire.botId);
   switch (kind) {
-    // A dash shot is already in the throws list, in move order with the other shots.
+    // The ram is already in the throws list, in move order with the other shots.
     case "dash": return [tank, kind, x, y, fire.path.map(cellRow)];
     case "splash": return [tank, kind, x, y, fire.squares.map((square): SplashRow => square.outcome === "empty"
       ? [square.x, square.y, square.outcome] : [square.x, square.y, square.outcome, indexOf(square.targetId)])];
     case "mudBomb": return [tank, kind, x, y, fire.center === null ? null : cellRow(fire.center),
       fire.area.map(cellRow), fire.affected.map(indexOf), fire.points];
-    case "whirlwind": return [tank, kind, x, y, fire.area.map(cellRow), fire.affected.map(indexOf)];
+    case "whirlwind": return [tank, kind, x, y, fire.area.map(cellRow), fire.affected.map(indexOf), fire.points];
     default: return [tank, kind, x, y];
   }
 }
@@ -140,13 +141,13 @@ export function expandFire(row: CompactFire, idOf: TankId, spawn: PublicSnapshot
     case "dash": {
       const shot = shots.get(botId);
       if (shot === undefined) throw new Error(`dash from tank ${botId} has no shot`);
-      return { ...base, kind, path: row[4].map(cell), shot };
+      return { ...base, kind, path: row[4].map(cell), shot, points: shot.outcome === "hit" ? ULTIMATE_RULES.dash.points : 0 };
     }
     case "splash": return { ...base, kind, squares: row[4].map(([x, y, outcome, target]) =>
       outcome === "empty" ? { ...cell([x, y]), outcome } : { ...cell([x, y]), outcome, targetId: idOf(target) }) };
     case "mudBomb": return { ...base, kind, center: row[4] === null ? null : cell(row[4]),
       area: row[5].map(cell), affected: row[6].map(idOf), points: row[7] };
-    case "whirlwind": return { ...base, kind, area: row[4].map(cell), affected: row[5].map(idOf) };
+    case "whirlwind": return { ...base, kind, area: row[4].map(cell), affected: row[5].map(idOf), points: row[6] };
     default: return { ...base, kind };
   }
 }

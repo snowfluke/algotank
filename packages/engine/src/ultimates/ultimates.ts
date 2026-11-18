@@ -28,14 +28,16 @@ export function isUltimateId(value: unknown): value is UltimateId {
 }
 
 export const ULTIMATE_RULES = {
-  firstReadyTurn: 15,
+  // 8 turns of charge before the first fire, so the board shows each tank's charge before ultimates go off. Measured
+  // 2026-11-18 (85-ultimates.md, Starting numbers): a 20-turn room averages 0.86 fires per tank at 8 and 0.93 at 1.
+  firstReadyTurn: 8,
   rechargeTurns: 40,
-  dash: { squares: 3, triggerMinDistance: 2, triggerMaxDistance: 4, aimedAtMe: 1 },
-  smoke: { turns: 10, aimedAtMe: 1, chanceDivisor: 2 },
+  dash: { squares: 3, triggerMinDistance: 2, triggerMaxDistance: 4, aimedAtMe: 1, points: 2 },
+  smoke: { turns: 15, aimedAtMe: 1, chanceDivisor: 4 },
   splash: { reach: 1, triggerTanks: 2 },
   fullTank: { freeShots: 3 },
   mudBomb: { stuckTurns: 5, reach: 1 },
-  whirlwind: { reach: 2, dizzyTurns: 4, spinTurns: 2, triggerTanks: 2 },
+  whirlwind: { reach: 2, pointReach: 1, dizzyTurns: 4, spinTurns: 2, triggerTanks: 2 },
   bigUmbrella: { blocks: 4, blockedEighths: [0, 1, 2, 6, 7] as readonly number[], aimedAtMe: 1 },
   magnet: { reach: 4, handSize: 3 },
 } as const;

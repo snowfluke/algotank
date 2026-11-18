@@ -69,6 +69,7 @@ export function Practice({ strategy, name, defaultRuleSetId, look = DEFAULT_LOOK
         ticks: MATCH_LENGTHS[choices.length],
         ruleSetId: choices.ruleSetId ?? defaultRuleSetId,
         seed: drawSeed(),
+        nowMs: Date.now(),
         styleName: (preset) => m.vocabulary.playStyles[preset.id].name,
       });
       setFinished((previous) => ({ runNumber: (previous?.runNumber ?? 0) + 1, run }));

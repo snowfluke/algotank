@@ -27,9 +27,9 @@ Why these and not the first drafts: a full freeze ("paralyzer") gives every neig
 | Appear | With 20 tanks or fewer, at the end of every 10th turn, one item appears when the board holds fewer than `max(1, floor(tanks / 4))`. With more tanks the spawn turn comes after every `round(200 / tanks)` turns (at least 1), and past 200 tanks it adds `round(tanks / 200)` items, within the same cap (`spawnTiming`). Measured on 2026-11-16 over 3,000 turns: one item per 10 turns gave 3.9 pickups per tank per 1,000 turns at 20 tanks, 2.0 at 40 and 0.8 at 100. With the shorter wait it is 3.3 to 4.5 from 19 to 100 tanks. Whole extra items per spawn turn were tried first and jumped from 3.9 at 20 tanks to 7.0 at 21. Its kind is drawn by weight (bucket 3, umbrella 3, pinwheel 2, mud ball 2) and its square among the squares with no tank and no item. |
 | Vanish | An item that nobody picks up disappears after 30 turns, so a new one can appear somewhere else. |
 | Pick up | A tank with an empty hand that ends its move on an item's square takes it. A tank holds one item at a time; a tank that holds one drives over another without taking it, and "Go to the nearest item" cannot act for it. |
-| Backfire | Owner, 2026-11-16: a pinwheel or a mud ball backfires on its taker with 20% (`ITEM_RULES.backfirePercent`): the taker gets the item's effect for the usual turns and holds nothing. The roll is one draw per such pickup, after the throw rolls and before the spawn draws. A backfire replaces an effect a hit gave on the same turn, because pickups come after throws. About 8% of pickups backfire (4 of 10 items are pinwheels or mud balls). Measured with it, 800 finals of 60 turns: the item hunter wins 12.9% of the mixed field (13.8% without), and 17.5 to 18.3% alone against the bot lineup with production ids (18.2 to 18.9% without). |
-| Effects | A tank has at most one effect. In a round with ultimates on (85-ultimates.md, from 2026-11-22), a new effect replaces the old one only when it has more turns left; otherwise the tank keeps its effect (owner, 2026-11-18). In a round with ultimates off, a new effect replaces the old one. At the end of a turn the effects that existed when the turn began count down, and then the new ones are set: a tank hit on turn t is dizzy on turns t+1 to t+3 (stuck on t+1 and t+2) and free on the next. |
-| Same turn | Pickups happen after every move and throw of the turn. An umbrella taken on turn t first protects on turn t+1, and a pinwheel or mud ball taken on turn t first acts on a hit on turn t+1. An umbrella blocks the first hit of a turn; a second hit on the same turn lands. |
+| Backfire | Owner, 2026-11-16: a pinwheel or a mud ball backfires on its taker with 20% (`ITEM_RULES.backfirePercent`): the taker gets the item's effect for the usual turns and holds nothing. The roll is one draw per such pickup, after the throw rolls and before the spawn draws. A backfire comes after move effects and follows the Effects rule below. About 8% of pickups backfire (4 of 10 items are pinwheels or mud balls). Measured with it, 800 finals of 60 turns: the item hunter wins 12.9% of the mixed field (13.8% without), and 17.5 to 18.3% alone against the bot lineup with production ids (18.2 to 18.9% without). |
+| Effects | A tank has at most one effect. In a round with ultimates on (85-ultimates.md, from 2026-11-22), a new effect replaces the old one only when it has more turns left; otherwise the tank keeps its effect (owner, 2026-11-18). In a round with ultimates off, a new effect replaces the old one. At the end of a turn the effect that existed when the turn began counts down before comparison with the new ones. A tank with a fresh pinwheel effect on turn t is dizzy on turns t+1 to t+6. A fresh mud ball leaves it stuck on turns t+1 to t+4. |
+| Same turn | Pickups happen after every move and throw of the turn. An umbrella taken on turn t first protects on turn t+1, and a pinwheel or mud ball taken on turn t first acts on a hit on turn t+1. Each blocked hit spends one of the umbrella's remaining blocks. |
 | Spawn | A joining tank (monthly) never lands on an item. |
 | Monthly new start | A new start builds a new round, so items, held items and effects clear. Points stay. |
 
@@ -50,10 +50,10 @@ Terminal states: used, gone. A held item also ends with its round.
 
 | From | To | Actor | Guard |
 |------|----|-------|-------|
-| none | dizzy (3) / stuck (2) | engine | a hit from a holder of a pinwheel / mud ball |
+| none | dizzy (6) / stuck (4) | engine | a pinwheel or mud ball hit or pickup backfire |
 | dizzy / stuck (n > 1) | same, n − 1 | engine, end of turn | none |
 | dizzy / stuck (1) | none | engine, end of turn | none |
-| dizzy / stuck | the other effect | engine | a new hit with the other item |
+| dizzy / stuck | the incoming effect | engine | the Effects rule accepts a new effect |
 
 ## Random draws
 
@@ -69,7 +69,7 @@ Draws are added after every existing draw of a turn: after the throw rolls, one 
 | `myItem` (condition) | Items | My tank holds {item} |
 | `myEffect` (condition) | Items | My tank is {effect} |
 | `targetItem` (condition) | The target | The target ({target}) holds {item} |
-| `goToItem` (action) | Items | Go to the nearest item ({item}); it cannot act when there is none |
+| `goToItem` (action) | Items | Go to the nearest item ({item}); it cannot act when there is none or when the nearest item is under the tank |
 
 ## Play styles
 

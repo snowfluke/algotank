@@ -12,7 +12,7 @@ Each play style has one default. The Charger, which only the bots and the script
 |---|---|---|---|
 | Dash / Lari kencang / `dash` | Leader chaser, Charger | The tank drives up to 3 squares straight ahead in this turn, then rams the first tank straight ahead within its throw range: a sure hit worth 2 points, with no roll and no water. It stops before an edge or a held square. **No shot can hit the tank in this turn**, whatever the move order. | The square ahead is free and the tank is not stuck, and either the first tank straight ahead is 2 to 4 squares away, or at least 1 tank aims at this tank (the dash then escapes the shot). |
 | Smoke screen / Kabut / `smoke` | Evader | For 15 turns, a shot at this tank uses a quarter of the hit chance (rounded down). | At least 1 tank aims at this tank (`aimedAtMe` with k = 1). No smoke is active. |
-| Splash ring / Percikan / `splash` | Random walker | The tank shoots all 8 squares around it for the water of one shot. Every tank in those 8 squares is hit. | At least 2 tanks stand in the 8 squares around, and the tank has the water for one shot. |
+| Splash ring / Percikan / `splash` | Random walker | The tank shoots all 8 squares around it for the water of one shot. Every tank in those 8 squares is hit, subject to the defenses below. | At least 2 tanks stand in the 8 squares around, and the tank has the water for one shot. |
 | Full tank / Tangki penuh / `fullTank` | Backstabber | The water fills to the top, and the next 3 shots at a tank use no water. | The water is below one shot, and a tank is within the tank's throw range. |
 | Mud bomb / Bom lumpur / `mudBomb` | Ambusher | A mud ball lands on the first tank in the throw line. That tank and every other tank within 1 square of it are stuck for 5 turns, and each of them gives 1 point to the thrower. The thrower is never stuck by its own bomb. | A tank is in the throw line. |
 | Whirlwind / Angin puyuh / `whirlwind` | Picker | Every other tank within 2 squares spins round to the right for 2 turns (no rule checked), then checks its rules from the bottom up for 2 turns. Each tank within 1 square gives 1 point to the whirlwind tank. | At least 2 other tanks are within 2 squares. |
@@ -32,7 +32,7 @@ A trigger reads only the snapshot from before the turn and draws no random numbe
 - **Full tank.** The free shots count only shots at a tank (a shot that spends water today). A free shot draws the hit roll as usual.
 - **Mud bomb.** It is not a shot: no hit roll, and no umbrella or smoke blocks it. Each tank it sticks gives 1 point (`POINTS_PER_HIT`) to the thrower, the first tank included (owner, 2026-11-18: "the mud bomb does 1 point to all in area, and keep sucking the point from the first tank"). A held item of the thrower does not act. A dashing tank is not stuck and gives no point. It gives the `stuck` effect for 5 turns (see When ultimates and items meet for an effect the tank already has).
 - **Whirlwind.** It gives the `dizzy` effect for 4 turns, of which the first 2 spin. Today `spinsThisTurn` spins only while `turnsLeft > effectTurns.dizzy - dizzySpinTurns`, so a dizzy effect must record its own spin turns: the pinwheel gives 6 turns with 2 spins, the whirlwind 4 turns with 2 spins. Each tank within 1 square of the whirlwind tank also gives it 1 point (`POINTS_PER_HIT`); it is not a shot, so no umbrella or smoke stops it, and a dashing tank gives nothing. Measured average over 7 play styles: 10.7% with the spin alone, 18.7% with the point from tanks within 1 square, 34% with a point from every tank within 2 (the Picker won 40%, which fails the gate), 11.8% when the wind emptied the caught tanks' water.
-- **Magnet.** An item that the magnet pulls cannot backfire. A pinwheel or a mud ball backfires only when a tank drives onto it (`84-items.md`). A tank with items from the magnet still takes no item by driving onto it, as a tank that holds one item does today. The first item in the hand is the one that acts. When it is used up, the next one comes forward with its full uses. Equal distances go to the smaller row, then the smaller column, as for `goToItem`. In move order, each Magnet fills the free slots it has then, from the items still on the board. If another Magnet already took them all, the later Magnet uses its turn and recharges with an empty pull. A pulled umbrella can block as soon as it is the acting item, including later throws on the same turn.
+- **Magnet.** An item that the magnet pulls cannot backfire. A pinwheel or a mud ball backfires only when a tank drives onto it (`84-items.md`). A tank with items from the magnet still takes no item by driving onto it, as a tank that holds one item does today. The first item in the hand is the one that acts. When it is used up, the next one comes forward with its full uses. Equal distances go to the smaller row, then the smaller column, as for `goToItem`. Each pull takes effect in move order. When two Magnets reach the same item, the nearer one with space has priority, then the first in move order. A Magnet that fills its hand leaves the remaining items for other Magnets. A firing Magnet with nothing to take recharges with an empty pull. A pulled umbrella can block as soon as it is the acting item, including later throws on the same turn.
 
 ## When an ultimate fires
 
@@ -66,13 +66,15 @@ These are separate from the `effect` slot (dizzy or stuck), because a tank can b
 
 | Active effect | Ends |
 |---|---|
-| smoke (turns left) | after 10 turns, counted down at the end of each turn |
+| smoke (turns left) | after 15 turns, including the turn it fires, counted down at the end of each turn |
 | big umbrella (blocks left) | after its 4th block |
 | full tank (free shots left) | after the 3rd free shot |
 
 ### Starting numbers
 
-`firstReadyTurn` = 15 and `rechargeTurns` = 40. These are starting values for the balance script to change. A room round lasts 20 to 600 turns, practice 40, 80 or 160 turns, and a monthly round lasts the rest of the day. Every round type must see at least one fire per tank on average. The balance script prints how often each ultimate fires. A trigger that almost never fires gets a looser guard, never a forced timer.
+`firstReadyTurn` = 8 and `rechargeTurns` = 40. A room round lasts 20 to 600 turns, practice 40, 80 or 160 turns, and a monthly round lasts the rest of the day. The goal is at least 0.85 fires per tank on average in the shortest room round (20 turns), and more in longer ones.
+
+Measured on 2026-11-18 across 800 standard mixed-field finals of 20 turns with items and ultimates on, by first charge: 15 turns gave 0.64 fires per tank, 10 gave 0.83, 8 gave 0.86, 5 gave 0.91, 1 gave 0.93, and every tank ready at the start gave 0.93. A 20-turn round allows one fire per tank, so the trigger, not the charge, sets the ceiling. Below 8 turns the gain is small, and 8 turns let the board show each tank's charge before the first ultimates go off. The first draft asked for 1.0 in every round length, which no charge reaches at 20 turns.
 
 ## When ultimates and items meet
 
@@ -82,19 +84,19 @@ Owner, 2026-11-18: "I haven't talked about when two or more ultis are colliding,
 
 | Collision | Rule |
 |---|---|
-| A dashing tank | Nothing touches it in its dash turn: no shot, no Splash ring hit, no Dash ram, no Mud bomb, no Whirlwind, no point moved, no effect. |
+| A dashing tank | Nothing touches it in its dash turn: no shot, no Splash ring hit, no Dash ram, no Mud bomb, no Whirlwind, no point moved to an attacker, no new effect. A floor pickup still rolls for backfire, and a backfired item is lost without affecting the tank. |
 | Smoke screen or Big umbrella fired on a turn | It protects from the start of that turn, whatever the move order, as Dash does. |
 | Big umbrella against Splash ring or Dash ram | Both are shots, so the direction rule applies and a block uses one of its 4. |
 | Big umbrella or Smoke screen against Mud bomb or Whirlwind | No protection: mud and wind are not water. |
 | Smoke screen against Dash ram | No protection: the ram has no roll. |
-| Two effects (stuck or dizzy) on one tank | One rule for every turn and every source, items included: the effect with more turns left stays, and a tie keeps the one the tank already had. Mud bomb's 5 stuck turns beat Whirlwind's 4 dizzy turns. |
+| Two effects (stuck or dizzy) on one tank | One rule for every turn and every source, items included: the effect with more turns left stays, and a tie keeps the one the tank already had. The old effect counts down before comparison, and pickup backfires compete after move effects. Mud bomb's 5 stuck turns beat Whirlwind's 4 dizzy turns. |
 | Two Magnets reach for the same item | The nearer Magnet takes it. At the same distance, the first in move order. |
 | Two tanks fire at each other in one turn | Both ultimates act in full, so their points can cancel out. |
 | A tank whose own ultimate is ready when it is caught | Stuck: it can fire every ultimate except Dash. Spinning: it waits until the spin ends. |
 
 ### Items against ultimates
 
-Items act only on normal shots. An ultimate never uses, spreads or uses up an item.
+Held attack items act only on normal shots. The item umbrella can also spend blocks on Dash and Splash ring.
 
 | Situation | Rule |
 |---|---|
@@ -108,7 +110,9 @@ Items act only on normal shots. An ultimate never uses, spreads or uses up an it
 
 ## Random draws
 
-Ultimate draws come after every draw that exists today in a turn, so a round with ultimates off draws exactly what it drew before. Order: for each tank that fires, in move order, the draws of its ultimate (splash ring: one chance per smoked tank in the ring, clockwise from the front). The ring resolves in move order like every ultimate: until 2026-11-18 it resolved after the turn's pickups, so an umbrella it used up could leave an empty-handed tank on an item, and `goToItem` then failed on the tank's own square. The hit rolls of shots at a smoked tank are the existing throw rolls with a smaller chance. A triggered ultimate draws nothing to decide whether it fires.
+Moves, normal throw rolls and ultimate fires resolve in move order. Splash ring draws once per smoked tank in the ring, clockwise from the front. Dash rams and shots at a dashing tank draw nothing. A normal shot at a smoked tank uses its usual draw with a smaller chance. Item pickup and spawn draws follow all moves. Rounds with ultimates off keep their previous draw order.
+
+Until 2026-11-18, Splash resolved after pickups. Spending the last umbrella block then could leave an empty-handed tank standing on an item, and `goToItem` failed on the tank's own square. Splash now spends the block before pickups, so the tank can take that item on the same turn. A trigger draws nothing.
 
 ## Which ultimate a strategy has
 
@@ -148,7 +152,7 @@ Before the real migration runs, a dry run on a copy of the newest backup counts 
 
 ## Stream and board
 
-- `PublicBot` gets the tank's ultimate: its id, ready or turns left, and its active effect. A `TickResult` lists each fire with what the board needs to draw it: the dash path, the splash squares hit and missed, the mud area, the whirlwind area, the items the magnet moved. The compact tick gets its own field for this, not the effect bits (2 bits, room for one kind only). `dodged` is appended to `COMPACT_OUTCOMES`.
+- `PublicBot` gets the tank's ultimate: its id, ready or turns left, and its active effect. A `TickResult` lists each fire with what the board needs to draw it: the Dash path and ram target, outcome and points, the Splash squares hit and missed, the Mud Bomb area, the Whirlwind area and points, and the items Magnet moved. The compact tick gets its own field for this, not the effect bits (2 bits, room for one kind only). `dodged` is appended to `COMPACT_OUTCOMES`.
 - A bundle from before this change must not crash on the new shape. It shows the "new version" notice.
 - The board draws the catalogue's ultimate effects (`catalogue/UltimateEffect.tsx`), which move to the board's folder because the board and the catalogue both use them. A ready tank glows gold. When it fires, the floor under it glows (the catalogue's charge), then the effect plays.
 - The live feed says which ultimate the player's tank used. The board legend ("Bantuan") gets one line about ultimates and a link to the catalogue's ultimates section.

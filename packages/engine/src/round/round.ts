@@ -6,16 +6,15 @@
 //                direction (int); then one tie-break number (next) per player.
 //   stepRound:   the draws of decide() for each bot in snapshot order. A spin, sequence
 //                step or ultimate fire skips decide and draws nothing at this point. Then the
-//                shuffle of the move order; then one chance roll for each throw (including
-//                the shot after a dash) that has a target and enough water or a free shot,
-//                in move order. A dry throw or a throw at a dashing tank draws nothing.
-//                Smoke changes the same roll.
+//                shuffle of the move order; then, in move order, one chance roll for each
+//                normal throw that has a target and enough water or a free shot, and one
+//                Splash roll per smoked tank in the ring, clockwise from the front.
+//                Smoke changes the normal roll. Dash rams and shots at a dashing tank draw nothing.
 //                Then one chance for each pinwheel or mud ball taken on the turn (its
 //                backfire, items/items.ts pickUp), and, in a round with items on and only on
 //                a spawn turn, one int for the item's kind and one int for its square
 //                (spawnItems, once per item it adds). A round with items off has no item,
-//                so it draws neither. After all these draws, fire order gives the ultimate
-//                draws: Splash rolls once per smoked tank in the ring, clockwise from the front.
+//                so it draws neither.
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
 //
@@ -49,7 +48,7 @@ import type {
   UltimateFire,
 } from "../types.ts";
 import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
-import { countDown, itemHandOf, newEffect, spinDecision, spinsThisTurn } from "../items/items.ts";
+import { countDown, itemHandOf, newEffect, receiveEffect, spinDecision, spinsThisTurn } from "../items/items.ts";
 import { ULTIMATE_RULES, chargeAfterTurn, ultimateDecision, ultimateEffectAfterTurn, type UltimateId } from "../ultimates/ultimates.ts";
 import { decide } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
@@ -277,21 +276,25 @@ export function stepRound(state: RoundState): TickResult {
   // 2. A random order decides who moves first.
   const order = round.rng.shuffle(before.bots.map((bot) => bot.id));
 
-  // 3. Moves, then item draws, then the queued Splash rolls.
+  // 3. Moves and fires in move order, then item draws.
   const { placements, throws, inflicted, fires, items, pickups, backfires } = resolveTick(before, decisions, order, round.rng,
     { items: before.items, tick: before.tick, spawn: round.config.items });
 
   // 4. Next snapshot.
-  const hits = tallyHits(throws, fires);
+  const hits = tallyHits(throws, fires, order);
   const ends = before.tick + 1 >= round.config.ticksTotal;
   const next: Snapshot = {
     ...before,
     tick: before.tick + 1,
-    // A backfire from a pickup replaces an effect given during the moves.
     bots: before.bots.map((bot, i) => {
-      const backfire = backfires.get(bot.id);
-      const effect = backfire === undefined ? inflicted.get(bot.id) ?? null : newEffect(backfire, bot.ultimate !== undefined);
-      return nextBotState(bot, placements[i], decisions[i], hits, effect, ends);
+      const decision = decisions[i];
+      const effectFromMoves = inflicted.get(bot.id);
+      let effect = countDown(bot.effect);
+      if (effectFromMoves !== undefined) effect = receiveEffect(effect, effectFromMoves, round.config.ultimates);
+      // The pickup still rolls, but a dash is immune to effects for the whole turn.
+      const backfire = decision?.ultimate === "dash" ? undefined : backfires.get(bot.id);
+      if (backfire !== undefined) effect = receiveEffect(effect, newEffect(backfire, round.config.ultimates), round.config.ultimates);
+      return nextBotState(bot, placements[i], decision, hits, effect, ends);
     }),
     items,
   };
@@ -308,14 +311,18 @@ interface HitTally {
   readonly lastHitBy: ReadonlyMap<BotId, BotId>;
 }
 
-function tallyHits(throws: readonly ThrowEvent[], fires: readonly UltimateFire[]): HitTally {
+function tallyHits(throws: readonly ThrowEvent[], fires: readonly UltimateFire[], order: readonly BotId[]): HitTally {
   const landed = new Map<BotId, number>();
   const taken = new Map<BotId, number>();
   const lastHitBy = new Map<BotId, BotId>();
+  const moveIndex = fires.some(({ kind }) => kind === "splash") ? new Map(order.map((id, i) => [id, i])) : undefined;
   function add(throwerId: BotId, targetId: BotId): void {
     landed.set(throwerId, (landed.get(throwerId) ?? 0) + 1);
     taken.set(targetId, (taken.get(targetId) ?? 0) + 1);
-    lastHitBy.set(targetId, throwerId);
+    const previous = lastHitBy.get(targetId);
+    if (previous === undefined || moveIndex === undefined || moveIndex.get(throwerId)! > moveIndex.get(previous)!) {
+      lastHitBy.set(targetId, throwerId);
+    }
   }
   for (const event of throws) if (event.outcome === "hit") add(event.throwerId, event.targetId);
   for (const fire of fires) {
@@ -330,7 +337,7 @@ function nextBotState(
   placement: Placement | undefined,
   decision: Decision | undefined,
   hits: HitTally,
-  inflicted: TankEffect | null,
+  effect: TankEffect | null,
   ends: boolean,
 ): BotState {
   if (placement === undefined || decision === undefined || placement.id !== bot.id || decision.botId !== bot.id) {
@@ -361,8 +368,7 @@ function nextBotState(
       landedNow > 0 ? 0 : bot.ticksSinceLandedHit === null ? null : bot.ticksSinceLandedHit + 1,
     ...itemHandOf(placement),
     itemUses: placement.itemUses,
-    // The effect from before the tick counts down; a hit on this tick starts a new one in its place.
-    effect: inflicted ?? countDown(bot.effect),
+    effect,
     ...(ultimate === undefined || ends ? {} : {
       ultimate: chargeAfterTurn(ultimate, decision.ultimate),
       ultimateEffect: ultimateEffectAfterTurn(placement.ultimateEffect ?? null),

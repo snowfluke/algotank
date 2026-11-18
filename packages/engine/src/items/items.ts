@@ -1,7 +1,7 @@
 // Items on the board (docs/specs/revamp/84-items.md). Every number of the feature is in
 // ITEM_RULES, so tuning edits this file only. The round loop (round/round.ts) calls the
-// end-of-turn functions below in this order: pickUp, countDownEffects then the new effects
-// of the turn's hits, ageItems, spawnItems. Throw resolution (round/resolve.ts) reads
+// end-of-turn functions below to pick up, age and spawn items, and to count down and
+// combine effects. Throw resolution (round/resolve.ts) reads
 // holderBlocks, actsOnOwnHit and effectOfHit.
 //
 // Random draws, in this order at the end of a turn: pickUp draws one chance for each pinwheel or
@@ -81,6 +81,12 @@ export function newEffect(kind: TankEffectKind, recordSpins = false): TankEffect
   const turnsLeft = ITEM_RULES.effectTurns[kind];
   if (kind === "dizzy" && recordSpins) return { kind, turnsLeft, spinTurnsLeft: ITEM_RULES.dizzySpinTurns };
   return { kind, turnsLeft };
+}
+
+export function receiveEffect(current: TankEffect | null, incoming: TankEffect, ultimatesOn: boolean): TankEffect {
+  // The owner's longer-effect rule (2026-11-18, 85-ultimates.md) applies with ultimates on.
+  // Older fixtures and stored replays rely on every new item effect replacing the old one.
+  return ultimatesOn && current !== null && current.turnsLeft >= incoming.turnsLeft ? current : incoming;
 }
 
 /** A dizzy tank spins before it reads rules in reverse. The legacy pinwheel shape uses its original timing. */

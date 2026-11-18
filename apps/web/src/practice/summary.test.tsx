@@ -81,7 +81,7 @@ describe("practice texts", () => {
 describe("MatchResult", () => {
   const preset = PRESETS[0];
   if (preset === undefined) throw new Error("no presets");
-  const run = runPractice({ strategy: preset.strategy, name: "Ayu", opponents: 7, mix: { kind: "eachOnce" }, ticks: TICKS_DEFAULT, seed: 7, ruleSetId: "standard" });
+  const run = runPractice({ strategy: preset.strategy, name: "Ayu", opponents: 7, mix: { kind: "eachOnce" }, ticks: TICKS_DEFAULT, seed: 7, nowMs: 0, ruleSetId: "standard" });
 
   test("states the place, what the tank did and the luck line", () => {
     const html = renderToStaticMarkup(<MatchResult run={run} />);
@@ -110,7 +110,7 @@ describe("MatchResult", () => {
       modes: [{ id: "m", name: "Only", rules: [], fallback: { action: "moveToward", params: { target: "nearestWithLessWater" } } }],
     });
     if (!chaser.ok) throw new Error(chaser.errors.join("\n"));
-    const chase = runPractice({ strategy: chaser.strategy, name: "Ayu", opponents: 3, mix: { kind: "eachOnce" }, ticks: TICKS_DEFAULT, seed: 7, ruleSetId: "standard" });
+    const chase = runPractice({ strategy: chaser.strategy, name: "Ayu", opponents: 3, mix: { kind: "eachOnce" }, ticks: TICKS_DEFAULT, seed: 7, nowMs: 0, ruleSetId: "standard" });
     expect(renderToStaticMarkup(<MatchResult run={chase} />)).toContain("Your tank most often moved toward the nearest tank with less water than it,");
     const idHtml = renderToStaticMarkup(
       <I18nProvider store={createLanguageStore({ store: null, initial: "id" })}>

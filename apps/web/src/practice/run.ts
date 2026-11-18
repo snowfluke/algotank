@@ -69,6 +69,7 @@ export interface PracticeSettings {
   readonly mix: OpponentMix;
   readonly ticks: number;
   readonly seed: number;
+  readonly nowMs: number;
   readonly ruleSetId: RuleSetId;
   /** The name a bot shows, from its play style, so the names follow the page language. Default: the engine's English name. */
   readonly styleName?: (preset: PlayStylePreset) => string;
@@ -93,7 +94,7 @@ export function runPractice(settings: PracticeSettings): PracticeRun {
     seed: settings.seed,
     // The Try it match plays like an arena round, items included (84-items.md).
     items: true,
-    ultimates: ultimatesOn(Date.now()),
+    ultimates: ultimatesOn(settings.nowMs),
     ruleSetId: settings.ruleSetId,
     ticksTotal: settings.ticks,
     // The cut-line conditions read this, so it follows the arena's own rule.

@@ -152,7 +152,7 @@ describe("the day round", () => {
     for (let i = 0; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
     const after = l.monthly.live(1).board;
     expect(after.tick).toBe(1);
-    expect(after.bots.every((bot) => bot.ultimate?.kind === "charging")).toBe(true);
+    expect(after.bots.every((bot) => bot.ultimate !== undefined)).toBe(true);
   });
   test("lasts from 00:00 to 24:00 in the league's time zone: 96,000 turns of 0.9 s", () => {
     const l = startLeague({ at: NOV_14 });

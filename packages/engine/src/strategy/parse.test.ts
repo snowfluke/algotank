@@ -253,6 +253,16 @@ const CASES: Record<StrategyIssueCode, { readonly input: unknown; readonly path:
     params: {},
   },
   unknownUltimate: { input: strategyWith({ ultimate: "fly" }), path: ["ultimate"], params: {} },
+  ultimateCannotCatch: {
+    input: strategyWith({ ultimate: "smoke" }, { rules: [{ ...validRule, conditions: [{ condition: "ultimateCatches", params: { n: 2 }, negate: false }] }] }),
+    path: [...CONDITION, "condition"],
+    params: {},
+  },
+  ultimateNeedsRule: {
+    input: strategyWith({}, { fallback: { action: "useUltimate", params: {} } }),
+    path: ["modes", 0, "fallback", "action"],
+    params: {},
+  },
   unknownAction: { input: ruleWith({ action: { action: "fly", params: {} } }), path: [...RULE, "action", "action"], params: {} },
   stepCount: { input: ruleWith({ action: { steps: Array(5).fill(STEP) } }), path: [...RULE, "action", "steps"], params: { min: 2, max: 4, actual: 5 } },
   notAStep: {
@@ -285,6 +295,19 @@ const CASES: Record<StrategyIssueCode, { readonly input: unknown; readonly path:
   levelOutOfRange: { input: strategyWith({ build: { reach: 3, aim: 0, dodge: 0 } }), path: ["build", "reach"], params: { attribute: "reach", max: 2 } },
   overBudget: { input: strategyWith({ build: { reach: 2, aim: 3, dodge: 1 } }), path: ["build"], params: { cost: 8, budget: 6 } },
 };
+
+test("useUltimate cannot be a step of a sequence", () => {
+  expect(issueWith(ruleWith({ action: { steps: [STEP, { action: "useUltimate", params: {} }] } }), "notAStep").path)
+    .toEqual([...RULE, "action", "steps", 1, "action"]);
+});
+
+test("ultimate conditions take only their numeric choices", () => {
+  const check = (condition: string, n: unknown) => ruleWith({ conditions: [{ condition, params: { n }, negate: false }] });
+  for (const n of [25, 50, 75]) expect(parseStrategy(check("ultimateCharged", n)).ok).toBe(true);
+  for (const n of [0, 26, 100, "50"]) expect(issueWith(check("ultimateCharged", n), "paramNotAnOption").path).toEqual([...CONDITION, "params", "n"]);
+  for (const n of [1, 2, 3, 4]) expect(parseStrategy(check("ultimateCatches", n)).ok).toBe(true);
+  for (const n of [0, 1.5, 5]) expect(issueWith(check("ultimateCatches", n), "paramNotAnOption").path).toEqual([...CONDITION, "params", "n"]);
+});
 
 describe("parseStrategy and a sequence of steps", () => {
   const steps = [

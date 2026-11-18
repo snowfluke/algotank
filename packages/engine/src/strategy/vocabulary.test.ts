@@ -114,7 +114,7 @@ describe("vocabulary tables", () => {
       chance: 100,
       switchToMode: null,
     }));
-    const fallbacks = Object.values(ACTIONS);
+    const fallbacks = Object.values(ACTIONS).filter((def) => !def.ruleOnly);
     const modes = fallbacks.map((def, index) => ({
       id: `m${index}`,
       name: def.id,
@@ -152,7 +152,7 @@ describe("vocabulary tables", () => {
         const params = { ...defaultsOf(def.params), ...(target === "" ? {} : { target }) };
         for (const self of crowd.bots) {
           const move = def.toMove(contextFor(crowd, self.id), params, stubRng({ int: [0] }));
-          if (move !== null) expect(MOVES, def.id).toContain(move);
+          if (move !== null) expect(MOVES, def.id).toContain(typeof move === "string" ? move : move.move);
         }
       }
     }

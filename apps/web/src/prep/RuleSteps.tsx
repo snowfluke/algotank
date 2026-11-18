@@ -321,7 +321,7 @@ function ConditionStep(props: RulesEditorProps & { readonly ruleId: string; read
       {/* data-coach: the workshop tour's "change one thing" step points at the whole editor, and a callout never
           covers its target, so the picker and the number's minus and plus stay free to use. */}
       <div data-coach="condition-edit" className="flex min-w-0 shrink-0 flex-col gap-3">
-        <ConditionEditor condition={condition} label={r.condition(props.index + 1)} onChange={(next) => change(setCondition(rule, props.index, next))} />
+        <ConditionEditor condition={condition} ultimate={props.strategy.ultimate} label={r.condition(props.index + 1)} onChange={(next) => change(setCondition(rule, props.index, next))} />
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         <label className="flex min-h-11 cursor-pointer items-center gap-3">
@@ -406,7 +406,7 @@ function FallbackStep(props: RulesEditorProps) {
   return (
     <StepSheet title={r.fallbackTitle} onBack={close} action={<Button onClick={close}>{r.done}</Button>}>
       <Problems problems={problems} />
-      <ActionEditor action={chosen.mode.fallback} onChange={(fallback) => props.onChange(setFallback(props.strategy, chosen.mode.id, fallback))} />
+      <ActionEditor fallback action={chosen.mode.fallback} onChange={(fallback) => props.onChange(setFallback(props.strategy, chosen.mode.id, fallback))} />
     </StepSheet>
   );
 }

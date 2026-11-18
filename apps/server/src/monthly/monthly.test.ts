@@ -131,6 +131,29 @@ function nextDay(l: League): void {
 }
 
 describe("the day round", () => {
+  test("changing a seat's ultimate restarts a ready charge; changing rules alone preserves progress", () => {
+    const l = startLeague({ at: ULTIMATES_FROM });
+    const account = newAccount();
+    const first = { ...strategy(), ultimate: "whirlwind" } as const;
+    const saved = take(l, account, { strategy: first }).seat!;
+    const tank = () => l.monthly.live(saved.league).board.bots.find((bot) => bot.id === saved.seatId)!;
+    const { firstReadyTurn } = ULTIMATE_RULES;
+    expect(tank().ultimate).toEqual({ id: "whirlwind", kind: "charging", turnsLeft: firstReadyTurn, turnsTotal: firstReadyTurn });
+    for (let i = 0; i < firstReadyTurn; i++) l.ticks.tick();
+    expect(tank().ultimate).toEqual({ id: "whirlwind", kind: "ready" });
+
+    const next = { ...first, ultimate: "fullTank" } as const;
+    l.monthly.changeStrategy(account, { strategy: next });
+    expect(tank().ultimate).toEqual({ id: "fullTank", kind: "charging", turnsLeft: firstReadyTurn, turnsTotal: firstReadyTurn });
+    expect(seatOf(l, account)).toMatchObject({ seatId: saved.seatId, strategy: next });
+
+    l.ticks.tick();
+    const progress = tank().ultimate;
+    expect(progress).toMatchObject({ turnsLeft: firstReadyTurn - 1, turnsTotal: firstReadyTurn });
+    l.monthly.changeStrategy(account, { strategy: { ...strategy(1), ultimate: next.ultimate } });
+    expect(tank().ultimate).toEqual(progress);
+  });
+
   test("the Jakarta midnight that opens ultimates gives the new day's tanks a fresh charge", () => {
     const l = startLeague({ at: ULTIMATES_FROM - 1 });
     take(l, newAccount());
@@ -140,7 +163,7 @@ describe("the day round", () => {
     const live = l.monthly.live(1);
     expect(live).toMatchObject({ day: "2026-11-22", board: { tick: 0 } });
     expect(live.board.bots).toHaveLength(2);
-    expect(live.board.bots.every((bot) => bot.ultimate?.kind === "charging" && bot.ultimate.turnsLeft === ULTIMATE_RULES.firstReadyTurn)).toBe(true);
+    expect(live.board.bots.every((bot) => bot.ultimate?.kind === "charging" && bot.ultimate.turnsLeft === ULTIMATE_RULES.firstReadyTurn && bot.ultimate.turnsTotal === ULTIMATE_RULES.firstReadyTurn)).toBe(true);
   });
 
   test("a league whose day spans the gate keeps its round off through ticks and joins until the next round", () => {

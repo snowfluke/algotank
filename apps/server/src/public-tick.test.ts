@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { expandTick } from "@game/arena";
-import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, createRound, runRound, ruleSet, stepRound, type Snapshot } from "@game/engine";
+import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, ULTIMATE_IDS, ULTIMATE_RULES, createRound, runRound, ruleSet, stepRound, type Snapshot } from "@game/engine";
 import { roundStartMessage, toCompactTick, toPublicSnapshot, toPublicTick } from "./public-tick.ts";
 
 // Sorted, so the test names the allow-list and not an order. The mode of a bot stays out.
@@ -82,5 +82,11 @@ test("a Magnet pull reaches both the public turn and the compact wire", () => {
   expect(tick.magnetFires).toEqual([fire]);
   expect(wire.magnetFires).toEqual([[0, 2, 2, [[0, 2, 1], [1, 1, 2]], 1]]);
   expect(wire.itemsWaiting).toEqual([[0, 1, 0]]);
+  const { firstReadyTurn, rechargeTurns } = ULTIMATE_RULES;
+  expect(tick.snapshot.bots[0]?.ultimate).toEqual({ id: "magnet", kind: "charging", turnsLeft: rechargeTurns, turnsTotal: rechargeTurns });
+  expect(wire.ultimates).toEqual([
+    [0, ULTIMATE_IDS.indexOf("magnet"), rechargeTurns, 0, rechargeTurns],
+    [1, ULTIMATE_IDS.indexOf(strategy.ultimate), firstReadyTurn - 1, 0, firstReadyTurn],
+  ]);
   expect(expandTick(wire, toPublicSnapshot(opening))).toEqual(tick);
 });

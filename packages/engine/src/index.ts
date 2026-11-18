@@ -1,6 +1,7 @@
 // Public interface of the engine. Import from "@game/engine", not from the
 // folders below, so the folders can change without touching callers.
 export * from "./types.ts";
+export { intParamAllows } from "./strategy/define.ts";
 
 // The eight facings and their geometry, shared by the round, the strategies and the board.
 export { DIRECTION_STEP, directionDegreesFromNorth, isDiagonal } from "./directions.ts";
@@ -37,7 +38,7 @@ export type { RoundRules, RuleSetId } from "./combat/rule-sets.ts";
 export { ITEM_RULES, itemCap, itemHandOf } from "./items/items.ts";
 
 // ultimates/ owns the ids, their rules and the assignment for older strategies.
-export { ULTIMATE_IDS, ULTIMATE_RULES, isUltimateId } from "./ultimates/ultimates.ts";
+export { ULTIMATE_IDS, ULTIMATE_RULES, isUltimateId, ultimateCatchesTanks, ultimateReach } from "./ultimates/ultimates.ts";
 export type { UltimateId } from "./ultimates/ultimates.ts";
 export { assignUltimate, matchUltimate } from "./ultimates/assign.ts";
 export { hasStrategyBody, sameData } from "./strategy/compare.ts";

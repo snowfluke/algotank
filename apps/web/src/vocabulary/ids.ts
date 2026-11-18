@@ -12,6 +12,7 @@ export const CONDITION_GROUPS = {
   walls: "Walls and space",
   round: "The round",
   items: "Items",
+  ultimate: "Ultimate",
 } as const;
 export type ConditionGroupId = keyof typeof CONDITION_GROUPS;
 
@@ -21,6 +22,7 @@ export const ACTION_GROUPS = {
   position: "Position",
   basic: "Basic moves",
   items: "Items",
+  ultimate: "Ultimate",
 } as const;
 export type ActionGroupId = keyof typeof ACTION_GROUPS;
 

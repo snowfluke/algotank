@@ -176,7 +176,7 @@ export class LeagueDay {
   /**
    * A seated tank's new rules ("Ubah aturan", owner 2026-11-16: the new rules play at once). It
    * keeps its id, today's points, whether today counts, its statistics, and its place on the board
-   * with its water, item and effect (engine replaceStrategy), so a change is no escape or refill.
+   * with its water, item and tank effect. The engine restarts the charge if the ultimate changes.
    */
   restrategy(id: PlayerId, strategy: Strategy): void {
     const seated = this.seated.get(id);

@@ -150,7 +150,7 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
         key: id,
         name: m.catalogue.ultimates[id].name,
         body: m.catalogue.ultimates[id].body,
-        extra: `${m.catalogue.defaultFor(v.playStyles[ULTIMATE_DEFAULT_STYLE[id]].name)}${released ? "" : ` ${m.catalogue.ultimatesNote}`}`,
+        extra: `${m.catalogue.defaultFor(v.playStyles[ULTIMATE_DEFAULT_STYLE[id]].name)} ${m.catalogue.firing}${released ? "" : ` ${m.catalogue.ultimatesNote}`}`,
         soon: !released,
         icon: <span className="flex size-9 items-center justify-center rounded-[0.5rem] bg-guide-soft text-guide-ink"><UltimateIcon ultimate={id} size={26} /></span>,
         preview: { kind: "board", scene: ULTIMATE_SCENES[id] },

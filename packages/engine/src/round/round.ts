@@ -49,8 +49,8 @@ import type {
 } from "../types.ts";
 import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
 import { countDown, itemHandOf, newEffect, receiveEffect, spinDecision, spinsThisTurn } from "../items/items.ts";
-import { ULTIMATE_RULES, chargeAfterTurn, ultimateDecision, ultimateEffectAfterTurn, type UltimateId } from "../ultimates/ultimates.ts";
-import { decide } from "../strategy/decide.ts";
+import { chargeAfterTurn, firstUltimateCharge, ultimateDecision, ultimateEffectAfterTurn, type UltimateId } from "../ultimates/ultimates.ts";
+import { decide, firesUltimateByRules } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
 import { allCells, arenaSize, cellKey, type Cell } from "./grid.ts";
 import { createRng } from "./rng.ts";
@@ -153,7 +153,7 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
     item: null,
     itemUses: 0,
     effect: null,
-    ...(ultimate === undefined ? {} : { ultimate: { id: ultimate, kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn }, ultimateEffect: null }),
+    ...(ultimate === undefined ? {} : { ultimate: firstUltimateCharge(ultimate), ultimateEffect: null }),
   };
 }
 
@@ -227,9 +227,10 @@ export function leaveRound(state: RoundState, id: BotId): void {
 
 /**
  * Gives a tank on the board new rules between two turns. It keeps its square, facing, points,
- * water, item, effects, ultimate and hit history, so new rules are never a way out of danger or a refill
+ * water, item, dizzy or stuck effect and hit history, so new rules are never a way out of danger or a refill
  * (monthly "Ubah aturan", owner 2026-11-16). It starts in the new strategy's first mode, with the
- * new strategy's upgrades and no running step sequence. Throws when the id is not on the board.
+ * new strategy's upgrades and no running step sequence. Changing an ultimate starts a first charge
+ * and clears that ultimate's active effect (85-ultimates.md, owner 2026-11-19).
  */
 export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy): BotState {
   const round = runtimeOf(state);
@@ -238,7 +239,15 @@ export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy
   const firstMode = strategy.modes[0];
   if (old === undefined) throw new Error(`player "${id}" is not in the round`);
   if (firstMode === undefined) throw new Error(`the strategy of player "${id}" has no mode`);
-  const bot: BotState = { ...old, modeId: firstMode.id, ticksInMode: 0, build: strategy.build };
+  const bot: BotState = {
+    ...old,
+    modeId: firstMode.id,
+    ticksInMode: 0,
+    build: strategy.build,
+    ...(old.ultimate !== undefined && old.ultimate.id !== strategy.ultimate
+      ? { ultimate: firstUltimateCharge(strategy.ultimate), ultimateEffect: null }
+      : {}),
+  };
   round.strategies.set(id, strategy);
   round.sequences.delete(id);
   round.snapshot = { ...before, bots: before.bots.map((b) => (b.id === id ? bot : b)) };
@@ -266,7 +275,8 @@ export function stepRound(state: RoundState): TickResult {
     // A spinning tank checks no rule and draws nothing; its running sequence ends (runningAfter sees no step).
     const decision = spinsThisTurn(bot) ? spinDecision(bot)
       : running !== undefined ? continueSequence(ctx, running, round.rng)
-      : ultimateDecision(before, bot) ?? decide(ctx, strategy, round.rng);
+      : (bot.ultimate?.kind === "ready" && !firesUltimateByRules(strategy) ? ultimateDecision(before, bot) : null)
+        ?? decide(ctx, strategy, round.rng);
     const after = runningAfter(decision, strategy);
     if (after === null) round.sequences.delete(bot.id);
     else round.sequences.set(bot.id, after);

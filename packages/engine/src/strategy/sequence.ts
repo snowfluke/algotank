@@ -54,7 +54,7 @@ function stepMove(ctx: DecisionContext, step: ActionRef, rng: Rng): Move {
   const def = ACTIONS[step.action];
   if (def === undefined || !isStepAction(step.action)) throw new Error(`"${step.action}" is not a step. Run the strategy through parseStrategy first.`);
   const move = def.toMove(ctx, step.params, rng);
-  if (move === null) throw new Error(`the step "${step.action}" returned no move; a step always acts`);
+  if (typeof move !== "string") throw new Error(`the step "${step.action}" returned no move; a step always acts`);
   return move;
 }
 

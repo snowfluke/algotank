@@ -211,6 +211,9 @@ export const en: VocabularyText = {
     },
     itemNear: { name: "An item close to me", text: "{item} is at most {n} away", not: "{item} is not within {n} of me", units: { n: "squares" } },
     myItem: { name: "The item I hold", text: "I hold {item}", not: "I do not hold {item}" },
+    ultimateReady: { name: "My ultimate is ready", text: "my ultimate is ready", not: "my ultimate is not ready" },
+    ultimateCharged: { name: "My ultimate's charge", text: "my ultimate is at least {n} charged", not: "my ultimate is less than {n} charged", units: { n: "percent" } },
+    ultimateCatches: { name: "How many tanks my ultimate can catch", text: "my ultimate would catch at least {n} tanks", not: "my ultimate would catch fewer than {n} tanks" },
     myEffect: { name: "An item's effect on me", text: "I am {effect}", not: "I am not {effect}" },
     targetItem: { name: "A chosen tank holds an item", text: "{target} holds {item}", not: "{target} does not hold {item}" },
   },
@@ -221,6 +224,7 @@ export const en: VocabularyText = {
     walls: "Walls and space",
     round: "The round",
     items: "Items",
+    ultimate: "Ultimate",
   },
   actions: {
     throw: { name: "Shoot", text: "shoot", done: "shot" },
@@ -236,6 +240,7 @@ export const en: VocabularyText = {
     turn: { name: "Turn", text: "turn {way}", done: "turned {way}" },
     wander: { name: "Wander", text: "wander around at random", done: "wandered around at random" },
     wait: { name: "Wait", text: "wait", done: "waited" },
+    useUltimate: { name: "Use my ultimate", text: "use my ultimate", done: "used its ultimate" },
     goToItem: { name: "Go get an item", text: "drive to the nearest square with {item}", done: "drove to the nearest square with {item}" },
   },
   actionGroups: {
@@ -244,6 +249,7 @@ export const en: VocabularyText = {
     position: "Go to a place",
     basic: "Basic moves",
     items: "Items",
+    ultimate: "Ultimate",
   },
   steps: {
     forward: { name: "Forward", text: "move one square forward" },
@@ -488,6 +494,9 @@ export const id: VocabularyText = {
     },
     itemNear: { name: "Item di dekatku", text: "ada {item} dalam jarak {n}", not: "tidak ada {item} dalam jarak {n}", units: { n: "squares" } },
     myItem: { name: "Item yang kupegang", text: "aku memegang {item}", not: "aku tidak memegang {item}" },
+    ultimateReady: { name: "Jurusku siap", text: "jurusku siap", not: "jurusku belum siap" },
+    ultimateCharged: { name: "Isi jurusku", text: "jurusku terisi minimal {n}", not: "jurusku terisi kurang dari {n}", units: { n: "percent" } },
+    ultimateCatches: { name: "Jumlah tank yang bisa kena jurusku", text: "jurusku bisa kena minimal {n} tank", not: "jurusku bisa kena kurang dari {n} tank" },
     myEffect: { name: "Efek item padaku", text: "aku sedang {effect}", not: "aku tidak sedang {effect}" },
     targetItem: { name: "Tank pilihan memegang item", text: "{target} memegang {item}", not: "{target} tidak memegang {item}" },
   },
@@ -498,6 +507,7 @@ export const id: VocabularyText = {
     walls: "Dinding dan ruang",
     round: "Ronde ini",
     items: "Item",
+    ultimate: "Jurus pamungkas",
   },
   actions: {
     throw: { name: "Tembak", text: "tembak", done: "menembak" },
@@ -513,6 +523,7 @@ export const id: VocabularyText = {
     turn: { name: "Belok", text: "belok {way}", done: "berbelok {way}" },
     wander: { name: "Jalan acak", text: "jalan-jalan ke arah acak", done: "jalan-jalan ke arah acak" },
     wait: { name: "Tunggu", text: "tunggu", done: "menunggu" },
+    useUltimate: { name: "Pakai jurus pamungkas", text: "pakai jurus pamungkas", done: "memakai jurus pamungkas" },
     goToItem: { name: "Ambil item", text: "pergi ke {item} terdekat", done: "pergi ke {item} terdekat" },
   },
   actionGroups: {
@@ -521,6 +532,7 @@ export const id: VocabularyText = {
     position: "Pergi ke suatu tempat",
     basic: "Gerakan dasar",
     items: "Item",
+    ultimate: "Jurus pamungkas",
   },
   steps: {
     forward: { name: "Maju", text: "maju satu petak" },

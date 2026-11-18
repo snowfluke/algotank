@@ -25,7 +25,7 @@
 //   pickups[k]= [bot index, item index], the items taken on the turn.
 //   itemsWaiting[k] = [bot index, first item index, optional second item index].
 //   magnetFires[k]  = [bot index, x, y, [[item index, source x, source y], ...], optional 1 for the new bucket].
-//   ultimates[k] = [bot index, ultimate index, charge turns, active count].
+//   ultimates[k] = [bot index, ultimate index, charge turns, active count, total charge turns].
 //   fires[k] = [bot index, ultimate id, x, y, ...payload] for fires other than Magnet.
 //   The appended fields leave the bot rows at eight values. See ultimate-wire.ts.
 //

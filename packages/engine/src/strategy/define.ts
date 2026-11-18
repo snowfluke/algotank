@@ -34,6 +34,17 @@ export function intParam(key: string, label: string, min: number, max: number, d
   return { kind: "int", key, label, min, max, default: defaultValue };
 }
 
+type IntSpec = Extract<ParamSpec, { readonly kind: "int" }>;
+
+export function intOptionParam(key: string, label: string, options: readonly [number, ...number[]], defaultValue: number): IntSpec {
+  return { kind: "int", key, label, min: Math.min(...options), max: Math.max(...options), default: defaultValue, options };
+}
+
+export function intParamAllows(spec: IntSpec, value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) &&
+    (spec.options === undefined ? value >= spec.min && value <= spec.max : spec.options.includes(value));
+}
+
 export function cellsParam(key: string, defaultValue: number): ParamSpec {
   return intParam(key, "Number of cells", 1, MAX_DISTANCE, defaultValue);
 }

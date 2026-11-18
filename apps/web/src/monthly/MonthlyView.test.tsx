@@ -288,13 +288,13 @@ describe("the ultimate in the monthly tank step", () => {
     expect(html).not.toContain("Coming soon");
   });
 
-  test("editing rules shows the seated ultimate alongside the update action", () => {
+  test("editing rules shows the new ultimate alongside the update action", () => {
     const html = renderToStaticMarkup(
       <ToastProvider>
         <TankStep strategy={strategy} look={seat.look} playerName={seat.name} submitting={false} problem={null}
-          purpose={{ kind: "changeRules", ultimate: seat.strategy.ultimate }} nowMs={ULTIMATES_FROM} onBack={noop} onSubmit={noop} />
+          purpose={{ kind: "changeRules" }} nowMs={ULTIMATES_FROM} onBack={noop} onSubmit={noop} />
       </ToastProvider>,
     );
-    expect(html.match(/data-monthly-tank-action[^>]*><a data-ultimate-link="([^"]+)"/)?.[1]).toBe(seat.strategy.ultimate);
+    expect(html.match(/data-monthly-tank-action[^>]*><a data-ultimate-link="([^"]+)"/)?.[1]).toBe(draft.ultimate);
   });
 });

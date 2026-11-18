@@ -56,14 +56,10 @@ function parseAccountStrategy(raw: unknown, id: string): { readonly ok: true; re
   return { ok: true, value: { id, name, strategy: parsed.strategy, updatedAt } };
 }
 
-/** The stored ultimate belongs to the id, even when a stale bundle sends a different strategy. */
+/** A stale bundle that omits the ultimate keeps the one saved for this id (85-ultimates.md). */
 function upsertStrategyBody(body: unknown, stored: AccountStrategy | undefined): unknown {
   if (!isRecord(body)) return body;
-  const input = body["strategy"];
-  const strategy = stored !== undefined && isRecord(input)
-    ? { ...input, ultimate: stored.strategy.ultimate }
-    : assignMissingUltimate(input);
-  return { ...body, strategy };
+  return { ...body, strategy: assignMissingUltimate(body["strategy"], stored?.strategy.ultimate) };
 }
 
 type PutResult =
@@ -95,7 +91,7 @@ export class AccountStrategies {
     return this.selectAll.all(accountId).map((row) => toStrategy(accountId, row));
   }
 
-  /** Creates or replaces one while holding the write lock that protects the stored ultimate. */
+  /** Creates or replaces one under the same write lock as the stale-copy and limit checks. */
   put(accountId: string, id: string, body: unknown, now: number): PutResult {
     return this.db.transaction((): PutResult => {
       const row = this.selectOne.get(accountId, id);

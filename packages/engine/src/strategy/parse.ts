@@ -20,9 +20,10 @@ import type {
   Strategy,
   StrategyInput,
 } from "../types.ts";
-import { isUltimateId } from "../ultimates/ultimates.ts";
+import { isUltimateId, ultimateCatchesTanks, type UltimateId } from "../ultimates/ultimates.ts";
 import { ACTIONS } from "./actions.ts";
 import { CONDITIONS } from "./conditions.ts";
+import { intParamAllows } from "./define.ts";
 import { LIMITS } from "./limits.ts";
 import { STEP_ACTION_IDS, isStepAction } from "./sequence.ts";
 import { TARGET_SELECTORS } from "./targets.ts";
@@ -51,6 +52,8 @@ export interface StrategyIssueParams {
   readonly unknownCondition: Record<string, never>;
   readonly unknownAction: Record<string, never>;
   readonly unknownUltimate: Record<string, never>;
+  readonly ultimateCannotCatch: Record<string, never>;
+  readonly ultimateNeedsRule: Record<string, never>;
   /** A sequence has too few or too many steps, or its steps are not a list (actual null). */
   readonly stepCount: { readonly min: number; readonly max: number; readonly actual: number | null };
   /** A step names an action that is not atomic, such as "move toward". */
@@ -88,6 +91,8 @@ const CODE_SET: Record<StrategyIssueCode, true> = {
   unknownCondition: true,
   unknownAction: true,
   unknownUltimate: true,
+  ultimateCannotCatch: true,
+  ultimateNeedsRule: true,
   stepCount: true,
   notAStep: true,
   negateNotSwitch: true,
@@ -174,16 +179,18 @@ function parseParam(spec: ParamSpec, raw: unknown, place: Place, problems: Probl
   }
   switch (spec.kind) {
     case "int":
-      if (!isWholeNumber(raw) || raw < spec.min || raw > spec.max) {
-        problems.add(
-          place,
-          `"${spec.label}" must be a whole number from ${spec.min} to ${spec.max}.`,
-          { code: "paramOutOfRange", params: { key: spec.key, min: spec.min, max: spec.max } },
-          path,
-        );
+      if (intParamAllows(spec, raw)) return raw;
+      if (spec.options !== undefined) {
+        problems.add(place, `"${spec.label}" must be one of: ${spec.options.join(", ")}.`, { code: "paramNotAnOption", params: { key: spec.key } }, path);
         return null;
       }
-      return raw;
+      problems.add(
+        place,
+        `"${spec.label}" must be a whole number from ${spec.min} to ${spec.max}.`,
+        { code: "paramOutOfRange", params: { key: spec.key, min: spec.min, max: spec.max } },
+        path,
+      );
+      return null;
     case "choice":
       if (typeof raw !== "string" || !spec.options.some((option) => option.value === raw)) {
         const names = spec.options.map((option) => option.label).join(", ");
@@ -219,7 +226,7 @@ function parseParams(specs: readonly ParamSpec[], raw: unknown, place: Place, pr
 // Conditions, actions, rules, modes
 // ---------------------------------------------------------------------------
 
-function parseCondition(raw: unknown, place: Place, problems: Problems): ConditionRef | null {
+function parseCondition(raw: unknown, place: Place, problems: Problems, ultimate: UltimateId | undefined): ConditionRef | null {
   if (!isRecord(raw)) {
     problems.add(place, "the condition must be an object.", { code: "notAnObject", params: { part: "condition" } });
     return null;
@@ -234,6 +241,9 @@ function parseCondition(raw: unknown, place: Place, problems: Problems): Conditi
       [...place.path, "condition"],
     );
     return null;
+  }
+  if (def.id === "ultimateCatches" && ultimate !== undefined && !ultimateCatchesTanks(ultimate)) {
+    problems.add(place, "this ultimate does not catch tanks. Pick another condition.", { code: "ultimateCannotCatch", params: NONE }, [...place.path, "condition"]);
   }
   const negate = field(raw, "negate");
   if (typeof negate !== "boolean") {
@@ -311,7 +321,7 @@ function parseId(raw: unknown, place: Place, what: "mode" | "rule", problems: Pr
   return raw;
 }
 
-function parseConditions(raw: unknown, place: Place, problems: Problems): ConditionRef[] {
+function parseConditions(raw: unknown, place: Place, problems: Problems, ultimate: UltimateId | undefined): ConditionRef[] {
   const conditions: ConditionRef[] = [];
   const path = [...place.path, "conditions"];
   const count = { min: LIMITS.minConditionsPerRule, max: LIMITS.maxConditionsPerRule };
@@ -333,7 +343,7 @@ function parseConditions(raw: unknown, place: Place, problems: Problems): Condit
     );
   }
   raw.slice(0, LIMITS.maxConditionsPerRule).forEach((item, index) => {
-    const condition = parseCondition(item, inside(place, `condition ${index + 1}`, "conditions", index), problems);
+    const condition = parseCondition(item, inside(place, `condition ${index + 1}`, "conditions", index), problems, ultimate);
     if (condition !== null) conditions.push(condition);
   });
   return conditions;
@@ -345,6 +355,7 @@ function parseRule(
   modeIds: ReadonlySet<string>,
   seenRuleIds: Set<string>,
   problems: Problems,
+  ultimate: UltimateId | undefined,
 ): Rule | null {
   if (!isRecord(raw)) {
     problems.add(place, "the rule must be an object.", { code: "notAnObject", params: { part: "rule" } });
@@ -368,7 +379,7 @@ function parseRule(
     problems.add(place, 'the rule must match "all" or "any" of its conditions.', { code: "matchInvalid", params: NONE }, [...place.path, "match"]);
   }
 
-  const conditions = parseConditions(field(raw, "conditions"), place, problems);
+  const conditions = parseConditions(field(raw, "conditions"), place, problems, ultimate);
   const action = parseRuleAction(field(raw, "action"), inside(place, "action", "action"), problems);
 
   const chance = field(raw, "chance");
@@ -411,7 +422,7 @@ function modePlace(raw: unknown, index: number): Place {
   return { where: modeLabel(raw, index), path: ["modes", index] };
 }
 
-function parseMode(raw: unknown, index: number, modeIds: ReadonlySet<string>, problems: Problems): Mode | null {
+function parseMode(raw: unknown, index: number, modeIds: ReadonlySet<string>, problems: Problems, ultimate: UltimateId | undefined): Mode | null {
   const place = modePlace(raw, index);
   if (!isRecord(raw)) {
     problems.add(place, "the mode must be an object.", { code: "notAnObject", params: { part: "mode" } });
@@ -445,12 +456,16 @@ function parseMode(raw: unknown, index: number, modeIds: ReadonlySet<string>, pr
     }
     const seenRuleIds = new Set<string>();
     rawRules.slice(0, LIMITS.maxRulesPerMode).forEach((rawRule, ruleIndex) => {
-      const rule = parseRule(rawRule, inside(place, `rule ${ruleIndex + 1}`, "rules", ruleIndex), modeIds, seenRuleIds, problems);
+      const rule = parseRule(rawRule, inside(place, `rule ${ruleIndex + 1}`, "rules", ruleIndex), modeIds, seenRuleIds, problems, ultimate);
       if (rule !== null) rules.push(rule);
     });
   }
 
-  const fallback = parseAction(field(raw, "fallback"), inside(place, "fallback action", "fallback"), problems);
+  const fallbackPlace = inside(place, "fallback action", "fallback");
+  const fallback = parseAction(field(raw, "fallback"), fallbackPlace, problems);
+  if (fallback !== null && ACTIONS[fallback.action]?.ruleOnly) {
+    problems.add(fallbackPlace, "using an ultimate needs a rule. Pick another fallback action.", { code: "ultimateNeedsRule", params: NONE }, [...fallbackPlace.path, "action"]);
+  }
   if (id === null || fallback === null || name.length < 1) return null;
   return { id, name, rules, fallback };
 }
@@ -531,6 +546,8 @@ export function parseStrategy(input: unknown): CheckedParseResult {
     };
   }
   const problems = new Problems();
+  const rawUltimate = field(input, "ultimate");
+  const ultimate = isUltimateId(rawUltimate) ? rawUltimate : undefined;
 
   const rawModes = field(input, "modes");
   const modes: Mode[] = [];
@@ -553,15 +570,14 @@ export function parseStrategy(input: unknown): CheckedParseResult {
     const limited = rawModes.slice(0, LIMITS.maxModes);
     const modeIds = collectModeIds(limited, problems);
     limited.forEach((rawMode, index) => {
-      const mode = parseMode(rawMode, index, modeIds, problems);
+      const mode = parseMode(rawMode, index, modeIds, problems, ultimate);
       if (mode !== null) modes.push(mode);
     });
   }
 
   const build = parseBuild(field(input, "build"), problems);
 
-  const ultimate = field(input, "ultimate");
-  if (!isUltimateId(ultimate)) {
+  if (ultimate === undefined) {
     problems.add({ where: "Ultimate", path: ["ultimate"] }, "the strategy needs one valid ultimate.", { code: "unknownUltimate", params: NONE });
     return { ok: false, errors: problems.messages, issues: problems.issues };
   }

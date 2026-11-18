@@ -3,11 +3,13 @@ import { describe, expect, test } from "bun:test";
 import { ULTIMATES_FROM } from "@game/arena";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
-import { DEFAULT_PRESET_ID, PRESETS, ULTIMATE_IDS } from "@game/engine";
+import { DEFAULT_PRESET_ID, PRESETS, ULTIMATE_IDS, parseStrategy, ruleSet } from "@game/engine";
 import type { StrategyInput } from "@game/engine";
 import { CATALOGS } from "../i18n/catalog.ts";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
+import { RulesPane } from "../prep/RulesPane.tsx";
+import { RULES_LIST } from "../prep/rulesNav.ts";
 import { matchingSaved } from "../prep/StylePane.tsx";
 import { ToastProvider } from "../ui/Toast.tsx";
 import { ChooseUltimateStep } from "./ChooseUltimateStep.tsx";
@@ -92,13 +94,23 @@ describe("workshop ultimates", () => {
       expect(after).not.toContain(m.catalogue.soon);
     });
 
-    test(`the ${language} saved editor shows the fixed ultimate without a choice control`, () => {
+    test(`the ${language} saved editor offers to change its ultimate`, () => {
       const library = { styles: [style], account: { kind: "deviceOnly" as const }, persistent: true, keptOnDevice: 0 };
       const html = render(language, <WorkshopEditor style={style} library={library} nowMs={ULTIMATES_FROM} onBack={noop} />);
       expect(html).toMatch(/data-workshop-ultimate[^>]*>.*?data-ultimate-link="fullTank"/);
-      expect(html).toContain(m.workshop.ultimateFixed);
-      expect(html).not.toContain("data-ultimate-picker");
-      expect(html).not.toContain(m.workshop.chooseUltimate);
+      expect(html).toContain(m.workshop.changeUltimate);
+      expect(html).toContain('data-focus-key="workshop-change-ultimate"');
+    });
+
+    test(`the ${language} rule card marks a saved catch condition that no longer fits`, () => {
+      const mode = style.strategy.modes[0]!;
+      const rule = { ...mode.rules[0]!, conditions: [{ condition: "ultimateCatches", params: { n: 2 }, negate: false }] };
+      const draft = { ...style.strategy, modes: [{ ...mode, rules: [rule] }, ...style.strategy.modes.slice(1)] };
+      const parsed = parseStrategy(draft);
+      if (parsed.ok) throw new Error("expected a rule problem");
+      const html = render(language, <RulesPane strategy={draft} issues={parsed.issues} rules={ruleSet("standard")} wide={false}
+        nav={RULES_LIST} onNav={noop} onChange={noop} />);
+      expect(html).toContain(m.prep.issues.ultimateCannotCatch({}));
     });
 
     test(`the ${language} chooser has eight described radios and shows the current choice`, () => {

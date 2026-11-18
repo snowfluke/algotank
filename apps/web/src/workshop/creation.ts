@@ -15,7 +15,7 @@ export function newStyleDraft(preset: StrategyInput | null, modeName: string): N
   };
 }
 
-/** First save fixes the ultimate and starts the usual autosave flow. */
+/** First save takes the chosen ultimate and starts the usual autosave flow. */
 export function saveNewStyle(library: PlayStyleLibrary, baseName: string, draft: NewStyleDraft): CreateResult | { readonly ok: false; readonly problem: "ultimate" } {
   if (draft.ultimate === null) return { ok: false, problem: "ultimate" };
   return library.create(freeName(baseName, library.getSnapshot().styles), { ...draft, ultimate: draft.ultimate });

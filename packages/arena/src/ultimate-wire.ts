@@ -9,8 +9,8 @@ type TankId = (index: number) => PlayerId;
 type Area = readonly CellRow[];
 type Affected = readonly number[];
 
-/** [tank index, ultimate index, charge turns (0 = ready), active count (0 = inactive)]. */
-export type CompactUltimate = readonly [number, number, number, number];
+/** The total follows the original four fields. A ready ultimate has both charge values at 0. */
+export type CompactUltimate = readonly [tank: number, ultimate: number, turnsLeft: number, active: number, turnsTotal: number];
 type SplashRow =
   | readonly [x: number, y: number, outcome: "empty"]
   | readonly [x: number, y: number, outcome: Exclude<SplashSquare["outcome"], "empty">, target: number];
@@ -34,8 +34,9 @@ export function hasPublicUltimate(bot: Record<string, unknown>): boolean {
   const { ultimate, ultimateEffect } = bot;
   if (ultimate === undefined) return ultimateEffect === undefined;
   if (!record(ultimate) || !isUltimateId(ultimate["id"])) return false;
-  if (ultimate["kind"] === "ready" ? ultimate["turnsLeft"] !== undefined :
-    ultimate["kind"] !== "charging" || !positive(ultimate["turnsLeft"])) return false;
+  const { kind, turnsLeft, turnsTotal } = ultimate;
+  if (kind === "ready" ? turnsLeft !== undefined || turnsTotal !== undefined :
+    kind !== "charging" || !positive(turnsLeft) || !positive(turnsTotal) || turnsLeft > turnsTotal) return false;
   if (ultimateEffect === null || ultimateEffect === undefined) return true;
   if (!record(ultimateEffect) || ultimateEffect["kind"] !== ultimate["id"]) return false;
   switch (ultimateEffect["kind"]) {
@@ -58,8 +59,9 @@ function isArea(rows: unknown, max: number): rows is Area {
 export function hasCompactUltimateFields(states: unknown, fires: unknown, botCount: number): boolean {
   const botIndex = (value: unknown): value is number => count(value) && value < botCount;
   if (states !== undefined && (!Array.isArray(states) || !states.every((row) =>
-    Array.isArray(row) && row.length === 4 && botIndex(row[0]) &&
+    Array.isArray(row) && row.length === 5 && botIndex(row[0]) &&
     count(row[1]) && row[1] < ULTIMATE_IDS.length && count(row[2]) && count(row[3]) &&
+    (row[2] === 0 ? row[4] === 0 : positive(row[4]) && row[2] <= row[4]) &&
     (row[3] === 0 || effectOf(ULTIMATE_IDS[row[1]], row[3]) !== null)))) return false;
   const affected = (ids: unknown): ids is Affected => Array.isArray(ids) && ids.every(botIndex);
   return fires === undefined || (Array.isArray(fires) && fires.every((row) => {
@@ -100,16 +102,17 @@ export function compactUltimate(bot: PublicBot, index: number): CompactUltimate 
   const { ultimate, ultimateEffect } = bot;
   if (ultimate === undefined) return null;
   const charge = ultimate.kind === "ready" ? 0 : ultimate.turnsLeft;
+  const total = ultimate.kind === "ready" ? 0 : ultimate.turnsTotal;
   const active = ultimateEffect == null ? 0 : ultimateEffect.kind === "smoke" ? ultimateEffect.turnsLeft :
     ultimateEffect.kind === "fullTank" ? ultimateEffect.freeShots : ultimateEffect.blocksLeft;
-  return [index, ULTIMATE_IDS.indexOf(ultimate.id), charge, active];
+  return [index, ULTIMATE_IDS.indexOf(ultimate.id), charge, active, total];
 }
 
-export function expandUltimate([, index, charge, active]: CompactUltimate): Pick<PublicBot, "ultimate" | "ultimateEffect"> {
+export function expandUltimate([, index, charge, active, total]: CompactUltimate): Pick<PublicBot, "ultimate" | "ultimateEffect"> {
   const id = ULTIMATE_IDS[index];
   if (id === undefined) throw new Error(`unknown ultimate index ${index}`);
   return {
-    ultimate: charge === 0 ? { id, kind: "ready" } : { id, kind: "charging", turnsLeft: charge },
+    ultimate: charge === 0 ? { id, kind: "ready" } : { id, kind: "charging", turnsLeft: charge, turnsTotal: total },
     ultimateEffect: effectOf(id, active),
   };
 }

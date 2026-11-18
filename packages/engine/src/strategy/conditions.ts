@@ -36,6 +36,7 @@ import {
   compares,
   comparisonParam,
   intParam,
+  intOptionParam,
   intValue,
   tableOf,
   withLiteralIds,
@@ -45,6 +46,7 @@ import {
 import { cutMargin } from "./score.ts";
 import { nearestItem } from "../items/items.ts";
 import { effectParam, effectValue, holds, itemParam, itemValue } from "../items/params.ts";
+import { ultimateCharged, ultimateReach } from "../ultimates/ultimates.ts";
 import { pickTarget } from "./targets.ts";
 
 const BOTS = "Other bots";
@@ -53,6 +55,7 @@ const ME = "About me";
 const ITEMS = "Items";
 const WALLS = "Walls and space";
 const ROUND = "The round";
+const ULTIMATE = "Ultimate";
 
 const MAX_BOT_COUNT = 64;
 const MIN_SCORE = -100;
@@ -338,6 +341,31 @@ const defs = withLiteralIds<ConditionDef>()([
     params: [effectParam()],
     // A dizzy tank checks its rules from the bottom up, so a rule with "dizzy" acts first at the bottom of the list.
     test: (ctx, params) => ctx.self.effect?.kind === effectValue(params),
+  },
+  // --- Ultimate (85-ultimates.md, owner 2026-11-19) -----------------------
+  {
+    id: "ultimateReady",
+    group: ULTIMATE,
+    label: "My ultimate is ready",
+    requiresUltimate: true,
+    params: [],
+    test: ({ self }) => self.ultimate?.kind === "ready",
+  },
+  {
+    id: "ultimateCharged",
+    group: ULTIMATE,
+    label: "My ultimate is at least {n}% charged",
+    requiresUltimate: true,
+    params: [intOptionParam("n", "Percent", [25, 50, 75], 50)],
+    test: ({ self }, params) => ultimateCharged(self, intValue(params, "n")),
+  },
+  {
+    id: "ultimateCatches",
+    group: ULTIMATE,
+    label: "My ultimate would catch at least {n} tanks",
+    requiresUltimate: true,
+    params: [intOptionParam("n", "Number of bots", [1, 2, 3, 4], 2)],
+    test: ({ snapshot, self }, params) => ultimateReach(snapshot, self) >= intValue(params, "n"),
   },
   // --- Walls and space ----------------------------------------------------
   {

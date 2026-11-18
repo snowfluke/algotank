@@ -6,7 +6,7 @@ import { TARGET_SELECTORS } from "@game/engine";
 import type { ParamSpec, ParamValues } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { setParam } from "../editor/edit.ts";
-import { optionText, type SentencePart } from "../vocabulary/sentence.ts";
+import { amountText, optionText, type SentencePart } from "../vocabulary/sentence.ts";
 import { Picker } from "../ui/Picker.tsx";
 import { NumberField } from "./NumberField.tsx";
 import type { PrepText } from "./messages.ts";
@@ -66,7 +66,7 @@ export function PhraseEditor({ parts, values, context, onChange }: PhraseEditorP
         const { spec } = part;
         const label = `${context}, ${m.prep.rules.paramNames[paramName(spec)]}`;
         const value = values[spec.key];
-        if (spec.kind === "int") {
+        if (spec.kind === "int" && spec.options === undefined) {
           const n = typeof value === "number" ? value : spec.default;
           return (
             <span key={spec.key} className="inline-flex flex-wrap items-center gap-x-1">
@@ -75,6 +75,11 @@ export function PhraseEditor({ parts, values, context, onChange }: PhraseEditorP
             </span>
           );
         }
+        const numeric = spec.kind === "int";
+        const selected = numeric ? typeof value === "number" ? String(value) : "" : typeof value === "string" ? value : "";
+        const choices = numeric
+          ? (spec.options ?? []).map((n) => ({ value: String(n), label: amountText(n, part.unit) }))
+          : optionValues(spec).map((option) => ({ value: option, label: optionText(v, spec, option) }));
         // Two to six short options for most parameters and 16 tanks for a target: a picker in every case, because a
         // segmented control is a fieldset with its own legend and would break the sentence it sits in.
         return (
@@ -83,11 +88,11 @@ export function PhraseEditor({ parts, values, context, onChange }: PhraseEditorP
             look="inline"
             label={label}
             title={m.prep.rules.paramQuestions[paramName(spec)]}
-            value={typeof value === "string" ? value : ""}
+            value={selected}
             placeholder={v.unknown}
             data-picker={`param-${spec.key}`}
-            choices={optionValues(spec).map((option) => ({ value: option, label: optionText(v, spec, option) }))}
-            onChange={(next) => onChange(setParam(values, spec.key, next))}
+            choices={choices}
+            onChange={(next) => onChange(setParam(values, spec.key, numeric ? Number(next) : next))}
           />
         );
       })}

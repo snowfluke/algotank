@@ -143,7 +143,8 @@ export function isDecision(value: unknown): boolean {
     (value["dizzy"] === undefined || value["dizzy"] === true) &&
     // Present only on a spinning turn of a dizzy tank (engine Decision.spin).
     (value["spin"] === undefined || value["spin"] === true) &&
-    (value["ultimate"] === undefined || (isUltimateId(value["ultimate"]) && value["actionId"] === "ultimate" && value["move"] === "W"))
+    (value["ultimate"] === undefined || (isUltimateId(value["ultimate"]) && value["move"] === "W" &&
+      (value["actionId"] === "ultimate" || (value["actionId"] === "useUltimate" && typeof value["ruleId"] === "string"))))
   );
 }
 

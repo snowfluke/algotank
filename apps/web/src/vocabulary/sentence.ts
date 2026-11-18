@@ -2,8 +2,8 @@
 // language. The rule card reads the finished sentence; the rule editor reads the
 // same parts and puts a control where a parameter goes, so both always agree.
 
-import { ACTION_IDS, ACTIONS, CONDITION_IDS, CONDITIONS, TARGET_IDS, isRuleSetId, isSequence } from "@game/engine";
-import type { ActionId, ActionRef, ConditionId, ConditionRef, Mode, ParamSpec, ParamValues, Rule, RuleAction } from "@game/engine";
+import { ACTION_IDS, ACTIONS, CONDITION_IDS, CONDITIONS, TARGET_IDS, isRuleSetId, isSequence, ultimateCatchesTanks } from "@game/engine";
+import type { ActionId, ActionRef, ConditionId, ConditionRef, Mode, ParamSpec, ParamValues, Rule, RuleAction, UltimateId } from "@game/engine";
 import { ACTION_GROUPS, CHOICE_OPTIONS, CONDITION_GROUPS, PLAY_STYLE_MODES, isOneOf, type ActionGroupId, type ChoiceKey, type ConditionGroupId } from "./ids.ts";
 import type { PhraseText, UnitText, VocabularyText } from "./messages.ts";
 import { stepKindOf, type StepKind } from "./steps.ts";
@@ -274,9 +274,10 @@ function groupIdOf<G extends string>(groups: Readonly<Record<G, string>>, engine
 }
 
 /** The conditions under their group headings, in the engine's order. */
-export function conditionGroups(v: VocabularyText): PickGroup<ConditionId>[] {
+export function conditionGroups(v: VocabularyText, ultimate: UltimateId): PickGroup<ConditionId>[] {
   const groups = new Map<ConditionGroupId, { id: ConditionId; name: string }[]>();
   for (const id of CONDITION_IDS) {
+    if (id === "ultimateCatches" && !ultimateCatchesTanks(ultimate)) continue;
     const def = CONDITIONS[id];
     if (def === undefined) continue;
     const group = groupIdOf(CONDITION_GROUPS, def.group);
@@ -292,12 +293,12 @@ export function conditionGroups(v: VocabularyText): PickGroup<ConditionId>[] {
  */
 const STEP_ONLY_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>(["wait"]);
 
-export function actionGroups(v: VocabularyText): PickGroup<ActionId>[] {
+export function actionGroups(v: VocabularyText, fallback = false): PickGroup<ActionId>[] {
   const groups = new Map<ActionGroupId, { id: ActionId; name: string }[]>();
   for (const id of ACTION_IDS) {
     if (STEP_ONLY_ACTIONS.has(id)) continue;
     const def = ACTIONS[id];
-    if (def === undefined) continue;
+    if (def === undefined || (fallback && def.ruleOnly)) continue;
     const group = groupIdOf(ACTION_GROUPS, def.group);
     groups.set(group, [...(groups.get(group) ?? []), { id, name: v.actions[id].name }]);
   }

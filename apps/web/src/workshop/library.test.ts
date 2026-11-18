@@ -152,7 +152,8 @@ describe("the device copy", () => {
     const created = saveNewStyle(library, "Switched", { ...draft, ultimate: "bigUmbrella" });
     if (!created.ok) throw new Error("not created");
     expect(created.style.strategy).toEqual({ ...evader, ultimate: "bigUmbrella" });
-    expect(library.save(created.style.id, evader)?.ultimate).toBe("bigUmbrella");
+    expect(library.save(created.style.id, evader)?.ultimate).toBe(evader.ultimate);
+    expect(library.get(created.style.id)?.strategy).toEqual(evader);
   });
 
   test("an empty style requires the player to pick an ultimate before it can be saved", () => {
@@ -229,14 +230,14 @@ describe("the merge at sign-in", () => {
     expect(account.names()).toEqual(["Account newer", "Device newer"]);
   });
 
-  test("newer device rules keep the ultimate fixed by the account", async () => {
+  test("the newer device copy syncs its changed ultimate to the account", async () => {
     const id = "shared-ultimate";
     const account = memoryAccount([style(id, "Account older", 1, other)]);
     const store = memoryStore();
     store.setItem(LIBRARY_KEY, JSON.stringify({ version: 2, styles: [style(id, "Device newer", 2)], sync: null }));
     const s = setUp(account, store);
     await signIn(s);
-    const expected = style(id, "Device newer", 2, { ...evader, ultimate: other.ultimate });
+    const expected = style(id, "Device newer", 2, evader);
     expect(s.library.get(id)).toEqual(expected);
     expect(account.styles.get(id)).toEqual(expected);
     expect(setUp(account, store).library.get(id)).toEqual(expected);
@@ -343,14 +344,14 @@ describe("after the merge", () => {
     s.library.save(made.style.id, other);
     await s.time.advance(PUSH_MS);
     expect(s.library.getSnapshot().account).toEqual({ kind: "behind", offline: true });
-    expect(s.library.get(made.style.id)?.strategy).toEqual({ ...other, ultimate: made.style.strategy.ultimate });
+    expect(s.library.get(made.style.id)?.strategy).toEqual(other);
     expect(s.library.rename(made.style.id, "Still editing")).toEqual({ ok: true });
 
     account.setOffline(false);
     await s.time.advance(RETRY_FIRST_MS * 2);
     expect(s.library.getSnapshot().account).toEqual({ kind: "synced" });
     expect(account.styles.get(made.style.id)?.name).toBe("Still editing");
-    expect(account.styles.get(made.style.id)?.strategy.ultimate).toBe(made.style.strategy.ultimate);
+    expect(account.styles.get(made.style.id)?.strategy.ultimate).toBe(other.ultimate);
   });
 
   test("a newer copy in the account is not overwritten by a late push: the merge takes it", async () => {

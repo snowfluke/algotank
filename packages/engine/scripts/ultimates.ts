@@ -1,11 +1,17 @@
 // Compares the same 800 finals with items on, using the rotating mixed field of
 // simulate.ts Table 1 (docs/specs/revamp/85-ultimates.md, Balance gates).
 // Run with bun packages/engine/scripts/ultimates.ts. Pass --sweep to measure
-// each first charge that can fire before a 20-turn final ends.
+// each first charge that can fire before a 20-turn final ends. Pass --rules
+// to compare automatic firing with a hand-written rule for each ultimate.
 
 import { PRESETS, STANDARD_RULE_SET_ID, ULTIMATE_IDS, ULTIMATE_RULES, createRound, standings, stepRound } from "../src/index.ts";
 import type { ShotProtection, UltimateId } from "../src/index.ts";
 import { FINAL_SIZE, mixedField } from "./field.ts";
+
+if (Bun.argv.includes("--rules")) {
+  await import("./ultimates-cross.ts");
+  process.exit(0);
+}
 
 const FINALS = 800;
 const TURNS = 60;
@@ -24,7 +30,7 @@ function averageFires(turns: number, firstReadyTurn: number = ULTIMATE_RULES.fir
       Object.assign(round, { snapshot: { ...round.snapshot, bots: round.snapshot.bots.map((bot) => ({
         ...bot,
         ultimate: firstReadyTurn === 0 ? { id: bot.ultimate!.id, kind: "ready" }
-          : { id: bot.ultimate!.id, kind: "charging", turnsLeft: firstReadyTurn },
+          : { id: bot.ultimate!.id, kind: "charging", turnsLeft: firstReadyTurn, turnsTotal: firstReadyTurn },
       })) } });
     }
     while (!round.isOver) fires += stepRound(round).fires?.length ?? 0;

@@ -67,7 +67,7 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
       ...source,
       bots: source.bots.map((bot) => ({
         ...bot,
-        ultimate: bot.id === "a" ? { kind: "ready", id: "smoke" } : { kind: "charging", id: "dash", turnsLeft: 40 },
+        ultimate: bot.id === "a" ? { kind: "ready", id: "smoke" } : { kind: "charging", id: "dash", turnsLeft: 40, turnsTotal: 40 },
       })),
     };
     const html = renderBoard({ snapshot, throws: [] });

@@ -12,6 +12,7 @@ import {
   CONDITIONS,
   LIMITS,
   TARGET_SELECTORS,
+  intParamAllows,
   isSequence,
   isStepAction,
 } from "@game/engine";
@@ -48,7 +49,7 @@ function modeIdsOf(strategy: StrategyInput): Set<string> {
 function isValidParam(spec: ParamSpec, value: number | string | undefined): boolean {
   switch (spec.kind) {
     case "int":
-      return typeof value === "number" && Number.isInteger(value) && value >= spec.min && value <= spec.max;
+      return intParamAllows(spec, value);
     case "choice":
       return typeof value === "string" && spec.options.some((option) => option.value === value);
     case "target":

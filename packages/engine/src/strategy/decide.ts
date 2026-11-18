@@ -29,6 +29,7 @@ import type {
   Rng,
   Rule,
   Strategy,
+  UltimateAction,
 } from "../types.ts";
 import { ACTIONS } from "./actions.ts";
 import { CONDITIONS } from "./conditions.ts";
@@ -39,6 +40,7 @@ const CERTAIN = 100;
 function conditionHolds(ctx: DecisionContext, ref: ConditionRef): boolean {
   const def = CONDITIONS[ref.condition];
   if (def === undefined) throw new Error(`Unknown condition "${ref.condition}". Run the strategy through parseStrategy first.`);
+  if (def.requiresUltimate && ctx.self.ultimate === undefined) return false;
   return def.test(ctx, ref.params) !== ref.negate;
 }
 
@@ -49,7 +51,7 @@ function ruleConditionsHold(ctx: DecisionContext, rule: Rule): boolean {
 }
 
 /** The move of an action, or null when the action cannot act. */
-function moveFor(ctx: DecisionContext, ref: ActionRef, rng: Rng): Move | null {
+function moveFor(ctx: DecisionContext, ref: ActionRef, rng: Rng): Move | UltimateAction | null {
   const def = ACTIONS[ref.action];
   if (def === undefined) throw new Error(`Unknown action "${ref.action}". Run the strategy through parseStrategy first.`);
   return def.toMove(ctx, ref.params, rng);
@@ -64,6 +66,15 @@ function currentMode(ctx: DecisionContext, strategy: Strategy): Mode {
   return mode;
 }
 
+function isUltimateRule(rule: Rule): boolean {
+  return !isSequence(rule.action) && rule.action.action === "useUltimate";
+}
+
+/** A rule in any mode gives the player control of when this tank fires (85-ultimates.md, owner 2026-11-19). */
+export function firesUltimateByRules(strategy: Strategy): boolean {
+  return strategy.modes.some((mode) => mode.rules.some(isUltimateRule));
+}
+
 export function decide(ctx: DecisionContext, strategy: Strategy, rng: Rng): Decision {
   const decision = decideInOrder(ctx, strategy, rng);
   return ctx.self.effect?.kind === "dizzy" ? { ...decision, dizzy: true } : decision;
@@ -73,26 +84,30 @@ function decideInOrder(ctx: DecisionContext, strategy: Strategy, rng: Rng): Deci
   const mode = currentMode(ctx, strategy);
   const rules = ctx.self.effect?.kind === "dizzy" ? [...mode.rules].reverse() : mode.rules;
   for (const rule of rules) {
+    // An ultimate rule cannot act with ultimates off, so it must not draw a chance roll (85-ultimates.md).
+    if (ctx.self.ultimate === undefined && isUltimateRule(rule)) continue;
     if (!ruleConditionsHold(ctx, rule)) continue;
     if (rule.chance < CERTAIN && !rng.chance(rule.chance)) continue;
     if (isSequence(rule.action)) return stepDecision(ctx, mode.id, { ...rule, action: rule.action }, 0, rng);
     const move = moveFor(ctx, rule.action, rng);
     if (move === null) continue;
-    return {
+    const decision = {
       botId: ctx.self.id,
       modeId: mode.id,
       ruleId: rule.id,
       actionId: rule.action.action,
-      move,
+      move: typeof move === "string" ? move : move.move,
       nextModeId: rule.switchToMode ?? mode.id,
     };
+    return typeof move === "string" ? decision : { ...decision, ...move };
   }
+  const fallback = moveFor(ctx, mode.fallback, rng);
   return {
     botId: ctx.self.id,
     modeId: mode.id,
     ruleId: null,
     actionId: mode.fallback.action,
-    move: moveFor(ctx, mode.fallback, rng) ?? FALLBACK_CANNOT_ACT,
+    move: typeof fallback === "string" ? fallback : FALLBACK_CANNOT_ACT,
     nextModeId: mode.id,
   };
 }

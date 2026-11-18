@@ -19,7 +19,7 @@ const settle = async () => {
 };
 
 describe("the workshop editor's draft", () => {
-  test("the editor saves edited rules with the style's original ultimate", async () => {
+  test("the editor saves a changed ultimate with its edited rules", async () => {
     const offline = { ok: false as const, status: 0, error: { error: "network_error" }, code: "network_error" };
     const library = new PlayStyleLibrary(null, { list: async () => offline, put: async () => offline, remove: async () => offline }, clock, () => "style-id-0001");
     const made = library.create("Sneaky", evader);
@@ -31,7 +31,7 @@ describe("the workshop editor's draft", () => {
     const modes = evader.modes.map((mode) => ({ ...mode, rules: mode.rules.map((rule) => ({ ...rule, chance: 80 })) }));
     editDraft(library, made.style.id, session.setDraft)({ ...evader, modes, ultimate: "dash" });
     await session.saveDraft();
-    const expected = { ...evader, modes };
+    const expected: StrategyInput = { ...evader, modes, ultimate: "dash" };
     expect(session.getSnapshot().load).toEqual({ kind: "ready", saved: expected, draft: expected });
     expect(await source.load()).toEqual({ ok: true, data: expected });
   });

@@ -92,7 +92,7 @@ function scene(ruleSetId: RuleSetId, width: number, height: number, turns: reado
       if (id !== "you" || ultimate === undefined) return [state];
       return [{
         ...state,
-        ultimate: index === 0 ? { kind: "ready", id: ultimate } : { kind: "charging", id: ultimate, turnsLeft: ULTIMATE_RULES.rechargeTurns },
+        ultimate: index === 0 ? { kind: "ready", id: ultimate } : { kind: "charging", id: ultimate, turnsLeft: ULTIMATE_RULES.rechargeTurns, turnsTotal: ULTIMATE_RULES.rechargeTurns },
       }];
     });
     return {

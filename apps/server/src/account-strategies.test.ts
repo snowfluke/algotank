@@ -45,6 +45,28 @@ async function list(t: TestServer, cookie: string): Promise<AccountStrategiesRes
 
 const put = (t: TestServer, cookie: string, id: string, payload: unknown) => t.api(`/api/account/strategies/${id}`, { method: "PUT", cookie, body: payload });
 
+test("an upsert takes the new ultimate and a stale bundle may omit it", () => {
+  using db = memoryDatabase();
+  const account = "account-1";
+  insertAccount(db, account);
+  const styles = new AccountStrategies(db);
+  const putStyle = (id: number, updatedAt: number, strategy: unknown) =>
+    styles.put(account, idOf(id), { ...body("Mine", updatedAt), strategy }, NOW);
+  const { modes, build, ultimate } = strategy;
+  const legacy = { modes, build };
+  const explicit = { ...strategy, ultimate: "magnet" } as const;
+  const other = PRESETS.find((preset) => preset.id === "random-walker")!.strategy;
+
+  expect(putStyle(1, NOW, explicit)).toMatchObject({ ok: true, saved: { strategy: explicit } });
+  expect(putStyle(1, NOW + 1, other)).toMatchObject({ ok: true, saved: { strategy: other } });
+  expect(putStyle(1, NOW + 2, legacy)).toMatchObject({ ok: true, saved: { strategy: { ...legacy, ultimate: other.ultimate } } });
+  expect(putStyle(2, NOW, legacy)).toMatchObject({ ok: true, saved: { strategy: { ...legacy, ultimate } } });
+  expect(putStyle(1, NOW + 3, { ...legacy, ultimate: "fly" })).toMatchObject({ ok: false, code: "strategy" });
+  expect(styles.list(account).map((style) => style.strategy)).toEqual([
+    { ...legacy, ultimate: other.ultimate }, { ...legacy, ultimate },
+  ]);
+});
+
 describe("account play style routes", () => {
   test("need a session, and a change from another site is refused", async () => {
     const t = start();
@@ -78,23 +100,6 @@ describe("account play style routes", () => {
     // Deleting what is gone is not an error, so a retried delete succeeds.
     expect((await t.api(`/api/account/strategies/${idOf(1)}`, { method: "DELETE", cookie: ana })).status).toBe(204);
     expect((await list(t, ana)).strategies.map((s) => s.id)).toEqual([idOf(2)]);
-  });
-
-  test("an upsert keeps the id's ultimate, and a new id from a stale bundle gets one", async () => {
-    const t = start();
-    const cookie = await signUp(t);
-    const { modes, build, ultimate } = strategy;
-    const legacy = { modes, build };
-    const explicit = { ...strategy, ultimate: "magnet" } as const;
-    expect((await put(t, cookie, idOf(1), { ...body("Mine"), strategy: explicit })).status).toBe(204);
-    const other = PRESETS.find((preset) => preset.id === "random-walker")!.strategy;
-    expect((await put(t, cookie, idOf(1), { ...body("Mine", NOW + 1), strategy: other })).status).toBe(204);
-    expect((await list(t, cookie)).strategies[0]?.strategy).toEqual({ ...other, ultimate: "magnet" });
-
-    expect((await put(t, cookie, idOf(1), { ...body("Mine", NOW + 2), strategy: legacy })).status).toBe(204);
-    expect((await put(t, cookie, idOf(2), { ...body("Old bundle"), strategy: legacy })).status).toBe(204);
-    expect((await put(t, cookie, idOf(3), { ...body("Invalid"), strategy: { ...legacy, ultimate: "fly" } })).status).toBe(400);
-    expect((await list(t, cookie)).strategies.map((s) => s.strategy)).toEqual([explicit, { ...legacy, ultimate }]);
   });
 
   test("the id, the name, the time and the strategy are checked", async () => {

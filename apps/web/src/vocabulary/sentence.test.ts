@@ -1,6 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import { ACTION_IDS, ACTIONS, CONDITION_IDS, CONDITIONS, PRESETS, RULE_SET_IDS, TARGET_SELECTORS } from "@game/engine";
+import { ACTION_IDS, ACTIONS, CONDITION_IDS, CONDITIONS, PRESETS, RULE_SET_IDS, TARGET_SELECTORS, ULTIMATE_IDS } from "@game/engine";
 import type { ActionRef, ConditionRef, ParamSpec, ParamValues, Rule } from "@game/engine";
 import { ACTION_GROUPS, CONDITION_GROUPS, PLAY_STYLE_MODES } from "./ids.ts";
 import { en, id, type VocabularyText } from "./messages.ts";
@@ -44,7 +44,7 @@ function expectReadable(text: string, v: VocabularyText, where: string): void {
 function sampleValues(spec: ParamSpec): readonly (number | string)[] {
   switch (spec.kind) {
     case "int":
-      return [...new Set([spec.min, spec.max, spec.default, ...(spec.min <= 1 && spec.max >= 1 ? [1] : [])])];
+      return spec.options ?? [...new Set([spec.min, spec.max, spec.default, ...(spec.min <= 1 && spec.max >= 1 ? [1] : [])])];
     case "choice":
       return spec.options.map((option) => option.value);
     case "target":
@@ -104,9 +104,22 @@ describe.each(LANGUAGES)("sentences in %s", (_language, v) => {
   });
 
   test("the pickers list every condition and action once, under a group name; \"wait\" is offered only as a step", () => {
-    expect<readonly string[]>(conditionGroups(v).flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual([...CONDITION_IDS].sort());
+    expect<readonly string[]>(conditionGroups(v, "splash").flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual([...CONDITION_IDS].sort());
     expect<readonly string[]>(actionGroups(v).flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual(ACTION_IDS.filter((id) => id !== "wait").sort());
-    for (const group of [...conditionGroups(v), ...actionGroups(v)]) expectReadable(group.name, v, "group");
+    for (const group of [...conditionGroups(v, "splash"), ...actionGroups(v)]) expectReadable(group.name, v, "group");
+  });
+
+  test("ultimate picks follow the current style and only rules offer the action", () => {
+    for (const ultimate of ULTIMATE_IDS) {
+      const group = conditionGroups(v, ultimate).find(({ name }) => name === v.conditionGroups.ultimate);
+      const ids = group?.items.map(({ id }) => id);
+      expect(ids).toEqual(
+        ["dash", "splash", "mudBomb", "whirlwind"].includes(ultimate)
+          ? ["ultimateReady", "ultimateCharged", "ultimateCatches"] : ["ultimateReady", "ultimateCharged"],
+      );
+    }
+    expect(actionGroups(v).find(({ name }) => name === v.actionGroups.ultimate)?.items.map(({ id }) => id)).toEqual(["useUltimate"]);
+    expect(actionGroups(v, true).flatMap(({ items }) => items).some(({ id }) => id === "useUltimate")).toBe(false);
   });
 
   test("a negated condition names the same parameters as the plain one, so the editor and the sentence agree", () => {

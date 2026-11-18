@@ -184,10 +184,9 @@ export class PlayStyleLibrary {
   save(id: string, input: StrategyInput): StrategyInput | undefined {
     const style = this.get(id);
     if (style === undefined) return undefined;
-    const strategy = { ...input, ultimate: style.strategy.ultimate };
-    if (sameData(style.strategy, strategy)) return style.strategy;
-    this.replace({ ...style, strategy, updatedAt: this.nextTime(style) });
-    return strategy;
+    if (sameData(style.strategy, input)) return style.strategy;
+    this.replace({ ...style, strategy: input, updatedAt: this.nextTime(style) });
+    return input;
   }
 
   rename(id: string, rawName: string): RenameResult {

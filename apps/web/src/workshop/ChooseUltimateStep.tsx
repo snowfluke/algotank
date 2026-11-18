@@ -31,10 +31,7 @@ export function ChooseUltimateStep({ ultimate, problem, nowMs = Date.now(), onCh
         </div>
       }
     >
-      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <p className="min-w-0 text-muted [overflow-wrap:anywhere]">{w.ultimateAfterSave}</p>
-        {ultimatesOn(nowMs) ? null : <span className="rounded-full bg-guide-soft px-2 py-0.5 text-caption font-semibold text-guide-ink">{m.catalogue.soon}</span>}
-      </div>
+      {ultimatesOn(nowMs) ? null : <span className="shrink-0 self-start rounded-full bg-guide-soft px-2 py-0.5 text-caption font-semibold text-guide-ink">{m.catalogue.soon}</span>}
       {/* The eight descriptions can exceed a short pane. Keep the save action outside the list (85-ultimates.md, D3). */}
       <div data-ultimate-picker="" className="min-h-0 min-w-0 overscroll-contain p-1 fit:overflow-y-auto">
         <fieldset className="grid min-w-0 gap-2 sm:grid-cols-2">

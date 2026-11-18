@@ -33,6 +33,7 @@ import { tableOf, withLiteralIds, targetParam, textValue } from "./define.ts";
 import { pickTarget } from "./targets.ts";
 import { forEachBotNear } from "./snapshot-index.ts";
 import { canTake, nearestItem } from "../items/items.ts";
+import { useUltimate } from "../ultimates/ultimates.ts";
 import { itemParam, itemValue } from "../items/params.ts";
 
 const ATTACK = "Attack";
@@ -40,6 +41,7 @@ const CHASE_AND_FLEE = "Chase and flee";
 const POSITION = "Position";
 const BASIC = "Basic moves";
 const ITEMS = "Items";
+const ULTIMATE = "Ultimate";
 
 /** "Move away from the crowd" counts bots this close to a cell. */
 const CROWD_RADIUS = 4;
@@ -314,6 +316,14 @@ const defs = withLiteralIds<ActionDef>()([
       if (item.x === ctx.self.x && item.y === ctx.self.y) return null;
       return stepTowards(ctx, stepToward(ctx.self, item));
     },
+  },
+  {
+    id: "useUltimate",
+    group: ULTIMATE,
+    label: "Use my ultimate",
+    params: [],
+    ruleOnly: true,
+    toMove: ({ snapshot, self }) => useUltimate(snapshot, self),
   },
 ]);
 

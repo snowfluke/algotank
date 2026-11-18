@@ -506,7 +506,8 @@ export class MonthlyLeagues {
    */
   changeStrategy(accountId: AccountId, body: unknown): void {
     const seat = this.seats.seats.get(accountId);
-    const parsed = parseStrategy(strategyForSeatChange(body, seat));
+    const input = isRecord(body) ? body["strategy"] : undefined;
+    const parsed = parseStrategy(assignMissingUltimate(input, seat?.strategy.ultimate));
     if (!parsed.ok) throw new HttpError(400, "The strategy is not valid.", { details: parsed.errors });
     if (seat === undefined) throw new HttpError(404, "Your account has no tank in the monthly arena.", { code: "no_monthly_seat" });
     if (this.closing) throw serviceBusy();
@@ -869,11 +870,4 @@ export class MonthlyLeagues {
   private sendState(league: number): void {
     this.options.streams.sendState(league, this.live(league));
   }
-}
-
-/** Changing a seat's rules and build keeps the ultimate set when the seat was taken. */
-function strategyForSeatChange(body: unknown, seat: Seat | undefined): unknown {
-  const input = isRecord(body) ? body["strategy"] : undefined;
-  if (seat === undefined) return assignMissingUltimate(input);
-  return isRecord(input) ? { ...input, ultimate: seat.strategy.ultimate } : input;
 }

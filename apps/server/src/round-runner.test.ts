@@ -77,7 +77,7 @@ test("a room fixes the release gate at round creation, even if its first tick co
   const after = setup(2, settings, 0, ULTIMATES_FROM);
   after.start(42);
   expect(bots(after)?.map((bot) => bot.ultimate)).toEqual(Array(2).fill({
-    id: strategy.ultimate, kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn,
+    id: strategy.ultimate, kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn, turnsTotal: ULTIMATE_RULES.firstReadyTurn,
   }));
 });
 

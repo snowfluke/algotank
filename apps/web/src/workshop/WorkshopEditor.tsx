@@ -4,10 +4,10 @@
 // the library; every edit is written to the library at once (a draft with a problem
 // too, see editorSession.ts) and the account follows (workshop/library.ts).
 
-import { ArrowLeft, CircleAlert, CircleCheck, Cog, ListChecks, Play, Scale } from "lucide-react";
+import { ArrowLeft, CircleAlert, CircleCheck, Cog, ListChecks, Pencil, Play, Scale } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { ACCOUNT_STRATEGY_LIMITS } from "@game/arena";
-import { parseStrategy, ruleSet, RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
+import { parseStrategy, ruleSet, RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId, type UltimateId } from "@game/engine";
 import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { guideSignal } from "../guide/guideStore.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -29,6 +29,7 @@ import { IconButton } from "../ui/IconButton.tsx";
 import { Pager } from "../ui/Pager.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
+import { ChooseUltimateStep } from "./ChooseUltimateStep.tsx";
 import { editDraft, editorSource } from "./editorSession.ts";
 import { ChecklistLine, ChecklistSheet } from "./FirstStyleGuide.tsx";
 import type { LibrarySnapshot, MyPlayStyle } from "./library.ts";
@@ -136,6 +137,7 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
   const [nav, setNav] = useState<RulesNav>(RULES_LIST);
   const [ruleSetId, setRuleSetId] = useState<RuleSetId>(STANDARD_RULE_SET_ID);
   const [choosingRules, setChoosingRules] = useState(false);
+  const [ultimateChoice, setUltimateChoice] = useState<UltimateId | null>(null);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const width = usePaneWidth<HTMLDivElement>();
 
@@ -156,6 +158,10 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
   const save = workshopSaveView(parsed.ok, library.account, w);
   // The ultimate row gives its height to any open rules step. On a phone the name row gives way too.
   const stepOpen = pane === "rules" && resolveView(draft, nav).kind !== "list";
+  const closeUltimatePicker = () => {
+    setUltimateChoice(null);
+    focusLater("workshop-change-ultimate");
+  };
   const tabs = [
     { value: "rules" as const, label: w.tabs.rules, icon: <ListChecks aria-hidden size={22} /> },
     { value: "upgrades" as const, label: w.tabs.upgrades, icon: <Cog aria-hidden size={22} /> },
@@ -169,6 +175,18 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
           onBack={() => {
             setChecklistOpen(false);
             focusLater("first-style-checklist");
+          }}
+        />
+      ) : ultimateChoice !== null ? (
+        <ChooseUltimateStep
+          ultimate={ultimateChoice}
+          problem={null}
+          {...(nowMs === undefined ? {} : { nowMs })}
+          onChoose={setUltimateChoice}
+          onBack={closeUltimatePicker}
+          onSave={() => {
+            edit({ ...draft, ultimate: ultimateChoice });
+            closeUltimatePicker();
           }}
         />
       ) : choosingRules ? (
@@ -205,8 +223,15 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
           </div>
           {stepOpen ? null : (
             <div data-workshop-ultimate="" className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3">
-              <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />
-              <p className="min-w-0 text-caption text-muted [overflow-wrap:anywhere]">{w.ultimateFixed}</p>
+              <UltimateLink ultimate={draft.ultimate} nowMs={nowMs} />
+              <IconButton
+                label={w.changeUltimate}
+                text={w.changeUltimate}
+                icon={<Pencil aria-hidden size={18} />}
+                variant="quiet"
+                data-focus-key="workshop-change-ultimate"
+                onClick={() => setUltimateChoice(draft.ultimate)}
+              />
             </div>
           )}
           <div {...tabPanelProps("workshop", pane)} className="flex min-h-0 min-w-0 flex-1 flex-col">

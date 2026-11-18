@@ -20,7 +20,8 @@ function run(actionId: string, bots: readonly BotState[], params: ParamValues = 
 function runOrNull(actionId: string, bots: readonly BotState[], params: ParamValues = {}, rngInt = 0): Move | null {
   const action = ACTIONS[actionId];
   if (action === undefined) throw new Error(`no action ${actionId}`);
-  return action.toMove(contextFor(snapshotOf(bots), "me"), params, stubRng({ int: [rngInt] }));
+  const move = action.toMove(contextFor(snapshotOf(bots), "me"), params, stubRng({ int: [rngInt] }));
+  return typeof move === "string" ? move : move?.move ?? null;
 }
 
 const NEAREST = { target: "nearest" };
@@ -67,11 +68,12 @@ describe("every action returns a legal move that never walks into a wall or off 
                     const nothingToAct = needsTarget
                       ? TARGET_SELECTORS[target]?.pick(ctx) === null
                       : (actionId === "stepOutOfLine" && botsThatCanHit(snapshot, me).length === 0) ||
-                        (actionId === "goToItem" && snapshot.items.length === 0);
+                        (actionId === "goToItem" && snapshot.items.length === 0) ||
+                        (actionId === "useUltimate" && me.ultimate === undefined);
                     expect(nothingToAct, where).toBe(true);
                     continue;
                   }
-                  expect(MOVES, where).toContain(move);
+                  expect(MOVES, where).toContain(typeof move === "string" ? move : move.move);
                   if (move === "F" && actionId !== "stepForward") {
                     const vector = DIRECTION_STEP[direction];
                     expect(isFree(snapshot, { x: x + vector.x, y: y + vector.y }), where).toBe(true);

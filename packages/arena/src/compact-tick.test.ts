@@ -132,8 +132,8 @@ describe("compactTick and expandTick", () => {
     const bots = turn.snapshot.bots.map((bot): PublicSnapshot["bots"][number] => {
       switch (bot.id) {
         case "p0": return { ...bot, ultimate: { id: "dash", kind: "ready" }, ultimateEffect: null };
-        case "p1": return { ...bot, ultimate: { id: "fullTank", kind: "charging", turnsLeft: 10 }, ultimateEffect: { kind: "fullTank", freeShots: 2 } };
-        case "p4": return { ...bot, ultimate: { id: "smoke", kind: "charging", turnsLeft: 40 }, ultimateEffect: { kind: "smoke", turnsLeft: 9 } };
+        case "p1": return { ...bot, ultimate: { id: "fullTank", kind: "charging", turnsLeft: 7, turnsTotal: 8 }, ultimateEffect: { kind: "fullTank", freeShots: 2 } };
+        case "p4": return { ...bot, ultimate: { id: "smoke", kind: "charging", turnsLeft: 40, turnsTotal: 40 }, ultimateEffect: { kind: "smoke", turnsLeft: 9 } };
         case "p6": return { ...bot, ultimate: { id: "bigUmbrella", kind: "ready" }, ultimateEffect: { kind: "bigUmbrella", blocksLeft: 4 } };
         default: return bot;
       }
@@ -142,7 +142,7 @@ describe("compactTick and expandTick", () => {
     const fireOrder = fires.map((fire) => fire.botId);
     const moveOrder = [...fireOrder, ...order.filter((id) => !fireOrder.includes(id))];
     const wire = compactTick({ ...turn, order: moveOrder, fires, throws: [shot], snapshot: { ...turn.snapshot, bots } }, order);
-    expect(wire.ultimates).toEqual([[0, 0, 0, 0], [1, 3, 10, 2], [4, 1, 40, 9], [6, 6, 0, 4]]);
+    expect(wire.ultimates).toEqual([[0, 0, 0, 0, 0], [1, 3, 7, 2, 8], [4, 1, 40, 9, 40], [6, 6, 0, 4, 0]]);
     expect(wire.magnetFires).toEqual([[7, 2, 2, [], 1]]);
     expect(wire.fires?.[1]).toEqual([0, "dash", 2, 2, [[2, 1]]]);
     const expanded = expandTick(wire, spawn);

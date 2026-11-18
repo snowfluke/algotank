@@ -1,12 +1,12 @@
 // The two steps of "Ikut arena bulanan" for a signed-in account without a seat (flow.ts):
 // the name (fixed for the month once used, so a fixed name shows as a sentence and is not
 // sent), then the tank with the preparation tabs and "Masukkan tank". The tank is prepared on
-// this device only (monthlySource), because a seat's strategy is fixed once it is submitted.
+// this device (monthlySource) until the player takes a seat or submits a change to the seated tank.
 
 import { Paintbrush } from "lucide-react";
 import { useMemo, useState } from "react";
 import { FIRST_PUBLISHED_RULES_MONTH, PLAYER_NAME_MAX } from "@game/arena";
-import { DEFAULT_PRESET_ID, PRESETS, type StrategyInput, type UltimateId } from "@game/engine";
+import { DEFAULT_PRESET_ID, PRESETS, type StrategyInput } from "@game/engine";
 import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
 import type { NameDraft } from "../mytank/useNameDraft.ts";
@@ -122,7 +122,7 @@ export interface TankStepProps {
   /** The server's answer to the last submit, or null. */
   readonly problem: string | null;
   /** "join" puts the tank in; "changeRules" gives the seated tank new rules (flow.ts, changingRules). */
-  readonly purpose: { readonly kind: "join" } | { readonly kind: "changeRules"; readonly ultimate: UltimateId };
+  readonly purpose: { readonly kind: "join" } | { readonly kind: "changeRules" };
   readonly nowMs?: number;
   onBack(): void;
   onSubmit(): void;
@@ -132,7 +132,7 @@ export function TankStep({ strategy, look, playerName, submitting, problem, purp
   const m = useMessages();
   const f = useFormat();
   const t = purpose.kind === "join" ? { title: m.monthly.joinSteps.tankTitle, submit: m.monthly.joinSteps.submit } : { title: m.monthly.changeRules.title, submit: m.monthly.changeRules.submit };
-  const ultimate = purpose.kind === "changeRules" ? purpose.ultimate : strategy.load.kind === "ready" ? strategy.load.draft.ultimate : null;
+  const ultimate = strategy.load.kind === "ready" ? strategy.load.draft.ultimate : null;
   const [tab, setTab] = useState<PrepTab>("style");
   return (
     <StepSheet

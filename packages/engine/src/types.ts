@@ -55,7 +55,7 @@ export type TankEffect =
   | { readonly kind: "dizzy"; readonly turnsLeft: number; readonly spinTurnsLeft?: number };
 
 export type UltimateState = { readonly id: UltimateId } & (
-  | { readonly kind: "charging"; readonly turnsLeft: number }
+  | { readonly kind: "charging"; readonly turnsLeft: number; readonly turnsTotal: number }
   | { readonly kind: "ready" }
 );
 
@@ -109,6 +109,7 @@ export type ParamSpec =
       readonly min: number;
       readonly max: number;
       readonly default: number;
+      readonly options?: readonly number[];
       readonly unit?: string;
     }
   | {
@@ -137,6 +138,8 @@ export interface ConditionDef {
   /** Plain sentence shown in the editor. `{key}` marks where a parameter goes. */
   readonly label: string;
   readonly params: readonly ParamSpec[];
+  /** False even when negated in a round without ultimates. */
+  readonly requiresUltimate?: true;
   /** Must not draw random numbers; a condition is a fact about the snapshot. */
   test(ctx: DecisionContext, params: ParamValues): boolean;
 }
@@ -153,13 +156,15 @@ export interface ActionDef {
   readonly group: string;
   readonly label: string;
   readonly params: readonly ParamSpec[];
+  /** The fallback cannot use this action. */
+  readonly ruleOnly?: true;
   /**
-   * Turns the intent into exactly one move for this tick, or returns null when
+   * Turns the intent into one move or one ultimate for this tick, or returns null when
    * the action cannot act: it needs a target and the selector finds nobody, or
    * it answers to a threat and there is none. It must not return a substitute
    * move then. decide() skips the rule, or throws ahead when it is the fallback.
    */
-  toMove(ctx: DecisionContext, params: ParamValues, rng: Rng): Move | null;
+  toMove(ctx: DecisionContext, params: ParamValues, rng: Rng): Move | UltimateAction | null;
 }
 
 export interface AttributeDef {
@@ -313,7 +318,7 @@ export type BotState = ItemHand & {
   readonly itemUses: number;
   /** Dizzy or stuck, while it lasts, or null. */
   readonly effect: TankEffect | null;
-  /** Present during a round with ultimates on. The id is fixed at spawn. */
+  /** Present during a round with ultimates on. Changing the ultimate starts a fresh charge. */
   readonly ultimate?: UltimateState;
   /** The tank's own active ultimate, independent of dizziness or mud. */
   readonly ultimateEffect?: UltimateEffect | null;
@@ -369,7 +374,7 @@ export type Decision = TurnAction & {
   readonly botId: BotId;
   /** The mode the bot was in when it decided. */
   readonly modeId: string;
-  /** The rule that ran, including its steps. Null on fallback, spin and ultimate turns. */
+  /** The rule that ran, including its steps. Null on fallback, spin and automatic ultimate turns. */
   readonly ruleId: string | null;
   /**
    * The action behind the move; on a turn of a sequence, the step's action. When the fallback cannot act, this is still the
@@ -398,7 +403,9 @@ export type Decision = TurnAction & {
 /** Ultimate decisions use the wait move on the existing move table. */
 export type TurnAction =
   | { readonly move: Move; readonly ultimate?: never }
-  | { readonly move: "W"; readonly ultimate: UltimateId };
+  | UltimateAction;
+
+export type UltimateAction = { readonly move: "W"; readonly ultimate: UltimateId };
 
 /** The place of a turn in a running sequence: step `index` (from 1) of `count`. */
 export interface SequenceStep {

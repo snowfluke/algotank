@@ -4,7 +4,7 @@
 
 import { CircleAlert } from "lucide-react";
 import { ACTIONS } from "@game/engine";
-import type { ActionRef, ConditionRef } from "@game/engine";
+import type { ActionRef, ConditionRef, UltimateId } from "@game/engine";
 import { actionOf, conditionOf } from "../editor/edit.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { Picker } from "../ui/Picker.tsx";
@@ -44,12 +44,12 @@ function VocabularyPicker<T extends string>(props: { readonly label: string; rea
 }
 
 /** The action of a rule or of "If no rule fits": which action, then its sentence with controls. */
-export function ActionEditor({ action, onChange }: { readonly action: ActionRef; onChange(next: ActionRef): void }) {
+export function ActionEditor({ action, fallback, onChange }: { readonly action: ActionRef; readonly fallback?: true; onChange(next: ActionRef): void }) {
   const m = useMessages();
   const parts = actionParts(m.vocabulary, action.action);
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <VocabularyPicker label={m.prep.rules.action} hook="action" groups={actionGroups(m.vocabulary)} value={action.action} onPick={(id) => onChange(actionOf(id, action))} />
+      <VocabularyPicker label={m.prep.rules.action} hook="action" groups={actionGroups(m.vocabulary, fallback)} value={action.action} onPick={(id) => onChange(actionOf(id, action))} />
       {parts === null || ACTIONS[action.action]?.params.length === 0 ? null : (
         <PhraseEditor parts={parts} values={action.params} context={m.prep.rules.action} onChange={(params) => onChange({ ...action, params })} />
       )}
@@ -58,12 +58,12 @@ export function ActionEditor({ action, onChange }: { readonly action: ActionRef;
 }
 
 /** One condition: which condition, then its sentence with controls. `label` names it ("Condition 2"). */
-export function ConditionEditor({ condition, label, onChange }: { readonly condition: ConditionRef; readonly label: string; onChange(next: ConditionRef): void }) {
+export function ConditionEditor({ condition, label, ultimate, onChange }: { readonly condition: ConditionRef; readonly label: string; readonly ultimate: UltimateId; onChange(next: ConditionRef): void }) {
   const m = useMessages();
   const parts = conditionParts(m.vocabulary, condition.condition);
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <VocabularyPicker label={label} hook="condition" groups={conditionGroups(m.vocabulary)} value={condition.condition} onPick={(id) => onChange(conditionOf(id, condition))} />
+      <VocabularyPicker label={label} hook="condition" groups={conditionGroups(m.vocabulary, ultimate)} value={condition.condition} onPick={(id) => onChange(conditionOf(id, condition))} />
       {parts === null ? null : <PhraseEditor parts={parts} values={condition.params} context={label} onChange={(params) => onChange({ ...condition, params })} />}
     </div>
   );

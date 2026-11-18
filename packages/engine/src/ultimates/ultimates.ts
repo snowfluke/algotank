@@ -1,4 +1,4 @@
-// Ultimate triggers and timing (docs/specs/revamp/85-ultimates.md, owner 2026-11-18).
+// Ultimate triggers and timing (docs/specs/revamp/85-ultimates.md, owner 2026-11-18 and 2026-11-19).
 // The trigger reads the snapshot before the turn and draws nothing. The round checks it
 // after spin and a running sequence. A fire takes the tank's whole turn.
 //
@@ -18,7 +18,7 @@ import { canTake } from "../items/items.ts";
 import { cellAhead } from "../round/grid.ts";
 import { botsThatCanHit, firstBotInLine, isFree } from "../strategy/geometry.ts";
 import { forEachBotNear } from "../strategy/snapshot-index.ts";
-import type { BotState, Decision, Snapshot, UltimateEffect, UltimateState } from "../types.ts";
+import type { BotState, Decision, Snapshot, UltimateAction, UltimateEffect, UltimateState } from "../types.ts";
 
 export const ULTIMATE_IDS = ["dash", "smoke", "splash", "fullTank", "mudBomb", "whirlwind", "bigUmbrella", "magnet"] as const;
 export type UltimateId = (typeof ULTIMATE_IDS)[number];
@@ -49,44 +49,92 @@ export function magnetSpace(tank: Pick<BotState, "item" | "itemsWaiting">): numb
   return ULTIMATE_RULES.magnet.handSize - (canTake(tank) ? 0 : 1 + (tank.itemsWaiting?.length ?? 0));
 }
 
-function tanksNear(snapshot: Snapshot, tank: BotState, reach: number): number {
+function tanksNear(snapshot: Snapshot, tank: BotState, reach: number, center = tank): number {
   let count = 0;
-  forEachBotNear(snapshot, tank.x, tank.y, reach, (other) => {
-    if (other.id !== tank.id) count++;
+  forEachBotNear(snapshot, center.x, center.y, reach, (other) => {
+    if (other.id !== tank.id && other.id !== center.id) count++;
   });
   return count;
 }
 
+const TANK_REACH: Partial<Record<UltimateId, (snapshot: Snapshot, tank: BotState) => number>> = {
+  dash: (snapshot, tank) => firstBotInLine(snapshot, tank, ULTIMATE_RULES.dash.triggerMaxDistance) === null ? 0 : 1,
+  splash: (snapshot, tank) => tanksNear(snapshot, tank, ULTIMATE_RULES.splash.reach),
+  mudBomb: (snapshot, tank) => {
+    const first = firstBotInLine(snapshot, tank, throwRange(tank.build, rulesOf(snapshot)));
+    // Count the first tank and its neighbours, leaving out the thrower.
+    return first === null ? 0 : tanksNear(snapshot, tank, ULTIMATE_RULES.mudBomb.reach, first.bot) + 1;
+  },
+  whirlwind: (snapshot, tank) => tanksNear(snapshot, tank, ULTIMATE_RULES.whirlwind.reach),
+};
+
+export function ultimateCatchesTanks(id: UltimateId): boolean {
+  return TANK_REACH[id] !== undefined;
+}
+
+export function ultimateReach(snapshot: Snapshot, tank: BotState): number {
+  return tank.ultimate === undefined ? 0 : TANK_REACH[tank.ultimate.id]?.(snapshot, tank) ?? 0;
+}
+
+export function ultimateCharged(tank: BotState, percent: number): boolean {
+  const state = tank.ultimate;
+  return state?.kind === "ready" || (state?.kind === "charging" &&
+    (state.turnsTotal - state.turnsLeft) * 100 >= percent * state.turnsTotal);
+}
+
+// Rules use the hard guard only. The automatic trigger also checks for a good moment (85-ultimates.md).
+const CAN_ACT: Record<UltimateId, (snapshot: Snapshot, tank: BotState) => boolean> = {
+  dash: (snapshot, tank) => tank.effect?.kind !== "stuck" && isFree(snapshot, cellAhead(tank, tank.direction)),
+  smoke: (_snapshot, tank) => tank.ultimateEffect?.kind !== "smoke",
+  splash: (snapshot, tank) => canThrow(tank.water, rulesOf(snapshot)),
+  fullTank: () => true,
+  mudBomb: (snapshot, tank) => ultimateReach(snapshot, tank) > 0,
+  whirlwind: () => true,
+  bigUmbrella: (_snapshot, tank) => tank.ultimateEffect?.kind !== "bigUmbrella",
+  magnet: (_snapshot, tank) => magnetSpace(tank) > 0,
+};
+
 const TRIGGERS: Record<UltimateId, (snapshot: Snapshot, tank: BotState) => boolean> = {
   dash: (snapshot, tank) => {
-    const { triggerMinDistance, triggerMaxDistance, aimedAtMe } = ULTIMATE_RULES.dash;
-    if (tank.effect?.kind === "stuck" || !isFree(snapshot, cellAhead(tank, tank.direction))) return false;
-    const first = firstBotInLine(snapshot, tank, triggerMaxDistance);
-    return (first !== null && first.distance >= triggerMinDistance) || botsThatCanHit(snapshot, tank).length >= aimedAtMe;
+    const { triggerMinDistance, aimedAtMe } = ULTIMATE_RULES.dash;
+    return (ultimateReach(snapshot, tank) > 0 && firstBotInLine(snapshot, tank, triggerMinDistance - 1) === null) ||
+      botsThatCanHit(snapshot, tank).length >= aimedAtMe;
   },
-  smoke: (snapshot, tank) => tank.ultimateEffect?.kind !== "smoke" &&
-    botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.smoke.aimedAtMe,
-  splash: (snapshot, tank) => canThrow(tank.water, rulesOf(snapshot)) &&
-    tanksNear(snapshot, tank, ULTIMATE_RULES.splash.reach) >= ULTIMATE_RULES.splash.triggerTanks,
+  smoke: (snapshot, tank) => botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.smoke.aimedAtMe,
+  splash: (snapshot, tank) => ultimateReach(snapshot, tank) >= ULTIMATE_RULES.splash.triggerTanks,
   fullTank: (snapshot, tank) => {
     const rules = rulesOf(snapshot);
     return !canThrow(tank.water, rules) && tanksNear(snapshot, tank, throwRange(tank.build, rules)) > 0;
   },
-  mudBomb: (snapshot, tank) => firstBotInLine(snapshot, tank, throwRange(tank.build, rulesOf(snapshot))) !== null,
-  whirlwind: (snapshot, tank) => tanksNear(snapshot, tank, ULTIMATE_RULES.whirlwind.reach) >= ULTIMATE_RULES.whirlwind.triggerTanks,
-  bigUmbrella: (snapshot, tank) => tank.ultimateEffect?.kind !== "bigUmbrella" &&
-    botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.bigUmbrella.aimedAtMe,
-  magnet: (_snapshot, tank) => magnetSpace(tank) > 0,
+  mudBomb: () => true,
+  whirlwind: (snapshot, tank) => ultimateReach(snapshot, tank) >= ULTIMATE_RULES.whirlwind.triggerTanks,
+  bigUmbrella: (snapshot, tank) => botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.bigUmbrella.aimedAtMe,
+  magnet: () => true,
 };
 
-export function ultimateDecision(snapshot: Snapshot, tank: BotState): Decision | null {
+export function useUltimate(snapshot: Snapshot, tank: BotState): UltimateAction | null {
   const ultimate = tank.ultimate;
-  if (ultimate?.kind !== "ready" || !TRIGGERS[ultimate.id](snapshot, tank)) return null;
-  return { botId: tank.id, modeId: tank.modeId, ruleId: null, actionId: "ultimate", move: "W", nextModeId: tank.modeId, ultimate: ultimate.id };
+  if (ultimate?.kind !== "ready" || !CAN_ACT[ultimate.id](snapshot, tank)) return null;
+  return { move: "W", ultimate: ultimate.id };
+}
+
+export function ultimateDecision(snapshot: Snapshot, tank: BotState): Decision | null {
+  const action = useUltimate(snapshot, tank);
+  if (action === null || !TRIGGERS[action.ultimate](snapshot, tank)) return null;
+  const { move, ultimate } = action;
+  return { botId: tank.id, modeId: tank.modeId, ruleId: null, actionId: "ultimate", move, nextModeId: tank.modeId, ultimate };
+}
+
+function charging(id: UltimateId, turnsTotal: number): UltimateState {
+  return { id, kind: "charging", turnsLeft: turnsTotal, turnsTotal };
+}
+
+export function firstUltimateCharge(id: UltimateId): UltimateState {
+  return charging(id, ULTIMATE_RULES.firstReadyTurn);
 }
 
 export function chargeAfterTurn(state: UltimateState, fired: UltimateId | undefined): UltimateState {
-  if (fired !== undefined) return { id: state.id, kind: "charging", turnsLeft: ULTIMATE_RULES.rechargeTurns };
+  if (fired !== undefined) return charging(state.id, ULTIMATE_RULES.rechargeTurns);
   if (state.kind === "ready") return state;
   if (state.turnsLeft === 1) return { id: state.id, kind: "ready" };
   return { ...state, turnsLeft: state.turnsLeft - 1 };

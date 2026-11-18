@@ -121,7 +121,9 @@ export function addTurn(stats: TankStats, turn: TankTurn): TankStats {
   const at = stats.uses.findIndex((use) => use.modeId === modeId && use.ruleId === ruleId);
   const fired = turn.decision.ultimate !== undefined;
   const ultimateTurns = (stats.ultimateTurns ?? 0) + (fired ? 1 : 0);
-  // A spin or an ultimate takes the whole turn without running a rule or the fallback.
+  // Whole-turn totals count spins and ultimate fires separately from rule uses.
+  // ponytail: Rule-fired ultimates carry a rule id (85-ultimates.md, owner 2026-11-19).
+  // Showing them under both the rule and the ultimate needs the totals to account for the overlap.
   const uses =
     turn.decision.spin === true || fired
       ? stats.uses

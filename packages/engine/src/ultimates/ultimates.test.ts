@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-  ACTIONS, CONDITIONS, DIRECTIONS, ITEM_RULES, PRESETS, STANDARD_RULE_SET_ID, ULTIMATE_RULES, createOpenRound, createRound,
-  joinRound, parseStrategy, replaceStrategy, runRound, statsOfRound, statsView, stepRound, waterAfterTick,
+  ACTIONS, CONDITIONS, DIRECTIONS, ITEM_RULES, PRESETS, STANDARD_RULE_SET_ID, ULTIMATE_IDS, ULTIMATE_RULES, createOpenRound, createRound,
+  joinRound, parseStrategy, replaceStrategy, runRound, statsOfRound, statsView, stepRound, ultimateReach, waterAfterTick,
 } from "../index.ts";
 import type { BoardItem, BotState, Direction, ItemKind, Move, RoundState, Snapshot, Strategy, UltimateId } from "../index.ts";
 import { rotate } from "../directions.ts";
@@ -118,7 +118,7 @@ describe("ultimate triggers from the pre-turn snapshot", () => {
 
   test("Magnet first fires the turn after charging, with an item four diagonal squares away", () => {
     const state = placedRound(
-      [tankWith("magnet", { ultimate: { id: "magnet", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn } }), bot("far", 0, 0, "N")],
+      [tankWith("magnet", { ultimate: { id: "magnet", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn, turnsTotal: ULTIMATE_RULES.firstReadyTurn } }), bot("far", 0, 0, "N")],
       { far: waiting("fullTank") },
       { height: 9, items: [{ kind: "bucket", x: 7, y: 7, turnsLeft: ITEM_RULES.turnsOnBoard }] },
     );
@@ -131,7 +131,7 @@ describe("ultimate triggers from the pre-turn snapshot", () => {
     ] }]);
     expect(tick.snapshot.items).toEqual([]);
     expect(roundTank(state, "self")).toMatchObject({ item: "bucket", itemsWaiting: ["bucket"], itemUses: ITEM_RULES.uses.bucket,
-      ultimate: { kind: "charging", id: "magnet", turnsLeft: ULTIMATE_RULES.rechargeTurns } });
+      ultimate: { kind: "charging", id: "magnet", turnsLeft: ULTIMATE_RULES.rechargeTurns, turnsTotal: ULTIMATE_RULES.rechargeTurns } });
   });
 
   test("Magnet fires with room even if there are no floor items in reach", () => {
@@ -792,7 +792,7 @@ describe("ultimate lifetime and precedence", () => {
 
   test("a running sequence takes its next step before a ready ultimate", () => {
     const state = placedRound(
-      [tankWith("mudBomb", { ultimate: { id: "mudBomb", kind: "charging", turnsLeft: 1 } }), enemy],
+      [tankWith("mudBomb", { ultimate: { id: "mudBomb", kind: "charging", turnsLeft: 1, turnsTotal: ULTIMATE_RULES.firstReadyTurn } }), enemy],
       { self: waiting("mudBomb", mode("main", [
         rule("steps", [when("enemyAhead", { n: 3 })], { steps: [act("wait"), act("wait")] }),
       ], act("wait"))) },
@@ -806,7 +806,7 @@ describe("ultimate lifetime and precedence", () => {
 
   test("a spin also takes priority over a running sequence", () => {
     const state = placedRound(
-      [tankWith("whirlwind", { ultimate: { id: "whirlwind", kind: "charging", turnsLeft: 1 } }), enemy,
+      [tankWith("whirlwind", { ultimate: { id: "whirlwind", kind: "charging", turnsLeft: 1, turnsTotal: ULTIMATE_RULES.firstReadyTurn } }), enemy,
         tankWith("whirlwind", { id: "caster", x: 3, y: 4 })],
       { self: waiting("whirlwind", mode("main", [
         rule("steps", [when("enemyAhead", { n: 3 })], { steps: [act("wait"), act("wait")] }),
@@ -831,27 +831,197 @@ describe("ultimate lifetime and precedence", () => {
     const firstFire = firstReadyTurn + 1;
     const secondFire = firstFire + rechargeTurns + 1;
     const state = placedRound([bot("self", 3, 3, "E"), enemy], { self: waiting("mudBomb") }, { ticksTotal: secondFire + 1 });
-    expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: firstReadyTurn });
+    expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: firstReadyTurn, turnsTotal: firstReadyTurn });
     const fireTurns: number[] = [];
     while (!state.isOver) {
       const result = stepRound(state);
       const turn = result.tick + 1;
       if (result.fires?.some((event) => event.botId === "self")) fireTurns.push(turn);
       if (turn === firstFire - 1 || turn === secondFire - 1) expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "ready" });
-      if (turn === firstFire || turn === secondFire) expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: rechargeTurns });
+      if (turn === firstFire || turn === secondFire) expect(roundTank(state, "self").ultimate).toEqual({ id: "mudBomb", kind: "charging", turnsLeft: rechargeTurns, turnsTotal: rechargeTurns });
     }
     expect(fireTurns).toEqual([firstFire, secondFire]);
     expect(roundTank(state, "self")).not.toHaveProperty("ultimate");
     expect(roundTank(state, "self")).not.toHaveProperty("ultimateEffect");
   });
 
-  test("a join starts its own charge and replacing rules preserves the tank's ultimate", () => {
+  test("a new ultimate clears the old active effect and keeps the separate tank effect", () => {
+    const effect = { kind: "stuck", turnsLeft: 3 } as const;
+    const ultimateEffect = { kind: "smoke", turnsLeft: 5 } as const;
+    const self = tankWith("smoke", { effect, ultimateEffect });
+    const round = placedRound([self, enemy]);
+    expect(replaceStrategy(round, "self", waiting("smoke")).ultimateEffect).toEqual(ultimateEffect);
+    expect(replaceStrategy(round, "self", waiting("dash"))).toMatchObject({ effect, ultimateEffect: null });
+  });
+
+  test("a join and a new ultimate start a first charge; the same ultimate stays ready", () => {
     const round = createOpenRound({ seed: 9, ticksTotal: 30, boardFor: 8, ruleSetId: STANDARD_RULE_SET_ID, items: false, ultimates: true });
     stepRound(round);
     const joined = joinRound(round, { id: "self", strategy: waiting("smoke") });
-    expect(joined.ultimate).toEqual({ id: "smoke", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn });
+    expect(joined.ultimate).toEqual({ id: "smoke", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn, turnsTotal: ULTIMATE_RULES.firstReadyTurn });
     for (let i = 0; i < ULTIMATE_RULES.firstReadyTurn; i++) stepRound(round);
-    expect(replaceStrategy(round, "self", waiting("dash")).ultimate).toEqual({ id: "smoke", kind: "ready" });
+    expect(replaceStrategy(round, "self", waiting("smoke")).ultimate).toEqual({ id: "smoke", kind: "ready" });
+    expect(replaceStrategy(round, "self", waiting("dash")).ultimate).toEqual({
+      id: "dash", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn, turnsTotal: ULTIMATE_RULES.firstReadyTurn,
+    });
+  });
+});
+
+// A quiet second tank keeps the fixture a legal round without affecting the guard or taking a turn away.
+const bystander = bot("far", 8, 6, "N");
+function firingRound(self: BotState, strategy: Strategy, others: readonly BotState[] = []): RoundState {
+  return placedRound([self, ...(others.length === 0 ? [bystander] : others)], { self: strategy, far: waiting("fullTank") });
+}
+
+describe("ultimate conditions", () => {
+  test("ready and each charge threshold read the first charge and the recharge", () => {
+    const { firstReadyTurn, rechargeTurns } = ULTIMATE_RULES;
+    const state = firingRound(bot("self", 3, 3, "E"), waiting("magnet"));
+    for (const turnsTotal of [firstReadyTurn, rechargeTurns]) {
+      for (let elapsed = 0; elapsed <= turnsTotal; elapsed++) {
+        const ctx = contextFor(state.snapshot, "self");
+        expect(CONDITIONS.ultimateReady!.test(ctx, {})).toBe(elapsed === turnsTotal);
+        for (const n of [25, 50, 75]) {
+          expect(CONDITIONS.ultimateCharged!.test(ctx, { n }), `${elapsed}/${turnsTotal} at ${n}%`)
+            .toBe(elapsed >= turnsTotal * n / 100);
+        }
+        if (elapsed < turnsTotal) expect(stepRound(state).fires).toEqual([]);
+      }
+      expect(stepRound(state).fires?.[0]?.kind).toBe("magnet");
+    }
+  });
+
+  test("reach counts the right tanks for each ultimate even while charging", () => {
+    const others = [
+      bot("first", 4, 3, "E"),
+      bot("near", 4, 2, "E"),
+      bot("nearby", 3, 4, "E"),
+      bot("next", 5, 3, "E"),
+      bot("far", 8, 3, "E"),
+    ];
+    const expected: Readonly<Record<UltimateId, number>> = {
+      dash: 1, splash: 3, mudBomb: 4, whirlwind: 4, smoke: 0, fullTank: 0, bigUmbrella: 0, magnet: 0,
+    };
+    for (const id of ULTIMATE_IDS) {
+      const count = expected[id];
+      const turnsTotal = ULTIMATE_RULES.firstReadyTurn;
+      const self = tankWith(id, { ultimate: { kind: "charging", id, turnsLeft: turnsTotal, turnsTotal } });
+      const snapshot = snapshotOf([self, ...others]);
+      expect(ultimateReach(snapshot, self), id).toBe(count);
+      for (const n of [1, 2, 3, 4]) {
+        expect(CONDITIONS.ultimateCatches!.test({ snapshot, self }, { n }), `${id} >= ${n}`).toBe(count >= n);
+      }
+    }
+    const dash = tankWith("dash");
+    expect(ultimateReach(snapshotOf([dash, others[4]!]), dash)).toBe(0);
+    const mud = tankWith("mudBomb");
+    expect(ultimateReach(snapshotOf([mud, { ...others[0]!, x: 8 }, others[1]!]), mud)).toBe(0);
+  });
+});
+
+describe("firing an ultimate by rules", () => {
+  const use = rule("fire", [when("ultimateReady")], act("useUltimate"));
+  const fallback = rule("next", [when("scoreAtLeast", { n: 0 })], act("wait"));
+  const target = bot("target", 5, 3, "N");
+  const stuck = { kind: "stuck", turnsLeft: 2 } as const;
+
+  test.each([
+    ["dash", [], {}],
+    ["smoke", [], { effect: stuck }],
+    ["splash", [], { water: waterPerThrow }],
+    ["fullTank", [], { water: waterCapacity }],
+    ["mudBomb", [target], { water: 0, effect: stuck }],
+    ["whirlwind", [], {}],
+    ["bigUmbrella", [], {}],
+    ["magnet", [], {}],
+  ] satisfies readonly [UltimateId, readonly BotState[], Partial<BotState>][])(
+    "%s can fire by rule when ready, even outside its automatic good moment",
+    (id, others, overrides) => {
+      const strategy = waiting(id, mode("main", [use, fallback], act("wait")));
+      const ready = tankWith(id, overrides);
+      const turn = stepRound(firingRound(ready, strategy, others));
+      expect(turn.decisions[0]).toMatchObject({ actionId: "useUltimate", ruleId: "fire", move: "W", ultimate: id });
+      expect(turn.fires?.filter(({ botId }) => botId === "self").map(({ kind }) => kind)).toEqual([id]);
+    },
+  );
+
+  test.each([
+    ["dash", [bot("near", 4, 3, "N")], {}],
+    ["dash", [], { effect: stuck }],
+    ["smoke", [], { ultimateEffect: { kind: "smoke", turnsLeft: 2 } }],
+    ["splash", [], { water: waterPerThrow - 1 }],
+    ["mudBomb", [], {}],
+    ["bigUmbrella", [], { ultimateEffect: { kind: "bigUmbrella", blocksLeft: 1 } }],
+    ["magnet", [], { item: "bucket", itemsWaiting: ["pinwheel", "umbrella"] }],
+    ["fullTank", [], { ultimate: { id: "fullTank", kind: "charging", turnsLeft: 1, turnsTotal: 8 } }],
+  ] satisfies readonly [UltimateId, readonly BotState[], Partial<BotState>][])(
+    "%s reads the next rule when the action cannot act",
+    (id, others, overrides) => {
+      // Keep the condition true so the miss comes from the action's own checks.
+      const always = { ...use, conditions: [when("scoreAtLeast", { n: 0 })] };
+      const strategy = waiting(id, mode("main", [always, fallback], act("wait")));
+      const turn = stepRound(firingRound(tankWith(id, overrides), strategy, others));
+      expect(turn.decisions[0]).toMatchObject({ ruleId: "next", actionId: "wait" });
+      expect(turn.fires).toEqual([]);
+    },
+  );
+
+  test("an ultimate rule in another mode disables auto fire and can switch modes when it runs", () => {
+    const first = mode("main", [{ ...fallback, switchToMode: "fire-mode" }], act("wait"));
+    const second = mode("fire-mode", [{ ...use, switchToMode: "main" }], act("wait"));
+    const automatic = waiting("magnet");
+    const byRules = parseStrategy({ ...automatic, modes: [first, second] });
+    if (!byRules.ok) throw new Error(byRules.errors.join("\n"));
+
+    const self = tankWith("magnet");
+    const autoRound = firingRound(self, automatic);
+    const autoTurn = stepRound(autoRound);
+    expect(autoTurn.decisions[0]).toMatchObject({ ruleId: null, actionId: "ultimate" });
+
+    const rulesRound = firingRound(self, byRules.strategy);
+    expect(stepRound(rulesRound).fires).toEqual([]);
+    const ruleTurn = stepRound(rulesRound);
+    expect(ruleTurn.decisions[0]).toMatchObject({ modeId: "fire-mode", ruleId: "fire", nextModeId: "main", actionId: "useUltimate" });
+    expect(ruleTurn.fires).toEqual(autoTurn.fires);
+  });
+
+  test("spinning and a running sequence each delay an ultimate rule", () => {
+    const strategy = waiting("fullTank", mode("main", [
+      use,
+      rule("steps", [when("scoreAtLeast", { n: 0 })], { steps: [act("wait"), act("wait")] }),
+    ], act("wait")));
+    const spin = firingRound(tankWith("fullTank", { effect: { kind: "dizzy", turnsLeft: 1, spinTurnsLeft: 1 } }), strategy);
+    expect(stepRound(spin).decisions[0]?.spin).toBe(true);
+    expect(stepRound(spin).decisions[0]?.ruleId).toBe("fire");
+    const steps = firingRound(tankWith("fullTank", {
+      ultimate: { id: "fullTank", kind: "charging", turnsLeft: 1, turnsTotal: ULTIMATE_RULES.firstReadyTurn },
+    }), strategy);
+    expect(stepRound(steps).decisions[0]?.step?.index).toBe(1);
+    expect(stepRound(steps).decisions[0]?.step?.index).toBe(2);
+    expect(stepRound(steps).decisions[0]?.ruleId).toBe("fire");
+  });
+
+  test("with ultimates off, conditions and useUltimate leave replay bytes and chance draws alone", () => {
+    const self = bot("self", 3, 3, "E");
+    const ctx = contextFor(snapshotOf([self]), "self");
+    expect(CONDITIONS.ultimateReady!.test(ctx, {})).toBe(false);
+    expect(CONDITIONS.ultimateCharged!.test(ctx, { n: 25 })).toBe(false);
+    expect(CONDITIONS.ultimateCatches!.test(ctx, { n: 1 })).toBe(false);
+    expect(ACTIONS.useUltimate!.toMove(ctx, {}, stubRng())).toBeNull();
+
+    const ultimateRules = [
+      { ...use, conditions: [when("scoreAtLeast", { n: 0 })], chance: 50 },
+      rule("test-ready", [when("ultimateReady")], act("turn", { way: "right" })),
+      rule("test-charged", [when("ultimateCharged", { n: 25 })], act("turn", { way: "right" })),
+      rule("test-catches", [{ ...when("ultimateCatches", { n: 1 }), negate: true }], act("turn", { way: "right" })),
+    ];
+    const replay = (strategy: Strategy) => runRound({
+      seed: 42, ticksTotal: 60, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, items: true, ultimates: false,
+      players: [{ id: "self", strategy }, { id: "enemy", strategy: waiting("mudBomb") }],
+    });
+    const base = waiting("splash", mode("main", [], act("wander")));
+    const rules = waiting("splash", mode("main", ultimateRules, act("wander")));
+    expect(JSON.stringify(replay(rules))).toBe(JSON.stringify(replay(base)));
   });
 });
 

@@ -137,23 +137,29 @@ describe("parseStreamMessage", () => {
       type: "roundStart", round: 1, startsInMs: 0,
       snapshot: { ...snapshot, bots: [{ ...snapshot.bots[0], ...fields }] },
     }));
-    const smoke = { ultimate: { id: "smoke", kind: "charging", turnsLeft: 40 }, ultimateEffect: { kind: "smoke", turnsLeft: 9 } };
+    const smoke = { ultimate: { id: "smoke", kind: "charging", turnsLeft: 7, turnsTotal: 8 }, ultimateEffect: { kind: "smoke", turnsLeft: 9 } };
     expect(start(smoke).ok).toBe(true);
+    expect(start({ ...smoke, ultimate: { ...smoke.ultimate, turnsTotal: 6 } }).ok).toBe(false);
+    expect(start({ ...smoke, ultimate: { ...smoke.ultimate, turnsTotal: undefined } }).ok).toBe(false);
     expect(start({ ...smoke, ultimate: { id: "smoke", kind: "charging", turnsLeft: 0 } }).ok).toBe(false);
     expect(start({ ...smoke, ultimateEffect: { kind: "fullTank", freeShots: 2 } }).ok).toBe(false);
 
     const tick = { tick: 0, bots: [[1, 2, 0, 0, 10, 0, 0, 0]], moves: [[0, 0]], throws: [], items: [], pickups: [],
-      ultimates: [[0, ULTIMATE_IDS.indexOf("smoke"), 40, 9]], fires: [[0, "smoke", 1, 2]] };
+      ultimates: [[0, ULTIMATE_IDS.indexOf("smoke"), 7, 9, 40]], fires: [[0, "smoke", 1, 2]] };
     const own = { ...decision("r1"), ruleId: null, actionId: "ultimate", move: "W", ultimate: "smoke" };
     const turn = (fields: object, decision: unknown = own) => parseStreamMessage("tick", json({
       type: "tick", round: 1, tick: { ...tick, ...fields }, own: decision,
     }));
     expect(turn({}).ok).toBe(true);
+    expect(turn({}, { ...own, ruleId: "r1", actionId: "useUltimate" }).ok).toBe(true);
+    expect(turn({}, { ...own, actionId: "useUltimate" }).ok).toBe(false);
     expect(turn({}, { ...own, ultimate: "unknown" }).ok).toBe(false);
     for (const fields of [
-      { ultimates: [[0, 42, 40, 0]] },
-      { ultimates: [[1, 0, 0, 0]] },
-      { ultimates: [[0, 0, 0, 3]] },
+      { ultimates: [[0, 42, 40, 0, 40]] },
+      { ultimates: [[1, 0, 0, 0, 0]] },
+      { ultimates: [[0, 0, 0, 3, 0]] },
+      { ultimates: [[0, 1, 7, 9]] },
+      { ultimates: [[0, 1, 7, 9, 6]] },
       { fires: [[0, "dash", 1, 2, [[2, "3"]]]] },
       { fires: [[0, "splash", 1, 2, [[2, 3, "hit", 1]]]] },
       { fires: [[0, "mudBomb", 1, 2, null, [], [], 1]] },

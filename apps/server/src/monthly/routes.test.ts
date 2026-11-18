@@ -171,7 +171,7 @@ describe("Change rules", () => {
     expect((await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy } })).status).toBe(204);
     const after = (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
     expect(before?.strategy.ultimate).toBe(chosen.ultimate);
-    expect([after?.seatId, after?.name, after?.strategy]).toEqual([before?.seatId, "Ada", { ...strategy, ultimate: chosen.ultimate }]);
+    expect([after?.seatId, after?.name, after?.strategy]).toEqual([before?.seatId, "Ada", strategy]);
   });
 });
 

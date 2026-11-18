@@ -7,6 +7,7 @@ export const ULTIMATE_MOTION_CSS = `
 .ue-smoke-puff { opacity: 0.88; }
 .ue-suck { transform: translate(calc(var(--dx) * 0.66), calc(var(--dy) * 0.66)); }
 .ue-pull { transform: translate(calc(var(--dx) * 0.6), calc(var(--dy) * 0.6)) scale(0.8); }
+.ue-drop { transform: translateY(-4px); }
 .ue-lob-x { transform: translate(calc(var(--dx) * 0.55), calc(var(--dy) * 0.55)); }
 .ue-lob-y { transform: translateY(-7px); }
 .ue-fling { transform: translate(var(--dx), var(--dy)); }
@@ -36,6 +37,7 @@ export const ULTIMATE_MOTION_CSS = `
   .ab-live .ue-open { animation: ue-open calc(var(--step) * 0.45) cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--step) * 0.17); }
   .ab-live .ue-field { animation: ue-field calc(var(--step) * 0.5) linear both; }
   .ab-live .ue-pull { animation: ue-pull calc(var(--step) * 0.64) cubic-bezier(0.5, 0, 0.75, 0) both; animation-delay: var(--d, 0ms); }
+  .ab-live .ue-drop { animation: ue-drop calc(var(--step) * 0.26) ease-in both; animation-delay: calc(var(--step) * 0.62); }
 }
 @keyframes ue-fire { 0%, 16% { opacity: 0; } 23%, 78% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes ue-ram { 0%, 59% { opacity: 0; } 67%, 83% { opacity: 1; } 100% { opacity: 0; } }
@@ -58,4 +60,5 @@ export const ULTIMATE_MOTION_CSS = `
 @keyframes ue-open { 0% { transform: scale(0.15, 0.4); } 100% { transform: scale(1); } }
 @keyframes ue-field { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 3; } }
 @keyframes ue-pull { 0% { transform: translate(0, 0); opacity: 1; } 85% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.4); opacity: 0; } }
+@keyframes ue-drop { 0% { transform: translateY(-10px); opacity: 0; } 25%, 85% { opacity: 1; } 100% { transform: translateY(0) scale(0.4); opacity: 0; } }
 `;

@@ -13,7 +13,7 @@
 
 import { canThrow, throwRange } from "../combat/combat.ts";
 import { rulesOf } from "../combat/rule-sets.ts";
-import { chebyshev, directionOfSigns, eighthsBetween } from "../directions.ts";
+import { directionOfSigns, eighthsBetween } from "../directions.ts";
 import { canTake } from "../items/items.ts";
 import { cellAhead } from "../round/grid.ts";
 import { botsThatCanHit, firstBotInLine, isFree } from "../strategy/geometry.ts";
@@ -34,12 +34,15 @@ export const ULTIMATE_RULES = {
   rechargeTurns: 40,
   dash: { squares: 3, triggerMinDistance: 2, triggerMaxDistance: 4, aimedAtMe: 1, points: 2 },
   smoke: { turns: 15, aimedAtMe: 1, chanceDivisor: 4 },
-  splash: { reach: 1, triggerTanks: 2 },
+  // Owner, 2026-11-18 (85-ultimates.md): more points per hit, with the whole tank of water.
+  splash: { reach: 1, triggerTanks: 2, points: 2, waterAfter: 0 },
   fullTank: { freeShots: 3 },
   mudBomb: { stuckTurns: 5, reach: 1 },
-  whirlwind: { reach: 2, pointReach: 1, dizzyTurns: 4, spinTurns: 2, triggerTanks: 2 },
+  // Owner, 2026-11-18 (85-ultimates.md): every dizzy turn from Whirlwind spins.
+  whirlwind: { reach: 2, pointReach: 1, dizzyTurns: 4, spinTurns: 4, triggerTanks: 2 },
   bigUmbrella: { blocks: 4, blockedEighths: [0, 1, 2, 6, 7] as readonly number[], aimedAtMe: 1 },
-  magnet: { reach: 4, handSize: 3 },
+  // Owner, 2026-11-18 (85-ultimates.md): a ready Magnet can always get an item if it has room.
+  magnet: { reach: 4, handSize: 3, newItem: "bucket" },
 } as const;
 
 export function magnetSpace(tank: Pick<BotState, "item" | "itemsWaiting">): number {
@@ -73,8 +76,7 @@ const TRIGGERS: Record<UltimateId, (snapshot: Snapshot, tank: BotState) => boole
   whirlwind: (snapshot, tank) => tanksNear(snapshot, tank, ULTIMATE_RULES.whirlwind.reach) >= ULTIMATE_RULES.whirlwind.triggerTanks,
   bigUmbrella: (snapshot, tank) => tank.ultimateEffect?.kind !== "bigUmbrella" &&
     botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.bigUmbrella.aimedAtMe,
-  magnet: (snapshot, tank) => magnetSpace(tank) > 0 &&
-    snapshot.items.some((item) => chebyshev(tank, item) <= ULTIMATE_RULES.magnet.reach),
+  magnet: (_snapshot, tank) => magnetSpace(tank) > 0,
 };
 
 export function ultimateDecision(snapshot: Snapshot, tank: BotState): Decision | null {

@@ -24,7 +24,7 @@
 //   items[k]  = [item index, x, y, turns left], the items on the board after the turn.
 //   pickups[k]= [bot index, item index], the items taken on the turn.
 //   itemsWaiting[k] = [bot index, first item index, optional second item index].
-//   magnetFires[k]  = [bot index, x, y, [[item index, source x, source y], ...]].
+//   magnetFires[k]  = [bot index, x, y, [[item index, source x, source y], ...], optional 1 for the new bucket].
 //   ultimates[k] = [bot index, ultimate index, charge turns, active count].
 //   fires[k] = [bot index, ultimate id, x, y, ...payload] for fires other than Magnet.
 //   The appended fields leave the bot rows at eight values. See ultimate-wire.ts.
@@ -36,6 +36,10 @@
 import { DIRECTIONS, ITEM_KINDS, MOVES, TANK_EFFECT_KINDS, ULTIMATE_RULES, itemHandOf, type BoardItem, type Direction, type ItemKind, type MagnetFire, type Move, type Pickup, type TankEffect, type ThrowEvent, type UltimateFire, type WaitingItems } from "@game/engine";
 import type { PlayerId, PublicBot, PublicSnapshot, PublicTick } from "./types.ts";
 import { compactFire, compactUltimate, expandFire, expandUltimate, hasCompactUltimateFields, type CompactFire, type CompactUltimate } from "./ultimate-wire.ts";
+
+type CompactMagnetFire = readonly [
+  bot: number, x: number, y: number, pulled: readonly (readonly number[])[], newBucket?: 1,
+];
 
 /** One turn in a compact form. Indexes refer to the order of `roundStart.snapshot.bots`. */
 export interface CompactTick {
@@ -51,7 +55,7 @@ export interface CompactTick {
   /** [bot index, item index]: the items taken on the turn. */
   readonly pickups: readonly (readonly number[])[];
   readonly itemsWaiting?: readonly (readonly number[])[];
-  readonly magnetFires?: readonly (readonly [number, number, number, readonly (readonly number[])[]])[];
+  readonly magnetFires?: readonly CompactMagnetFire[];
   readonly ultimates?: readonly CompactUltimate[];
   readonly fires?: readonly CompactFire[];
 }
@@ -170,9 +174,12 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
     pickups: tick.pickups.map((p) => [idx(p.botId), indexIn(COMPACT_ITEMS, p.item, "item")]),
     ...(itemsWaiting.length === 0 ? {} : { itemsWaiting }),
     ...(magnetFires === undefined || (tick.magnetFires === undefined && magnetFires.length === 0) ? {} : {
-      magnetFires: magnetFires.map(({ botId, at, items }) => [
-        idx(botId), at.x, at.y, items.map(({ kind, from }) => [indexIn(COMPACT_ITEMS, kind, "item"), from.x, from.y]),
-      ]),
+      magnetFires: magnetFires.map(({ botId, at, items }): CompactMagnetFire => {
+        const pulled = items.flatMap(({ kind, from }) => from === undefined ? [] : [[indexIn(COMPACT_ITEMS, kind, "item"), from.x, from.y]]);
+        const row = [idx(botId), at.x, at.y, pulled] as const;
+        // The new bucket has no floor square (85-ultimates.md, owner 2026-11-18). Keep the floor rows intact.
+        return pulled.length === items.length ? row : [...row, 1];
+      }),
     }),
     ...(ultimates.length === 0 ? {} : { ultimates }),
     ...(fires?.length ? { fires } : {}),
@@ -273,15 +280,18 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
     return { botId: botAt(botIndex, "pickup tank").id, item: entry(COMPACT_ITEMS, kind, "item") };
   });
   const magnetFires = compact.magnetFires?.map((values): MagnetFire => {
-    if (values.length !== 4) throw new Error(`a Magnet fire has ${values.length} values`);
-    const [botIndex, x, y, pulled] = values;
-    if (pulled.length > ULTIMATE_RULES.magnet.handSize) throw new Error(`Magnet pulled ${pulled.length} items`);
+    if (values.length !== 4 && (values.length !== 5 || values[4] !== 1)) throw new Error("invalid Magnet fire row");
+    const [botIndex, x, y, pulled, newBucket] = values;
+    const count = pulled.length + (newBucket ?? 0);
+    if (count > ULTIMATE_RULES.magnet.handSize) throw new Error(`Magnet gained ${count} items`);
+    const items = pulled.map((item): MagnetFire["items"][number] => {
+      if (item.length !== 3) throw new Error(`a pulled item has ${item.length} values`);
+      return { kind: entry(COMPACT_ITEMS, item[0], "item"), from: { x: integer(item[1], "item x"), y: integer(item[2], "item y") } };
+    });
+    if (newBucket === 1) items.push({ kind: ULTIMATE_RULES.magnet.newItem });
     return {
       botId: botAt(botIndex, "Magnet tank").id, at: { x: integer(x, "Magnet x"), y: integer(y, "Magnet y") }, kind: "magnet",
-      items: pulled.map((item) => {
-        if (item.length !== 3) throw new Error(`a pulled item has ${item.length} values`);
-        return { kind: entry(COMPACT_ITEMS, item[0], "item"), from: { x: integer(item[1], "item x"), y: integer(item[2], "item y") } };
-      }),
+      items,
     };
   });
   let fires: UltimateFire[] | undefined;

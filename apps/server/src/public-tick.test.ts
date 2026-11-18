@@ -74,11 +74,13 @@ test("a Magnet pull reaches both the public turn and the compact wire", () => {
   const engine = stepRound(state);
   const tick = toPublicTick(engine);
   const wire = toCompactTick(engine);
-  expect(tick.snapshot.bots[0]).toMatchObject({ item: "bucket", itemsWaiting: ["umbrella"] });
+  expect(tick.snapshot.bots[0]).toMatchObject({ item: "bucket", itemsWaiting: ["umbrella", "bucket"] });
   expect(tick.snapshot.bots[0]).not.toHaveProperty("itemUses");
   const fire = engine.fires?.[0];
   if (fire?.kind !== "magnet") throw new Error("expected Magnet");
+  expect(fire.items).toEqual([{ kind: "bucket", from: { x: 2, y: 1 } }, { kind: "umbrella", from: { x: 1, y: 2 } }, { kind: "bucket" }]);
   expect(tick.magnetFires).toEqual([fire]);
-  expect(wire.itemsWaiting).toEqual([[0, 1]]);
+  expect(wire.magnetFires).toEqual([[0, 2, 2, [[0, 2, 1], [1, 1, 2]], 1]]);
+  expect(wire.itemsWaiting).toEqual([[0, 1, 0]]);
   expect(expandTick(wire, toPublicSnapshot(opening))).toEqual(tick);
 });

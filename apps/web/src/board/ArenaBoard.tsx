@@ -18,8 +18,8 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { memo, useEffect, useId, useMemo, useRef } from "react";
 import type { PublicBot } from "@game/arena";
-import { canThrow, rulesOf } from "@game/engine";
-import type { BotId, RuleSetId, ThrowEvent } from "@game/engine";
+import { ULTIMATE_RULES, canThrow, rulesOf } from "@game/engine";
+import type { BotId, RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { duckMusicUnder } from "../sound/music.ts";
 import { playSound } from "../sound/player.ts";
@@ -54,7 +54,7 @@ import type { ArenaBoardProps } from "./props.ts";
 import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
 import { botAtPoint, nameTagSpot, useTankPeek, type BoardView } from "./tankPeek.ts";
 import { useCellPixels } from "./useCellPixels.ts";
-import { UltimateBadges, UltimateFireDrawing, TankUltimateFloor } from "./ultimates/UltimateEffect.tsx";
+import { HELD_ITEM_AT, UltimateBadges, UltimateFireDrawing, TankUltimateFloor } from "./ultimates/UltimateEffect.tsx";
 import { fireInWindow } from "./ultimates/boardUltimates.ts";
 import { ULTIMATE_MOTION_CSS } from "./ultimates/ultimateMotion.ts";
 import { WaterGauge } from "./WaterGauge.tsx";
@@ -103,8 +103,6 @@ const YOU_MIN_PX = 15;
 const NAME_MIN_PX = 14;
 /** An item blinks in its last turns on the board, so a viewer sees that it is about to go. */
 const ITEM_FADE_TURNS = 5;
-/** Where the disc of a held item sits on the tank's square, and its size. */
-const BADGE_AT = { x: -3.5, y: -3.3 } as const;
 const BADGE_SCALE = 0.85;
 /** The open umbrella of a blocked throw is drawn at this share of its size, so it covers only the front of the tank. */
 const UMBRELLA_SCALE = 0.75;
@@ -221,6 +219,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
   const hitTargets = new Set<BotId>();
   const shooters = new Set<BotId>();
   const scores = new Map<BotId, { points: number; ultimate: boolean }>();
+  const splashScores: { botId: BotId; square: UltimateFire["at"]; points: number; ultimate: true }[] = [];
   const firesById = new Map(fires?.map((fire) => [fire.botId, fire]));
   // A turn can end the round and clear every tank's state while still carrying its fires.
   const ultimateArt = !hidden && (firesById.size > 0 || drawn.some((bot) => bot.ultimate !== undefined || bot.itemsWaiting !== undefined));
@@ -246,10 +245,19 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
     if ("points" in fire && fire.points > 0) scores.set(fire.botId, { points: fire.points, ultimate: true });
     if (fire.kind === "splash") {
       for (const square of fire.squares) {
-        if (square.outcome === "hit") hitTargets.add(square.targetId);
+        if (square.outcome === "hit") {
+          hitTargets.add(square.targetId);
+          // One pop at each fire-time hit, even if the target moved later in the turn (85-ultimates.md).
+          splashScores.push({ botId: fire.botId, square, points: ULTIMATE_RULES.splash.points, ultimate: true });
+        }
       }
     }
   }
+  const scorePops = [...scores].flatMap(([botId, score]) => {
+    const square = botsById.get(botId);
+    if (square === undefined || (drawnIds !== null && !drawnIds.has(botId)) || (crowd && botId !== highlightId && !score.ultimate)) return [];
+    return [{ botId, square, ...score }];
+  });
 
   const ownBot = highlightId === null ? undefined : botsById.get(highlightId);
   // Where the viewer's tank sits in what the viewer sees: the whole arena or the window.
@@ -478,7 +486,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
               </g>
               {bot.item === null ? null : (
                 // Keyed by the item, so the disc pops in on the turn the tank takes it.
-                <g key={`held-${bot.item}`} transform={`translate(${BADGE_AT.x} ${BADGE_AT.y}) scale(${BADGE_SCALE})`} data-held={bot.item}>
+                <g key={`held-${bot.item}`} transform={`translate(${HELD_ITEM_AT.x} ${HELD_ITEM_AT.y}) scale(${BADGE_SCALE})`} data-held={bot.item}>
                   <g className={pulled > (bot.itemsWaiting?.length ?? 0) ? "ue-held" : "ab-anim ab-item-in"}>
                     <HeldBadge kind={bot.item} />
                   </g>
@@ -519,13 +527,11 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
         })}
 
         <g key={`plus-${tick}`} aria-hidden="true">
-          {[...scores].flatMap(([id, { points, ultimate }]) => {
-            const shooter = botsById.get(id);
-            if (shooter === undefined || (drawnIds !== null && !drawnIds.has(id)) || (crowd && id !== highlightId && !ultimate)) return [];
-            const at = tankCenter(shooter.x, shooter.y);
+          {[...scorePops, ...splashScores].map(({ botId, square, points, ultimate }) => {
+            const at = tankCenter(square.x, square.y);
             // In the top row the "+1" stays inside the wall instead of leaving the picture.
-            return [
-              <g key={id} transform={`translate(${at.x + CELL * 0.3} ${Math.max(at.y - CELL * 0.65, plusSize * 0.6 + topEdge)})`}>
+            return (
+              <g key={`${botId}:${square.x},${square.y}`} transform={`translate(${at.x + CELL * 0.3} ${Math.max(at.y - CELL * 0.65, plusSize * 0.6 + topEdge)})`}>
                 <text
                   className={ultimate ? "ab-anim ab-plus ue-plus" : "ab-anim ab-plus"}
                   textAnchor="middle"
@@ -535,12 +541,12 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, fires, na
                   fontSize={plusSize}
                   strokeWidth={plusSize * 0.22}
                   paintOrder="stroke"
-                  style={{ fill: id === highlightId ? "var(--color-self-ink)" : "var(--color-ink)", stroke: "var(--color-panel)" }}
+                  style={{ fill: botId === highlightId ? "var(--color-self-ink)" : "var(--color-ink)", stroke: "var(--color-panel)" }}
                 >
                   {points === 1 ? m.board.plusOne : points === 2 ? m.board.plusTwo : m.board.plusPoints(points)}
                 </text>
-              </g>,
-            ];
+              </g>
+            );
           })}
         </g>
 

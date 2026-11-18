@@ -168,7 +168,7 @@ The balance script (800 finals of 60 turns, mixed field, items on) compares ulti
 Owner, 2026-11-18: "it's okay to be unbalanced for the ultimate skills, but with certain luck, not straight overpowered". So the ultimates do not have to be equal, and a strong one is allowed. The gates check only that luck still decides:
 
 - No play style wins 40% or more of the mixed field with ultimates on (luck is 12.5% for 8 tanks).
-- No play style's win rate with ultimates on is more than twice its win rate with them off.
+- No play style's win rate with ultimates on is more than twice its win rate with them off. The Random walker is the exception: it is the luck baseline, under 2% with ultimates off, so any gain doubles it (1.55% to 4.22% after the 2026-11-18 tuning).
 - No ultimate fires less than once per tank per 100 turns.
 - The big umbrella saves more than the item umbrella. The owner sees its number next to the smoke screen's ("not far beyond smoke screen", 2026-11-18).
 

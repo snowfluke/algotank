@@ -448,8 +448,8 @@ export interface MagnetFire {
   readonly kind: "magnet";
   readonly botId: BotId;
   readonly at: Cell;
-  /** Closest first, in the order the items joined the hand. */
-  readonly items: readonly { readonly kind: ItemKind; readonly from: Cell }[];
+  /** Floor pulls closest first, then the new bucket with no source square. */
+  readonly items: readonly ({ readonly kind: ItemKind; readonly from: Cell } | { readonly kind: "bucket"; readonly from?: never })[];
 }
 
 export type UltimateFire = { readonly botId: BotId; readonly at: Cell } & (

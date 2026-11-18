@@ -18,7 +18,7 @@ export function rotateFires(fires: readonly UltimateFire[], height: number): rea
       case "splash": return { ...fire, at, squares: fire.squares.map(turn) };
       case "mudBomb": return { ...fire, at, area: fire.area.map(turn), center: fire.center === null ? null : turn(fire.center) };
       case "whirlwind": return { ...fire, at, area: fire.area.map(turn) };
-      case "magnet": return { ...fire, at, items: fire.items.map((item) => ({ ...item, from: turn(item.from) })) };
+      case "magnet": return { ...fire, at, items: fire.items.map((item) => item.from === undefined ? item : { ...item, from: turn(item.from) }) };
       default: return { ...fire, at };
     }
   });
@@ -33,7 +33,7 @@ export function fireInWindow(fire: UltimateFire, camera: CameraWindow, drawn: Re
     case "splash": return fire.squares.some(near);
     case "mudBomb":
     case "whirlwind": return fire.area.some(near) || fire.affected.some((id) => drawn?.has(id) ?? false);
-    case "magnet": return fire.items.some(({ from }) => near(from));
+    case "magnet": return fire.items.some(({ from }) => from !== undefined && near(from));
     default: return false;
   }
 }

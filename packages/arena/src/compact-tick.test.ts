@@ -120,7 +120,7 @@ describe("compactTick and expandTick", () => {
     const side = { x: 3, y: 2 };
     const shot = { throwerId: "p0", outcome: "hit", targetId: "p1", distance: 1, hitChance: 100 } as const;
     const fires: NonNullable<PublicTick["fires"]> = [
-      { botId: "p7", kind: "magnet", at, items: [{ kind: "bucket", from: front }] },
+      { botId: "p7", kind: "magnet", at, items: [{ kind: "bucket" }] },
       { botId: "p5", kind: "splash", at, squares: [{ ...front, targetId: "p1", outcome: "hit" }, { ...side, targetId: "p2", outcome: "miss" }] },
       { botId: "p0", kind: "dash", at, path: [front], shot, points: 2 },
       { botId: "p3", kind: "mudBomb", at, center: front, area: [at, front], affected: ["p1"], points: 1 },
@@ -143,6 +143,7 @@ describe("compactTick and expandTick", () => {
     const moveOrder = [...fireOrder, ...order.filter((id) => !fireOrder.includes(id))];
     const wire = compactTick({ ...turn, order: moveOrder, fires, throws: [shot], snapshot: { ...turn.snapshot, bots } }, order);
     expect(wire.ultimates).toEqual([[0, 0, 0, 0], [1, 3, 10, 2], [4, 1, 40, 9], [6, 6, 0, 4]]);
+    expect(wire.magnetFires).toEqual([[7, 2, 2, [], 1]]);
     expect(wire.fires?.[1]).toEqual([0, "dash", 2, 2, [[2, 1]]]);
     const expanded = expandTick(wire, spawn);
     expect(expanded.fires).toEqual(fires);

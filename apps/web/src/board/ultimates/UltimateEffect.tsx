@@ -4,7 +4,7 @@
 
 import type { CSSProperties } from "react";
 import type { PublicBot } from "@game/arena";
-import { ULTIMATE_RULES, directionDegreesFromNorth, type BotId, type ItemKind, type SplashSquare, type UltimateFire } from "@game/engine";
+import { ULTIMATE_RULES, directionDegreesFromNorth, type BotId, type MagnetFire, type SplashSquare, type UltimateFire } from "@game/engine";
 import { CELL, cellCenter, shotShape, type ArenaBounds, type Point } from "../boardHelpers.ts";
 import { JetShape, Puff, Splash } from "../boardShapes.tsx";
 import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "../itemShapes.tsx";
@@ -17,6 +17,9 @@ const WATER = "var(--color-water)";
 const SMOKE = "var(--color-panel)";
 const SMOKE_EDGE = "var(--color-line-strong)";
 const STAR = "M0 -1.1L0.3 -0.3L1.1 0L0.3 0.3L0 1.1L-0.3 0.3L-1.1 0L-0.3 -0.3Z";
+
+export const HELD_ITEM_AT = { x: -3.5, y: -3.3 };
+const waitingItemAt = (index: number): Point => ({ x: -3.7, y: -0.2 + index * 2.8 });
 
 const vars = (values: Record<string, string | number>): CSSProperties => values as CSSProperties;
 const delay = (stepParts: number): string => `calc(var(--step) * ${stepParts})`;
@@ -181,12 +184,20 @@ function MagnetField({ square }: { readonly square: Square }) {
   );
 }
 
-/** Magnet, over the tanks: each item slides to the tank and goes in. */
-function MagnetPull({ square, items }: { readonly square: Square; readonly items: readonly { readonly kind: ItemKind; readonly from: Square }[] }) {
+/** Floor items slide in, and the bucket drops from above because it has no floor square (85-ultimates.md). */
+function MagnetPull({ square, items, waiting }: { readonly square: Square; readonly items: MagnetFire["items"]; readonly waiting: number }) {
   const c = at(square);
   return (
     <g>
       {items.map((item, i) => {
+        if (item.from === undefined) {
+          const hand = waiting === 0 ? HELD_ITEM_AT : waitingItemAt(waiting - 1);
+          return (
+            <g key="new-bucket" data-ultimate-drop={item.kind} transform={`translate(${c.x + hand.x} ${c.y + hand.y})`}>
+              <g className="ue-drop"><ItemShape kind={item.kind} /></g>
+            </g>
+          );
+        }
         const p = at(item.from);
         return (
           <g key={`${item.from.x},${item.from.y}`} data-ultimate-pull={item.kind} transform={`translate(${p.x} ${p.y})`}>
@@ -330,7 +341,7 @@ export function UltimateFireDrawing({ fire, bots, board, layer }: {
           <><AffectedArea kind={fire.kind} area={fire.area} /><Whirlwind square={fire.at} reach={ULTIMATE_RULES.whirlwind.reach} /><CaughtTanks kind={fire.kind} affected={fire.affected} bots={bots} /></>
         ) : null}
         {fire.kind === "magnet" && fire.items.length > 0 ? (
-          floor ? <MagnetField square={fire.at} /> : <MagnetPull square={fire.at} items={fire.items} />
+          floor ? <MagnetField square={fire.at} /> : <MagnetPull square={fire.at} items={fire.items} waiting={source?.itemsWaiting?.length ?? 0} />
         ) : null}
       </g>
       {fire.kind === "dash" && !floor && source !== undefined ? <Ram fire={fire} shooter={source} board={board} /> : null}
@@ -378,11 +389,15 @@ export function UltimateBadges({ bot, pulled }: { readonly bot: PublicBot; reado
       ) : null}
       {waiting === undefined ? null : (
         <g data-ultimate-stack="">
-          {waiting.map((kind, index) => kind === undefined ? null : (
-            <g key={index} className={index >= firstNew ? "ue-held" : undefined} data-waiting-item={kind} transform={`translate(-3.7 ${-0.2 + index * 2.8}) scale(0.56)`}>
-              <HeldBadge kind={kind} />
-            </g>
-          ))}
+          {waiting.map((kind, index) => {
+            if (kind === undefined) return null;
+            const { x, y } = waitingItemAt(index);
+            return (
+              <g key={index} className={index >= firstNew ? "ue-held" : undefined} data-waiting-item={kind} transform={`translate(${x} ${y}) scale(0.56)`}>
+                <HeldBadge kind={kind} />
+              </g>
+            );
+          })}
         </g>
       )}
     </>

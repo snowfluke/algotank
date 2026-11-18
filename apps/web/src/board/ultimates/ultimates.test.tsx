@@ -19,7 +19,7 @@ const MARKS: Readonly<Record<UltimateId, readonly string[]>> = {
   mudBomb: ['data-ultimate-lob=""', 'data-ultimate-area="mudBomb"', 'data-ultimate-caught="a"', 'data-effect="stuck"', '>+3</text>'],
   whirlwind: ['data-ultimate-wind=""', 'data-ultimate-area="whirlwind"', 'data-ultimate-caught="c"', 'data-effect="dizzy"', '>+1</text>'],
   bigUmbrella: ['data-ultimate-active="bigUmbrella"', 'data-ultimate-blocks="3"', 'data-throw="blocked"', 'data-throw="hit"'],
-  magnet: ['data-ultimate-pull="bucket"', 'data-held="bucket"', 'data-ultimate-stack=""', 'data-waiting-item="umbrella"', 'data-waiting-item="pinwheel"'],
+  magnet: ['data-ultimate-pull="umbrella"', 'data-ultimate-pull="pinwheel"', 'data-ultimate-drop="bucket"', 'data-held="umbrella"', 'data-ultimate-stack=""', 'data-waiting-item="pinwheel"', 'data-waiting-item="bucket"'],
 };
 
 function renderBoard({ snapshot, throws, fires }: Pick<PublicTick, "snapshot" | "throws" | "fires">): string {
@@ -32,7 +32,11 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
     expect(html).toContain(`data-ultimate-fire="${id}"`);
     expect(html).toContain("--step:200ms");
     for (const mark of MARKS[id]) expect(html).toContain(mark);
-    if (id === "splash") expect(html.match(/data-ultimate-splash="hit"/g)).toHaveLength(8);
+    if (id === "splash") {
+      expect(html.match(/data-ultimate-splash="hit"/g)).toHaveLength(8);
+      expect(html.match(/>\+2<\/text>/g)).toHaveLength(8);
+    }
+    if (id === "magnet") expect(html).not.toContain('data-ultimate-pull="bucket"');
     // The ram is a contact effect, so the board does not draw its wire throw as a water jet.
     if (id === "dash") expect(html).not.toContain('data-throw="hit"');
   });
@@ -54,6 +58,7 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
       }],
     });
     for (const outcome of ["empty", ...outcomes, "hit"]) expect(html).toContain(`data-ultimate-splash="${outcome}"`);
+    expect(html.match(/>\+2<\/text>/g)).toHaveLength(4);
   });
 
   test("the ready glow follows the ready tank only, and charging tanks stay quiet", () => {

@@ -98,6 +98,21 @@ describe("catalogue scenes follow the arena's rules", () => {
       });
     }
   });
+
+  test("Splash ring empties the source and transfers two points for each of its eight hits", () => {
+    const { steps, keyStep } = ULTIMATE_SCENES.splash;
+    const [source, ...targets] = steps[keyStep]!.snapshot.bots;
+    expect(source).toMatchObject({ id: "you", score: 16, water: 0 });
+    expect(targets.map(({ score }) => score)).toEqual(Array(8).fill(-2));
+    expect(steps[keyStep + 1]!.snapshot.bots[0]?.water).toBe(ruleSet("standard").waterRefillPerTick);
+  });
+
+  test("the Whirlwind scene shows four right turns and clears the effect on the last", () => {
+    const { steps, keyStep } = ULTIMATE_SCENES.whirlwind;
+    const caught = steps.slice(keyStep).map(({ snapshot }) => snapshot.bots.find(({ id }) => id === "c")!);
+    expect(caught.map(({ direction }) => direction)).toEqual(["N", "E", "S", "W", "N"]);
+    expect(caught.map(({ effect }) => effect?.kind === "dizzy" ? effect.spinTurnsLeft : null)).toEqual([4, 3, 2, 1, null]);
+  });
 });
 
 describe("the catalogue's address", () => {

@@ -313,7 +313,8 @@ function resolveUltimate(
       me.ultimateEffect = { kind, freeShots: ULTIMATE_RULES.fullTank.freeShots };
       return { ...fire, kind };
     case "splash": {
-      source.waterChange = "spend";
+      me.water = ULTIMATE_RULES.splash.waterAfter;
+      source.waterChange = "keep";
       return { ...fire, kind, squares: resolveSplash(source, size, occupant, rng) };
     }
     case "mudBomb": {
@@ -336,15 +337,18 @@ function resolveUltimate(
 function resolveMagnet(source: Slot, boardItems: Set<BoardItem>, magnets: ReadonlySet<Slot>): MagnetFire {
   const { place } = source;
   const at = { x: place.x, y: place.y };
-  const items = magnetItems(source, boardItems, magnets);
-  return {
-    botId: place.id, at, kind: "magnet",
-    items: items.map((item) => {
-      boardItems.delete(item);
-      holdItem(place, item.kind);
-      return { kind: item.kind, from: { x: item.x, y: item.y } };
-    }),
-  };
+  const items = magnetItems(source, boardItems, magnets).map((item): MagnetFire["items"][number] => {
+    boardItems.delete(item);
+    holdItem(place, item.kind);
+    return { kind: item.kind, from: { x: item.x, y: item.y } };
+  });
+  // The bucket joins after the floor pulls and goes straight into the hand (85-ultimates.md, owner 2026-11-18).
+  if (magnetSpace(place) > 0) {
+    const kind = ULTIMATE_RULES.magnet.newItem;
+    holdItem(place, kind);
+    items.push({ kind });
+  }
+  return { botId: place.id, at, kind: "magnet", items };
 }
 
 function magnetItems(source: Slot, boardItems: ReadonlySet<BoardItem>, magnets: ReadonlySet<Slot>): BoardItem[] {
@@ -404,9 +408,10 @@ function inflictInArea(
 
 function resolveSplash(source: Slot, size: ArenaSize, occupant: ReadonlyMap<string, Slot>, rng: Rng): SplashSquare[] {
   const me = source.place;
+  const { reach, points } = ULTIMATE_RULES.splash;
   const squares: SplashSquare[] = [];
   for (let eighths = 0; eighths < DIRECTIONS.length; eighths++) {
-    const cell = cellAhead(me, rotate(me.direction, eighths), ULTIMATE_RULES.splash.reach);
+    const cell = cellAhead(me, rotate(me.direction, eighths), reach);
     if (!isInside(size, cell)) continue;
     const target = occupant.get(cellKey(cell));
     if (target === undefined) {
@@ -419,9 +424,9 @@ function resolveSplash(source: Slot, size: ArenaSize, occupant: ReadonlyMap<stri
       continue;
     }
     const hitChance = chanceThroughSmoke(target, SURE_HIT);
-    const impact = hitChance === SURE_HIT ? resolveHit(target, me, POINTS_PER_HIT)
-      : rollImpact(target, me, SURE_HIT, hitChance, POINTS_PER_HIT, rng);
-    if (impact.outcome === "hit") movePoints(source, target, POINTS_PER_HIT);
+    const impact = hitChance === SURE_HIT ? resolveHit(target, me, points)
+      : rollImpact(target, me, SURE_HIT, hitChance, points, rng);
+    if (impact.outcome === "hit") movePoints(source, target, points);
     squares.push({ ...cell, targetId, ...impact });
   }
   return squares;

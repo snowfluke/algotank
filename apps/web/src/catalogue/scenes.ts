@@ -6,7 +6,7 @@
 //
 // Each scene loops. Its steps are turns; ScenePlayer.tsx numbers them, so every loop replays them.
 
-import { ULTIMATE_RULES, itemHandOf, ruleSet, type BoardItem, type BotId, type BotState, type Direction, type ItemKind, type RuleSetId, type Snapshot, type TankEffect, type ThrowEvent, type UltimateEffect, type UltimateFire, type UltimateId, type WaitingItems } from "@game/engine";
+import { POINTS_PER_HIT, ULTIMATE_RULES, itemHandOf, ruleSet, waterAfterTick, type BoardItem, type BotId, type BotState, type Direction, type ItemKind, type RuleSetId, type Snapshot, type TankEffect, type ThrowEvent, type UltimateEffect, type UltimateFire, type UltimateId, type WaitingItems } from "@game/engine";
 
 /** One turn of a scene: the board after it, and the shots of it. */
 export interface SceneStep {
@@ -212,8 +212,10 @@ const RING_TANKS = {
   g: { x: 1, y: 2, dir: "N" },
   h: { x: 2, y: 2, dir: "NW" },
 } as const satisfies Partial<Record<SceneTankId, Pose>>;
-const RING_HITS = Object.entries(RING_TANKS).map(([targetId, { x, y }]) => ({ x, y, targetId, outcome: "hit" as const }));
-const RING_AFTER = Object.fromEntries(Object.entries(RING_TANKS).map(([id, pose]) => [id, { ...pose, score: -1 }]));
+const RING_HITS = (["b", "c", "e", "h", "g", "f", "d", "a"] as const).map((targetId) =>
+  ({ x: RING_TANKS[targetId].x, y: RING_TANKS[targetId].y, targetId, outcome: "hit" as const }));
+const RING_SCORE = RING_HITS.length * ULTIMATE_RULES.splash.points;
+const RING_AFTER = Object.fromEntries(Object.entries(RING_TANKS).map(([id, pose]) => [id, { ...pose, score: -ULTIMATE_RULES.splash.points }]));
 
 const MUD_TARGET = { x: 3, y: 1 };
 const MUD_TANKS: Turn["tanks"] = {
@@ -232,29 +234,30 @@ function mudAfter(turnsLeft: number): Turn["tanks"] {
   };
 }
 
-const WIND_START: Turn["tanks"] = {
+const WIND_START = {
   you: { x: 2, y: 1, dir: "N" },
   a: { x: 0, y: 0, dir: "E" },
   b: { x: 4, y: 1, dir: "W" },
   c: { x: 2, y: 2, dir: "N" },
-};
+} as const satisfies Turn["tanks"];
 function windAfter(turn: number, a: Direction, b: Direction, c: Direction): Turn["tanks"] {
-  const effect = { kind: "dizzy", turnsLeft: 4 - turn, spinTurnsLeft: Math.max(0, 2 - turn) } as const;
+  const { dizzyTurns, spinTurns } = ULTIMATE_RULES.whirlwind;
+  const turnsLeft = dizzyTurns - turn;
+  const caught = turnsLeft === 0 ? {} : { effect: { kind: "dizzy", turnsLeft, spinTurnsLeft: Math.max(0, spinTurns - turn) } as const };
   return {
-    you: { x: 2, y: 1, dir: "N", score: 1 },
-    a: { x: 0, y: 0, dir: a, effect },
-    b: { x: 4, y: 1, dir: b, effect },
-    c: { x: 2, y: 2, dir: c, score: -1, effect },
+    you: { ...WIND_START.you, score: POINTS_PER_HIT },
+    a: { ...WIND_START.a, dir: a, ...caught },
+    b: { ...WIND_START.b, dir: b, ...caught },
+    c: { ...WIND_START.c, dir: c, score: -POINTS_PER_HIT, ...caught },
   };
 }
 
-const MAGNET_ITEMS = [
-  { kind: "bucket", from: { x: 1, y: 0 } },
-  { kind: "umbrella", from: { x: 5, y: 0 } },
+const MAGNET_PULLS = [
+  { kind: "umbrella", from: { x: 1, y: 0 } },
   { kind: "pinwheel", from: { x: 5, y: 2 } },
 ] as const;
-const LEFT_ITEM = { kind: "mudBall", x: 0, y: 2 } as const;
-const MAGNET_HAND = { x: 3, y: 1, dir: "N", item: "bucket", waiting: ["umbrella", "pinwheel"] } as const;
+const MAGNET_BUCKET = { kind: ULTIMATE_RULES.magnet.newItem } as const;
+const MAGNET_HAND = { x: 3, y: 1, dir: "N", item: MAGNET_PULLS[0].kind, waiting: [MAGNET_PULLS[1].kind, MAGNET_BUCKET.kind] } as const;
 
 export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
   dash: scene("standard", 5, 3, [
@@ -279,10 +282,10 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
   splash: scene("standard", 3, 3, [
     { tanks: { you: { x: 1, y: 1, dir: "N" }, ...RING_TANKS } },
     {
-      tanks: { you: { x: 1, y: 1, dir: "N", score: 8, water: 6 }, ...RING_AFTER },
+      tanks: { you: { x: 1, y: 1, dir: "N", score: RING_SCORE, water: ULTIMATE_RULES.splash.waterAfter }, ...RING_AFTER },
       fire: { botId: "you", kind: "splash", at: { x: 1, y: 1 }, squares: RING_HITS },
     },
-    { tanks: { you: { x: 1, y: 1, dir: "N", score: 8, water: 7 }, ...RING_AFTER } },
+    { tanks: { you: { x: 1, y: 1, dir: "N", score: RING_SCORE, water: waterAfterTick(ULTIMATE_RULES.splash.waterAfter, false, ruleSet("standard")) }, ...RING_AFTER } },
   ], 1, "splash"),
   fullTank: scene("standard", 5, 3, [
     { tanks: { you: { x: 0, y: 1, dir: "E", water: 1 }, a: { x: 2, y: 1, dir: "W" } } },
@@ -304,11 +307,12 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: WIND_START },
     {
       tanks: windAfter(0, "E", "W", "N"),
-      fire: { botId: "you", kind: "whirlwind", at: { x: 2, y: 1 }, area: squareArea({ x: 2, y: 1 }, 2, 5, 3), affected: ["a", "b", "c"], points: 1 },
+      fire: { botId: "you", kind: "whirlwind", at: { x: 2, y: 1 }, area: squareArea({ x: 2, y: 1 }, ULTIMATE_RULES.whirlwind.reach, 5, 3), affected: ["a", "b", "c"], points: POINTS_PER_HIT },
     },
     { tanks: windAfter(1, "S", "N", "E") },
     { tanks: windAfter(2, "W", "E", "S") },
-    { tanks: windAfter(3, "W", "E", "S") },
+    { tanks: windAfter(3, "N", "S", "W") },
+    { tanks: windAfter(4, "E", "W", "N") },
   ], 1, "whirlwind"),
   // A shot from the tank's side uses a block. The shot from behind still lands.
   bigUmbrella: scene("standard", 5, 3, [
@@ -321,12 +325,12 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: 3 } }, a: { x: 2, y: 0, dir: "S", water: 7 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 7 } } },
   ], 1, "bigUmbrella"),
   magnet: scene("standard", 7, 3, [
-    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: [...MAGNET_ITEMS.map(({ kind, from }) => ({ kind, ...from })), LEFT_ITEM] },
+    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: MAGNET_PULLS.map(({ kind, from }) => ({ kind, ...from })) },
     {
-      tanks: { you: MAGNET_HAND }, items: [LEFT_ITEM],
-      fire: { botId: "you", kind: "magnet", at: { x: 3, y: 1 }, items: MAGNET_ITEMS },
+      tanks: { you: MAGNET_HAND },
+      fire: { botId: "you", kind: "magnet", at: { x: 3, y: 1 }, items: [...MAGNET_PULLS, MAGNET_BUCKET] },
     },
-    { tanks: { you: MAGNET_HAND }, items: [LEFT_ITEM] },
+    { tanks: { you: MAGNET_HAND } },
   ], 1, "magnet"),
 };
 

@@ -13,6 +13,7 @@
 //   (b) an element scrolls inside itself (scrollable overflow and more content than room);
 //   (c) a visible text or control is cut off by an ancestor that hides overflow, or by the
 //       viewport.
+// The monthly phone tabs also check that every label fits on one line (77-monthly-league.md).
 // The "fallback" size (a phone held sideways) checks only (c) and horizontal overflow, because
 // the page may scroll there. The "sweep" moves the width from 360 to 1280 px at a height of
 // 800 for the simple screens and fails on horizontal overflow.
@@ -1162,8 +1163,8 @@ STATES.push(
       steps: [{ wait: "[data-monthly-page]" }, { click: '[data-camera-switch] label:has(input[value="follow"])' }, { wait: "[data-camera]:not([data-camera=whole])" }],
     }),
   ),
-  // The longest own pane (a place in the month and a full feed), 2026-11-16: on a short phone the feed's
-  // buttons once covered the quit button; the pane has no turn feed since 2026-11-16.
+  // The ranked summary on a short phone still fits the change actions above it and the quit button below it
+  // (77-monthly-league.md, owner 2026-11-18).
   monthlyKit("ranked-mine", "case=ranked&tab=mine&side=mine", { sizes: [...MONTHLY_SIZES, "400x620"] }),
   // The information list and the board legend (84-items.md): both are dialogs that must fit without scrolling.
   monthlyKit("about", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-monthly-about-open]" }, { wait: "dialog[data-monthly-about][open]" }] }),
@@ -1665,6 +1666,11 @@ export function measureInPage({ kind, containedScroll }) {
       if (parentStyle.position === "fixed") break;
     }
     if (srOnly) continue;
+    if (problem === null && viewportWidth >= 360 && hasText && el.parentElement?.matches('[data-bottom-tabs="monthly"] [role="tab"]')) {
+      if (el.scrollWidth > el.clientWidth || box.height > parseFloat(style.lineHeight) + 1) {
+        problem = `${describe(el)} does not fit on one line in the monthly tab bar`;
+      }
+    }
     if (problem === null && box.right > viewportWidth + 1) problem = `${describe(el)} runs past the right edge of the viewport`;
     if (problem === null && kind === "fit" && (visibleBottom > viewportHeight + 1 || visibleTop < -1)) problem = `${describe(el)} is outside the viewport height`;
     if (problem !== null) c.push(problem);

@@ -47,7 +47,7 @@ const render = (p: MonthlyViewProps, language: "en" | "id" = "en") =>
   renderToStaticMarkup(
     <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
       <MonthlyView {...p} />
-      <MonthlyPhoneBar seat={p.seat} onJoin={p.onJoin} onChangeRules={p.onChangeRules} onChangeLook={p.onChangeLook} tab={p.tab} onTab={p.onTab} />
+      <MonthlyPhoneBar seat={p.seat} onJoin={p.onJoin} tab={p.tab} onTab={p.onTab} />
     </I18nProvider>,
   );
 
@@ -57,11 +57,15 @@ describe("the monthly page", () => {
     expect(html).toContain("data-monthly-board");
     expect(html).toContain("05:12:44 left");
     expect(html.match(/data-monthly-join/g)?.length).toBe(1);
+    expect(html).toMatch(/data-monthly-join=""[^>]*>Join the monthly arena<\/button>[\s\S]*data-bottom-tabs="monthly"/);
     const id = render(props(), "id");
     expect(id).toContain("Sisa 05:12:44");
-    expect(id).toContain("Ikut arena bulanan");
-    // A visitor has no "Your tank" tab.
-    expect(html).not.toContain('data-tab="mine"');
+    expect(id.match(/data-monthly-join/g)?.length).toBe(1);
+    expect(id).toMatch(/data-monthly-join=""[^>]*>Ikut arena bulanan<\/button>[\s\S]*data-bottom-tabs="monthly"/);
+    for (const visitor of [html, id]) {
+      expect(Array.from(visitor.matchAll(/data-tab="([^"]+)"/g), ([, tab]) => tab)).toEqual(["arena", "ranking", "activity"]);
+      expect(visitor).not.toMatch(/data-change-(rules|look)/);
+    }
   });
 
   test("an empty league shows the empty board and invites the first tank", () => {
@@ -224,17 +228,34 @@ describe("a tank that quit today", () => {
   });
 });
 
-describe("changing the rules", () => {
-  test("a seated owner sees Change rules and Change look on the arena and ranking tabs; a visitor does not", () => {
-    const seat = fixtureSeat(1);
-    const count = (html: string, hook: string) => html.split(hook).length - 1;
-    for (const tab of ["arena", "ranking"] as const) {
-      const html = render(props({ seat, onJoin: null, tab }, 16));
-      expect([count(html, "data-change-rules"), count(html, "data-change-look")]).toEqual([1, 1]);
-    }
-    expect(render(props({ seat, onJoin: null, tab: "arena" }, 16), "id")).toContain(">Ubah tampilan<");
-    expect(count(render(props({}, 16)), "data-change-look")).toBe(0);
-  });
+describe("the seated player's phone layout", () => {
+  const seat = fixtureSeat(1);
+  const words = {
+    en: { tabs: ["Arena", "Ranking", "Your tank", "Activity"], rules: "Change rules", look: "Change look" },
+    id: { tabs: ["Arena", "Peringkat", "Tank kamu", "Aktivitas"], rules: "Ubah aturan", look: "Ubah tampilan" },
+  } as const;
+
+  for (const language of ["en", "id"] as const) {
+    test(`the bar has only four tabs in ${language} and both change actions are in the tank pane`, () => {
+      const labels = words[language];
+      const bar = renderToStaticMarkup(
+        <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
+          <MonthlyPhoneBar seat={seat} onJoin={null} tab="arena" onTab={() => undefined} />
+        </I18nProvider>,
+      );
+      expect(bar.match(/<button /g)?.length).toBe(4);
+      expect(Array.from(bar.matchAll(/data-tab="([^"]+)"/g), ([, tab]) => tab)).toEqual(["arena", "ranking", "mine", "activity"]);
+      for (const label of labels.tabs) expect(bar).toContain(`>${label}</span>`);
+
+      const html = render(props({ seat, onJoin: null, tab: "mine" }, 16), language);
+      const pane = html.match(/<section data-own-pane=""[\s\S]*?<\/section>/)?.[0] ?? "";
+      expect(pane).toMatch(new RegExp(`data-change-rules=""[^>]*><span[^>]*>${labels.rules}</span>`));
+      expect(pane).toMatch(new RegExp(`data-change-look=""[^>]*><span[^>]*>${labels.look}</span>`));
+      for (const tab of ["arena", "ranking", "activity"] as const) {
+        expect(render(props({ seat, onJoin: null, tab }, 16), language)).not.toMatch(/data-change-(rules|look)/);
+      }
+    });
+  }
 });
 
 describe("the ultimate in the monthly tank step", () => {

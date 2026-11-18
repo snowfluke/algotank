@@ -47,6 +47,7 @@ export interface PrepPanelProps {
   readonly nextRules: NextRules;
   /** True when the arena changes the rules between rounds. */
   readonly showRuleSets: boolean;
+  readonly nowMs?: number | undefined;
   /** The player's look in this arena, for the drawings. Without it (the workshop), the look of "My tank". */
   readonly look?: TankLook;
   /** The chosen tab, held by the host above the part that is mounted again. */
@@ -136,7 +137,7 @@ function PrepBody(props: PrepPanelProps & { readonly draft: StrategyInput; reado
         end={<SaveLine strategy={strategy} compact={props.compactSave} />}
       >
         {tab === "style" ? (
-          <StylePane strategy={draft} look={look} wide={wide} onChange={strategy.setDraft} onSaveNow={() => void strategy.saveDraft()} />
+          <StylePane strategy={draft} look={look} wide={wide} nowMs={props.nowMs} onChange={strategy.setDraft} onSaveNow={() => void strategy.saveDraft()} />
         ) : tab === "rules" ? (
           <RulesPane {...rulesProps} wide={wide} />
         ) : tab === "upgrades" ? (

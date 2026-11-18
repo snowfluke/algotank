@@ -8,6 +8,7 @@ import { ArrowLeft, CircleAlert, CircleCheck, Cog, ListChecks, Play, Scale } fro
 import { useMemo, useRef, useState } from "react";
 import { ACCOUNT_STRATEGY_LIMITS } from "@game/arena";
 import { parseStrategy, ruleSet, RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { guideSignal } from "../guide/guideStore.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { WhenStrategyReady } from "../player/WhenStrategyReady.tsx";
@@ -39,6 +40,7 @@ type Pane = "rules" | "upgrades" | "try";
 export interface WorkshopEditorProps {
   readonly style: MyPlayStyle;
   readonly library: LibrarySnapshot;
+  readonly nowMs?: number;
   onBack(): void;
 }
 
@@ -126,7 +128,7 @@ function RoundRulesStep({ value, onChange, onBack }: { readonly value: RuleSetId
   );
 }
 
-export function WorkshopEditor({ style, library, onBack }: WorkshopEditorProps) {
+export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditorProps) {
   const m = useMessages();
   const w = m.workshop;
   const [pane, setPane] = useState<Pane>("rules");
@@ -152,8 +154,8 @@ export function WorkshopEditor({ style, library, onBack }: WorkshopEditorProps) 
   const issues = parsed.ok ? [] : parsed.issues;
   const rules = ruleSet(ruleSetId);
   const save = workshopSaveView(parsed.ok, library.account, w);
-  // On a phone an open rules step has its own Back, so the name row gives way to it.
-  const stepOpen = pane === "rules" && !width.wide && resolveView(draft, nav).kind !== "list";
+  // The ultimate row gives its height to any open rules step. On a phone the name row gives way too.
+  const stepOpen = pane === "rules" && resolveView(draft, nav).kind !== "list";
   const tabs = [
     { value: "rules" as const, label: w.tabs.rules, icon: <ListChecks aria-hidden size={22} /> },
     { value: "upgrades" as const, label: w.tabs.upgrades, icon: <Cog aria-hidden size={22} /> },
@@ -181,9 +183,9 @@ export function WorkshopEditor({ style, library, onBack }: WorkshopEditorProps) 
       ) : (
         <div ref={width.ref} className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
           {/* One wrapping row: on a laptop the name, the save line and the round rules sit side by side, so the panes keep the height. */}
-          <div className={`min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${stepOpen ? "hidden" : "flex"}`}>
+          <div className={`min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${stepOpen && !width.wide ? "hidden" : "flex"}`}>
             <div className="flex min-w-0 flex-[1_1_20rem] items-start gap-2">
-              <IconButton label={w.back} icon={<ArrowLeft aria-hidden size={22} />} variant="quiet" className="mt-0.5" onClick={onBack} />
+              <IconButton label={w.back} icon={<ArrowLeft aria-hidden size={22} />} variant="quiet" className="mt-0.5" data-focus-key="workshop-editor-back" onClick={onBack} />
               <NameField key={style.id} style={style} />
             </div>
             <p role="status" data-coach="style-saved" className={`flex min-w-0 flex-[1_1_12rem] items-start gap-1.5 text-caption font-semibold ${save.kind === "problem" ? "text-hit" : save.kind === "saved" ? "text-ok" : "text-muted"}`}>
@@ -201,6 +203,12 @@ export function WorkshopEditor({ style, library, onBack }: WorkshopEditorProps) 
             />
             <ChecklistLine compact onOpen={() => setChecklistOpen(true)} />
           </div>
+          {stepOpen ? null : (
+            <div data-workshop-ultimate="" className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3">
+              <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />
+              <p className="min-w-0 text-caption text-muted [overflow-wrap:anywhere]">{w.ultimateFixed}</p>
+            </div>
+          )}
           <div {...tabPanelProps("workshop", pane)} className="flex min-h-0 min-w-0 flex-1 flex-col">
             <WhenStrategyReady strategy={session}>
               {() =>

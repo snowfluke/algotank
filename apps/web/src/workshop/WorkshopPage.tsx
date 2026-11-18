@@ -6,7 +6,8 @@
 // | View      | Shows                                 | Goes to                                         |
 // |-----------|---------------------------------------|-------------------------------------------------|
 // | list      | my play styles, or the empty state    | startFrom (New), edit (Open, a new one), rename |
-// | startFrom | the 8 built-in styles to start from   | edit (the new play style), list (Back)          |
+// | startFrom | the 8 built-in styles or empty       | ultimate (choose a start), list (Back)          |
+// | ultimate  | the new style's ultimate choices    | edit (first save), startFrom (Back)             |
 // | edit      | the editor of one play style          | list (Back)                                     |
 // | rename    | the name field of one play style      | list (Save or Back)                             |
 //
@@ -21,8 +22,9 @@ import { paths } from "../app/route.ts";
 import { useAccount } from "../auth/accountStore.ts";
 import { guideSignal, showAround } from "../guide/guideStore.ts";
 import { Tour } from "../guide/Tour.tsx";
-import { useMessages } from "../i18n/I18nProvider.tsx";
-import { BuiltInStyles } from "../prep/BuiltInStyles.tsx";
+import { useLanguage, useMessages } from "../i18n/I18nProvider.tsx";
+import { BuiltInStyles, styleIndex } from "../prep/BuiltInStyles.tsx";
+import type { PlayStyle } from "../prep/playStyles.ts";
 import { focusLater } from "../prep/rulesNav.ts";
 import { usePaneWidth } from "../prep/usePaneWidth.ts";
 import { AppHeader } from "../ui/AppHeader.tsx";
@@ -33,15 +35,23 @@ import { IconButton } from "../ui/IconButton.tsx";
 import { Pager } from "../ui/Pager.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
 import { useToast } from "../ui/Toast.tsx";
+import { useFitDetail } from "../ui/useFitDetail.ts";
 import { useMyTank } from "../mytank/useMyTank.ts";
 import { MAX_PLAY_STYLES, type MyPlayStyle } from "./library.ts";
+import { ChooseUltimateStep } from "./ChooseUltimateStep.tsx";
+import { newStyleDraft, saveNewStyle } from "./creation.ts";
 import { ChecklistLine, ChecklistSheet, FirstStyleDone } from "./FirstStyleGuide.tsx";
 import { StyleCard } from "./StyleCard.tsx";
 import { playStyleLibrary, useLibrary } from "./useLibrary.ts";
 import { WorkshopEditor } from "./WorkshopEditor.tsx";
 import { freeName } from "./workshopState.ts";
 
-type View = { readonly kind: "list" } | { readonly kind: "startFrom" } | { readonly kind: "edit"; readonly id: string } | { readonly kind: "rename"; readonly id: string };
+type View =
+  | { readonly kind: "list" }
+  | { readonly kind: "startFrom" }
+  | { readonly kind: "ultimate"; readonly preset: PlayStyle | null; readonly draft: ReturnType<typeof newStyleDraft>; readonly problem: string | null }
+  | { readonly kind: "edit"; readonly id: string }
+  | { readonly kind: "rename"; readonly id: string };
 
 function RenameStep({ style, onDone }: { readonly style: MyPlayStyle; onDone(): void }) {
   const m = useMessages();
@@ -124,6 +134,7 @@ function ListHeading({ className }: { readonly className: string }) {
 
 export function WorkshopPage() {
   const m = useMessages();
+  const [language] = useLanguage();
   const w = m.workshop;
   const toast = useToast();
   const myTank = useMyTank().tank;
@@ -147,11 +158,17 @@ export function WorkshopPage() {
   const [startIndex, setStartIndex] = useState(0);
   const width = usePaneWidth<HTMLDivElement>();
   const full = library.styles.length >= MAX_PLAY_STYLES;
+  const listDetail = useFitDetail<HTMLDivElement>(2, `${language}|${full}|${library.account.kind}|${library.keptOnDevice}`);
   const styleOf = (id: string) => library.styles.find((style) => style.id === id);
 
   function backToList(focusKey: string | null): void {
     setView({ kind: "list" });
     focusLater(focusKey);
+  }
+
+  function startStyle(preset: PlayStyle | null): void {
+    if (preset !== null) setStartIndex(styleIndex(preset.id));
+    setView({ kind: "ultimate", preset, draft: newStyleDraft(preset?.strategy ?? null, m.prep.rules.newModeName(1)), problem: null });
   }
 
   if (celebrate !== false) {
@@ -202,7 +219,11 @@ export function WorkshopPage() {
   } else if (view.kind === "startFrom") {
     content = (
       <div data-workshop-start-from="" className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <StepSheet title={w.startFromTitle} onBack={() => backToList("workshop-new")}>
+        <StepSheet
+          title={w.startFromTitle}
+          onBack={() => backToList("workshop-new")}
+          action={<Button variant="secondary" data-focus-key="workshop-empty-start" onClick={() => startStyle(null)}>{w.startEmpty}</Button>}
+        >
           {/* Where the tour's callout goes, because the styles fill the step and leave no room beside them. Empty, it takes no room. */}
           <div data-coach-dock="top" className="shrink-0 empty:hidden" />
           <div data-coach="start-from" className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -213,16 +234,35 @@ export function WorkshopPage() {
               index={startIndex}
               onIndexChange={setStartIndex}
               actionLabel={w.startFrom}
-              onChoose={(style) => {
-                const result = playStyleLibrary.create(freeName(m.vocabulary.playStyles[style.id].name, library.styles), style.strategy);
-                if (!result.ok) return;
-                setView({ kind: "edit", id: result.style.id });
-                guideSignal("styleStarted");
-              }}
+              onChoose={startStyle}
             />
           </div>
         </StepSheet>
       </div>
+    );
+  } else if (view.kind === "ultimate") {
+    content = (
+      <ChooseUltimateStep
+        ultimate={view.draft.ultimate}
+        problem={view.problem}
+        onChoose={(ultimate) => setView({ ...view, draft: { ...view.draft, ultimate }, problem: null })}
+        onBack={() => {
+          setView({ kind: "startFrom" });
+          focusLater(view.preset === null ? "workshop-empty-start" : `style:${view.preset.id}`);
+        }}
+        onSave={() => {
+          const name = view.preset === null ? w.newStyle : m.vocabulary.playStyles[view.preset.id].name;
+          const result = saveNewStyle(playStyleLibrary, name, view.draft);
+          if (!result.ok) {
+            const problem = result.problem === "ultimate" ? w.needUltimate : result.problem === "full" ? w.full(MAX_PLAY_STYLES) : w.nameProblem;
+            setView({ ...view, problem });
+            return;
+          }
+          setView({ kind: "edit", id: result.style.id });
+          focusLater("workshop-editor-back");
+          guideSignal("styleStarted");
+        }}
+      />
     );
   } else if (view.kind === "rename" && styleOf(view.id) !== undefined) {
     const style = styleOf(view.id) as MyPlayStyle;
@@ -239,34 +279,38 @@ export function WorkshopPage() {
     );
   } else {
     content = (
-      <div data-workshop-list="" className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <div ref={listDetail.ref} data-workshop-list="" className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 fit:overflow-hidden">
         <ListHeading className="text-title" />
         <ChecklistLine onOpen={() => setChecklistOpen(true)} />
         <KeptLine />
         {full ? <p className="shrink-0 text-muted">{w.full(MAX_PLAY_STYLES)}</p> : null}
-        <Pager
-          label={w.listLabel}
-          items={library.styles}
-          itemKey={(style) => style.id}
-          ordered={false}
-          renderItem={(style) => (
-            <StyleCard
-              style={style}
-              full={full}
-              onOpen={() => setView({ kind: "edit", id: style.id })}
-              onRename={() => setView({ kind: "rename", id: style.id })}
-              onCopy={() => {
-                const result = playStyleLibrary.create(freeName(style.name, library.styles), style.strategy);
-                if (result.ok) toast.show({ message: w.copied(result.style.name) });
-              }}
-              onDelete={() => {
-                const removed = playStyleLibrary.remove(style.id);
-                if (removed !== null) toast.show({ message: w.removed(removed.name), onUndo: () => playStyleLibrary.restore(removed) });
-                focusLater("workshop-new");
-              }}
-            />
-          )}
-        />
+        {/* Reserve room for one full card and the pager controls so fit-detail sees the shortage before Pager clips. */}
+        <div className={`flex min-w-0 flex-1 flex-col ${listDetail.level === 0 ? "fit:min-h-80" : "min-h-0"}`}>
+          <Pager
+            label={w.listLabel}
+            items={library.styles}
+            itemKey={(style) => style.id}
+            ordered={false}
+            renderItem={(style) => (
+              <StyleCard
+                style={style}
+                full={full}
+                compactUltimate={listDetail.level > 0}
+                onOpen={() => setView({ kind: "edit", id: style.id })}
+                onRename={() => setView({ kind: "rename", id: style.id })}
+                onCopy={() => {
+                  const result = playStyleLibrary.create(freeName(style.name, library.styles), style.strategy);
+                  if (result.ok) toast.show({ message: w.copied(result.style.name) });
+                }}
+                onDelete={() => {
+                  const removed = playStyleLibrary.remove(style.id);
+                  if (removed !== null) toast.show({ message: w.removed(removed.name), onUndo: () => playStyleLibrary.restore(removed) });
+                  focusLater("workshop-new");
+                }}
+              />
+            )}
+          />
+        </div>
       </div>
     );
   }

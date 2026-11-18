@@ -23,6 +23,7 @@ import { TankSheet, type SheetSource, type SheetTank } from "./TankSheet.tsx";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import type { TankInfo } from "../board/props.ts";
 import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
 import { SCREEN_SCALE_STYLE } from "../screen/screenScale.ts";
@@ -329,10 +330,11 @@ function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: num
 }
 
 /** The owner's tank: today, the counted days, the turns, and the way out. */
-function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
+function OwnPane({ seat, league, ranking, now, onLeague, onQuit }: {
   seat: MonthlySeat;
   league: number;
   ranking: LeagueRankingResponse | null;
+  now: number | undefined;
   onLeague(next: number): void;
   onQuit(): void;
 }) {
@@ -369,6 +371,7 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit }: {
       ) : (
         <>
           <div className="flex min-w-0 shrink-0 flex-col gap-1">
+            <UltimateLink ultimate={seat.strategy.ultimate} nowMs={now} />
             {here ? null : (
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 <p className="min-w-0 font-semibold">{t.otherLeague(seat.league)}</p>
@@ -522,7 +525,7 @@ function PresenterLayout(props: MonthlyViewProps) {
             <SegmentedControl legend={t.tabs.label} hideLegend size="sm" value={side} onChange={props.onSide} options={sideOptions} />
           </div>
           {side === "mine" && seat !== null ? (
-            <OwnPane seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />
+            <OwnPane seat={seat} league={league} ranking={props.ranking} now={props.now} onLeague={props.onLeague} onQuit={props.onQuit} />
           ) : side === "activity" ? (
             <ActivityList events={board?.live.league === league ? board.live.activity : []} fixedNow={props.now} />
           ) : (
@@ -607,7 +610,7 @@ function PhoneLayout(props: MonthlyViewProps) {
   const leagueTitle = leagueTitleOf(t, league, leagues);
   let pane: ReactNode;
   if (tab === "mine" && seat !== null) {
-    pane = <OwnPane seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />;
+    pane = <OwnPane seat={seat} league={league} ranking={props.ranking} now={props.now} onLeague={props.onLeague} onQuit={props.onQuit} />;
   } else if (tab === "ranking") {
     pane = (
       <section aria-label={t.ranking.label} className={PANE}>

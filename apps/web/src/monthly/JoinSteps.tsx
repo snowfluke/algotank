@@ -6,7 +6,8 @@
 import { Paintbrush } from "lucide-react";
 import { useMemo, useState } from "react";
 import { FIRST_PUBLISHED_RULES_MONTH, PLAYER_NAME_MAX } from "@game/arena";
-import { DEFAULT_PRESET_ID, PRESETS, type StrategyInput } from "@game/engine";
+import { DEFAULT_PRESET_ID, PRESETS, type StrategyInput, type UltimateId } from "@game/engine";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
 import type { NameDraft } from "../mytank/useNameDraft.ts";
 import { readLastStyle } from "../prep/lastStyle.ts";
@@ -121,15 +122,17 @@ export interface TankStepProps {
   /** The server's answer to the last submit, or null. */
   readonly problem: string | null;
   /** "join" puts the tank in; "changeRules" gives the seated tank new rules (flow.ts, changingRules). */
-  readonly purpose: "join" | "changeRules";
+  readonly purpose: { readonly kind: "join" } | { readonly kind: "changeRules"; readonly ultimate: UltimateId };
+  readonly nowMs?: number;
   onBack(): void;
   onSubmit(): void;
 }
 
-export function TankStep({ strategy, look, playerName, submitting, problem, purpose, onBack, onSubmit }: TankStepProps) {
+export function TankStep({ strategy, look, playerName, submitting, problem, purpose, nowMs, onBack, onSubmit }: TankStepProps) {
   const m = useMessages();
   const f = useFormat();
-  const t = purpose === "join" ? { title: m.monthly.joinSteps.tankTitle, submit: m.monthly.joinSteps.submit } : { title: m.monthly.changeRules.title, submit: m.monthly.changeRules.submit };
+  const t = purpose.kind === "join" ? { title: m.monthly.joinSteps.tankTitle, submit: m.monthly.joinSteps.submit } : { title: m.monthly.changeRules.title, submit: m.monthly.changeRules.submit };
+  const ultimate = purpose.kind === "changeRules" ? purpose.ultimate : strategy.load.kind === "ready" ? strategy.load.draft.ultimate : null;
   const [tab, setTab] = useState<PrepTab>("style");
   return (
     <StepSheet
@@ -147,13 +150,16 @@ export function TankStep({ strategy, look, playerName, submitting, problem, purp
               {problem}
             </p>
           )}
-          <Button size="lg" data-monthly-submit="" loading={submitting} disabled={!strategy.valid || strategy.load.kind !== "ready"} onClick={onSubmit}>
-            {t.submit}
-          </Button>
+          <div data-monthly-tank-action="" className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 fit:flex-nowrap">
+            {ultimate === null ? null : <UltimateLink ultimate={ultimate} nowMs={nowMs} />}
+            <Button size="lg" className="shrink-0" data-monthly-submit="" loading={submitting} disabled={!strategy.valid || strategy.load.kind !== "ready"} onClick={onSubmit}>
+              {t.submit}
+            </Button>
+          </div>
         </div>
       }
     >
-      <PrepPanel strategy={strategy} playerName={playerName} nextRules={{ kind: "none" }} showRuleSets={false} look={look} tab={tab} onTab={setTab} />
+      <PrepPanel strategy={strategy} playerName={playerName} nextRules={{ kind: "none" }} showRuleSets={false} look={look} nowMs={nowMs} tab={tab} onTab={setTab} />
     </StepSheet>
   );
 }

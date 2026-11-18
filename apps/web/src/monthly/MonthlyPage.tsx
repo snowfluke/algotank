@@ -194,10 +194,11 @@ export function MonthlyPage() {
   }
 
   async function submitRules(): Promise<void> {
-    if (strategy.load.kind !== "ready" || flow.kind !== "changingRules" || flow.submitting) return;
+    if (strategy.load.kind !== "ready" || flow.kind !== "changingRules" || flow.submitting || seat === null) return;
     dispatch({ type: "submit" });
     setProblem(null);
-    const result = await putMonthlyStrategy(strategy.load.draft);
+    // The seat keeps the ultimate it joined with, even if the new rules came from another style (85-ultimates.md).
+    const result = await putMonthlyStrategy({ ...strategy.load.draft, ultimate: seat.strategy.ultimate });
     if (result.ok) {
       dispatch({ type: "rulesChanged" });
       setTab("arena");
@@ -280,7 +281,7 @@ export function MonthlyPage() {
     return (
       <AppShell header={<AppHeader title={m.common.pageTitles.monthly} />}>
         <TankStep
-          purpose={joining ? "join" : "changeRules"}
+          purpose={joining || seat === null ? { kind: "join" } : { kind: "changeRules", ultimate: seat.strategy.ultimate }}
           strategy={strategy}
           look={joining ? tank.look : (seat?.look ?? tank.look)}
           playerName={joining ? (fixedName ?? name.field.value) : (seat?.name ?? "")}

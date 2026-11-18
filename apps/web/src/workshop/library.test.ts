@@ -10,6 +10,7 @@ import type { StrategyInput } from "@game/engine";
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { KeyValueStore } from "../session/storage.ts";
 import type { Clock } from "../ui/timer.ts";
+import { newStyleDraft, saveNewStyle } from "./creation.ts";
 import { DAMAGED_KEY, LIBRARY_KEY, PlayStyleLibrary, PUSH_MS, RETRY_FIRST_MS, type AccountApi } from "./library.ts";
 
 const evader = PRESETS.find((p) => p.id === DEFAULT_PRESET_ID)!.strategy as StrategyInput;
@@ -140,21 +141,32 @@ describe("the device copy", () => {
     expect(setUp(memoryAccount(), store).library.getSnapshot().styles).toEqual([made.style]);
   });
 
-  test("an empty style receives one ultimate when created and keeps it on save", () => {
-    const random = spyOn(Math, "random").mockReturnValue(0.25);
-    try {
-      const { library } = setUp();
-      const empty = { modes: [{ ...evader.modes[0]!, rules: [] }], build: evader.build };
-      const created = library.create("Empty", empty);
-      if (!created.ok) throw new Error("not created");
-      expect(parseStrategy(created.style.strategy).ok).toBe(true);
-      expect(created.style.strategy.ultimate).toBe("splash");
-      library.save(created.style.id, evader);
-      expect(library.get(created.style.id)?.strategy).toEqual({ ...evader, ultimate: "splash" });
-      expect(random).toHaveBeenCalledTimes(1);
-    } finally {
-      random.mockRestore();
-    }
+  test("a preset supplies the initial ultimate and the first save takes the player's choice", () => {
+    const { library } = setUp();
+    const draft = newStyleDraft(evader, "Mode 1");
+    expect(draft.ultimate).toBe(evader.ultimate);
+    expect(library.getSnapshot().styles).toEqual([]);
+
+    const defaultStyle = saveNewStyle(library, "Default", draft);
+    expect(defaultStyle.ok && defaultStyle.style.strategy).toEqual(evader);
+    const created = saveNewStyle(library, "Switched", { ...draft, ultimate: "bigUmbrella" });
+    if (!created.ok) throw new Error("not created");
+    expect(created.style.strategy).toEqual({ ...evader, ultimate: "bigUmbrella" });
+    expect(library.save(created.style.id, evader)?.ultimate).toBe("bigUmbrella");
+  });
+
+  test("an empty style requires the player to pick an ultimate before it can be saved", () => {
+    const { library } = setUp();
+    const draft = newStyleDraft(null, "Mode 1");
+    expect(draft.ultimate).toBeNull();
+    expect(saveNewStyle(library, "Empty", draft)).toEqual({ ok: false, problem: "ultimate" });
+    expect(library.getSnapshot().styles).toEqual([]);
+
+    const created = saveNewStyle(library, "Empty", { ...draft, ultimate: "splash" });
+    if (!created.ok) throw new Error("not created");
+    expect(parseStrategy(created.style.strategy).ok).toBe(true);
+    expect(created.style.strategy.ultimate).toBe("splash");
+    expect(created.style.strategy.modes[0]?.rules).toEqual([]);
   });
 
   test("version 1 upgrades preset styles and invalid drafts, and the next save keeps their ultimates", () => {
@@ -338,6 +350,7 @@ describe("after the merge", () => {
     await s.time.advance(RETRY_FIRST_MS * 2);
     expect(s.library.getSnapshot().account).toEqual({ kind: "synced" });
     expect(account.styles.get(made.style.id)?.name).toBe("Still editing");
+    expect(account.styles.get(made.style.id)?.strategy.ultimate).toBe(made.style.strategy.ultimate);
   });
 
   test("a newer copy in the account is not overwritten by a late push: the merge takes it", async () => {

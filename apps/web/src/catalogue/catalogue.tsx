@@ -8,13 +8,13 @@
 
 import type { ReactNode } from "react";
 import { ITEM_KINDS, PICKER_ORDER, PRESETS, RULE_SET_IDS, ULTIMATE_IDS, type ItemKind, type PresetId, type RuleSetId, type UltimateId } from "@game/engine";
-import { ChevronsRight, Cloud, Droplets, GlassWater, Magnet, Tornado, Umbrella, CircleDot } from "lucide-react";
 import { ARENA_GROUNDS, groundMarksPath, marksFilled } from "../board/arenaGround.ts";
 import { ItemShape } from "../board/itemShapes.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { PlayStyleScene } from "../prep/PlayStyleScene.tsx";
 import { plainTankLook } from "../tank/look.ts";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
+import { UltimateIcon } from "./UltimateIcon.tsx";
 
 export const CATALOGUE_SECTIONS = ["playStyles", "items", "conditions", "ultimates"] as const;
 export type CatalogueSection = (typeof CATALOGUE_SECTIONS)[number];
@@ -84,17 +84,6 @@ export interface CatalogueEntry {
 
 const ICON_LOOK = plainTankLook(3);
 
-const ULTIMATE_ICONS: Readonly<Record<UltimateId, ReactNode>> = {
-  dash: <ChevronsRight aria-hidden size={26} strokeWidth={2.5} />,
-  smoke: <Cloud aria-hidden size={26} strokeWidth={2.5} />,
-  splash: <Droplets aria-hidden size={26} strokeWidth={2.5} />,
-  fullTank: <GlassWater aria-hidden size={26} strokeWidth={2.5} />,
-  mudBomb: <CircleDot aria-hidden size={26} strokeWidth={2.5} />,
-  whirlwind: <Tornado aria-hidden size={26} strokeWidth={2.5} />,
-  bigUmbrella: <Umbrella aria-hidden size={26} strokeWidth={2.5} />,
-  magnet: <Magnet aria-hidden size={26} strokeWidth={2.5} />,
-};
-
 function ItemIcon({ kind }: { readonly kind: ItemKind }) {
   return (
     <svg viewBox="-6 -6 12 12" className="block h-full max-h-9 w-auto overflow-visible" aria-hidden="true">
@@ -163,7 +152,7 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
         body: m.catalogue.ultimates[id].body,
         extra: `${m.catalogue.defaultFor(v.playStyles[ULTIMATE_DEFAULT_STYLE[id]].name)}${released ? "" : ` ${m.catalogue.ultimatesNote}`}`,
         soon: !released,
-        icon: <span className="flex size-9 items-center justify-center rounded-[0.5rem] bg-guide-soft text-guide-ink">{ULTIMATE_ICONS[id]}</span>,
+        icon: <span className="flex size-9 items-center justify-center rounded-[0.5rem] bg-guide-soft text-guide-ink"><UltimateIcon ultimate={id} size={26} /></span>,
         preview: { kind: "board", scene: ULTIMATE_SCENES[id] },
       }));
   }

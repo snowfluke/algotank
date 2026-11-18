@@ -11,6 +11,7 @@ import { CircleCheck, Wrench } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { StrategyInput } from "@game/engine";
 import { paths } from "../app/route.ts";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { sameData } from "../editor/compare.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { playSound } from "../sound/player.ts";
@@ -30,6 +31,7 @@ import { currentPlayStyle, traitsOf } from "./playStyles.ts";
 export interface StylePaneProps {
   readonly strategy: StrategyInput;
   readonly look: TankLook;
+  readonly nowMs?: number | undefined;
   readonly wide: boolean;
   onChange(next: StrategyInput): void;
   /** Saves without the usual wait after an edit: choosing a style is one complete action. */
@@ -43,16 +45,19 @@ export function matchingSaved(strategy: StrategyInput, styles: readonly MyPlaySt
   return styles.find((style) => sameData(style.strategy, strategy)) ?? null;
 }
 
-function MineRow({ style, chosen, look, onUse }: { readonly style: MyPlayStyle; readonly chosen: boolean; readonly look: TankLook; onUse(): void }) {
+function MineRow({ style, chosen, look, nowMs, onUse }: { readonly style: MyPlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly nowMs: number | undefined; onUse(): void }) {
   const m = useMessages();
   const s = m.prep.style;
   const loadable = isLoadable(style);
   const traits = loadable ? traitsOf(style.strategy) : [];
   return (
     <div className={`flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] border-2 border-b-4 p-3 ${chosen ? "border-water bg-water-soft" : "border-line bg-panel"}`}>
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-start gap-3">
         <TankBadge look={look} size={32} name={null} />
-        <p className="min-w-0 flex-1 truncate font-display text-lead font-semibold">{style.name}</p>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <p className="truncate font-display text-lead font-semibold">{style.name}</p>
+          <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />
+        </div>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
@@ -73,7 +78,7 @@ function MineRow({ style, chosen, look, onUse }: { readonly style: MyPlayStyle; 
   );
 }
 
-export function StylePane({ strategy, look, wide, onChange, onSaveNow }: StylePaneProps) {
+export function StylePane({ strategy, look, wide, nowMs, onChange, onSaveNow }: StylePaneProps) {
   const m = useMessages();
   const s = m.prep.style;
   const toast = useToast();
@@ -148,6 +153,7 @@ export function StylePane({ strategy, look, wide, onChange, onSaveNow }: StylePa
           chosen={current}
           look={look}
           wide={wide}
+          nowMs={nowMs}
           index={index}
           onIndexChange={setIndex}
           actionLabel={s.use}
@@ -160,7 +166,7 @@ export function StylePane({ strategy, look, wide, onChange, onSaveNow }: StylePa
           itemKey={(style) => style.id}
           ordered={false}
           // Each row compares itself, so a saved copy of a built-in style is marked too.
-          renderItem={(style) => <MineRow style={style} chosen={sameData(style.strategy, strategy)} look={look} onUse={() => apply(style.strategy, style.name, { kind: "mine", id: style.id })} />}
+          renderItem={(style) => <MineRow style={style} chosen={sameData(style.strategy, strategy)} look={look} nowMs={nowMs} onUse={() => apply(style.strategy, style.name, { kind: "mine", id: style.id })} />}
         />
       )}
     </div>

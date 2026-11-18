@@ -169,15 +169,13 @@ export class PlayStyleLibrary {
     return this.snapshot.styles.find((style) => style.id === id);
   }
 
-  create(rawName: string, strategy: StrategyInput | Omit<StrategyInput, "ultimate">): CreateResult {
+  create(rawName: string, strategy: StrategyInput): CreateResult {
     const { styles } = this.snapshot;
     if (styles.length >= MAX_PLAY_STYLES) return { ok: false, problem: "full" };
     const problem = nameProblem(rawName, styles, null);
     const name = cleanStrategyName(rawName);
     if (problem !== null || name === null) return { ok: false, problem: problem ?? "name" };
-    // ponytail: let the player pick an ultimate when they start from empty (85-ultimates.md).
-    const ultimate = "ultimate" in strategy ? strategy.ultimate : assignUltimate(strategy, Math.random);
-    const style: MyPlayStyle = { id: this.newId(), name, strategy: { ...strategy, ultimate }, updatedAt: this.clock.now() };
+    const style: MyPlayStyle = { id: this.newId(), name, strategy: { ...strategy }, updatedAt: this.clock.now() };
     this.change([style, ...styles]);
     return { ok: true, style };
   }

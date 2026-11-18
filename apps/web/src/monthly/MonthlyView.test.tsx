@@ -1,9 +1,13 @@
 /// <reference types="bun" />
 // The page's states as the phone (and a server render) draws them, in both languages.
 import { describe, expect, test } from "bun:test";
+import { ULTIMATES_FROM } from "@game/arena";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
+import type { StrategyHandle } from "../prep/useStrategySession.ts";
+import { ToastProvider } from "../ui/Toast.tsx";
+import { TankStep } from "./JoinSteps.tsx";
 import { FIXTURE_MOVE, fixtureActivity, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureRanking, fixtureSeat, OWN_SEAT } from "./monthlyFixtures.ts";
 import { MonthlyPhoneBar, MonthlyView, type MonthlyViewProps } from "./MonthlyView.tsx";
 import { en } from "./messages.ts";
@@ -117,6 +121,18 @@ describe("the monthly page", () => {
     expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank gets a place after its first full day, from midnight to midnight.");
   });
 
+  test("Your tank shows the seat's own ultimate even when its rules match a different play style", () => {
+    const original = fixtureSeat(1);
+    const seat = { ...original, strategy: { ...original.strategy, ultimate: "bigUmbrella" as const } };
+    const input = props({ seat, onJoin: null, tab: "mine", now: ULTIMATES_FROM - 1 });
+    const html = render(input, "id");
+    expect(html).toMatch(/data-own-pane.*?data-ultimate-link="bigUmbrella" href="\/catalogue\?section=ultimates&amp;card=bigUmbrella"/);
+    expect(html).toContain(">Payung besar<");
+    expect(html).toContain(">Segera hadir<");
+    expect(html).not.toContain(`data-ultimate-link="${original.strategy.ultimate}"`);
+    expect(render({ ...input, now: ULTIMATES_FROM }, "id")).not.toContain(">Segera hadir<");
+  });
+
   test("the help button opens a list that says the tank plays without the page, in both languages", () => {
     const html = render(props());
     expect(html).toContain("data-monthly-about-open");
@@ -218,5 +234,46 @@ describe("changing the rules", () => {
     }
     expect(render(props({ seat, onJoin: null, tab: "arena" }, 16), "id")).toContain(">Ubah tampilan<");
     expect(count(render(props({}, 16)), "data-change-look")).toBe(0);
+  });
+});
+
+describe("the ultimate in the monthly tank step", () => {
+  const noop = () => undefined;
+  const done = async () => undefined;
+  const seat = fixtureSeat(1);
+  const draft = { ...seat.strategy, ultimate: "whirlwind" as const };
+  const strategy: StrategyHandle = {
+    load: { kind: "ready", saved: seat.strategy, draft },
+    save: { kind: "idle" },
+    dirty: true,
+    pending: false,
+    valid: true,
+    setDraft: noop,
+    saveDraft: done,
+    saveStrategy: done,
+    refreshSaved: async () => null,
+    clearSaveError: noop,
+    reload: noop,
+  };
+
+  test("joining shows the ultimate in the draft that will take the seat", () => {
+    const html = renderToStaticMarkup(
+      <ToastProvider>
+        <TankStep strategy={strategy} look={seat.look} playerName={seat.name} submitting={false} problem={null}
+          purpose={{ kind: "join" }} nowMs={ULTIMATES_FROM} onBack={noop} onSubmit={noop} />
+      </ToastProvider>,
+    );
+    expect(html).toMatch(/data-monthly-tank-action[^>]*><a data-ultimate-link="whirlwind" href="\/catalogue\?section=ultimates&amp;card=whirlwind"/);
+    expect(html).not.toContain("Coming soon");
+  });
+
+  test("editing rules shows the seated ultimate alongside the update action", () => {
+    const html = renderToStaticMarkup(
+      <ToastProvider>
+        <TankStep strategy={strategy} look={seat.look} playerName={seat.name} submitting={false} problem={null}
+          purpose={{ kind: "changeRules", ultimate: seat.strategy.ultimate }} nowMs={ULTIMATES_FROM} onBack={noop} onSubmit={noop} />
+      </ToastProvider>,
+    );
+    expect(html.match(/data-monthly-tank-action[^>]*><a data-ultimate-link="([^"]+)"/)?.[1]).toBe(seat.strategy.ultimate);
   });
 });

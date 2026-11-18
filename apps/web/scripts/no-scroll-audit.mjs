@@ -35,7 +35,8 @@
 // carry data-tab="<value>" (ui/Tabs.tsx, ui/BottomTabs.tsx); the other hooks are named in the
 // state table below and listed in docs/specs/revamp/11-foundation-guide.md, section 11.
 // Exempt from (b) and (c): a textarea's own text and Pager's invisible measuring layer.
-// The monthly activity list (86-monthly-activity.md) can scroll vertically within its pane.
+// The monthly activity list (86-monthly-activity.md) and ultimate chooser (85-ultimates.md, D3)
+// can scroll vertically within their panes.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -63,6 +64,10 @@ export const SIZES = [
 export const SWEEP = { from: 360, to: 1280, step: 80, height: 800 };
 
 export const LANGUAGES = ["en", "id"];
+const CONTAINED_SCROLL = "[data-monthly-activity], [data-ultimate-picker]";
+// One second before release, so the extra tag is measured even after the gate goes live.
+const BEFORE_ULTIMATES = Date.parse("2026-11-21T23:59:59+07:00");
+const ULTIMATE_WORKSHOP_SIZES = SIZES.filter((size) => ["app", "owner", "bars"].includes(size.pages)).map((size) => size.name);
 
 /** Sizes a state is checked at. The big screen page is checked from the laptop sizes up, and nothing else at 1920 x 1080. A tour state names its sizes. */
 export function sizesFor(state) {
@@ -631,6 +636,11 @@ export const STATES = [
   { screen: "workshop", state: "start-from-full-list", owner: "S1b", path: () => "/workshop", as: "visitor", seedWorkshop: 3, steps: [{ click: "[data-workshop-new]" }, { wait: "[data-workshop-start-from]" }] },
   { screen: "workshop", state: "list-1-signed-in", owner: "S1b", path: () => "/workshop", as: "creator", seedWorkshop: 1, steps: [{ wait: "[data-workshop-list]" }] },
   { screen: "workshop", state: "start-from", owner: "S1b", path: () => "/workshop", as: "visitor", steps: [{ click: "[data-workshop-new]" }, { wait: "[data-workshop-start-from]" }] },
+  ...[
+    { state: "ultimate-picker", steps: [{ click: "[data-workshop-new]" }, { click: '[data-focus-key="workshop-empty-start"]' }, { wait: "[data-ultimate-picker]" }, { click: "[data-ultimate-save]" }, { wait: '[data-ultimate-save] + [role="alert"]' }] },
+    { state: "card-ultimate", seedWorkshop: 1, steps: [{ wait: "[data-pager-item] [data-ultimate-link]" }] },
+    { state: "editor-ultimate", seedWorkshop: 1, steps: [{ click: "[data-workshop-open]" }, { wait: "[data-workshop-ultimate] [data-ultimate-link]" }] },
+  ].map((state) => ({ screen: "workshop", owner: "D3", path: () => "/workshop", as: "visitor", sizes: ULTIMATE_WORKSHOP_SIZES, fixedTime: BEFORE_ULTIMATES, ...state })),
   ...["upgrades", "rules", "try"].map((pane) => ({
     screen: "workshop",
     state: `editor-${pane}`,
@@ -1126,6 +1136,7 @@ STATES.push(
   monthlyKit("seated-ranking-month", "case=seated&tab=ranking&side=month"),
   monthlyKit("seated-ranking-month-last-page", "case=seated&tab=ranking&side=month", { steps: [{ wait: "[data-monthly-page]" }, { pageToEnd: "[data-monthly-ranking] [data-pager-next]" }] }),
   monthlyKit("seated-mine", "case=seated&tab=mine&side=mine"),
+  monthlyKit("your-tank-ultimate", "case=seated&tab=mine&side=mine", { owner: "D3", fixedTime: BEFORE_ULTIMATES, sizes: [...MONTHLY_SIZES, "400x620"], steps: [{ wait: "[data-own-pane] [data-ultimate-link]" }] }),
   monthlyKit("other-league", "case=other&tab=mine&side=mine"),
   monthlyKit("seated-leagues-2", "case=seated&leagues=2"),
   monthlyKit("other-league-arena", "case=other"),
@@ -1186,7 +1197,7 @@ STATES.push(
     mock: [{ route: "**/api/monthly/me", status: 200, body: { seat: null, name: { name: "Bartholomew Kusu", month: "2026-11", canChange: false }, move: null } }],
     steps: [{ click: "[data-monthly-join]" }, { wait: "[data-name-fixed]" }],
   },
-  { screen: "monthly", state: "join-tank", owner: "M2", path: () => "/monthly", as: "creator", perSize: true, sizes: [...APP_SIZE_NAMES, "1728x1000"], steps: [{ click: "[data-monthly-join]" }, { click: "[data-monthly-next]" }, { wait: "[data-monthly-submit]" }] },
+  { screen: "monthly", state: "join-tank", owner: "M2", path: () => "/monthly", as: "creator", perSize: true, sizes: [...APP_SIZE_NAMES, "1728x1000"], steps: [{ click: "[data-monthly-join]" }, { click: "[data-monthly-next]" }, { wait: "[data-monthly-tank-action] [data-ultimate-link]" }] },
   {
     screen: "monthly",
     state: "join-tank-problem",
@@ -1585,7 +1596,7 @@ async function closeFixtures(base, fixtures) {
 // --- The checks (run inside the page) ----------------------------------------------------
 
 /** Runs in the browser. `kind` is "fit" or "fallback". Returns { a, b, c } lists of problems. */
-export function measureInPage(kind) {
+export function measureInPage({ kind, containedScroll }) {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const doc = document.documentElement;
@@ -1595,7 +1606,6 @@ export function measureInPage(kind) {
     return `${el.tagName.toLowerCase()}${cls ? `.${cls}` : ""}${text ? ` "${text}"` : ""}`;
   };
   const exempt = (el) => el.closest("[data-pager-measure]") !== null;
-  const activityList = "[data-monthly-activity]";
   const a = [];
   if (doc.scrollWidth > viewportWidth + 1) a.push(`document is ${doc.scrollWidth} px wide in a ${viewportWidth} px viewport`);
   if (kind === "fit" && doc.scrollHeight > viewportHeight + 1) a.push(`document is ${doc.scrollHeight} px tall in a ${viewportHeight} px viewport`);
@@ -1607,13 +1617,13 @@ export function measureInPage(kind) {
     const style = getComputedStyle(el);
     if (scrolls(style.overflowX) && el.scrollWidth > el.clientWidth + 1) b.push(`${describe(el)} scrolls sideways (${el.scrollWidth} > ${el.clientWidth})`);
     if (kind === "fit" && scrolls(style.overflowY) && el.scrollHeight > el.clientHeight + 1) {
-      if (!el.matches(activityList)) b.push(`${describe(el)} scrolls (${el.scrollHeight} > ${el.clientHeight})`);
+      if (!el.matches(containedScroll)) b.push(`${describe(el)} scrolls (${el.scrollHeight} > ${el.clientHeight})`);
       else if (style.overscrollBehaviorY !== "contain") b.push(`${describe(el)} lets vertical scrolling reach the page`);
     }
   }
 
   const c = [];
-  const CONTROL = 'a[href], button, input, select, textarea, summary, [role="button"], [role="tab"], [role="switch"], [role="radio"], [role="checkbox"], [role="slider"], [role="option"], [role="combobox"], [data-monthly-activity]';
+  const CONTROL = `a[href], button, input, select, textarea, summary, [role="button"], [role="tab"], [role="switch"], [role="radio"], [role="checkbox"], [role="slider"], [role="option"], [role="combobox"], ${containedScroll}`;
   const hides = (value) => value === "hidden" || value === "clip";
   for (const el of document.body.querySelectorAll("*")) {
     const tag = el.tagName.toLowerCase();
@@ -1627,8 +1637,8 @@ export function measureInPage(kind) {
     const box = el.getBoundingClientRect();
     // Screen-reader-only text is a 1 px box on purpose.
     if (box.width <= 1 || box.height <= 1) continue;
-    // Measure only the visible height of activity rows. Width and the pane's own bounds still have to fit.
-    const scrollPane = el.parentElement?.closest(activityList);
+    // Measure only the visible height of rows in a contained list. The width and the pane itself still have to fit.
+    const scrollPane = el.parentElement?.closest(containedScroll);
     const scrollBox = scrollPane && scrolls(getComputedStyle(scrollPane).overflowY) ? scrollPane.getBoundingClientRect() : null;
     const visibleTop = scrollBox === null ? box.top : Math.min(scrollBox.bottom, Math.max(scrollBox.top, box.top));
     const visibleBottom = scrollBox === null ? box.bottom : Math.min(scrollBox.bottom, Math.max(scrollBox.top, box.bottom));
@@ -1669,7 +1679,7 @@ export function measureInPage(kind) {
  * copies, controls outside the viewport and controls under an open modal dialog are not checked.
  * A tour's callout or pill may cover a control for its step, except one in the bottom bar.
  */
-export function overlapInPage() {
+export function overlapInPage(containedScroll) {
   const describe = (el) => {
     const text = (el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 32);
     const hook = [...el.attributes].map((a) => a.name).find((name) => name.startsWith("data-")) ?? "";
@@ -1687,6 +1697,11 @@ export function overlapInPage() {
     const x = box.left + box.width / 2;
     const y = box.top + box.height / 2;
     if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) continue;
+    const scrollPane = el.parentElement?.closest(containedScroll);
+    if (scrollPane && /^(auto|scroll)$/.test(getComputedStyle(scrollPane).overflowY)) {
+      const pane = scrollPane.getBoundingClientRect();
+      if (y < pane.top || y >= pane.bottom) continue;
+    }
     const hit = document.elementFromPoint(x, y);
     if (hit === null || hit === el || el.contains(hit)) continue;
     const label = hit.closest("label");
@@ -1846,6 +1861,7 @@ async function auditState(browser, base, out, state, fixtures, log) {
     }
     try {
       if (unreachable !== null) throw new Error(unreachable);
+      if (state.fixedTime !== undefined) await page.clock.setFixedTime(state.fixedTime);
       for (const mock of state.mock ?? []) await page.route(mock.route, (route) => route.fulfill(mockAnswer(mock, route)));
       await page.goto(base + state.path(fixtures), { waitUntil: "load" });
       await settle(page);
@@ -1869,8 +1885,8 @@ async function auditState(browser, base, out, state, fixtures, log) {
       await settle(page);
       const shot = join(out, fileName(state, lang, size.name));
       await page.screenshot({ path: shot, fullPage: true });
-      const found = unreachable === null ? await page.evaluate(measureInPage, size.kind) : { a: [], b: [], c: [] };
-      const overlap = unreachable === null && size.kind === "fit" ? await page.evaluate(overlapInPage) : [];
+      const found = unreachable === null ? await page.evaluate(measureInPage, { kind: size.kind, containedScroll: CONTAINED_SCROLL }) : { a: [], b: [], c: [] };
+      const overlap = unreachable === null && size.kind === "fit" ? await page.evaluate(overlapInPage, CONTAINED_SCROLL) : [];
       const tour = unreachable === null && state.tour !== undefined ? await page.evaluate(tourInPage, { expect: state.tour, keepClear: KEEP_CLEAR }) : [];
       const inView = unreachable === null && state.inView !== undefined ? await page.evaluate(inViewInPage, state.inView) : [];
       const failures = [];

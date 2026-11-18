@@ -13,6 +13,7 @@
 import { CircleCheck } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { PresetId } from "@game/engine";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import type { TankLook } from "../tank/look.ts";
 import { Button } from "../ui/Button.tsx";
@@ -25,6 +26,7 @@ export interface BuiltInStylesProps {
   /** The style the tank plays now, or null (own rules, or a start-from picker). */
   readonly chosen: PresetId | null;
   readonly look: TankLook;
+  readonly nowMs?: number | undefined;
   /** Wide panes show the grid; narrow ones the carousel. */
   readonly wide: boolean;
   /** The carousel's position, kept by the screen so a resize or a re-render does not lose it. */
@@ -58,7 +60,7 @@ function CardFace({ style, chosen, look, live }: { readonly style: PlayStyle; re
 }
 
 /** One style with its drawing as large as the slide allows, and the button to choose it. */
-function Slide({ style, chosen, look, onChoose, actionLabel }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; onChoose(): void; readonly actionLabel: string }) {
+function Slide({ style, chosen, look, nowMs, onChoose, actionLabel }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly nowMs?: number | undefined; onChoose(): void; readonly actionLabel: string }) {
   const m = useMessages();
   return (
     <article
@@ -66,23 +68,25 @@ function Slide({ style, chosen, look, onChoose, actionLabel }: { readonly style:
       className={`mx-auto flex min-h-0 w-full max-w-md min-w-0 shrink flex-col gap-2 rounded-[var(--radius-card)] border-2 border-b-4 p-3 ${chosen ? "border-water bg-water-soft" : "border-line bg-panel"}`}
     >
       <CardFace style={style} chosen={chosen} look={look} live />
-      {/* The chosen style needs no button: the mark beside its name says it is the one. */}
-      {chosen ? null : (
-        <div className="shrink-0">
-          <Button onClick={onChoose}>{actionLabel}</Button>
-        </div>
-      )}
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 fit:flex-nowrap">
+        <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />
+        {/* The chosen style needs no button: the mark beside its name says it is the one. */}
+        {chosen ? null : <Button className="max-w-full shrink-0" data-style-choose={style.id} data-focus-key={`style:${style.id}`} onClick={onChoose}>{actionLabel}</Button>}
+      </div>
     </article>
   );
 }
 
-function Grid({ chosen, look, onChoose, onTooShort }: Pick<BuiltInStylesProps, "chosen" | "look" | "onChoose"> & { onTooShort(): void }) {
+function Grid({ chosen, look, nowMs, onChoose, onTooShort }: Pick<BuiltInStylesProps, "chosen" | "look" | "nowMs" | "onChoose"> & { onTooShort(): void }) {
   const [hovered, setHovered] = useState<PresetId | null>(null);
   const grid = useRef<HTMLDivElement | null>(null);
   // A tile that cannot hold its drawing, name and two lines says so, and the screen shows the carousel instead.
   useLayoutEffect(() => {
     const tiles = grid.current?.children ?? [];
-    if ([...tiles].some((tile) => tile.scrollHeight > tile.clientHeight + 1)) onTooShort();
+    if ([...tiles].some((tile) => {
+      const button = tile.firstElementChild;
+      return tile.scrollHeight > tile.clientHeight + 1 || (button !== null && button.scrollHeight > button.clientHeight + 1);
+    })) onTooShort();
   });
   const [focused, setFocused] = useState<PresetId | null>(null);
   const live = movingStyle(hovered, focused, chosen);
@@ -92,20 +96,28 @@ function Grid({ chosen, look, onChoose, onTooShort }: Pick<BuiltInStylesProps, "
       {PLAY_STYLES.map((style) => {
         const isChosen = style.id === chosen;
         return (
-          <button
+          // The catalogue link has its own action and focus stop, beside the style's button.
+          <article
             key={style.id}
-            type="button"
-            aria-pressed={isChosen}
             data-style-tile={style.id}
-            onClick={() => onChoose(style)}
-            onPointerEnter={() => setHovered(style.id)}
-            onPointerLeave={() => setHovered((now) => (now === style.id ? null : now))}
-            onFocus={() => setFocused(style.id)}
-            onBlur={() => setFocused((now) => (now === style.id ? null : now))}
-            className={`press flex min-h-0 min-w-0 flex-col items-stretch gap-1.5 overflow-hidden rounded-[var(--radius-card)] border-2 border-b-4 p-2 text-left ${isChosen ? "border-water bg-water-soft" : "border-line bg-panel [@media(hover:hover)]:hover:border-line-strong"}`}
+            className={`flex min-h-0 min-w-0 flex-col rounded-[var(--radius-card)] border-2 border-b-4 p-2 ${isChosen ? "border-water bg-water-soft" : "border-line bg-panel [@media(hover:hover)]:hover:border-line-strong"}`}
           >
-            <CardFace style={style} chosen={isChosen} look={look} live={live === style.id} />
-          </button>
+            <button
+              type="button"
+              aria-pressed={isChosen}
+              data-style-choose={style.id}
+              data-focus-key={`style:${style.id}`}
+              onClick={() => onChoose(style)}
+              onPointerEnter={() => setHovered(style.id)}
+              onPointerLeave={() => setHovered((now) => (now === style.id ? null : now))}
+              onFocus={() => setFocused(style.id)}
+              onBlur={() => setFocused((now) => (now === style.id ? null : now))}
+              className="press flex min-h-0 min-w-0 shrink flex-col items-stretch gap-1.5 rounded-[var(--radius-control)] text-left"
+            >
+              <CardFace style={style} chosen={isChosen} look={look} live={live === style.id} />
+            </button>
+            <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />
+          </article>
         );
       })}
     </div>
@@ -120,7 +132,7 @@ export function BuiltInStyles(props: BuiltInStylesProps) {
   return (
     <div ref={ref} className="flex min-h-0 min-w-0 flex-1 flex-col">
       {grid ? (
-        <Grid chosen={props.chosen} look={props.look} onChoose={props.onChoose} onTooShort={() => setGridNeeds((need) => Math.max(need, (box?.height ?? 0) + 1))} />
+        <Grid chosen={props.chosen} look={props.look} nowMs={props.nowMs} onChoose={props.onChoose} onTooShort={() => setGridNeeds((need) => Math.max(need, (box?.height ?? 0) + 1))} />
       ) : (
         <StyleCarousel {...props} />
       )}
@@ -128,7 +140,7 @@ export function BuiltInStyles(props: BuiltInStylesProps) {
   );
 }
 
-function StyleCarousel({ chosen, look, index, onIndexChange, onChoose, actionLabel }: BuiltInStylesProps) {
+function StyleCarousel({ chosen, look, nowMs, index, onIndexChange, onChoose, actionLabel }: BuiltInStylesProps) {
   const m = useMessages();
   return (
     // The carousel takes the height its slide needs, so the card hugs its content and the pager sits right under it;
@@ -140,7 +152,7 @@ function StyleCarousel({ chosen, look, index, onIndexChange, onChoose, actionLab
       itemKey={(style) => style.id}
       index={index}
       onIndexChange={onIndexChange}
-      renderItem={(style) => <Slide style={style} chosen={style.id === chosen} look={look} onChoose={() => onChoose(style)} actionLabel={actionLabel} />}
+      renderItem={(style) => <Slide style={style} chosen={style.id === chosen} look={look} nowMs={nowMs} onChoose={() => onChoose(style)} actionLabel={actionLabel} />}
     />
     </div>
   );

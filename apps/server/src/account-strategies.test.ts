@@ -80,6 +80,23 @@ describe("account play style routes", () => {
     expect((await list(t, ana)).strategies.map((s) => s.id)).toEqual([idOf(2)]);
   });
 
+  test("an upsert keeps the id's ultimate, and a new id from a stale bundle gets one", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    const { modes, build, ultimate } = strategy;
+    const legacy = { modes, build };
+    const explicit = { ...strategy, ultimate: "magnet" } as const;
+    expect((await put(t, cookie, idOf(1), { ...body("Mine"), strategy: explicit })).status).toBe(204);
+    const other = PRESETS.find((preset) => preset.id === "random-walker")!.strategy;
+    expect((await put(t, cookie, idOf(1), { ...body("Mine", NOW + 1), strategy: other })).status).toBe(204);
+    expect((await list(t, cookie)).strategies[0]?.strategy).toEqual({ ...other, ultimate: "magnet" });
+
+    expect((await put(t, cookie, idOf(1), { ...body("Mine", NOW + 2), strategy: legacy })).status).toBe(204);
+    expect((await put(t, cookie, idOf(2), { ...body("Old bundle"), strategy: legacy })).status).toBe(204);
+    expect((await put(t, cookie, idOf(3), { ...body("Invalid"), strategy: { ...legacy, ultimate: "fly" } })).status).toBe(400);
+    expect((await list(t, cookie)).strategies.map((s) => s.strategy)).toEqual([explicit, { ...legacy, ultimate }]);
+  });
+
   test("the id, the name, the time and the strategy are checked", async () => {
     const t = start();
     const cookie = await signUp(t);

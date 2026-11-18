@@ -55,7 +55,7 @@ describe("api client", () => {
       };
       return new Response(null, { status: 204 });
     });
-    const strategy = { modes: [], build: {} };
+    const strategy = { modes: [], build: {}, ultimate: "dash" } as const;
     expect(await saveMyStrategy("a 1", "tok", strategy)).toEqual({ ok: true, data: undefined });
     expect(seen).toEqual({ url: "/api/arenas/a%201/players/me/strategy", auth: "Bearer tok", body: strategy });
   });

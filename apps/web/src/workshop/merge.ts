@@ -62,9 +62,11 @@ export function mergePlan(device: readonly MyPlayStyle[], account: readonly MyPl
     const knownAt = memory.known[id];
     const deletedAt = memory.deleted[id];
     if (d !== undefined && a !== undefined) {
-      const winner = d.updatedAt > a.updatedAt ? d : a;
+      const deviceWins = d.updatedAt > a.updatedAt;
+      // The server fixed this id's ultimate, and a v1 device may have assigned a different one.
+      const winner = deviceWins ? { ...d, strategy: { ...d.strategy, ultimate: a.strategy.ultimate } } : a;
       result.push(winner);
-      if (winner === d && d.updatedAt !== a.updatedAt && isValid(d)) replaceUploads.push(d);
+      if (deviceWins && isValid(winner)) replaceUploads.push(winner);
       // The account still has its own copy until an upload succeeds.
       known[id] = a.updatedAt;
     } else if (d !== undefined) {

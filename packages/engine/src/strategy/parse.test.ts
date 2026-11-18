@@ -18,6 +18,7 @@ function strategyWith(overrides: Record<string, unknown> = {}, modeOverrides: Re
   return {
     modes: [{ id: "m1", name: "Main", rules: [validRule], fallback: { action: "goForward", params: {} }, ...modeOverrides }],
     build: { reach: 1, aim: 1, dodge: 1 },
+    ultimate: "dash",
     ...overrides,
   };
 }
@@ -51,6 +52,7 @@ describe("parseStrategy accepts", () => {
     if (!result.ok) return;
     expect(JSON.stringify(result.strategy)).not.toMatch(/extra|secret|note|junk|other/);
     expect(result.strategy).not.toBe(input);
+    expect(result.strategy.ultimate).toBe("dash");
     expect(result.strategy.modes[0]?.rules[0]?.conditions[0]?.params).toEqual({ n: 2 });
   });
 
@@ -61,6 +63,7 @@ describe("parseStrategy accepts", () => {
         { id: "b", name: "B", rules: [], fallback: { action: "throw", params: {} } },
       ],
       build: { reach: 0, aim: 0, dodge: 0 },
+      ultimate: "dash",
     };
     expect(parseStrategy(input).ok).toBe(true);
   });
@@ -76,6 +79,11 @@ describe("parseStrategy rejects, with a message", () => {
     const errors = errorsOf(input);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain("must be an object");
+  });
+
+  test("a missing ultimate is the only issue in an otherwise valid strategy", () => {
+    const { ultimate: _ultimate, ...legacy } = strategyWith();
+    expect(issuesOf(legacy)).toEqual([{ path: ["ultimate"], code: "unknownUltimate", params: {} }]);
   });
 
   test("an unknown condition id", () => {
@@ -187,6 +195,7 @@ describe("parseStrategy rejects, with a message", () => {
     const errors = errorsOf({
       modes: [{ id: "m", name: "", rules: [{ ...validRule, chance: 0, switchToMode: "ghost" }], fallback: null }],
       build: { reach: 9, aim: 0, dodge: 0 },
+      ultimate: "dash",
     });
     expect(errors.length).toBeGreaterThanOrEqual(5);
   });
@@ -243,6 +252,7 @@ const CASES: Record<StrategyIssueCode, { readonly input: unknown; readonly path:
     path: [...CONDITION, "condition"],
     params: {},
   },
+  unknownUltimate: { input: strategyWith({ ultimate: "fly" }), path: ["ultimate"], params: {} },
   unknownAction: { input: ruleWith({ action: { action: "fly", params: {} } }), path: [...RULE, "action", "action"], params: {} },
   stepCount: { input: ruleWith({ action: { steps: Array(5).fill(STEP) } }), path: [...RULE, "action", "steps"], params: { min: 2, max: 4, actual: 5 } },
   notAStep: {
@@ -342,6 +352,7 @@ describe("parseStrategy issues", () => {
 
   test("issues come in the same order as the sentences, one for each", () => {
     const result = parseStrategy({
+      ultimate: "dash",
       modes: [{ id: "m", name: "", rules: [{ ...validRule, chance: 0, switchToMode: "ghost" }], fallback: null }],
       build: { reach: 9, aim: 0, dodge: 0 },
     });

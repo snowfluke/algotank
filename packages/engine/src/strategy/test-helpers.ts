@@ -130,7 +130,7 @@ export function mode(id: string, rules: readonly Rule[], fallback: ActionRef): M
 
 /** Runs the input through parseStrategy and fails the test when it is rejected. */
 export function strategyOf(modes: readonly Mode[], build: Record<string, number> = ZERO_BUILD): Strategy {
-  const result = parseStrategy({ modes, build });
+  const result = parseStrategy({ modes, build, ultimate: "dash" });
   if (!result.ok) throw new Error(`test strategy is invalid:\n${result.errors.join("\n")}`);
   return result.strategy;
 }

@@ -4,9 +4,7 @@
 // never words a rule differently from the game. Only the ultimates, which the game does not have
 // yet (owner, 2026-11-17: "coming soon"), are worded here.
 
-/** The ultimates, in the order of the catalogue. Each is the default of one play style (catalogue.ts). */
-export const ULTIMATE_IDS = ["dash", "smoke", "splash", "fullTank", "mudBomb", "whirlwind", "bigUmbrella", "magnet"] as const;
-export type UltimateId = (typeof ULTIMATE_IDS)[number];
+import type { UltimateId } from "@game/engine";
 
 type UltimateText = { readonly name: string; readonly body: string };
 
@@ -35,7 +33,7 @@ export const en = {
   /** Under reduced motion the scene does not play by itself. */
   nextStep: "Next step",
   ultimates: {
-    dash: { name: "Dash", body: "The tank drives up to 3 squares in a straight line in one turn, and no shot can hit it in that turn." },
+    dash: { name: "Dash", body: "The tank drives up to 3 squares straight ahead in one turn, and no shot can hit it on that turn." },
     smoke: { name: "Smoke screen", body: "For 10 turns, a shot at this tank hits only half as often." },
     splash: { name: "Splash ring", body: "The tank shoots all 8 squares around it, and its water runs out. The square in front is always hit, and each other square 1 time in 3." },
     fullTank: { name: "Full tank", body: "The water fills to the top, and the next 3 shots use no water." },

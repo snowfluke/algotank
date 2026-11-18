@@ -23,7 +23,7 @@ describe("play styles", () => {
     expect(PLAY_STYLES).toHaveLength(8);
     const chaser = PLAY_STYLES.find((style) => style.id === "leader-chaser")!;
     expect(traitsOf(chaser.strategy)).toContain("huntsRicher");
-    expect(traitsOf({ build: {}, modes: [] })).toEqual([]);
+    expect(traitsOf({ build: {}, modes: [], ultimate: "dash" })).toEqual([]);
   });
 
   test("a preset is recognised, and a hand edit is not", () => {
@@ -143,7 +143,7 @@ describe("issues", () => {
     });
     if (result.ok) throw new Error("expected problems");
     const places = result.issues.map((issue: StrategyIssue) => issuePlace(issue).kind);
-    expect(places).toEqual(["mode", "rule", "rule", "fallback", "upgrades"]);
+    expect(places).toEqual(["mode", "rule", "rule", "fallback", "upgrades", "strategy"]);
     for (const issue of result.issues) {
       for (const text of [en, id]) {
         const sentence = issueSentence(text, issue);

@@ -36,6 +36,12 @@ export type { RoundRules, RuleSetId } from "./combat/rule-sets.ts";
 // items/ owns the items on the board: when they appear, who takes them, what they do.
 export { ITEM_RULES, itemCap } from "./items/items.ts";
 
+// ultimates/ owns the ids carried by strategies and the assignment for older strategies.
+export { ULTIMATE_IDS, isUltimateId } from "./ultimates/ultimates.ts";
+export type { UltimateId } from "./ultimates/ultimates.ts";
+export { assignUltimate, matchUltimate } from "./ultimates/assign.ts";
+export { hasStrategyBody, sameData } from "./strategy/compare.ts";
+
 // strategy/ owns what a player can configure: the vocabulary tables, the
 // validator, the presets, and the function that picks a bot's move.
 export { CONDITIONS, TARGET_SELECTORS, ACTIONS, CONDITION_IDS, TARGET_IDS, ACTION_IDS } from "./strategy/vocabulary.ts";

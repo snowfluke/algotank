@@ -4,7 +4,7 @@
 // keeps the same slot. Each function takes the store, so tests use a plain object.
 
 import type { ArenaId, PlayerId } from "@game/arena";
-import type { StrategyInput } from "@game/engine";
+import { assignUltimate, hasStrategyBody, isUltimateId, type StrategyInput } from "@game/engine";
 
 export interface KeyValueStore {
   getItem(key: string): string | null;
@@ -106,10 +106,10 @@ export function parseStrategyDraft(raw: string | null): StrategyInput | null {
   } catch {
     return null;
   }
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const { modes, build } = value as Record<string, unknown>;
-  if (!Array.isArray(modes) || typeof build !== "object" || build === null || Array.isArray(build)) return null;
-  return value as StrategyInput;
+  if (!hasStrategyBody(value)) return null;
+  // Drafts kept before 85-ultimates.md still have rules the player has not sent.
+  if (!("ultimate" in value)) return { ...value, ultimate: assignUltimate(value, Math.random) };
+  return isUltimateId(value.ultimate) ? { ...value, ultimate: value.ultimate } : null;
 }
 
 export const readStrategyDraft = (store: KeyValueStore | null, arenaId: ArenaId): StrategyInput | null =>

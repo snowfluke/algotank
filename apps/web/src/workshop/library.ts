@@ -25,7 +25,7 @@
 // | any                | connect(null), 401          | deviceOnly                        |
 
 import { ACCOUNT_STRATEGY_LIMITS, cleanStrategyName, type AccountStrategiesResponse } from "@game/arena";
-import { parseStrategy } from "@game/engine";
+import { assignUltimate, hasStrategyBody, isUltimateId, parseStrategy } from "@game/engine";
 import type { StrategyInput } from "@game/engine";
 import type { ApiResult } from "../api/client.ts";
 import { sameData } from "../editor/compare.ts";
@@ -46,7 +46,7 @@ export const RETRY_MAX_MS = 30000;
 
 /** The stored form in localStorage under LIBRARY_KEY. */
 export interface StoredLibrary {
-  readonly version: 1;
+  readonly version: 2;
   readonly styles: readonly MyPlayStyle[];
   /** What the last signed-in account held, for the merge. Null before the first sign-in on this device. */
   readonly sync: SyncMemory | null;
@@ -86,11 +86,21 @@ export function isLoadable(style: Pick<MyPlayStyle, "strategy">): boolean {
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-// Shallow on the strategy, like a strategy draft: the editor reports every problem inside it.
-function isStoredStyle(v: unknown): v is MyPlayStyle {
-  if (!isRecord(v) || typeof v["id"] !== "string" || typeof v["name"] !== "string" || typeof v["updatedAt"] !== "number") return false;
-  const strategy = v["strategy"];
-  return isRecord(strategy) && Array.isArray(strategy["modes"]) && isRecord(strategy["build"]);
+type StyleWithoutUltimate = Omit<MyPlayStyle, "strategy"> & { readonly strategy: Omit<StrategyInput, "ultimate"> };
+
+function hasStoredStyleBody(v: unknown): v is StyleWithoutUltimate {
+  return isRecord(v) && typeof v["id"] === "string" && typeof v["name"] === "string" &&
+    typeof v["updatedAt"] === "number" && hasStrategyBody(v["strategy"]);
+}
+
+function isStoredStyle(style: StyleWithoutUltimate): style is MyPlayStyle {
+  return "ultimate" in style.strategy && isUltimateId(style.strategy.ultimate);
+}
+
+/** Keep old drafts, including ones with rule problems that the workshop can fix (85-ultimates.md). */
+function upgradeLibraryStyle(style: StyleWithoutUltimate): MyPlayStyle {
+  if (isStoredStyle(style)) return style;
+  return { ...style, strategy: { ...style.strategy, ultimate: assignUltimate(style.strategy, Math.random) } };
 }
 
 function isMemory(v: unknown): v is SyncMemory {
@@ -98,7 +108,7 @@ function isMemory(v: unknown): v is SyncMemory {
   return isRecord(v) && typeof v["accountId"] === "string" && numbers(v["known"]) && numbers(v["deleted"]);
 }
 
-const EMPTY: StoredLibrary = { version: 1, styles: [], sync: null };
+const EMPTY: StoredLibrary = { version: 2, styles: [], sync: null };
 
 /** The stored library, or null when the text is there but cannot be read (it is then kept aside, not overwritten). */
 function parseStoredLibrary(raw: string | null): StoredLibrary | null {
@@ -109,10 +119,12 @@ function parseStoredLibrary(raw: string | null): StoredLibrary | null {
   } catch {
     return null;
   }
-  if (!isRecord(value) || value["version"] !== 1 || !Array.isArray(value["styles"]) || !value["styles"].every(isStoredStyle)) return null;
-  const sync = value["sync"];
-  if (sync !== null && !isMemory(sync)) return null;
-  return { version: 1, styles: value["styles"], sync };
+  if (!isRecord(value)) return null;
+  const { version, styles, sync } = value;
+  if (!Array.isArray(styles) || !styles.every(hasStoredStyleBody) || (sync !== null && !isMemory(sync))) return null;
+  if (version === 1) return { version: 2, styles: styles.map(upgradeLibraryStyle), sync };
+  if (version === 2 && styles.every(isStoredStyle)) return { version: 2, styles, sync };
+  return null;
 }
 
 /** The problem with a name, or null. `exceptId` is the style being renamed. */
@@ -157,22 +169,27 @@ export class PlayStyleLibrary {
     return this.snapshot.styles.find((style) => style.id === id);
   }
 
-  create(rawName: string, strategy: StrategyInput): CreateResult {
+  create(rawName: string, strategy: StrategyInput | Omit<StrategyInput, "ultimate">): CreateResult {
     const { styles } = this.snapshot;
     if (styles.length >= MAX_PLAY_STYLES) return { ok: false, problem: "full" };
     const problem = nameProblem(rawName, styles, null);
     const name = cleanStrategyName(rawName);
     if (problem !== null || name === null) return { ok: false, problem: problem ?? "name" };
-    const style: MyPlayStyle = { id: this.newId(), name, strategy, updatedAt: this.clock.now() };
+    // ponytail: let the player pick an ultimate when they start from empty (85-ultimates.md).
+    const ultimate = "ultimate" in strategy ? strategy.ultimate : assignUltimate(strategy, Math.random);
+    const style: MyPlayStyle = { id: this.newId(), name, strategy: { ...strategy, ultimate }, updatedAt: this.clock.now() };
     this.change([style, ...styles]);
     return { ok: true, style };
   }
 
   /** Keeps any draft, one with a problem too: the device copy never loses an edit. */
-  save(id: string, strategy: StrategyInput): void {
+  save(id: string, input: StrategyInput): StrategyInput | undefined {
     const style = this.get(id);
-    if (style === undefined || sameData(style.strategy, strategy)) return;
+    if (style === undefined) return undefined;
+    const strategy = { ...input, ultimate: style.strategy.ultimate };
+    if (sameData(style.strategy, strategy)) return style.strategy;
     this.replace({ ...style, strategy, updatedAt: this.nextTime(style) });
+    return strategy;
   }
 
   rename(id: string, rawName: string): RenameResult {
@@ -270,7 +287,7 @@ export class PlayStyleLibrary {
 
   private write(): void {
     if (this.store === null) return;
-    const stored: StoredLibrary = { version: 1, styles: this.snapshot.styles, sync: this.memory };
+    const stored: StoredLibrary = { version: 2, styles: this.snapshot.styles, sync: this.memory };
     try {
       this.store.setItem(LIBRARY_KEY, JSON.stringify(stored));
     } catch {

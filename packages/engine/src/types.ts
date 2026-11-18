@@ -17,6 +17,7 @@
 //
 // The rules of play for the eight directions are a table in directions.ts.
 
+import type { UltimateId } from "./ultimates/ultimates.ts";
 import type { RuleSetId } from "./combat/rule-sets.ts";
 
 /** The eight facings, clockwise from north. Each is 45 degrees from the next. directions.ts holds the geometry. */
@@ -223,6 +224,7 @@ export interface StrategyInput {
   /** At least one mode. The first mode is the one a bot starts each round in. */
   readonly modes: readonly Mode[];
   readonly build: Build;
+  readonly ultimate: UltimateId;
 }
 
 declare const validStrategy: unique symbol;

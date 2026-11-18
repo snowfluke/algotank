@@ -14,9 +14,10 @@
 // again. The day reads each seat's rules from league_seat at its start (league-store.ts).
 
 import { Database } from "bun:sqlite";
-import { PRESETS, parseStrategy, type Strategy, type StrategyInput } from "@game/engine";
+import { PRESETS, parseStrategy, type Strategy } from "@game/engine";
 import { DEFAULT_DATA_DIR } from "../src/config.ts";
 import { DATABASE_FILE } from "../src/db/open.ts";
+import { assignMissingUltimate } from "../src/ultimates/strategy.ts";
 import BEFORE_RETUNE from "./presets-before-2026-11-16.json";
 import BEFORE_DRY_SPELL from "./presets-before-2026-11-16-dry-spell.json";
 import BEFORE_GRAB from "./presets-before-2026-11-16-grab.json";
@@ -39,10 +40,13 @@ function canonical(value: unknown): string {
 }
 
 function parsed(input: unknown, what: string): Strategy {
-  const result = parseStrategy(input as StrategyInput);
+  const result = parseStrategy(assignMissingUltimate(input));
   if (!result.ok) throw new Error(`${what} is not a valid strategy: ${result.errors.join("; ")}`);
   return result.strategy;
 }
+
+// A seat's ultimate stays fixed when a retune updates its rules (85-ultimates.md).
+const rulesText = ({ modes, build }: Strategy): string => canonical({ modes, build });
 
 /** Old preset text -> preset id, for the presets whose rules changed. */
 const oldPresets = new Map<string, string>();
@@ -50,8 +54,8 @@ for (const snapshot of [BEFORE_RETUNE, BEFORE_DRY_SPELL, BEFORE_GRAB]) {
   for (const preset of PRESETS) {
     const before = (snapshot as Record<string, unknown>)[preset.id];
     if (before === undefined) continue;
-    const oldText = canonical(parsed(before, `The old preset ${preset.id}`));
-    if (oldText !== canonical(preset.strategy)) oldPresets.set(oldText, preset.id);
+    const oldText = rulesText(parsed(before, `The old preset ${preset.id}`));
+    if (oldText !== rulesText(preset.strategy)) oldPresets.set(oldText, preset.id);
   }
 }
 
@@ -59,12 +63,13 @@ const db = new Database(`${dataDir}/${DATABASE_FILE}`, { readwrite: true, create
 db.exec("PRAGMA busy_timeout = 5000");
 const seats = db.query<{ seat_id: string; name: string; strategy_json: string }, []>("SELECT seat_id, name, strategy_json FROM league_seat ORDER BY seat_order").all();
 const updates = seats.flatMap((seat) => {
-  const id = oldPresets.get(canonical(parsed(JSON.parse(seat.strategy_json), `The rules of ${seat.name}`)));
+  const saved = parsed(JSON.parse(seat.strategy_json), `The rules of ${seat.name}`);
+  const id = oldPresets.get(rulesText(saved));
   const preset = id === undefined ? undefined : PRESETS.find((p) => p.id === id);
-  return preset === undefined ? [] : [{ seat, presetId: preset.id, strategy: preset.strategy }];
+  return preset === undefined ? [] : [{ seat, presetId: preset.id, strategy: { ...preset.strategy, ultimate: saved.ultimate } }];
 });
-const currentTexts = new Set(PRESETS.map((preset) => canonical(preset.strategy)));
-const onCurrent = seats.filter((seat) => currentTexts.has(canonical(parsed(JSON.parse(seat.strategy_json), `The rules of ${seat.name}`)))).length;
+const currentTexts = new Set(PRESETS.map((preset) => rulesText(preset.strategy)));
+const onCurrent = seats.filter((seat) => currentTexts.has(rulesText(parsed(JSON.parse(seat.strategy_json), `The rules of ${seat.name}`)))).length;
 console.log(`Seated tanks: ${seats.length}: ${updates.length} on an old preset that changed, ${onCurrent} on a preset of now, ${seats.length - updates.length - onCurrent} with their own rules.`);
 console.log(`Playing an old preset that changed: ${updates.map((u) => `${u.seat.name} (${u.presetId})`).join(", ") || "none"}.`);
 

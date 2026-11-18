@@ -38,6 +38,7 @@ import {
 } from "@game/arena";
 import { DEFAULT_PRESET_ID, parseStrategy, PRESETS, type Strategy } from "@game/engine";
 import { closeArena } from "./arena-lifetime.ts";
+import { assignMissingUltimate } from "./ultimates/strategy.ts";
 import { removePlayerChat, type ChatLimits, type ChatStore } from "./chat.ts";
 import type { Auth } from "./auth/index.ts";
 import type { SlidingWindowLimit } from "./rate-limit.ts";
@@ -132,9 +133,9 @@ function settingsEvent(body: unknown): Extract<ArenaEvent, { kind: "setBotFill" 
   throw new HttpError(400, "Send one setting: botFill as true or false, or tankCount as a whole number.");
 }
 
-/** The one place a strategy document becomes a Strategy at the HTTP boundary. */
-async function readStrategy(req: Request): Promise<Strategy> {
-  const parsed = parseStrategy(await readJson(req));
+/** Each room submission supplies its own ultimate, including a legacy submission (85-ultimates.md). */
+async function readSubmittedStrategy(req: Request): Promise<Strategy> {
+  const parsed = parseStrategy(assignMissingUltimate(await readJson(req)));
   if (!parsed.ok) throw new HttpError(400, "The strategy has problems.", { details: parsed.errors });
   return parsed.strategy;
 }
@@ -514,7 +515,7 @@ export function createRouter(deps: RouteDeps): Router {
   router.add("PUT", "/api/arenas/:id/players/me/strategy", async (ctx) => {
     const record = arenaOf(deps, ctx);
     const playerId = requirePlayer(record, ctx);
-    const strategy = await readStrategy(ctx.req);
+    const strategy = await readSubmittedStrategy(ctx.req);
     const saved = record.arena.players.find((p) => p.id === playerId)?.strategy ?? null;
 
     // No stream message: strategies are private, so the public arena does not change.

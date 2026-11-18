@@ -1217,7 +1217,7 @@ function workshopSeedScript(count, brokenIndex = 2) {
       updatedAt: base - i * 3_600_000,
     };
   });
-  return { key: "algotank:workshop:play-styles", value: JSON.stringify({ version: 1, styles, sync: null }) };
+  return { key: "algotank:workshop:play-styles", value: JSON.stringify({ version: 2, styles, sync: null }) };
 }
 
 // --- HTTP set-up ------------------------------------------------------------------------

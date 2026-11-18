@@ -72,6 +72,7 @@ function demoStrategy(order: DemoOrder): Strategy {
   const parsed = parseStrategy({
     modes: [{ id: "main", name: "Main", rules: order.map((key) => DEMO_RULES[key]), fallback: DEMO_FALLBACK }],
     build: DEMO_BUILD,
+    ultimate: "dash",
   });
   if (!parsed.ok) throw new Error(`The demo strategy is not valid: ${parsed.errors.join(" ")}`);
   return parsed.strategy;

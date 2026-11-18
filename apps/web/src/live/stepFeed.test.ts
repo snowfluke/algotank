@@ -10,6 +10,7 @@ import { en as vocabularyEn, id as vocabularyId } from "../vocabulary/messages.t
 import { en as liveEn, id as liveId } from "./messages.ts";
 
 const strategy: StrategyInput = {
+  ultimate: "dash",
   build: {},
   modes: [
     {

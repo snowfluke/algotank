@@ -1,12 +1,18 @@
 import { existsSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
-import { RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId, type Standing, type Strategy } from "@game/engine";
+import { parseStrategy, RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId, type Standing, type Strategy } from "@game/engine";
 import { applyEvent, botFillSizeOf, botsToAddAtStart, createArena, finalPlaceOf, isBanned, isFinalRound, maxPlayersOf, parseArenaSettings, seatsOf, survivorCount, tankCountRange, toPublicArena } from "./arena.ts";
 import { ARENA_KINDS, FLAG_COUNTRIES, isPublicKind, PUBLIC_KINDS, parsePlayerName, parseTankLook, plainTankLook, type Arena, type ArenaError, type ArenaEvent, type ArenaKind, type ArenaSettings, type RuleSetMode, type TankLook } from "./types.ts";
 
-// Placeholder: real strategies come from parseStrategy in @game/engine. The
-// reducer never looks inside a strategy, so an empty object cast is enough.
-const strategy = (label = "s"): Strategy => ({ label }) as unknown as Strategy;
+function strategy(label = "s"): Strategy {
+  const parsed = parseStrategy({
+    modes: [{ id: "main", name: label, rules: [], fallback: { action: "throw", params: {} } }],
+    build: { reach: 0, aim: 0, dodge: 0 },
+    ultimate: "dash",
+  });
+  if (!parsed.ok) throw new Error(parsed.errors.join(" "));
+  return parsed.strategy;
+}
 
 // A presenter arena holds the most players (512), so the knockout tests below fit in it.
 const SETTINGS: ArenaSettings = {

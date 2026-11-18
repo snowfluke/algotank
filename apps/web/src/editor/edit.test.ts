@@ -332,7 +332,7 @@ describe("steps in order", () => {
     chance: 100,
     switchToMode: null,
   };
-  const valid = (rule: Rule) => assertValid({ modes: [{ id: "m", name: "Main", rules: [rule], fallback: { action: "throw", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
+  const valid = (rule: Rule) => assertValid({ ultimate: "dash", modes: [{ id: "m", name: "Main", rules: [rule], fallback: { action: "throw", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
 
   test("switching to steps keeps a step action as step 1 and gives the fewest steps a sequence has", () => {
     const steps = toSteps(base);

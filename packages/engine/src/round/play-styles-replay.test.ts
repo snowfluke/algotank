@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { RULE_SET_IDS, createRound, parseStrategy, standings, stepRound } from "../index.ts";
-import type { RuleSetId, StrategyInput } from "../index.ts";
+import type { RuleSetId } from "../index.ts";
 import RECORDED_STRATEGIES from "./play-styles-replay.strategies.json";
 import { RECORDED_STYLES, canonical } from "../../scripts/large-round.ts";
 
@@ -59,7 +59,7 @@ const RECORDED = [
 // The play styles as they were at the recording (the presets were retuned on 2026-11-16), so this
 // test checks the turn loop and not the presets.
 const recordedPlayers = RECORDED_STYLES.map((id) => {
-  const parsed = parseStrategy(RECORDED_STRATEGIES[id] as StrategyInput);
+  const parsed = parseStrategy(RECORDED_STRATEGIES[id]);
   if (!parsed.ok) throw new Error(`the recorded play style ${id} is not a valid strategy: ${parsed.errors.join("; ")}`);
   return { id, strategy: parsed.strategy };
 });

@@ -16,6 +16,7 @@ const rule = (action: string) => ({ id: action, match: "all" as const, condition
 
 /** The player's strategy: one rule per action the turns below name, each rule with the action's id as its own. */
 const strategy: StrategyInput = {
+  ultimate: "dash",
   build: {},
   modes: [{ id: "m", name: "Only", rules: [rule("attack"), rule("moveAway")], fallback: { action: "throw", params: {} } }],
 };
@@ -104,6 +105,7 @@ describe("MatchResult", () => {
   test("names the tank's target in the third person, because the sentence starts with “Your tank”", () => {
     // Every turn runs the fallback, so the most used action is this one.
     const chaser = parseStrategy({
+      ultimate: "dash",
       build: { reach: 0, aim: 0, dodge: 0 },
       modes: [{ id: "m", name: "Only", rules: [], fallback: { action: "moveToward", params: { target: "nearestWithLessWater" } } }],
     });

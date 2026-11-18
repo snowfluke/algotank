@@ -91,8 +91,10 @@ Ultimate draws come after every draw that exists today in a turn, so a round wit
 **Assigning an ultimate to a strategy that has none** (`assignUltimate(strategy, random)`, in the engine, one function used by every boundary below):
 
 1. A preset whose rules and build are equal → its ultimate.
-2. Otherwise, the preset with the most rules equal in id and content, counted over all modes. Six presets come from `burstAndRetreat` and share the rule ids `loaded`, `dodge`, `spent` and `point-blank`, so only equal content counts: the chase target and the extra rules (`top`, `free-hit`, `go-behind`, `grab`) decide.
-3. A tie or no match → a random ultimate. It is stored, so it never changes again.
+2. Otherwise, the preset most similar by rule ids: shared ids divided by all distinct ids of both (Jaccard), over all modes. A style copied from a preset keeps the preset's rule ids even after the player changes a rule's numbers, and a preset with extra rules the player never had scores lower. Rules equal in id and content break a tie. Six presets come from `burstAndRetreat` and share the rule ids `loaded`, `dodge`, `spent` and `point-blank`, so the extra rules (`top`, `free-hit`, `go-behind`, `grab`) and then the content decide. Presets tied with the same ultimate (Leader chaser and Charger) are no tie.
+3. A tie between different ultimates, or no shared rule id → a random ultimate. It is stored, so it never changes again.
+
+Dry run on the 2026-11-17 backup: of 57 saved styles, 3 exact, 41 by similarity, 13 random. Of 32 monthly seats, 18 exact, 10 by similarity, 4 random. Counting equal rules only, the first draft left 35 styles and 13 seats to random.
 
 Boundaries that can meet a strategy without an ultimate, each through `assignUltimate`:
 

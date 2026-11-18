@@ -79,6 +79,7 @@ import { HttpError, isRecord } from "../http.ts";
 import { checkTypedName } from "../name-filter.ts";
 import { toPublicSnapshot } from "../public-tick.ts";
 import { newPlayerId } from "../secrets.ts";
+import { assignMissingUltimate } from "../ultimates/strategy.ts";
 import type { Clock, Scheduler } from "../timers.ts";
 import type { CalendarDay, LeagueCalendar } from "./calendar.ts";
 import { RECORD_TOP, type Champions } from "./champions.ts";
@@ -410,7 +411,8 @@ export class MonthlyLeagues {
     if (!isRecord(body)) throw new HttpError(400, "Send the tank: its look and its strategy, and its name when the player typed one.");
     const look = parseTankLook(body["look"]);
     if (look === null) throw new HttpError(400, "The tank's look is not valid.", { code: "look_invalid" });
-    const parsed = parseStrategy(body["strategy"]);
+    // A new seat fixes the submitted or assigned ultimate (85-ultimates.md).
+    const parsed = parseStrategy(assignMissingUltimate(body["strategy"]));
     if (!parsed.ok) throw new HttpError(400, "The strategy is not valid.", { details: parsed.errors });
     if (this.closing) throw serviceBusy();
     if (this.seats.seats.has(accountId)) throw new HttpError(409, "Your account already has a tank in the monthly arena.", { code: "monthly_seat_taken" });
@@ -498,9 +500,9 @@ export class MonthlyLeagues {
    * 2026-11-16, after players who changed rules by a quit and a new seat saw their points at 0).
    */
   changeStrategy(accountId: AccountId, body: unknown): void {
-    const parsed = parseStrategy(isRecord(body) ? body["strategy"] : undefined);
-    if (!parsed.ok) throw new HttpError(400, "The strategy is not valid.", { details: parsed.errors });
     const seat = this.seats.seats.get(accountId);
+    const parsed = parseStrategy(strategyForSeatChange(body, seat));
+    if (!parsed.ok) throw new HttpError(400, "The strategy is not valid.", { details: parsed.errors });
     if (seat === undefined) throw new HttpError(404, "Your account has no tank in the monthly arena.", { code: "no_monthly_seat" });
     if (this.closing) throw serviceBusy();
     // The same rules again change nothing, so a save never restarts the tank's mode.
@@ -851,4 +853,11 @@ export class MonthlyLeagues {
   private sendState(league: number): void {
     this.options.streams.sendState(league, this.live(league));
   }
+}
+
+/** Changing a seat's rules and build keeps the ultimate set when the seat was taken. */
+function strategyForSeatChange(body: unknown, seat: Seat | undefined): unknown {
+  const input = isRecord(body) ? body["strategy"] : undefined;
+  if (seat === undefined) return assignMissingUltimate(input);
+  return isRecord(input) ? { ...input, ultimate: seat.strategy.ultimate } : input;
 }

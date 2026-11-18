@@ -77,7 +77,7 @@ describe("step kinds", () => {
       expect(stepKindOf(stepRefOf(kind))).toBe(kind);
     }
     const all = { ...shot, action: { steps: STEP_KINDS.slice(0, 4).map(stepRefOf) } };
-    const result = parseStrategy({ modes: [{ id: "m", name: "Main", rules: [all], fallback: { action: "throw", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
+    const result = parseStrategy({ ultimate: "dash", modes: [{ id: "m", name: "Main", rules: [all], fallback: { action: "throw", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
     expect(result.ok).toBe(true);
   });
 

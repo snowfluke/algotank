@@ -43,9 +43,10 @@ const toTarget = (action: string, target: string) => ({ action, params: { target
 const mode = (rules: readonly unknown[], fallback: unknown) => ({ id: "m", name: "M", rules, fallback });
 
 const PROBE_INPUTS: Readonly<Record<string, StrategyInput>> = {
-  statue: { build: BUILD, modes: [mode([], toTarget("faceTarget", "nearest"))] } as unknown as StrategyInput,
+  statue: { build: BUILD, ultimate: "dash", modes: [mode([], toTarget("faceTarget", "nearest"))] } as unknown as StrategyInput,
   turtle: {
     build: BUILD,
+    ultimate: "dash",
     modes: [
       mode(
         [{ id: "adjacent", match: "all", conditions: [when("enemyAhead", { n: 1 })], action: { action: "throw", params: {} }, chance: 100, switchToMode: null }],
@@ -107,7 +108,7 @@ const builds: Readonly<Record<string, Build>> = {
 const base = presetStrategy(BUILD_PRESET_ID);
 const buildTable: Record<string, Record<string, number>> = {};
 for (const [label, build] of Object.entries(builds)) {
-  const input = { modes: base.modes, build } as StrategyInput;
+  const input = { ...base, build };
   const strategy = strategyOf(input, `${BUILD_PRESET_ID} with build ${label}`);
   buildTable[label] = {};
   for (const id of BUILD_RULE_SETS) (buildTable[label] as Record<string, number>)[RULE_SETS[id].id] = Number(winPercentOfReplacement(id, strategy).toFixed(1));
@@ -134,7 +135,7 @@ function switcherStrategy(): Strategy {
     return { rule, modes };
   });
   const input = {
-    build: base.build,
+    ...base,
     modes: [{ ...firstMode, rules: [...branches.map((branch) => branch.rule), ...firstMode.rules] }, ...otherModes, ...branches.flatMap((branch) => branch.modes)],
   } as unknown as StrategyInput;
   return strategyOf(input, "switcher");

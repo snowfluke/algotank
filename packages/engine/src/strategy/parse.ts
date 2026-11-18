@@ -20,6 +20,7 @@ import type {
   Strategy,
   StrategyInput,
 } from "../types.ts";
+import { isUltimateId } from "../ultimates/ultimates.ts";
 import { ACTIONS } from "./actions.ts";
 import { CONDITIONS } from "./conditions.ts";
 import { LIMITS } from "./limits.ts";
@@ -49,6 +50,7 @@ export interface StrategyIssueParams {
   readonly paramNotAnOption: { readonly key: string };
   readonly unknownCondition: Record<string, never>;
   readonly unknownAction: Record<string, never>;
+  readonly unknownUltimate: Record<string, never>;
   /** A sequence has too few or too many steps, or its steps are not a list (actual null). */
   readonly stepCount: { readonly min: number; readonly max: number; readonly actual: number | null };
   /** A step names an action that is not atomic, such as "move toward". */
@@ -85,6 +87,7 @@ const CODE_SET: Record<StrategyIssueCode, true> = {
   paramNotAnOption: true,
   unknownCondition: true,
   unknownAction: true,
+  unknownUltimate: true,
   stepCount: true,
   notAStep: true,
   negateNotSwitch: true,
@@ -557,8 +560,14 @@ export function parseStrategy(input: unknown): CheckedParseResult {
 
   const build = parseBuild(field(input, "build"), problems);
 
+  const ultimate = field(input, "ultimate");
+  if (!isUltimateId(ultimate)) {
+    problems.add({ where: "Ultimate", path: ["ultimate"] }, "the strategy needs one valid ultimate.", { code: "unknownUltimate", params: NONE });
+    return { ok: false, errors: problems.messages, issues: problems.issues };
+  }
+
   if (problems.messages.length > 0 || build === null) return { ok: false, errors: problems.messages, issues: problems.issues };
   // The only place a Strategy is made: every check above has passed.
-  const checked: StrategyInput = { modes, build };
+  const checked: StrategyInput = { modes, build, ultimate };
   return { ok: true, strategy: checked as Strategy };
 }

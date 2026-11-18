@@ -164,13 +164,31 @@ describe("Change rules", () => {
     const cookie = await signUp(t);
     const strategy = (PRESETS[1] as (typeof PRESETS)[number]).strategy;
     expect((await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy } })).status).toBe(404);
-    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+    const chosen = { ...tank.strategy, ultimate: "magnet" } as const;
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada", strategy: chosen } })).status).toBe(201);
     const before = (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
     expect((await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy: { rules: "no" } } })).status).toBe(400);
     expect((await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy } })).status).toBe(204);
     const after = (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
-    expect([after?.seatId, after?.name, after?.strategy]).toEqual([before?.seatId, "Ada", strategy]);
+    expect(before?.strategy.ultimate).toBe(chosen.ultimate);
+    expect([after?.seatId, after?.name, after?.strategy]).toEqual([before?.seatId, "Ada", { ...strategy, ultimate: chosen.ultimate }]);
   });
+});
+
+test("a stale bundle gets an ultimate when taking a seat and keeps it when changing rules", async () => {
+  const t = start();
+  const cookie = await signUp(t);
+  const { modes, build, ultimate } = PRESETS.find((preset) => preset.id === "dry-hunter")!.strategy;
+  const takeSeat = await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, strategy: { modes, build } } });
+  expect(takeSeat.status).toBe(201);
+  const before = (await json<MonthlyMeResponse>(takeSeat)).seat;
+  expect(before?.strategy).toEqual({ modes, build, ultimate });
+
+  const newRules = { modes: tank.strategy.modes, build: { reach: 1, aim: 1, dodge: 1 } };
+  const change = await t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy: newRules } });
+  expect(change.status).toBe(204);
+  const after = (await json<MonthlyMeResponse>(await t.api("/api/monthly/me", { cookie }))).seat;
+  expect(after).toMatchObject({ seatId: before?.seatId!, strategy: { ...newRules, ultimate } });
 });
 
 describe("Change look", () => {

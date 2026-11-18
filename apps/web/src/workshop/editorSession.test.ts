@@ -19,6 +19,23 @@ const settle = async () => {
 };
 
 describe("the workshop editor's draft", () => {
+  test("the editor saves edited rules with the style's original ultimate", async () => {
+    const offline = { ok: false as const, status: 0, error: { error: "network_error" }, code: "network_error" };
+    const library = new PlayStyleLibrary(null, { list: async () => offline, put: async () => offline, remove: async () => offline }, clock, () => "style-id-0001");
+    const made = library.create("Sneaky", evader);
+    if (!made.ok) throw new Error("not created");
+    const source = editorSource(library, made.style.id, "gone");
+    const session = new StrategySession(source, clock, () => undefined);
+    session.start();
+    await settle();
+    const modes = evader.modes.map((mode) => ({ ...mode, rules: mode.rules.map((rule) => ({ ...rule, chance: 80 })) }));
+    editDraft(library, made.style.id, session.setDraft)({ ...evader, modes, ultimate: "dash" });
+    await session.saveDraft();
+    const expected = { ...evader, modes };
+    expect(session.getSnapshot().load).toEqual({ kind: "ready", saved: expected, draft: expected });
+    expect(await source.load()).toEqual({ ok: true, data: expected });
+  });
+
   test("an edit reverted before the automatic save leaves the library as it was", async () => {
     const offline = { ok: false as const, status: 0, error: { error: "network_error" }, code: "network_error" };
     const library = new PlayStyleLibrary(null, { list: async () => offline, put: async () => offline, remove: async () => offline }, clock, () => "style-id-0001");

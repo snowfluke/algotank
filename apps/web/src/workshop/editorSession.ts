@@ -29,7 +29,7 @@ export function editorSource(library: PlayStyleLibrary, id: string, notFound: st
 /** The editor's change handler: the library first (any draft, one with a problem too), then the session. */
 export function editDraft(library: PlayStyleLibrary, id: string, setDraft: (next: StrategyInput) => void): (next: StrategyInput) => void {
   return (next) => {
-    library.save(id, next);
-    setDraft(next);
+    const saved = library.save(id, next);
+    if (saved !== undefined) setDraft(saved);
   };
 }

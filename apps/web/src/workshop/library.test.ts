@@ -3,9 +3,9 @@
 // account (each case of the table in merge.ts) against an account in memory that keeps
 // the server's rules (20 per account, a stale copy refused), with a clock the test moves.
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { ACCOUNT_STRATEGY_LIMITS, type AccountStrategy } from "@game/arena";
-import { DEFAULT_PRESET_ID, PRESETS } from "@game/engine";
+import { DEFAULT_PRESET_ID, parseStrategy, PRESETS } from "@game/engine";
 import type { StrategyInput } from "@game/engine";
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { KeyValueStore } from "../session/storage.ts";
@@ -140,6 +140,46 @@ describe("the device copy", () => {
     expect(setUp(memoryAccount(), store).library.getSnapshot().styles).toEqual([made.style]);
   });
 
+  test("an empty style receives one ultimate when created and keeps it on save", () => {
+    const random = spyOn(Math, "random").mockReturnValue(0.25);
+    try {
+      const { library } = setUp();
+      const empty = { modes: [{ ...evader.modes[0]!, rules: [] }], build: evader.build };
+      const created = library.create("Empty", empty);
+      if (!created.ok) throw new Error("not created");
+      expect(parseStrategy(created.style.strategy).ok).toBe(true);
+      expect(created.style.strategy.ultimate).toBe("splash");
+      library.save(created.style.id, evader);
+      expect(library.get(created.style.id)?.strategy).toEqual({ ...evader, ultimate: "splash" });
+      expect(random).toHaveBeenCalledTimes(1);
+    } finally {
+      random.mockRestore();
+    }
+  });
+
+  test("version 1 upgrades preset styles and invalid drafts, and the next save keeps their ultimates", () => {
+    const random = spyOn(Math, "random").mockReturnValue(0.875);
+    try {
+      const store = memoryStore();
+      const sync = { accountId: ACCOUNT, known: { "old-preset": 1 }, deleted: {} };
+      const preset = { modes: evader.modes, build: evader.build };
+      const invalid = { modes: [{ ...evader.modes[0]!, rules: [], name: "" }], build: evader.build };
+      store.setItem(LIBRARY_KEY, JSON.stringify({ version: 1, styles: [
+        { id: "old-preset", name: "Preset", updatedAt: 1, strategy: preset },
+        { id: "old-draft", name: "Draft", updatedAt: 2, strategy: invalid },
+      ], sync }));
+      const { library } = setUp(memoryAccount(), store);
+      expect(library.get("old-preset")?.strategy).toEqual(evader);
+      expect(library.get("old-draft")?.strategy).toEqual({ ...invalid, ultimate: "magnet" });
+      expect(library.rename("old-draft", "Renamed").ok).toBe(true);
+      expect(JSON.parse(store.getItem(LIBRARY_KEY)!)).toMatchObject({ version: 2, sync });
+      expect(setUp(memoryAccount(), store).library.getSnapshot().styles).toEqual(library.getSnapshot().styles);
+      expect(random).toHaveBeenCalledTimes(1);
+    } finally {
+      random.mockRestore();
+    }
+  });
+
   test("blocked storage keeps the styles for the visit, and damaged storage is kept aside, not overwritten", () => {
     const blocked = setUp(memoryAccount(), null);
     expect(blocked.library.create("Sneaky", evader).ok).toBe(true);
@@ -175,6 +215,19 @@ describe("the merge at sign-in", () => {
     await signIn(s);
     expect(s.names()).toEqual(["Account newer", "Device newer"]);
     expect(account.names()).toEqual(["Account newer", "Device newer"]);
+  });
+
+  test("newer device rules keep the ultimate fixed by the account", async () => {
+    const id = "shared-ultimate";
+    const account = memoryAccount([style(id, "Account older", 1, other)]);
+    const store = memoryStore();
+    store.setItem(LIBRARY_KEY, JSON.stringify({ version: 2, styles: [style(id, "Device newer", 2)], sync: null }));
+    const s = setUp(account, store);
+    await signIn(s);
+    const expected = style(id, "Device newer", 2, { ...evader, ultimate: other.ultimate });
+    expect(s.library.get(id)).toEqual(expected);
+    expect(account.styles.get(id)).toEqual(expected);
+    expect(setUp(account, store).library.get(id)).toEqual(expected);
   });
 
   test("deleted on the device while signed out: the account loses it, unless it changed there since", async () => {
@@ -278,7 +331,7 @@ describe("after the merge", () => {
     s.library.save(made.style.id, other);
     await s.time.advance(PUSH_MS);
     expect(s.library.getSnapshot().account).toEqual({ kind: "behind", offline: true });
-    expect(s.library.get(made.style.id)?.strategy).toEqual(other);
+    expect(s.library.get(made.style.id)?.strategy).toEqual({ ...other, ultimate: made.style.strategy.ultimate });
     expect(s.library.rename(made.style.id, "Still editing")).toEqual({ ok: true });
 
     account.setOffline(false);

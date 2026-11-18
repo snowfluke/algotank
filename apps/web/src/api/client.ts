@@ -65,7 +65,7 @@ import type {
   TakeSeatRequest,
   TournamentWinner,
 } from "@game/arena";
-import type { StrategyInput } from "@game/engine";
+import { hasStrategyBody, isUltimateId, type StrategyInput } from "@game/engine";
 import { isChatHistoryResponse, isChatMessage } from "../chat/chatWire.ts";
 import { isPublicArena as isPublicArenaShape } from "../stream/parseStreamMessage.ts";
 
@@ -131,7 +131,7 @@ const isPublicArena: Guard<PublicArena> = (v): v is PublicArena => isPublicArena
 // Shallow on purpose: the server validated the strategy when it stored it, and the
 // editor shows any remaining problem as a validation message.
 const isStrategyInput: Guard<StrategyInput> = (v): v is StrategyInput =>
-  isRecord(v) && Array.isArray(v["modes"]) && isRecord(v["build"]);
+  hasStrategyBody(v) && "ultimate" in v && isUltimateId(v.ultimate);
 
 function isErrorResponse(value: unknown): value is ErrorResponse {
   if (!isRecord(value) || typeof value["error"] !== "string") return false;

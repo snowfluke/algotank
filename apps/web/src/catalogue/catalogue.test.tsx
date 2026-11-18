@@ -6,7 +6,7 @@ import { createLanguageStore } from "../i18n/language.ts";
 import { paths } from "../app/route.ts";
 import { CATALOGUE_SECTIONS, placeFromSearch, searchWithPlace, type CatalogueSection } from "./catalogue.tsx";
 import { CatalogueView } from "./CataloguePage.tsx";
-import { ULTIMATE_IDS } from "./messages.ts";
+import { ULTIMATE_IDS } from "@game/engine";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
 
 const render = (section: CatalogueSection, language: "en" | "id" = "en", entry?: string) =>

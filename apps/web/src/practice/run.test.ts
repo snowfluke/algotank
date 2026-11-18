@@ -136,6 +136,7 @@ describe("the statistics of a test match", () => {
   test("a rule that never runs shows 0", () => {
     const parsed = parseStrategy({
       build: presetStrategy(DEFAULT_PRESET_ID).build,
+      ultimate: "dash",
       modes: [
         {
           id: "m",

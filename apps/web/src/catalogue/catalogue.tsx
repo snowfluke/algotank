@@ -7,30 +7,26 @@
 // - Ultimates: not in the game yet, so "Coming soon"; each names the play style it is the default of.
 
 import type { ReactNode } from "react";
-import { ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, type ItemKind, type PresetId, type RuleSetId } from "@game/engine";
+import { ITEM_KINDS, PICKER_ORDER, PRESETS, RULE_SET_IDS, ULTIMATE_IDS, type ItemKind, type PresetId, type RuleSetId, type UltimateId } from "@game/engine";
 import { ChevronsRight, Cloud, Droplets, GlassWater, Magnet, Tornado, Umbrella, CircleDot } from "lucide-react";
 import { ARENA_GROUNDS, groundMarksPath, marksFilled } from "../board/arenaGround.ts";
 import { ItemShape } from "../board/itemShapes.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { PlayStyleScene } from "../prep/PlayStyleScene.tsx";
 import { plainTankLook } from "../tank/look.ts";
-import { ULTIMATE_IDS, type UltimateId } from "./messages.ts";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
 
 export const CATALOGUE_SECTIONS = ["playStyles", "items", "conditions", "ultimates"] as const;
 export type CatalogueSection = (typeof CATALOGUE_SECTIONS)[number];
 
-/** The play style each ultimate starts on (owner's examples: leader chaser dash, evader smoke, wanderer ring, sneak water). */
-export const ULTIMATE_DEFAULT_STYLE: Readonly<Record<UltimateId, PresetId>> = {
-  dash: "leader-chaser",
-  smoke: "evader",
-  splash: "random-walker",
-  fullTank: "backstabber",
-  mudBomb: "ambusher",
-  whirlwind: "picker",
-  bigUmbrella: "dry-hunter",
-  magnet: "item-hunter",
-};
+/** The catalogue names a visible preset, so Dash lists the Leader chaser (85-ultimates.md). */
+export const ULTIMATE_DEFAULT_STYLE: Readonly<Record<UltimateId, PresetId>> = Object.fromEntries(
+  ULTIMATE_IDS.map((ultimate) => {
+    const preset = PRESETS.find((p) => p.strategy.ultimate === ultimate && PICKER_ORDER.some((id) => id === p.id));
+    if (preset === undefined) throw new Error(`No visible preset uses "${ultimate}".`);
+    return [ultimate, preset.id];
+  }),
+) as Record<UltimateId, PresetId>;
 
 /** The cards of a collection, by key, in order: the same keys the page draws. */
 export function catalogueKeys(section: CatalogueSection): readonly string[] {

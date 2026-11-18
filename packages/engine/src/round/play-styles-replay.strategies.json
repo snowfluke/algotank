@@ -1,5 +1,6 @@
 {
  "evader": {
+  "ultimate": "smoke",
   "modes": [
    {
     "id": "evade",
@@ -64,6 +65,7 @@
   }
  },
  "leader-chaser": {
+  "ultimate": "dash",
   "modes": [
    {
     "id": "chase",
@@ -123,6 +125,7 @@
   }
  },
  "dry-hunter": {
+  "ultimate": "bigUmbrella",
   "modes": [
    {
     "id": "hunt",
@@ -255,6 +258,7 @@
   }
  },
  "ambusher": {
+  "ultimate": "mudBomb",
   "modes": [
    {
     "id": "rest",
@@ -370,6 +374,7 @@
   }
  },
  "picker": {
+  "ultimate": "whirlwind",
   "modes": [
    {
     "id": "rest",
@@ -485,6 +490,7 @@
   }
  },
  "backstabber": {
+  "ultimate": "fullTank",
   "modes": [
    {
     "id": "rest",
@@ -623,6 +629,7 @@
   }
  },
  "charger": {
+  "ultimate": "dash",
   "modes": [
    {
     "id": "charge",
@@ -661,6 +668,7 @@
   }
  },
  "random-walker": {
+  "ultimate": "splash",
   "modes": [
    {
     "id": "wander",

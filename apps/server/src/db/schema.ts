@@ -8,8 +8,9 @@
 
 import type { Database } from "bun:sqlite";
 import { PersistenceError } from "./errors.ts";
+import { migrateStrategyUltimates } from "./strategy-ultimates.ts";
 
-const MIGRATIONS: readonly string[] = [
+const MIGRATIONS: readonly (string | ((db: Database) => void))[] = [
   // 1: the accounts and what belongs to them (83-sqlite.md, D1). Every child row goes with its
   // account (ON DELETE CASCADE), although no route deletes an account today.
   `
@@ -284,6 +285,8 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (month, seat_id)
   ) STRICT;
   `,
+  // 10: Assign the ultimate once, while the strategies are still at rest (85-ultimates.md).
+  migrateStrategyUltimates,
 ];
 
 /** The version this code writes. */
@@ -302,11 +305,12 @@ export function migrate(db: Database): void {
       `The database has schema version ${current}, and this version of AlgoTank knows only up to ${SCHEMA_VERSION}. Start the newer version of AlgoTank, or restore a backup.`,
     );
   }
-  MIGRATIONS.slice(current).forEach((sql, i) => {
+  MIGRATIONS.slice(current).forEach((migration, i) => {
     const version = current + i + 1;
     db.transaction(() => {
-      db.run(sql);
+      if (typeof migration === "string") db.run(migration);
+      else migration(db);
       db.run(`PRAGMA user_version = ${version}`);
-    })();
+    }).immediate();
   });
 }

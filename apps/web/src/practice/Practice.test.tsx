@@ -33,7 +33,7 @@ describe("Practice", () => {
   });
 
   test("a strategy with problems disables the button and says why", () => {
-    const broken = renderToStaticMarkup(<Practice strategy={{ modes: [], build: {} }} name="Ayu" defaultRuleSetId="standard" />);
+    const broken = renderToStaticMarkup(<Practice strategy={{ modes: [], build: {}, ultimate: "dash" }} name="Ayu" defaultRuleSetId="standard" />);
     expect(broken).toContain("rules need a fix before a test match can run.");
     expect(broken).toContain("disabled");
   });

@@ -82,6 +82,7 @@ describe("vocabulary tables", () => {
     const firstAction = Object.values(ACTIONS)[0];
     if (firstCondition === undefined || firstAction === undefined) throw new Error("tables are empty");
     const result = parseStrategy({
+      ultimate: "dash",
       modes: [
         {
           id: "m",
@@ -124,7 +125,7 @@ describe("vocabulary tables", () => {
     for (let start = 0; start < rules.length; start += 20) {
       for (let first = 0; first < modes.length; first += 6) {
         const slice = modes.slice(first, first + 6).map((mode, i) => ({ ...mode, rules: i === 0 ? rules.slice(start, start + 20) : [] }));
-        const result = parseStrategy({ modes: slice, build: { reach: 0, aim: 0, dodge: 0 } });
+        const result = parseStrategy({ modes: slice, ultimate: "dash", build: { reach: 0, aim: 0, dodge: 0 } });
         expect(result.ok ? [] : result.errors).toEqual([]);
       }
     }
@@ -580,6 +581,7 @@ describe("conditions about walls and the round", () => {
 
   test("the rule set condition rejects an id that is not a set, and accepts each real one, through parseStrategy", () => {
     const strategyWith = (set: string) => ({
+      ultimate: "dash",
       modes: [{ id: "m", name: "M", rules: [{ id: "r", match: "all", conditions: [{ condition: "ruleSet", params: { set }, negate: false }], action: { action: "throw", params: {} }, chance: 100, switchToMode: null }], fallback: { action: "throw", params: {} } }],
       build: { reach: 0, aim: 0, dodge: 0 },
     });

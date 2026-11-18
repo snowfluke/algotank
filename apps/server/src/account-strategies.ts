@@ -26,6 +26,7 @@ import type { Auth } from "./auth/index.ts";
 import { HttpError, isRecord, jsonResponse, noContent, readJson } from "./http.ts";
 import type { Router } from "./router.ts";
 import { sequenceAdded, type MetricsRecorder } from "./metrics/metrics.ts";
+import { assignMissingUltimate } from "./ultimates/strategy.ts";
 
 /** A device clock may run a little fast; a time further ahead than this is a broken client. */
 const FUTURE_SLACK_MS = 24 * 60 * 60 * 1000;
@@ -55,6 +56,20 @@ function parseAccountStrategy(raw: unknown, id: string): { readonly ok: true; re
   return { ok: true, value: { id, name, strategy: parsed.strategy, updatedAt } };
 }
 
+/** The stored ultimate belongs to the id, even when a stale bundle sends a different strategy. */
+function upsertStrategyBody(body: unknown, stored: AccountStrategy | undefined): unknown {
+  if (!isRecord(body)) return body;
+  const input = body["strategy"];
+  const strategy = stored !== undefined && isRecord(input)
+    ? { ...input, ultimate: stored.strategy.ultimate }
+    : assignMissingUltimate(input);
+  return { ...body, strategy };
+}
+
+type PutResult =
+  | Exclude<ReturnType<typeof parseAccountStrategy>, { readonly ok: true }>
+  | { readonly ok: true; readonly saved: AccountStrategy; readonly previous: AccountStrategy | undefined };
+
 /** The play styles of every account. */
 export class AccountStrategies {
   private readonly selectAll: Statement<StrategyRow, [string]>;
@@ -80,17 +95,25 @@ export class AccountStrategies {
     return this.selectAll.all(accountId).map((row) => toStrategy(accountId, row));
   }
 
-  /** Creates or replaces one. The caller checked the record. */
-  put(accountId: string, strategy: AccountStrategy): { readonly ok: true } | { readonly ok: false; readonly code: "strategy_limit" | "strategy_stale" } {
-    return this.db.transaction(() => {
-      const row = this.selectOne.get(accountId, strategy.id);
+  /** Creates or replaces one while holding the write lock that protects the stored ultimate. */
+  put(accountId: string, id: string, body: unknown, now: number): PutResult {
+    return this.db.transaction((): PutResult => {
+      const row = this.selectOne.get(accountId, id);
       const stored = row === null ? undefined : toStrategy(accountId, row);
+      const parsed = parseAccountStrategy(upsertStrategyBody(body, stored), id);
+      if (!parsed.ok) return parsed;
+      const strategy = parsed.value;
+      if (strategy.updatedAt > now + FUTURE_SLACK_MS) return { ok: false, code: "strategy_time_invalid", problem: "updatedAt is too far in the future." };
       const counted = this.countOf.get(accountId);
       if (counted === null) throw new Error("SQLite returned no row for count(*).");
-      if (stored === undefined && counted.count >= ACCOUNT_STRATEGY_LIMITS.perAccount) return { ok: false, code: "strategy_limit" } as const;
-      if (stored !== undefined && stored.updatedAt > strategy.updatedAt) return { ok: false, code: "strategy_stale" } as const;
+      if (stored === undefined && counted.count >= ACCOUNT_STRATEGY_LIMITS.perAccount) {
+        return { ok: false, code: "strategy_limit", problem: `An account keeps at most ${ACCOUNT_STRATEGY_LIMITS.perAccount} play styles.` };
+      }
+      if (stored !== undefined && stored.updatedAt > strategy.updatedAt) {
+        return { ok: false, code: "strategy_stale", problem: "The account holds a newer copy of this play style." };
+      }
       this.upsert.run(accountId, strategy.id, strategy.name, strategy.updatedAt, JSON.stringify(strategy.strategy));
-      return { ok: true } as const;
+      return { ok: true, saved: strategy, previous: stored };
     }).immediate();
   }
 
@@ -135,20 +158,13 @@ export function registerAccountStrategyRoutes(router: Router, { auth, strategies
 
   router.add("PUT", "/api/account/strategies/:id", async (ctx) => {
     const account = auth.requireAccount(ctx.req);
-    const parsed = parseAccountStrategy(await readJson(ctx.req), ctx.params["id"] ?? "");
-    if (!parsed.ok) {
-      if (parsed.code === "strategy") throw new HttpError(400, parsed.problem, parsed.details === undefined ? {} : { details: parsed.details });
-      return refuse(400, parsed.code, parsed.problem);
-    }
-    if (parsed.value.updatedAt > now() + FUTURE_SLACK_MS) return refuse(400, "strategy_time_invalid", "updatedAt is too far in the future.");
-    const saved = strategies.list(account.id).find((s) => s.id === parsed.value.id)?.strategy ?? null;
-    const result = strategies.put(account.id, parsed.value);
+    const result = strategies.put(account.id, ctx.params["id"] ?? "", await readJson(ctx.req), now());
     if (!result.ok) {
-      return result.code === "strategy_limit"
-        ? refuse(409, "strategy_limit", `An account keeps at most ${ACCOUNT_STRATEGY_LIMITS.perAccount} play styles.`)
-        : refuse(409, "strategy_stale", "The account holds a newer copy of this play style.");
+      if (result.code === "strategy") throw new HttpError(400, result.problem, result.details === undefined ? {} : { details: result.details });
+      const status = result.code === "strategy_limit" || result.code === "strategy_stale" ? 409 : 400;
+      return refuse(status, result.code, result.problem);
     }
-    if (sequenceAdded(saved, parsed.value.strategy)) metrics.count("stepRuleSaved");
+    if (sequenceAdded(result.previous?.strategy ?? null, result.saved.strategy)) metrics.count("stepRuleSaved");
     return noContent();
   });
 

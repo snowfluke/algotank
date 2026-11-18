@@ -11,7 +11,7 @@
 // Each scene loops. Its steps are turns; ScenePlayer.tsx numbers them, so every loop replays them.
 
 import { ruleSet, type BoardItem, type BotId, type BotState, type Direction, type ItemKind, type RuleSetId, type Snapshot, type TankEffect, type ThrowEvent } from "@game/engine";
-import type { UltimateId } from "./messages.ts";
+import type { UltimateId } from "@game/engine";
 import type { UltimateEffect } from "./UltimateEffect.tsx";
 
 /** One turn of a scene: the board after it, and the shots of it. */

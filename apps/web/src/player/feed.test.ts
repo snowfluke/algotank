@@ -7,6 +7,7 @@ import { en as vocabularyEn, id as vocabularyId } from "../vocabulary/messages.t
 import { describeDecision } from "./feed.ts";
 
 const strategy: StrategyInput = {
+  ultimate: "dash",
   build: {},
   modes: [
     {
@@ -94,6 +95,7 @@ describe("describeDecision", () => {
   test("a whole line stays in the tank's own voice, in both languages", () => {
     // A blocked step with a shot, an outcome and a mode switch uses every follow-on sentence.
     const chase: StrategyInput = {
+      ultimate: "dash",
       build: {},
       modes: [
         {

@@ -67,7 +67,7 @@ describe("blocked storage", () => {
 });
 
 describe("strategy draft", () => {
-  const draft = { modes: [{ id: "m1" }], build: { reach: 1 } } as never;
+  const draft = { modes: [{ id: "m1" }], build: { reach: 1 }, ultimate: "dash" } as never;
 
   test("a saved draft is read back and clearing removes it", () => {
     const store = memoryStore();

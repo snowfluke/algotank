@@ -266,10 +266,21 @@ describe("strategy", () => {
     const current = await (await t.api(path, { token: ada.playerToken })).json();
     expect(current).toEqual(JSON.parse(JSON.stringify(PRESETS.find((p) => p.id === DEFAULT_PRESET_ID)!.strategy)));
 
-    const other = PRESETS.find((p) => p.id !== DEFAULT_PRESET_ID)!.strategy;
+    const other = { ...PRESETS.find((p) => p.id !== DEFAULT_PRESET_ID)!.strategy, ultimate: "splash" };
     const put = await t.api(path, { method: "PUT", token: ada.playerToken, body: other });
     expect(put.status).toBe(204);
     expect(await (await t.api(path, { token: ada.playerToken })).json()).toEqual(JSON.parse(JSON.stringify(other)));
+  });
+
+  test("a room submission from a stale bundle gets the ultimate of the strategy it submits", async () => {
+    const t = start();
+    const { arenaId } = await createTestArena(t);
+    const { playerToken } = await joinTestPlayer(t, arenaId, "Ada");
+    const path = `/api/arenas/${arenaId}/players/me/strategy`;
+    const { modes, build, ultimate } = PRESETS.find((preset) => preset.id === "dry-hunter")!.strategy;
+    expect((await t.api(path, { method: "PUT", token: playerToken, body: { modes, build, ultimate: null } })).status).toBe(400);
+    expect((await t.api(path, { method: "PUT", token: playerToken, body: { modes, build } })).status).toBe(204);
+    expect(await (await t.api(path, { token: playerToken })).json()).toEqual({ modes, build, ultimate });
   });
 
   test("a bad strategy is rejected with details", async () => {

@@ -4,7 +4,7 @@ The server keeps its data in one SQLite file, `DATA_DIR/algotank.sqlite`, throug
 
 ## Add a table or change one
 
-1. Add one SQL string at the end of `MIGRATIONS` in `schema.ts`. Never edit a migration that a released version has applied, because a database that already has it does not run it again.
+1. Append a SQL string or a function of the database to `MIGRATIONS` in `schema.ts`. Never edit a migration that a released version has applied, because a database that already has it does not run it again.
 2. Each migration runs in its own transaction and sets `PRAGMA user_version` to its position, so a failed migration leaves the version before it. A database whose version is higher than the code knows stops the start.
 3. Follow the conventions: `STRICT` tables, snake_case names, times as INTEGER milliseconds, booleans as INTEGER 0 or 1 with a CHECK. A value the code looks up, filters or sorts by gets its own column, with an index where a query needs one. A JSON text column holds only a whole snapshot that the code reads and writes as one piece. A row that belongs to an account references `account (id) ON DELETE CASCADE`, unless the server holds its live copy in memory (the arenas, the league): a delete in the database alone would then leave the copy in memory, which the next save writes back. `schema.ts` says so at each such table.
 

@@ -12,6 +12,7 @@
 // Append new presets, so the recorded fixtures keep their seats.
 
 import type { ActionRef, Build, ConditionRef, Mode, ParamValues, Preset, Rule, StrategyInput } from "../types.ts";
+import type { UltimateId } from "../ultimates/ultimates.ts";
 import { withLiteralIds } from "./define.ts";
 import { parseStrategy } from "./parse.ts";
 
@@ -110,8 +111,9 @@ const targetCannotThrow = (target: string) => when("targetWater", { target, comp
  * items became twice as strong (items.ts ITEM_RULES.uses, effectTurns), the same field: item-hunter
  * +29, ambusher +24, leader-chaser +5, picker -2, backstabber -15, evader -19, dry-hunter -22.
  */
-function burstAndRetreat(chase: string, extraStrikeRules: readonly Rule[] = [], extraRestRules: readonly Rule[] = []): StrategyInput {
+function burstAndRetreat(ultimate: UltimateId, chase: string, extraStrikeRules: readonly Rule[] = [], extraRestRules: readonly Rule[] = []): StrategyInput {
   return {
+    ultimate,
     build: build(0, 3, 3),
     modes: [
       mode(
@@ -152,6 +154,7 @@ const sources = withLiteralIds<PresetSource>()([
     name: "Evader",
     summary: "Steps out of the line of fire when a bot aims at it, throws at a bot in front of it only when that bot does not aim back, backs away to refill when its tank runs low, picks up an item within 3 cells, and otherwise walks toward the nearest bot.",
     strategy: {
+      ultimate: "smoke",
       build: build(0, 3, 3),
       modes: [
         mode(
@@ -174,7 +177,7 @@ const sources = withLiteralIds<PresetSource>()([
     id: "leader-chaser",
     name: "Leader chaser",
     summary: "Backs away to refill its tank, then runs at the nearest bot with more points than it has and throws from one cell until the tank runs low.",
-    strategy: burstAndRetreat("nearestWithMorePoints", [
+    strategy: burstAndRetreat("dash", "nearestWithMorePoints", [
       // The leader has nobody richer to chase, so it takes the nearest bot instead of standing still.
       rule("top", [when("targetDistance", { target: "nearestWithMorePoints", compare: "atMost", n: 20 }, true)], actOn("moveToward", "nearest")),
     ]),
@@ -183,25 +186,25 @@ const sources = withLiteralIds<PresetSource>()([
     id: "dry-hunter",
     name: "Dry hunter",
     summary: "Backs away to refill its tank, then runs at the nearest bot with less water, and throws at once at a bot in range that cannot throw back.",
-    strategy: burstAndRetreat("nearestWithLessWater", [rule("free-hit", [THROW_AHEAD, targetCannotThrow("inThrowLine")], act("throw"))]),
+    strategy: burstAndRetreat("bigUmbrella", "nearestWithLessWater", [rule("free-hit", [THROW_AHEAD, targetCannotThrow("inThrowLine")], act("throw"))]),
   },
   {
     id: "ambusher",
     name: "Ambusher",
     summary: "Backs away to refill its tank, then runs at the nearest bot and throws from one cell until the tank runs low.",
-    strategy: burstAndRetreat("nearest"),
+    strategy: burstAndRetreat("mudBomb", "nearest"),
   },
   {
     id: "picker",
     name: "Picker",
     summary: "Backs away to refill its tank, then runs only at the nearest bot that holds less water than it does.",
-    strategy: burstAndRetreat("nearestWithLessWater"),
+    strategy: burstAndRetreat("whirlwind", "nearestWithLessWater"),
   },
   {
     id: "backstabber",
     name: "Backstabber",
     summary: "Backs away to refill its tank, then runs at the nearest bot, goes for a bot that faces away when one is near, and throws from one cell.",
-    strategy: burstAndRetreat("nearest", [
+    strategy: burstAndRetreat("fullTank", "nearest", [
       // 5 cells in Chebyshev distance covers about the area that 8 covered in |dx| + |dy| (121 cells against 145).
       rule("go-behind", [when("targetDistance", { target: "nearestFacingAway", compare: "atMost", n: 2 })], actOn("moveToward", "nearestFacingAway")),
     ]),
@@ -211,6 +214,7 @@ const sources = withLiteralIds<PresetSource>()([
     name: "Charger",
     summary: "Throws when a bot stands in front of it and otherwise walks toward the nearest bot, which makes it the benchmark for every other preset.",
     strategy: {
+      ultimate: "dash",
       build: build(0, 3, 3),
       modes: [mode("charge", "Charge", [rule("throw-ahead", [THROW_AHEAD], act("throw"))], actOn("moveToward", "nearest"))],
     },
@@ -220,6 +224,7 @@ const sources = withLiteralIds<PresetSource>()([
     name: "Random walker",
     summary: "Wanders at random and throws only when a bot happens to stand in front of it, so it is the baseline every other preset must beat.",
     strategy: {
+      ultimate: "splash",
       build: build(1, 2, 2),
       modes: [mode("wander", "Wander", [rule("throw-ahead", [THROW_AHEAD], act("throw"))], act("wander"))],
     },
@@ -235,6 +240,7 @@ const sources = withLiteralIds<PresetSource>()([
     // It takes buckets only: with every kind it stayed 36 to 63 above the field mean (12 days), and a
     // 3-cell or 2-cell reach changed nothing in the standard set. The Evader's grab rule did most of the fix.
     strategy: burstAndRetreat(
+      "magnet",
       "nearest",
       [],
       [rule("grab", [when("itemNear", { item: "bucket", n: 5 }), NOT_DRY_SPELL], act("goToItem", { item: "bucket" }))],

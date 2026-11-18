@@ -24,7 +24,7 @@ export type TickMove = { readonly botId: BotId } & TurnAction;
 export interface TickResolution {
   /** One entry per bot, in the snapshot's bot order. */
   readonly placements: readonly Placement[];
-  /** Ordinary throws, in resolution order. */
+  /** Throws, including the shot after a dash, in resolution order. */
   readonly throws: readonly ThrowEvent[];
   /** New effects from moves, in move order. A later effect replaces an earlier one. */
   readonly inflicted: ReadonlyMap<BotId, TankEffect>;
@@ -61,7 +61,7 @@ type PendingSplash = {
   readonly at: Cell;
   readonly squares: readonly (
     | { readonly cell: Cell; readonly target?: never }
-    | { readonly cell: Cell; readonly target: Slot; readonly defenses: ShotDefenses; readonly front: boolean }
+    | { readonly cell: Cell; readonly target: Slot; readonly defenses: ShotDefenses }
   )[];
 };
 
@@ -119,8 +119,11 @@ export function resolveTick(
       remainingItems ??= new Set(boardItems);
       pendingFires.push(resolveMagnet(slot, remainingItems));
     } else if (action.ultimate !== undefined) {
-      const fire = resolveUltimate(action.ultimate, slot, snapshot, rules, occupant, inflicted);
-      if (fire !== null) pendingFires.push(fire);
+      const fire = resolveUltimate(action.ultimate, slot, snapshot, rules, occupant, rng, inflicted);
+      if (fire !== null) {
+        pendingFires.push(fire);
+        if (fire.kind === "dash") throws.push(fire.shot);
+      }
     } else if (action.move === "T") {
       throws.push(resolveThrow(slot, snapshot, rules, occupant, rng, inflicted));
     } else if (!stuck) {
@@ -273,6 +276,7 @@ function resolveUltimate(
   size: ArenaSize,
   rules: RoundRules,
   occupant: Map<string, Slot>,
+  rng: Rng,
   inflicted: Map<BotId, TankEffect>,
 ): UltimateFire | PendingSplash | null {
   const me = source.place;
@@ -287,7 +291,9 @@ function resolveUltimate(
         if (cell === null) break;
         path.push(cell);
       }
-      return { ...fire, kind, path };
+      // The dash shot uses the same water, held item and roll as a throw from its last square (85-ultimates.md).
+      const shot = resolveThrow(source, size, rules, occupant, rng, inflicted);
+      return { ...fire, kind, path, shot };
     }
     case "smoke":
       me.ultimateEffect = { kind, turnsLeft: ULTIMATE_RULES.smoke.turns };
@@ -306,17 +312,17 @@ function resolveUltimate(
         const cell = cellAhead(me, rotate(me.direction, eighths), ULTIMATE_RULES.splash.reach);
         if (!isInside(size, cell)) return [];
         const target = occupant.get(cellKey(cell));
-        return target === undefined ? [{ cell }] : [{ cell, target, defenses: defensesAt(target, me), front: eighths === 0 }];
+        return target === undefined ? [{ cell }] : [{ cell, target, defenses: defensesAt(target, me) }];
       });
       return { kind: "pendingSplash", source, at, squares };
     }
     case "mudBomb": {
       const hit = firstTarget(source, size, rules, occupant);
-      if (hit === null) return { ...fire, kind, center: null, area: [], affected: [] };
+      if (hit === null) return { ...fire, kind, center: null, area: [], affected: [], points: 0 };
       const center = { x: hit.target.place.x, y: hit.target.place.y };
       const area = squaresWithin(size, center, ULTIMATE_RULES.mudBomb.reach);
       const affected = inflictInArea(area, occupant, source, inflicted, { kind: "stuck", turnsLeft: ULTIMATE_RULES.mudBomb.stuckTurns });
-      return { ...fire, kind, center, area, affected };
+      return { ...fire, kind, center, area, affected, points: affected.length * POINTS_PER_HIT };
     }
     case "whirlwind": {
       const { reach, dizzyTurns, spinTurns } = ULTIMATE_RULES.whirlwind;
@@ -363,6 +369,8 @@ function inflictInArea(
     if (target === undefined || target === source || (effect.kind === "stuck" && isDashing(target))) continue;
     const id = target.place.id;
     inflicted.set(id, effect);
+    // Mud Bomb takes a point from each tank it sticks (owner, 2026-11-18).
+    if (effect.kind === "stuck") movePoints(source, target, POINTS_PER_HIT);
     affected.push(id);
   }
   return affected;
@@ -372,16 +380,16 @@ function resolveSplash(fire: PendingSplash, rng: Rng): UltimateFire {
   const squares = fire.squares.map((square): SplashSquare => {
     const { cell, target } = square;
     if (target === undefined) return { ...cell, outcome: "empty" };
-    const { front, defenses } = square;
-    const baseChance = front ? 100 : 100 / ULTIMATE_RULES.splash.sideChanceDivisor;
+    const { defenses } = square;
+    const baseChance = 100;
     const hitChance = defenses.smoked ? baseChance / ULTIMATE_RULES.smoke.chanceDivisor : baseChance;
     const targetId = target.place.id;
     if (isDashing(target)) {
-      // The ring draws once per occupied side square even when its tank is immune.
-      if (defenses.smoked || !front) rng.chance(hitChance);
+      // A smoked square draws even if its tank dashes (85-ultimates.md, Splash ring).
+      if (defenses.smoked) rng.next();
       return { ...cell, targetId, outcome: "dodged" };
     }
-    const impact = rollImpact(target, defenses, baseChance, hitChance, POINTS_PER_HIT, rng, front);
+    const impact = rollImpact(target, defenses, baseChance, hitChance, POINTS_PER_HIT, rng, true);
     if (impact.outcome === "hit") movePoints(fire.source, target, POINTS_PER_HIT);
     return { ...cell, targetId, ...impact };
   });

@@ -146,6 +146,7 @@
 import type {
   BotId,
   BotState,
+  UltimateFire,
   Decision,
   ItemHand,
   MagnetFire,
@@ -607,7 +608,7 @@ export interface PublicArena {
  */
 export type PublicBot = Pick<
   BotState,
-  "id" | "x" | "y" | "direction" | "score" | "wasHit" | "build" | "hitsLanded" | "hitsTaken" | "water" | "effect"
+  "id" | "x" | "y" | "direction" | "score" | "wasHit" | "build" | "hitsLanded" | "hitsTaken" | "water" | "effect" | "ultimate" | "ultimateEffect"
 > & ItemHand;
 
 /**
@@ -631,6 +632,8 @@ export interface PublicTick {
   readonly snapshot: PublicSnapshot;
   /** The items moved by each Magnet, in move order. */
   readonly magnetFires?: readonly MagnetFire[];
+  /** Every ultimate fire in move order, including Magnet. */
+  readonly fires?: readonly UltimateFire[];
 }
 
 /**

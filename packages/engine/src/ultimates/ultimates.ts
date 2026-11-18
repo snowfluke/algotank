@@ -30,9 +30,9 @@ export function isUltimateId(value: unknown): value is UltimateId {
 export const ULTIMATE_RULES = {
   firstReadyTurn: 15,
   rechargeTurns: 40,
-  dash: { squares: 3, triggerMinDistance: 2, triggerMaxDistance: 4 },
+  dash: { squares: 3, triggerMinDistance: 2, triggerMaxDistance: 4, aimedAtMe: 1 },
   smoke: { turns: 10, aimedAtMe: 1, chanceDivisor: 2 },
-  splash: { reach: 1, sideChanceDivisor: 3, triggerTanks: 2 },
+  splash: { reach: 1, triggerTanks: 2 },
   fullTank: { freeShots: 3 },
   mudBomb: { stuckTurns: 5, reach: 1 },
   whirlwind: { reach: 2, dizzyTurns: 4, spinTurns: 2, triggerTanks: 2 },
@@ -54,10 +54,10 @@ function tanksNear(snapshot: Snapshot, tank: BotState, reach: number): number {
 
 const TRIGGERS: Record<UltimateId, (snapshot: Snapshot, tank: BotState) => boolean> = {
   dash: (snapshot, tank) => {
-    const { triggerMinDistance, triggerMaxDistance } = ULTIMATE_RULES.dash;
+    const { triggerMinDistance, triggerMaxDistance, aimedAtMe } = ULTIMATE_RULES.dash;
     if (tank.effect?.kind === "stuck" || !isFree(snapshot, cellAhead(tank, tank.direction))) return false;
     const first = firstBotInLine(snapshot, tank, triggerMaxDistance);
-    return first !== null && first.distance >= triggerMinDistance;
+    return (first !== null && first.distance >= triggerMinDistance) || botsThatCanHit(snapshot, tank).length >= aimedAtMe;
   },
   smoke: (snapshot, tank) => tank.ultimateEffect?.kind !== "smoke" &&
     botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.smoke.aimedAtMe,

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { expandTick } from "@game/arena";
 import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, createRound, runRound, ruleSet, stepRound, type Snapshot } from "@game/engine";
-import { toCompactTick, toPublicSnapshot, toPublicTick } from "./public-tick.ts";
+import { roundStartMessage, toCompactTick, toPublicSnapshot, toPublicTick } from "./public-tick.ts";
 
 // Sorted, so the test names the allow-list and not an order. The mode of a bot stays out.
 // Items are public: every viewer sees them on the board and on the tank that holds one (84-items.md).
@@ -17,6 +17,16 @@ const { spawn, ticks } = runRound({
   survivorsAfterRound: null,
   ruleSetId: "dry-spell",
   players: ["a", "b", "c"].map((id) => ({ id, strategy })),
+});
+
+test("the ultimates-off roundStart and tick messages match the pre-release wire bytes", () => {
+  const wire = JSON.stringify([
+    roundStartMessage(1, spawn, 3000),
+    ...ticks.map((tick) => ({ type: "tick", round: 1, tick: toCompactTick(tick), own: tick.decisions[0] })),
+  ]);
+  // Recorded before D1 from the same seed, including the JSON key order.
+  expect(new Bun.CryptoHasher("sha256").update(wire).digest("hex"))
+    .toBe("9bc8f8657af32290e1f464535727df166e1b0f780059f985fc29c7180cec503e");
 });
 
 test("a public bot carries exactly the allowed fields, and water is one of them", () => {

@@ -52,7 +52,8 @@ function lookOf(i: number): TankLook {
   };
 }
 
-const day = new LeagueDay(1, seeded(Number(option("seed") ?? 1)));
+// Keep the benchmark on the same pre-release rules as its fixture.
+const day = new LeagueDay(1, seeded(Number(option("seed") ?? 1)), () => 0);
 const seats: DayTank[] = Array.from({ length: tanks }, (_, i) => ({
   id: `seat-${i + 1}`,
   name: `Tank ${i + 1}`,

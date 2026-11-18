@@ -21,8 +21,8 @@
 // A turn comes in the compact form; it is checked here for its shape (arrays of numbers).
 // Its indexes need the round's spawn, so streamState.ts checks them when it expands the turn.
 
-import { ARENA_KINDS, isJoinPolicy, isResultId, parseOwnStats, parseTankLook, RULE_SET_MODES } from "@game/arena";
-import { DIRECTIONS, MOVES, isRuleSetId } from "@game/engine";
+import { ARENA_KINDS, hasCompactUltimateFields, hasPublicUltimate, isJoinPolicy, isResultId, parseOwnStats, parseTankLook, RULE_SET_MODES } from "@game/arena";
+import { DIRECTIONS, MOVES, isRuleSetId, isUltimateId } from "@game/engine";
 import { isChatMessage } from "../chat/chatWire.ts";
 import type { WireStreamMessage } from "./streamState.ts";
 
@@ -47,7 +47,7 @@ const hasRuleSetId = (record: Record<string, unknown>, key: string): boolean => 
 const hasRuleSetIdOrNull = (record: Record<string, unknown>, key: string): boolean =>
   record[key] === null || isRuleSetId(record[key]);
 
-function isSnapshot(value: unknown): boolean {
+export function isSnapshot(value: unknown): boolean {
   return (
     isRecord(value) &&
     typeof value["width"] === "number" &&
@@ -56,7 +56,8 @@ function isSnapshot(value: unknown): boolean {
     typeof value["ticksTotal"] === "number" &&
     hasRuleSetId(value, "ruleSetId") &&
     Array.isArray(value["bots"]) &&
-    value["bots"].every((bot) => isRecord(bot) && typeof bot["water"] === "number" && DIRECTION_VALUES.includes(bot["direction"]))
+    value["bots"].every((bot) => isRecord(bot) && typeof bot["water"] === "number" &&
+      DIRECTION_VALUES.includes(bot["direction"]) && hasPublicUltimate(bot))
   );
 }
 
@@ -127,7 +128,7 @@ export function isPublicArena(value: unknown): boolean {
   );
 }
 
-function isDecision(value: unknown): boolean {
+export function isDecision(value: unknown): boolean {
   return (
     isRecord(value) &&
     typeof value["botId"] === "string" &&
@@ -141,7 +142,8 @@ function isDecision(value: unknown): boolean {
     // Present only on a turn of a dizzy tank (engine Decision.dizzy).
     (value["dizzy"] === undefined || value["dizzy"] === true) &&
     // Present only on a spinning turn of a dizzy tank (engine Decision.spin).
-    (value["spin"] === undefined || value["spin"] === true)
+    (value["spin"] === undefined || value["spin"] === true) &&
+    (value["ultimate"] === undefined || (isUltimateId(value["ultimate"]) && value["actionId"] === "ultimate" && value["move"] === "W"))
   );
 }
 
@@ -149,12 +151,14 @@ function isNumberRow(value: unknown): boolean {
   return Array.isArray(value) && value.every((n) => typeof n === "number");
 }
 
-/** The compact form's shape: a turn number and five lists of number rows (the last two are the items and the pickups). */
-function isCompactTick(value: unknown): boolean {
+/** The compact form's shape. The ultimate rows use the same checks as the shared codec. */
+export function isCompactTick(value: unknown): boolean {
   return (
     isRecord(value) &&
     typeof value["tick"] === "number" &&
-    [value["bots"], value["moves"], value["throws"], value["items"], value["pickups"]].every((rows) => Array.isArray(rows) && rows.every(isNumberRow))
+    Array.isArray(value["bots"]) && value["bots"].every(isNumberRow) &&
+    [value["moves"], value["throws"], value["items"], value["pickups"]].every((rows) => Array.isArray(rows) && rows.every(isNumberRow)) &&
+    hasCompactUltimateFields(value["ultimates"], value["fires"], value["bots"].length)
   );
 }
 

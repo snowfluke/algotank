@@ -4,7 +4,7 @@
 
 import { PRESETS, runRound, statsOfRound } from "@game/engine";
 import type { BotId, RoundConfig, RuleSetId, Snapshot, Standing, Strategy, TankStats, TickResult } from "@game/engine";
-import { isFinalRound, survivorCount } from "@game/arena";
+import { isFinalRound, survivorCount, ultimatesOn } from "@game/arena";
 import type { TankInfo } from "../board/props.ts";
 import { TANK_COLOURS } from "../tank/colours.ts";
 import { plainTankLook, type TankLook } from "../tank/look.ts";
@@ -93,7 +93,7 @@ export function runPractice(settings: PracticeSettings): PracticeRun {
     seed: settings.seed,
     // The Try it match plays like an arena round, items included (84-items.md).
     items: true,
-    ultimates: false,
+    ultimates: ultimatesOn(Date.now()),
     ruleSetId: settings.ruleSetId,
     ticksTotal: settings.ticks,
     // The cut-line conditions read this, so it follows the arena's own rule.

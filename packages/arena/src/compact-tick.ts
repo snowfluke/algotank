@@ -25,14 +25,17 @@
 //   pickups[k]= [bot index, item index], the items taken on the turn.
 //   itemsWaiting[k] = [bot index, first item index, optional second item index].
 //   magnetFires[k]  = [bot index, x, y, [[item index, source x, source y], ...]].
-//   Both Magnet fields are sparse and separate so older bundles still read the same bot rows.
+//   ultimates[k] = [bot index, ultimate index, charge turns, active count].
+//   fires[k] = [bot index, ultimate id, x, y, ...payload] for fires other than Magnet.
+//   The appended fields leave the bot rows at eight values. See ultimate-wire.ts.
 //
 // expandTick throws an Error on a compact tick that does not fit the spawn (an
 // index out of range, a value of the wrong kind). The client treats that as a
 // protocol error.
 
-import { DIRECTIONS, ITEM_KINDS, MOVES, TANK_EFFECT_KINDS, ULTIMATE_RULES, itemHandOf, type BoardItem, type Direction, type ItemKind, type MagnetFire, type Move, type Pickup, type TankEffect, type ThrowEvent, type WaitingItems } from "@game/engine";
+import { DIRECTIONS, ITEM_KINDS, MOVES, TANK_EFFECT_KINDS, ULTIMATE_RULES, itemHandOf, type BoardItem, type Direction, type ItemKind, type MagnetFire, type Move, type Pickup, type TankEffect, type ThrowEvent, type UltimateFire, type WaitingItems } from "@game/engine";
 import type { PlayerId, PublicBot, PublicSnapshot, PublicTick } from "./types.ts";
+import { compactFire, compactUltimate, expandFire, expandUltimate, hasCompactUltimateFields, type CompactFire, type CompactUltimate } from "./ultimate-wire.ts";
 
 /** One turn in a compact form. Indexes refer to the order of `roundStart.snapshot.bots`. */
 export interface CompactTick {
@@ -49,6 +52,8 @@ export interface CompactTick {
   readonly pickups: readonly (readonly number[])[];
   readonly itemsWaiting?: readonly (readonly number[])[];
   readonly magnetFires?: readonly (readonly [number, number, number, readonly (readonly number[])[]])[];
+  readonly ultimates?: readonly CompactUltimate[];
+  readonly fires?: readonly CompactFire[];
 }
 
 /** Direction index to direction. The engine's own table, clockwise from north. */
@@ -128,9 +133,15 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
   const moveOf = new Map<PlayerId, Move>();
   for (const { botId, move } of tick.moves) moveOf.set(botId, move);
   const itemsWaiting: number[][] = [];
+  const ultimates: CompactUltimate[] = [];
   bots.forEach((bot, i) => {
     if (bot.itemsWaiting !== undefined) itemsWaiting.push([i, ...bot.itemsWaiting.map((kind) => indexIn(COMPACT_ITEMS, kind, "item"))]);
+    const ultimate = compactUltimate(bot, i);
+    if (ultimate !== null) ultimates.push(ultimate);
   });
+  const magnetFires = tick.fires?.filter((fire) => fire.kind === "magnet") ?? tick.magnetFires;
+  const fires = tick.fires?.filter((fire) => fire.kind !== "magnet").map((fire) => compactFire(fire, idx));
+  if (!hasCompactUltimateFields(ultimates, fires, bots.length)) throw new Error("invalid compact ultimate fields");
 
   return {
     tick: tick.tick,
@@ -158,11 +169,13 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
     items: tick.snapshot.items.map((item) => [indexIn(COMPACT_ITEMS, item.kind, "item"), item.x, item.y, item.turnsLeft]),
     pickups: tick.pickups.map((p) => [idx(p.botId), indexIn(COMPACT_ITEMS, p.item, "item")]),
     ...(itemsWaiting.length === 0 ? {} : { itemsWaiting }),
-    ...(tick.magnetFires === undefined ? {} : {
-      magnetFires: tick.magnetFires.map(({ botId, at, items }) => [
+    ...(magnetFires === undefined || (tick.magnetFires === undefined && magnetFires.length === 0) ? {} : {
+      magnetFires: magnetFires.map(({ botId, at, items }) => [
         idx(botId), at.x, at.y, items.map(({ kind, from }) => [indexIn(COMPACT_ITEMS, kind, "item"), from.x, from.y]),
       ]),
     }),
+    ...(ultimates.length === 0 ? {} : { ultimates }),
+    ...(fires?.length ? { fires } : {}),
   };
 }
 
@@ -183,7 +196,14 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
   if (compact.bots.length !== spawnBots.length) {
     throw new Error(`the tick has ${compact.bots.length} tanks, the round ${spawnBots.length}`);
   }
+  if (!hasCompactUltimateFields(compact.ultimates, compact.fires, spawnBots.length)) throw new Error("invalid compact ultimate fields");
   const botAt = (index: unknown, what: string): PublicBot => entry(spawnBots, index, what);
+  const ultimateOf = new Map<number, ReturnType<typeof expandUltimate>>();
+  for (const row of compact.ultimates ?? []) {
+    const index = row[0];
+    if (ultimateOf.has(index)) throw new Error(`two ultimate states for tank ${index}`);
+    ultimateOf.set(index, expandUltimate(row));
+  }
   const waitingOf = new Map<PlayerId, WaitingItems>();
   for (const values of compact.itemsWaiting ?? []) {
     if (values.length < 2 || values.length > ULTIMATE_RULES.magnet.handSize) throw new Error(`a waiting hand has ${values.length} values`);
@@ -213,6 +233,7 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       water: integer(water, "water"),
       ...itemHandOf({ item: itemOfFlags(bits), itemsWaiting }),
       effect: effectOfFlags(bits),
+      ...ultimateOf.get(i),
     };
   });
 
@@ -263,6 +284,20 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       }),
     };
   });
+  let fires: UltimateFire[] | undefined;
+  if (compact.fires !== undefined || magnetFires !== undefined) {
+    const shots = new Map(throws.map((shot) => [shot.throwerId, shot]));
+    const idOf = (index: number): PlayerId => botAt(index, "ultimate tank").id;
+    const byTank = new Map<PlayerId, UltimateFire>();
+    for (const fire of [...(compact.fires?.map((row) => expandFire(row, idOf, spawn, shots)) ?? []), ...(magnetFires ?? [])]) {
+      if (byTank.has(fire.botId)) throw new Error(`two ultimate fires for tank ${fire.botId}`);
+      byTank.set(fire.botId, fire);
+    }
+    fires = order.flatMap((id) => {
+      const fire = byTank.get(id);
+      return fire === undefined ? [] : [fire];
+    });
+  }
 
   return {
     tick: integer(compact.tick, "tick"),
@@ -282,5 +317,6 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       items,
     },
     ...(magnetFires === undefined ? {} : { magnetFires }),
+    ...(fires === undefined ? {} : { fires }),
   };
 }

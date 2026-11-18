@@ -1,6 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import { arenaIn, decision, emptyCompactTick, lobbyArena, snapshotAt } from "./fixtures.ts";
+import { ULTIMATE_IDS } from "@game/engine";
+import { arenaIn, decision, emptyCompactTick, engineRound, lobbyArena, snapshotAt } from "./fixtures.ts";
 import { parseStreamMessage } from "./parseStreamMessage.ts";
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -129,6 +130,35 @@ describe("parseStreamMessage", () => {
       expect(parseStreamMessage("tick", json({ type: "tick", round: 1, tick: bad, own: null })).ok).toBe(false);
     }
   });
+
+  test("reads ultimate states and fire payloads and rejects invalid counts, indexes and shapes", () => {
+    const { spawn: snapshot } = engineRound(2, 1);
+    const start = (fields: object) => parseStreamMessage("roundStart", json({
+      type: "roundStart", round: 1, startsInMs: 0,
+      snapshot: { ...snapshot, bots: [{ ...snapshot.bots[0], ...fields }] },
+    }));
+    const smoke = { ultimate: { id: "smoke", kind: "charging", turnsLeft: 40 }, ultimateEffect: { kind: "smoke", turnsLeft: 9 } };
+    expect(start(smoke).ok).toBe(true);
+    expect(start({ ...smoke, ultimate: { id: "smoke", kind: "charging", turnsLeft: 0 } }).ok).toBe(false);
+    expect(start({ ...smoke, ultimateEffect: { kind: "fullTank", freeShots: 2 } }).ok).toBe(false);
+
+    const tick = { tick: 0, bots: [[1, 2, 0, 0, 10, 0, 0, 0]], moves: [[0, 0]], throws: [], items: [], pickups: [],
+      ultimates: [[0, ULTIMATE_IDS.indexOf("smoke"), 40, 9]], fires: [[0, "smoke", 1, 2]] };
+    const own = { ...decision("r1"), ruleId: null, actionId: "ultimate", move: "W", ultimate: "smoke" };
+    const turn = (fields: object, decision: unknown = own) => parseStreamMessage("tick", json({
+      type: "tick", round: 1, tick: { ...tick, ...fields }, own: decision,
+    }));
+    expect(turn({}).ok).toBe(true);
+    expect(turn({}, { ...own, ultimate: "unknown" }).ok).toBe(false);
+    for (const fields of [
+      { ultimates: [[0, 42, 40, 0]] },
+      { ultimates: [[1, 0, 0, 0]] },
+      { ultimates: [[0, 0, 0, 3]] },
+      { fires: [[0, "dash", 1, 2, [[2, "3"]]]] },
+      { fires: [[0, "splash", 1, 2, [[2, 3, "hit", 1]]]] },
+      { fires: [[0, "mudBomb", 1, 2, null, [], [], 1]] },
+    ]) expect(turn(fields).ok).toBe(false);
+  });
 });
 
 describe("the stats event (K2)", () => {
@@ -138,6 +168,21 @@ describe("the stats event (K2)", () => {
   test("is read when its numbers and rules fit", () => {
     const parsed = parseStreamMessage("stats", event({ game: 1, round: 2, last: view, gameTotal: view }));
     expect(parsed.ok && parsed.message.type === "stats" && parsed.message.stats.round).toBe(2);
+  });
+
+  test("reads ultimate turns and defaults the field from older servers to zero", () => {
+    const read = (last: object, gameTotal: object = view) => parseStreamMessage("stats", event({ game: 1, round: 2, last, gameTotal }));
+    const ultimateTurns = (last: object) => {
+      const parsed = read(last);
+      return parsed.ok && parsed.message.type === "stats" && parsed.message.stats.last.ultimateTurns;
+    };
+    expect(ultimateTurns(view)).toBe(0);
+    expect(ultimateTurns({ ...view, ultimateTurns: 2 })).toBe(2);
+    const parsed = read({ ...view, ultimateTurns: 2 }, { ...view, ultimateTurns: 3 });
+    expect(parsed.ok && parsed.message.type === "stats" && parsed.message.stats.gameTotal.ultimateTurns).toBe(3);
+    expect(read({ ...view, ultimateTurns: -1 }).ok).toBe(false);
+    expect(read({ ...view, ultimateTurns: 11 }).ok).toBe(false);
+    expect(read(view, { ...view, ultimateTurns: -1 }).ok).toBe(false);
   });
 
   test("is a protocol error when a number is missing, below zero, or more hits than shots", () => {

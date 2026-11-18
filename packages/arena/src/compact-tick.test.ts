@@ -102,7 +102,7 @@ describe("compactTick and expandTick", () => {
     expect(wire.itemsWaiting).toEqual([[0, 3, 1]]);
     expect(wire.magnetFires).toEqual([[0, 3, 2, [[3, 3, 1], [1, 2, 2]]]]);
     expect(wire.bots.every((bot) => bot.length === 8)).toBe(true);
-    expect(expandTick(wire, spawn)).toEqual(tick);
+    expect(expandTick(wire, spawn)).toEqual({ ...tick, fires: tick.magnetFires! });
 
     const { itemsWaiting: _queue, magnetFires: _fires, ...legacy } = wire;
     const next = expandTick(legacy, tick.snapshot);
@@ -110,6 +110,46 @@ describe("compactTick and expandTick", () => {
     expect(next.snapshot.bots[0]).not.toHaveProperty("itemsWaiting");
     expect(next).not.toHaveProperty("magnetFires");
     expect(expandTick(compactTick(turn, order), spawn)).toEqual(turn);
+  });
+
+  test("all ultimate fires and active counts round-trip in move order", () => {
+    const { spawn, ticks } = playRound("standard", 7);
+    const turn = ticks[0]!;
+    const at = { x: 2, y: 2 };
+    const front = { x: 2, y: 1 };
+    const side = { x: 3, y: 2 };
+    const shot = { throwerId: "p0", outcome: "hit", targetId: "p1", distance: 1, hitChance: 90, bucket: true } as const;
+    const fires: NonNullable<PublicTick["fires"]> = [
+      { botId: "p7", kind: "magnet", at, items: [{ kind: "bucket", from: front }] },
+      { botId: "p5", kind: "splash", at, squares: [{ ...front, targetId: "p1", outcome: "hit" }, { ...side, targetId: "p2", outcome: "miss" }] },
+      { botId: "p0", kind: "dash", at, path: [front], shot },
+      { botId: "p3", kind: "mudBomb", at, center: front, area: [at, front], affected: ["p1"], points: 1 },
+      { botId: "p2", kind: "whirlwind", at, area: [at, front], affected: ["p3", "p4"] },
+      { botId: "p4", kind: "smoke", at },
+      { botId: "p6", kind: "bigUmbrella", at },
+      { botId: "p1", kind: "fullTank", at },
+    ];
+    const bots = turn.snapshot.bots.map((bot): PublicSnapshot["bots"][number] => {
+      switch (bot.id) {
+        case "p0": return { ...bot, ultimate: { id: "dash", kind: "ready" }, ultimateEffect: null };
+        case "p1": return { ...bot, ultimate: { id: "fullTank", kind: "charging", turnsLeft: 10 }, ultimateEffect: { kind: "fullTank", freeShots: 2 } };
+        case "p4": return { ...bot, ultimate: { id: "smoke", kind: "charging", turnsLeft: 40 }, ultimateEffect: { kind: "smoke", turnsLeft: 9 } };
+        case "p6": return { ...bot, ultimate: { id: "bigUmbrella", kind: "ready" }, ultimateEffect: { kind: "bigUmbrella", blocksLeft: 4 } };
+        default: return bot;
+      }
+    });
+    const order = spawn.bots.map((bot) => bot.id);
+    const fireOrder = fires.map((fire) => fire.botId);
+    const moveOrder = [...fireOrder, ...order.filter((id) => !fireOrder.includes(id))];
+    const wire = compactTick({ ...turn, order: moveOrder, fires, throws: [shot], snapshot: { ...turn.snapshot, bots } }, order);
+    expect(wire.ultimates).toEqual([[0, 0, 0, 0], [1, 3, 10, 2], [4, 1, 40, 9], [6, 6, 0, 4]]);
+    expect(wire.fires?.[1]).toEqual([0, "dash", 2, 2, [[2, 1]]]);
+    const expanded = expandTick(wire, spawn);
+    expect(expanded.fires).toEqual(fires);
+    expect(expanded.snapshot.bots).toEqual(bots);
+    expect(() => expandTick({ ...wire, throws: [] }, spawn)).toThrow("has no shot");
+    expect(() => expandTick({ ...wire, fires: [[0, "dash", spawn.width, 0, []]] }, spawn)).toThrow("outside the board");
+    expect(expandTick(compactTick(turn, order), expanded.snapshot).snapshot.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
   });
 
   test("items, pickups, held items and both effects take part in the round trips above", () => {

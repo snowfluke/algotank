@@ -6,16 +6,16 @@
 //                direction (int); then one tie-break number (next) per player.
 //   stepRound:   the draws of decide() for each bot in snapshot order. A spin, sequence
 //                step or ultimate fire skips decide and draws nothing at this point. Then the
-//                shuffle of the move order; then one chance roll for each throw that
-//                has a target and enough water or a free shot, in move order. A dry throw
-//                or a throw at a dashing tank draws nothing. Smoke changes the same roll.
+//                shuffle of the move order; then one chance roll for each throw (including
+//                the shot after a dash) that has a target and enough water or a free shot,
+//                in move order. A dry throw or a throw at a dashing tank draws nothing.
+//                Smoke changes the same roll.
 //                Then one chance for each pinwheel or mud ball taken on the turn (its
 //                backfire, items/items.ts pickUp), and, in a round with items on and only on
 //                a spawn turn, one int for the item's kind and one int for its square
 //                (spawnItems, once per item it adds). A round with items off has no item,
 //                so it draws neither. After all these draws, fire order gives the ultimate
-//                draws: Splash rolls once per occupied side square, clockwise from the
-//                front, and for an occupied front square only when it is under smoke.
+//                draws: Splash rolls once per smoked tank in the ring, clockwise from the front.
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
 //

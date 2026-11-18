@@ -1,5 +1,6 @@
 /// <reference types="bun" />
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
+import { ULTIMATES_FROM } from "@game/arena";
 import { DEFAULT_PRESET_ID, PRESETS, STANDARD_RULE_SET_ID, parseStrategy, statsOfRound, statsView } from "@game/engine";
 import type { Strategy } from "@game/engine";
 import { OPPONENTS_MAX, PLAYER_ID, TICKS_DEFAULT, drawSeed, pickOpponents, runPractice } from "./run.ts";
@@ -45,6 +46,17 @@ describe("pickOpponents", () => {
 });
 
 describe("runPractice", () => {
+  test("the browser clock enables ultimates for a new practice round at release", () => {
+    const now = spyOn(Date, "now").mockReturnValue(ULTIMATES_FROM - 1);
+    try {
+      expect(runPractice(settings).spawn.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
+      now.mockReturnValue(ULTIMATES_FROM);
+      expect(runPractice(settings).spawn.bots.every((bot) => bot.ultimate?.kind === "charging")).toBe(true);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   test("the same seed gives the same round", () => {
     const first = runPractice(settings);
     const second = runPractice(settings);
@@ -101,8 +113,9 @@ describe("the statistics of a test match", () => {
     for (const preset of PRESETS) {
       const run = runPractice({ ...settings, strategy: preset.strategy });
       const view = statsView(statsOfRound(run.spawn, run.ticks, PLAYER_ID), run.strategy);
-      // A pinwheel's spin turns belong to no row (engine stats: spinTurns).
-      const total = view.modes.reduce((sum, mode) => sum + mode.rules.reduce((s, n) => s + n, 0) + mode.fallback, 0) + view.spinTurns;
+      // Spin and ultimate turns belong to no rule row (engine stats).
+      const total = view.modes.reduce((sum, mode) => sum + mode.rules.reduce((s, n) => s + n, 0) + mode.fallback, 0) +
+        view.spinTurns + (view.ultimateTurns ?? 0);
       expect(total).toBe(run.ticks.length);
     }
   });

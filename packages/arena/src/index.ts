@@ -31,3 +31,5 @@ export * from "./chat-protocol.ts";
 export * from "./results-protocol.ts";
 export * from "./metrics-protocol.ts";
 export * from "./stats-protocol.ts";
+export * from "./ultimates-release.ts";
+export { hasCompactUltimateFields, hasPublicUltimate } from "./ultimate-wire.ts";

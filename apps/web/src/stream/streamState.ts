@@ -11,7 +11,7 @@
 
 import { expandTick } from "@game/arena";
 import type { CompactTick, OwnStats, PublicArena, PublicSnapshot, PublicTick, StreamMessage } from "@game/arena";
-import type { Decision, ThrowEvent } from "@game/engine";
+import type { Decision, ThrowEvent, UltimateFire } from "@game/engine";
 import { throwOf } from "../water/water.ts";
 
 /** How many recent decisions of the player the state keeps. */
@@ -47,6 +47,8 @@ export interface ArenaStreamState {
   readonly roundSpawn: PublicSnapshot | null;
   /** The throws of the tick that produced the snapshot. Empty for a spawn state. */
   readonly throws: readonly ThrowEvent[];
+  /** The ultimate fires of the tick that produced the snapshot. */
+  readonly fires: readonly UltimateFire[];
   /** The player's own decisions in snapshotRound, oldest first. Empty for a viewer. */
   readonly ownDecisions: readonly OwnDecision[];
   /** Set when a message could not be read. It stays until the next valid message. */
@@ -82,6 +84,7 @@ export const INITIAL_STREAM_STATE: ArenaStreamState = {
   snapshot: null,
   roundSpawn: null,
   throws: [],
+  fires: [],
   ownDecisions: [],
   protocolError: null,
   firstTurnAt: null,
@@ -106,6 +109,7 @@ const NO_ROUND = {
   snapshot: null,
   roundSpawn: null,
   throws: [],
+  fires: [],
   ownDecisions: [],
   firstTurnAt: null,
 } as const satisfies Partial<ArenaStreamState>;
@@ -150,6 +154,7 @@ function withTick(state: ArenaStreamState, round: number, wire: CompactTick, own
     snapshotRound: round,
     snapshot: tick.snapshot,
     throws: tick.throws,
+    fires: tick.fires ?? [],
     ownDecisions,
     protocolError: null,
     firstTurnAt: null,
@@ -180,6 +185,7 @@ export function reduceStream(state: ArenaStreamState, action: StreamAction): Are
             snapshot: message.snapshot,
             roundSpawn: message.snapshot,
             throws: [],
+            fires: [],
             ownDecisions: sameRound ? state.ownDecisions : [],
             protocolError: null,
             firstTurnAt: message.startsInMs > 0 ? action.receivedAt + message.startsInMs : null,

@@ -273,6 +273,7 @@ function RunningScene({ data }: { data: HarnessData }) {
     snapshot: tick?.snapshot ?? data.spawn,
     roundSpawn: data.spawn,
     throws: tick?.throws ?? [],
+    fires: [],
     ownDecisions: viewerId === null ? [] : ownDecisions(data.ticks, frame),
     protocolError: null,
     firstTurnAt: null,

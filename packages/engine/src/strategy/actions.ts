@@ -309,7 +309,10 @@ const defs = withLiteralIds<ActionDef>()([
     // Driving picks up an item only with an empty hand, even when Magnet has room to pull more.
     toMove: (ctx, params) => {
       const item = canTake(ctx.self) ? nearestItem(ctx.snapshot, ctx.self, itemValue(params)) : undefined;
-      return item === undefined ? null : stepTowards(ctx, stepToward(ctx.self, item));
+      if (item === undefined) return null;
+      // Splash can use the last umbrella block after pickups (85-ultimates.md). Stay on the item to take it this turn.
+      if (item.x === ctx.self.x && item.y === ctx.self.y) return "W";
+      return stepTowards(ctx, stepToward(ctx.self, item));
     },
   },
 ]);

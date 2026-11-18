@@ -2,10 +2,12 @@
 // Every snapshot the server sends goes through toPublicSnapshot, so one allow-list
 // (PublicBot in @game/arena) decides what leaves the server.
 
-import { compactTick, type CompactTick, type PlayerId, type PublicBot, type PublicSnapshot, type PublicTick, type StreamMessage } from "@game/arena";
+import { compactTick, hasPublicUltimate, type CompactTick, type PlayerId, type PublicBot, type PublicSnapshot, type PublicTick, type StreamMessage } from "@game/arena";
 import { itemHandOf, type BotState, type Decision, type Snapshot, type TickResult } from "@game/engine";
 
 function toPublicBot(bot: BotState): PublicBot {
+  const { ultimate, ultimateEffect } = bot;
+  if (!hasPublicUltimate({ ultimate, ultimateEffect })) throw new Error(`Invalid ultimate state for tank ${bot.id}.`);
   return {
     id: bot.id,
     x: bot.x,
@@ -19,6 +21,7 @@ function toPublicBot(bot: BotState): PublicBot {
     water: bot.water,
     ...itemHandOf(bot),
     effect: bot.effect,
+    ...(ultimate === undefined ? {} : { ultimate, ultimateEffect: ultimateEffect ?? null }),
   };
 }
 
@@ -47,6 +50,7 @@ export function toPublicTick(result: TickResult): PublicTick {
     pickups: result.pickups,
     snapshot: toPublicSnapshot(result.snapshot),
     ...(magnetFires?.length ? { magnetFires } : {}),
+    ...(result.fires?.length ? { fires: result.fires } : {}),
   };
 }
 

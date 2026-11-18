@@ -37,6 +37,8 @@ export interface StatsNumbers {
   readonly squaresMoved: number;
   /** Turns in which no rule ran, so "If no rule fits" did. */
   readonly noRuleTurns: number;
+  /** Present when the tank fired an ultimate, or defaulted to zero when read from the wire. */
+  readonly ultimateTurns?: number;
 }
 
 /** The running totals of one tank. Read the numbers with statsNumbers, the rules with statsView. */
@@ -152,11 +154,15 @@ export function statsOfRound(spawn: Snapshot, ticks: readonly TickResult[], botI
 
 export function statsNumbers(stats: TankStats): StatsNumbers {
   const noRuleTurns = stats.uses.reduce((sum, use) => sum + (use.ruleId === null ? use.turns : 0), 0);
-  return { turns: stats.turns, shots: stats.shots, hits: stats.hits, timesHit: stats.timesHit, squaresMoved: stats.squaresMoved, noRuleTurns };
+  return {
+    turns: stats.turns, shots: stats.shots, hits: stats.hits, timesHit: stats.timesHit, squaresMoved: stats.squaresMoved, noRuleTurns,
+    ...(stats.ultimateTurns === undefined ? {} : { ultimateTurns: stats.ultimateTurns }),
+  };
 }
 
 /** The sum of two sets of numbers: a game's numbers over its rounds. */
 export function addNumbers(a: StatsNumbers, b: StatsNumbers): StatsNumbers {
+  const ultimateTurns = (a.ultimateTurns ?? 0) + (b.ultimateTurns ?? 0);
   return {
     turns: a.turns + b.turns,
     shots: a.shots + b.shots,
@@ -164,6 +170,7 @@ export function addNumbers(a: StatsNumbers, b: StatsNumbers): StatsNumbers {
     timesHit: a.timesHit + b.timesHit,
     squaresMoved: a.squaresMoved + b.squaresMoved,
     noRuleTurns: a.noRuleTurns + b.noRuleTurns,
+    ...(ultimateTurns === 0 ? {} : { ultimateTurns }),
   };
 }
 

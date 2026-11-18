@@ -1,7 +1,7 @@
 // Plays a round in real time: after a pause that lets players find their tank, one
 // timer per running arena steps the engine and sends each tick to the stream.
 
-import type { ArenaId } from "@game/arena";
+import { ultimatesOn, type ArenaId } from "@game/arena";
 import { createRound, standings, stepRound, type RoundConfig, type RoundState, type Snapshot } from "@game/engine";
 import type { AutoSteps } from "./auto-steps.ts";
 import type { StreamHub } from "./stream.ts";
@@ -59,6 +59,7 @@ export class RoundRunner {
     if (phase.kind !== "running") throw new Error("begin needs an arena in the running phase.");
 
     try {
+      const { scheduler, now, startDelayMs } = this.options;
       // Players edit their strategy in the break, so keep what plays now for the replay.
       const strategyOf = new Map(arena.players.map((p) => [p.id, p.strategy] as const));
       const config: RoundConfig = {
@@ -74,13 +75,12 @@ export class RoundRunner {
         }),
         // Every arena plays with items (docs/specs/revamp/84-items.md); the stored config keeps it for the replay.
         items: true,
-        ultimates: false,
+        ultimates: ultimatesOn(now()),
       };
       const state = createRound(config);
       this.store.setRoundConfig(record, phase.round, config);
       const humans = new Set(arena.players.filter((p) => !p.isBot).map((p) => p.id));
       this.withStats(arena.id, (stats) => stats.roundStarted(arena.id, arena.game, phase.round, config.players.filter((p) => humans.has(p.id))));
-      const { scheduler, now, startDelayMs } = this.options;
       this.hub.sendArena(this.autoSteps.view(arena));
       this.hub.sendRoundStart(arena.id, phase.round, state.snapshot, startDelayMs);
 

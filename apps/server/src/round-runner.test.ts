@@ -1,7 +1,7 @@
 import { plainTankLook } from "@game/arena";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { createArena, type ArenaEvent, type ArenaSettings } from "@game/arena";
-import { PRESETS, type TickResult } from "@game/engine";
+import { ULTIMATES_FROM, createArena, type ArenaEvent, type ArenaSettings } from "@game/arena";
+import { PRESETS, ULTIMATE_RULES, type TickResult } from "@game/engine";
 import { AutoSteps } from "./auto-steps.ts";
 import { Metrics } from "./metrics/metrics.ts";
 import { zoneCalendar } from "./monthly/calendar.ts";
@@ -36,8 +36,8 @@ afterEach(() => errors.mockRestore());
 
 const SETTINGS: ArenaSettings = { name: "Test", kind: "presenter", ticksPerRound: TICKS, tickMs: 100, ruleSetMode: "standard", botFill: false, joinPolicy: "anyone", tankCount: 512 };
 
-function setup(playerCount: number, settings: ArenaSettings = SETTINGS, startDelayMs = 0) {
-  const ticks = manualScheduler();
+function setup(playerCount: number, settings: ArenaSettings = SETTINGS, startDelayMs = 0, at?: number) {
+  const ticks = manualScheduler(at);
   const store = new Store({ db: memoryDatabase(), now: ticks.now, scheduler: ticks });
   const hub = new FlakyHub({ heartbeatMs: 60_000, maxStreamsPerArena: 10, now: ticks.now, scheduler: ticks, arenaMessageIntervalMs: 0 });
   const runner = new RoundRunner(store, hub, new AutoSteps(ticks, ticks.now, PUBLIC_RULES), { scheduler: ticks, now: ticks.now, startDelayMs });
@@ -63,6 +63,23 @@ function setup(playerCount: number, settings: ArenaSettings = SETTINGS, startDel
 }
 
 const phaseOf = (record: ArenaRecord) => record.arena.phase;
+
+test("a room fixes the release gate at round creation, even if its first tick comes later", () => {
+  const settings = { ...SETTINGS, kind: "private", tankCount: 2 } as const;
+  const before = setup(2, settings, 10, ULTIMATES_FROM - 1);
+  before.start(42);
+  const bots = (s: ReturnType<typeof setup>) => s.runner.currentRound(s.record.arena.id)?.snapshot.bots;
+  expect(bots(before)?.map((bot) => bot.ultimate)).toEqual([undefined, undefined]);
+  before.ticks.advance(10);
+  before.ticks.tick();
+  expect(bots(before)?.map((bot) => bot.ultimate)).toEqual([undefined, undefined]);
+
+  const after = setup(2, settings, 0, ULTIMATES_FROM);
+  after.start(42);
+  expect(bots(after)?.map((bot) => bot.ultimate)).toEqual(Array(2).fill({
+    id: strategy.ultimate, kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn,
+  }));
+});
 
 describe("a round that cannot start", () => {
   test("returns to the lobby and throws, and the host can start again", () => {

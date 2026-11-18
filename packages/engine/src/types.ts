@@ -453,9 +453,9 @@ export interface MagnetFire {
 }
 
 export type UltimateFire = { readonly botId: BotId; readonly at: Cell } & (
-  | { readonly kind: "dash"; readonly path: readonly Cell[] }
+  | { readonly kind: "dash"; readonly path: readonly Cell[]; readonly shot: ThrowEvent }
   | { readonly kind: "splash"; readonly squares: readonly SplashSquare[] }
-  | { readonly kind: "mudBomb"; readonly center: Cell | null; readonly area: readonly Cell[]; readonly affected: readonly BotId[] }
+  | { readonly kind: "mudBomb"; readonly center: Cell | null; readonly area: readonly Cell[]; readonly affected: readonly BotId[]; readonly points: number }
   | { readonly kind: "whirlwind"; readonly area: readonly Cell[]; readonly affected: readonly BotId[] }
   | { readonly kind: "smoke" | "fullTank" | "bigUmbrella" }
 ) | MagnetFire;

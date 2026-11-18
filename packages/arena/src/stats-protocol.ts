@@ -77,8 +77,10 @@ export function parseStatsNumbers(raw: unknown): StatsNumbers | null {
   if (!isObj(raw)) return null;
   const [turns, shots, hits, timesHit, squaresMoved, noRuleTurns] = NUMBER_KEYS.map((key) => raw[key]);
   if (!count(turns) || !count(shots) || !count(hits) || !count(timesHit) || !count(squaresMoved) || !count(noRuleTurns)) return null;
-  if (hits > shots || noRuleTurns > turns) return null;
-  return { turns, shots, hits, timesHit, squaresMoved, noRuleTurns };
+  // Before ultimates, there were no fires to count (85-ultimates.md).
+  const ultimateTurns = raw["ultimateTurns"] === undefined ? 0 : raw["ultimateTurns"];
+  if (!count(ultimateTurns) || hits > shots || noRuleTurns + ultimateTurns > turns) return null;
+  return { turns, shots, hits, timesHit, squaresMoved, noRuleTurns, ultimateTurns };
 }
 
 export function parseStatsView(raw: unknown): StatsView | null {
@@ -96,7 +98,7 @@ export function parseStatsView(raw: unknown): StatsView | null {
   }
   // Absent from a server older than the pinwheel's spin (2026-11-17), which had no spin turns to count.
   const spinTurns = raw["spinTurns"] === undefined ? 0 : raw["spinTurns"];
-  if (!count(spinTurns) || spinTurns > numbers.turns) return null;
+  if (!count(spinTurns) || spinTurns + (numbers.ultimateTurns ?? 0) > numbers.turns) return null;
   return { ...numbers, modes, spinTurns };
 }
 

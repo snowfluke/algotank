@@ -5,11 +5,11 @@ import { Disclosure } from "./disclosure.ts";
 import { GameMasters } from "./game-masters.ts";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Database } from "bun:sqlite";
-import { plainTankLook, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
-import { arenaSize, PRESETS, ruleSet, STANDARD_RULE_SET_ID } from "@game/engine";
+import { plainTankLook, ULTIMATES_FROM, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
+import { arenaSize, PRESETS, ruleSet, STANDARD_RULE_SET_ID, ULTIMATE_RULES } from "@game/engine";
 import { HttpError } from "../http.ts";
 import { manualScheduler, type ManualScheduler } from "../test-helpers.ts";
-import { zoneCalendar } from "./calendar.ts";
+import { DEFAULT_LEAGUE_TIME_ZONE, zoneCalendar, type LeagueCalendar } from "./calendar.ts";
 import { Champions } from "./champions.ts";
 import { insertAccount, memoryDatabase } from "../db/testing.ts";
 import { LeagueStore } from "./league-store.ts";
@@ -42,7 +42,7 @@ interface League {
  * `seatsPerLeague` is 16 unless given, so the tests of several leagues and of the month close need 17
  * tanks, not 513; `null` gives the server's MONTHLY_SEATS.
  */
-function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler; readonly seatsPerLeague?: number | null } = {}): League {
+function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler; readonly seatsPerLeague?: number | null; readonly calendar?: LeagueCalendar } = {}): League {
   const ticks = options.ticks ?? manualScheduler(options.at ?? NOV_14 + 10 * 60 * 60 * 1000);
   const db = options.db ?? memoryDatabase();
   const champions = new Champions(db);
@@ -53,7 +53,7 @@ function startLeague(options: { readonly at?: number; readonly db?: Database; re
     disclosure: new Disclosure(db),
     champions,
     streams,
-    calendar: zoneCalendar("Asia/Jakarta"),
+    calendar: options.calendar ?? zoneCalendar(DEFAULT_LEAGUE_TIME_ZONE),
     now: ticks.now,
     scheduler: ticks,
     tickMs: 900,
@@ -127,6 +127,33 @@ function nextDay(l: League): void {
 }
 
 describe("the day round", () => {
+  test("the Jakarta midnight that opens ultimates gives the new day's tanks a fresh charge", () => {
+    const l = startLeague({ at: ULTIMATES_FROM - 1 });
+    take(l, newAccount());
+    expect(l.monthly.live(1)).toMatchObject({ day: "2026-11-21", dayEndsInMs: 1 });
+    expect(l.monthly.live(1).board.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
+    nextDay(l);
+    const live = l.monthly.live(1);
+    expect(live).toMatchObject({ day: "2026-11-22", board: { tick: 0 } });
+    expect(live.board.bots).toHaveLength(2);
+    expect(live.board.bots.every((bot) => bot.ultimate?.kind === "charging" && bot.ultimate.turnsLeft === ULTIMATE_RULES.firstReadyTurn)).toBe(true);
+  });
+
+  test("a league whose day spans the gate keeps its round off through ticks and joins until the next round", () => {
+    const l = startLeague({ at: ULTIMATES_FROM - 1, calendar: zoneCalendar("UTC") });
+    take(l, newAccount());
+    l.ticks.advance(2);
+    l.ticks.tick();
+    const joined = take(l, newAccount());
+    const before = l.monthly.live(1).board;
+    expect(before.tick).toBe(1);
+    expect(before.bots.find((bot) => bot.id === joined.seat?.seatId)).toBeDefined();
+    expect(before.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
+    for (let i = 0; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
+    const after = l.monthly.live(1).board;
+    expect(after.tick).toBe(1);
+    expect(after.bots.every((bot) => bot.ultimate?.kind === "charging")).toBe(true);
+  });
   test("lasts from 00:00 to 24:00 in the league's time zone: 96,000 turns of 0.9 s", () => {
     const l = startLeague({ at: NOV_14 });
     const live = l.monthly.live(1);

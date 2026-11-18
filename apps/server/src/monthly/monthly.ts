@@ -249,7 +249,7 @@ export class MonthlyLeagues {
   /** New day rounds for every league. With a checkpoint each seat gets its points and "counts"; without one, 0 points and counts. */
   private openDay(checkpoint: Checkpoint | null): void {
     this.days.clear();
-    for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, new LeagueDay(league, this.options.random));
+    for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, new LeagueDay(league, this.options.random, this.options.now));
     const ticksLeft = this.ticksLeft();
     const seats = [...this.seats.seats.values()].sort((a, b) => a.order - b.order);
     // Each league seats its own tanks below, so a seat in a league with no day would be left out without a word.
@@ -437,7 +437,7 @@ export class MonthlyLeagues {
     };
     this.options.store.writeSeats(next);
     this.seats = next;
-    if (!this.days.has(league)) this.days.set(league, new LeagueDay(league, this.options.random));
+    if (!this.days.has(league)) this.days.set(league, new LeagueDay(league, this.options.random, this.options.now));
     // A tank that left today and comes back the same day goes on where it stopped, and today counts again: leaving
     // is a pause, like "Change rules" (owner, 2026-11-17: a rejoin started over at 0 and its day did not count). The
     // checkpoint is written before the saved score goes, so a crash in between keeps the points.

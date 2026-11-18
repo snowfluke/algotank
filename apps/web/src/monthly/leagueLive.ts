@@ -19,7 +19,8 @@
 // Terminal: closed (the page moves to a league that exists, which is a new stream).
 
 import { expandTick, type LeagueLive, type LeagueStreamMessage, type PublicSnapshot } from "@game/arena";
-import type { ThrowEvent } from "@game/engine";
+import type { ThrowEvent, UltimateFire } from "@game/engine";
+import { isCompactTick, isDecision, isSnapshot } from "../stream/parseStreamMessage.ts";
 import { OWN_DECISIONS_KEPT, type OwnDecision } from "../stream/streamState.ts";
 import { throwOf } from "../water/water.ts";
 
@@ -29,6 +30,8 @@ export interface LeagueBoard {
   readonly snapshot: PublicSnapshot;
   /** The shots of the turn that made `snapshot`; empty after a state. */
   readonly throws: readonly ThrowEvent[];
+  /** The ultimate fires of the turn that made `snapshot`. */
+  readonly fires: readonly UltimateFire[];
   /** When the day round ends, as a Date.now() time: the state's `dayEndsInMs` from when it arrived. */
   readonly dayEndsAt: number;
   /** The viewer's own tank's last turns, oldest first, for the "Tank kamu" feed. */
@@ -58,8 +61,8 @@ export function parseLeagueMessage(data: string): LeagueStreamMessage | null {
     return null;
   }
   if (!isRecord(raw)) return null;
-  if (raw["type"] === "state" && isRecord(raw["state"]) && Array.isArray(raw["state"]["tanks"]) && isRecord(raw["state"]["board"])) return raw as unknown as LeagueStreamMessage;
-  if (raw["type"] === "tick" && isRecord(raw["tick"])) return raw as unknown as LeagueStreamMessage;
+  if (raw["type"] === "state" && isRecord(raw["state"]) && Array.isArray(raw["state"]["tanks"]) && isSnapshot(raw["state"]["board"])) return raw as unknown as LeagueStreamMessage;
+  if (raw["type"] === "tick" && isCompactTick(raw["tick"]) && (raw["own"] === null || isDecision(raw["own"]))) return raw as unknown as LeagueStreamMessage;
   if (raw["type"] === "closed" && typeof raw["leagues"] === "number" && raw["leagues"] >= 1) return raw as unknown as LeagueStreamMessage;
   return null;
 }
@@ -73,7 +76,7 @@ export function nextLeagueLoad(load: LeagueLiveLoad, message: LeagueStreamMessag
     const same = load.kind === "ready" && load.board.live.day === state.day && load.board.live.league === state.league;
     const reshuffled = same && state.board.tick === 0 && load.board.snapshot.tick > 0 && state.tanks.length > 0;
     const reshuffles = same ? load.board.reshuffles + (reshuffled ? 1 : 0) : 0;
-    return { kind: "ready", board: { live: state, snapshot: state.board, throws: [], dayEndsAt: now + state.dayEndsInMs, own: same ? load.board.own : [], reshuffles } };
+    return { kind: "ready", board: { live: state, snapshot: state.board, throws: [], fires: [], dayEndsAt: now + state.dayEndsInMs, own: same ? load.board.own : [], reshuffles } };
   }
   if (load.kind !== "ready") return load;
   // expandTick throws on a turn that does not fit the tanks of the state; the stream then reconnects (useLeagueLive).
@@ -82,5 +85,5 @@ export function nextLeagueLoad(load: LeagueLiveLoad, message: LeagueStreamMessag
     message.own === null
       ? load.board.own
       : [...load.board.own, { tick: tick.tick, decision: message.own, throwEvent: throwOf(tick.throws, message.own.botId) }].slice(-OWN_DECISIONS_KEPT);
-  return { kind: "ready", board: { ...load.board, snapshot: tick.snapshot, throws: tick.throws, own } };
+  return { kind: "ready", board: { ...load.board, snapshot: tick.snapshot, throws: tick.throws, fires: tick.fires ?? [], own } };
 }

@@ -1,5 +1,5 @@
 // One league's day round in memory: the engine round, the seated tanks and the bot
-// (docs/specs/revamp/77-monthly-league.md, section 2). It knows no clock, no file and no stream;
+// (docs/specs/revamp/77-monthly-league.md, section 2). It reads the clock when it creates a round;
 // monthly.ts drives it between turns and saves what it reports.
 //
 // The league's day:
@@ -51,7 +51,8 @@ import { plainTankLook, type LeagueDayPhase, type LeagueTank, type PlayerId, typ
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
 import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
-import { MONTHLY_BOARD_MIN_TANKS } from "@game/arena";
+import { MONTHLY_BOARD_MIN_TANKS, ultimatesOn } from "@game/arena";
+import type { Clock } from "../timers.ts";
 
 /** What the round needs of a seated tank. */
 export interface DayTank {
@@ -140,6 +141,7 @@ export class LeagueDay {
   constructor(
     readonly league: number,
     private readonly random: Random = Math.random,
+    private readonly now: Clock,
   ) {}
 
   /**
@@ -166,7 +168,8 @@ export class LeagueDay {
   private newRound(tanks: number, ticksLeft: number): RoundState {
     this.boardFor = boardTanksFor(tanks);
     const ruleSetId = MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
-    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: false });
+    // Hold the release choice for this round, even if a seat joins after the gate opens (85-ultimates.md).
+    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: ultimatesOn(this.now()) });
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */

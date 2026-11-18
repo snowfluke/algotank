@@ -58,7 +58,7 @@ export function fixtureLive(league: number, count: number, ruleSetId: RuleSetId 
 }
 
 export function fixtureLoad(live: LeagueLive, now: number, own: readonly OwnDecision[] = []): LeagueLiveLoad {
-  return { kind: "ready", board: { live, snapshot: live.board, throws: [], dayEndsAt: now + live.dayEndsInMs, own, reshuffles: 0 } };
+  return { kind: "ready", board: { live, snapshot: live.board, throws: [], fires: [], dayEndsAt: now + live.dayEndsInMs, own, reshuffles: 0 } };
 }
 
 /** The owner's last turns under the default play style: a grab, shots and drives, so the feed has pages. */

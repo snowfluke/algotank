@@ -85,6 +85,33 @@ describe("compactTick and expandTick", () => {
     expect(expandTick(compact, spawn)).toEqual(tick);
   });
 
+  test("Magnet queues and pulls round-trip in appended fields while legacy bots keep eight values", () => {
+    const { spawn, ticks } = playRound("standard", 7);
+    const turn = ticks[0]!;
+    const tick: PublicTick = {
+      ...turn,
+      snapshot: { ...turn.snapshot, bots: turn.snapshot.bots.map((bot, i) => i === 0
+        ? { ...bot, item: "bucket", itemsWaiting: ["mudBall", "umbrella"] }
+        : bot) },
+      magnetFires: [{ kind: "magnet", botId: "p0", at: { x: 3, y: 2 }, items: [
+        { kind: "mudBall", from: { x: 3, y: 1 } }, { kind: "umbrella", from: { x: 2, y: 2 } },
+      ] }],
+    };
+    const order = spawn.bots.map((bot) => bot.id);
+    const wire = JSON.parse(JSON.stringify(compactTick(tick, order))) as CompactTick;
+    expect(wire.itemsWaiting).toEqual([[0, 3, 1]]);
+    expect(wire.magnetFires).toEqual([[0, 3, 2, [[3, 3, 1], [1, 2, 2]]]]);
+    expect(wire.bots.every((bot) => bot.length === 8)).toBe(true);
+    expect(expandTick(wire, spawn)).toEqual(tick);
+
+    const { itemsWaiting: _queue, magnetFires: _fires, ...legacy } = wire;
+    const next = expandTick(legacy, tick.snapshot);
+    expect(next.snapshot.bots[0]?.item).toBe("bucket");
+    expect(next.snapshot.bots[0]).not.toHaveProperty("itemsWaiting");
+    expect(next).not.toHaveProperty("magnetFires");
+    expect(expandTick(compactTick(turn, order), spawn)).toEqual(turn);
+  });
+
   test("items, pickups, held items and both effects take part in the round trips above", () => {
     const seen = new Set<string>();
     for (const ruleSetId of RULE_SET_IDS) {
@@ -118,6 +145,9 @@ describe("compactTick and expandTick", () => {
       ["a move index is out of range", { ...good, moves: [[0, 6], ...good.moves.slice(1)] }],
       ["a throw names a tank out of range", { ...good, throws: [[999, 3, 0, 1, 90]] }],
       ["a throw has too few values", { ...good, throws: [[0, 3, 1]] }],
+      ["a queue lacks an acting item", { ...good, bots: [[0, 0, 0, 0, 0, 0, 0, 0], ...good.bots.slice(1)], itemsWaiting: [[0, 1]] }],
+      ["a queue exceeds the hand capacity", { ...good, itemsWaiting: [[0, 1, 2, 3]] }],
+      ["a queue names an unknown item", { ...good, itemsWaiting: [[0, 999]] }],
     ];
     for (const [name, bad] of cases) {
       test(name, () => {

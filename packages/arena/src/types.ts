@@ -147,6 +147,8 @@ import type {
   BotId,
   BotState,
   Decision,
+  ItemHand,
+  MagnetFire,
   Move,
   Pickup,
   RuleSetId,
@@ -605,8 +607,8 @@ export interface PublicArena {
  */
 export type PublicBot = Pick<
   BotState,
-  "id" | "x" | "y" | "direction" | "score" | "wasHit" | "build" | "hitsLanded" | "hitsTaken" | "water" | "item" | "effect"
->;
+  "id" | "x" | "y" | "direction" | "score" | "wasHit" | "build" | "hitsLanded" | "hitsTaken" | "water" | "effect"
+> & ItemHand;
 
 /**
  * A snapshot as every viewer sees it. A full Snapshot can be passed where this is expected.
@@ -627,6 +629,8 @@ export interface PublicTick {
   /** Items taken on this tick (docs/specs/revamp/84-items.md). Every viewer sees an item on the board and on its tank. */
   readonly pickups: readonly Pickup[];
   readonly snapshot: PublicSnapshot;
+  /** The items moved by each Magnet, in move order. */
+  readonly magnetFires?: readonly MagnetFire[];
 }
 
 /**

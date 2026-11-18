@@ -9,7 +9,8 @@
 // draws one int for the kind and one int for the square of each item it adds, only on a turn that
 // spawns. A round with items off has no item, so neither draws.
 
-import type { BoardItem, BotState, Decision, ItemKind, Pickup, Rng, Snapshot, TankEffect, TankEffectKind } from "../types.ts";
+import { chebyshev } from "../directions.ts";
+import type { BoardItem, BotState, Decision, ItemHand, ItemKind, Pickup, Rng, Snapshot, TankEffect, TankEffectKind, WaitingItems } from "../types.ts";
 import { ITEM_KINDS } from "../types.ts";
 
 export const ITEM_RULES = {
@@ -115,14 +116,39 @@ export interface Carrier {
   readonly y: number;
   item: ItemKind | null;
   itemUses: number;
+  itemsWaiting?: WaitingItems;
 }
 
-/** A held item after it acted once: one use less, and gone after the last. */
-export function useOnce(holder: { item: ItemKind | null; itemUses: number }): void {
+/** Expose a mutable hand as a snapshot, omitting an empty queue for older rounds and readers. */
+export function itemHandOf({ item, itemsWaiting }: { readonly item: ItemKind | null; readonly itemsWaiting?: WaitingItems | undefined }): ItemHand {
+  if (itemsWaiting === undefined) return { item };
+  if (item === null) throw new Error("waiting items need an acting item");
+  return { item, itemsWaiting };
+}
+
+/** A held item after it acted once: one use less, then the next item comes forward. */
+export function useOnce(holder: Pick<Carrier, "item" | "itemUses" | "itemsWaiting">): void {
   holder.itemUses -= 1;
   if (holder.itemUses <= 0) {
-    holder.item = null;
-    holder.itemUses = 0;
+    const [next, last] = holder.itemsWaiting ?? [];
+    holder.item = next ?? null;
+    holder.itemUses = next === undefined ? 0 : ITEM_RULES.uses[next];
+    if (last === undefined) delete holder.itemsWaiting;
+    else holder.itemsWaiting = [last];
+  }
+}
+
+/** Add an item that has already been acquired. Only Magnet can add to a non-empty hand. */
+export function holdItem(holder: Pick<Carrier, "item" | "itemUses" | "itemsWaiting">, item: ItemKind): void {
+  if (canTake(holder)) {
+    holder.item = item;
+    holder.itemUses = ITEM_RULES.uses[item];
+  } else if (holder.itemsWaiting === undefined) {
+    holder.itemsWaiting = [item];
+  } else if (holder.itemsWaiting[1] === undefined) {
+    holder.itemsWaiting = [holder.itemsWaiting[0], item];
+  } else {
+    throw new Error("the item hand is full");
   }
 }
 
@@ -141,7 +167,7 @@ export interface PickupResult {
  * ITEM_RULES.backfirePercent: the taker gets the item's effect and holds nothing. Changes
  * `carriers` in place.
  */
-export function pickUp(items: readonly BoardItem[], carriers: readonly Carrier[], rng: Rng): PickupResult {
+export function pickUp(items: Iterable<BoardItem>, carriers: readonly Carrier[], rng: Rng): PickupResult {
   const onSquare = new Map<string, Carrier>();
   for (const carrier of carriers) onSquare.set(`${carrier.x},${carrier.y}`, carrier);
   const left: BoardItem[] = [];
@@ -149,17 +175,14 @@ export function pickUp(items: readonly BoardItem[], carriers: readonly Carrier[]
   const backfires = new Map<string, TankEffectKind>();
   for (const item of items) {
     const carrier = onSquare.get(`${item.x},${item.y}`);
-    if (carrier === undefined || carrier.item !== null) {
+    if (carrier === undefined || !canTake(carrier)) {
       left.push(item);
       continue;
     }
     pickups.push({ botId: carrier.id, item: item.kind });
     const effect = EFFECT_OF_ITEM[item.kind];
     if (effect !== null && rng.chance(ITEM_RULES.backfirePercent)) backfires.set(carrier.id, effect);
-    else {
-      carrier.item = item.kind;
-      carrier.itemUses = ITEM_RULES.uses[item.kind];
-    }
+    else holdItem(carrier, item.kind);
   }
   return { items: left, pickups, backfires };
 }
@@ -225,13 +248,28 @@ export function nearestItem(snapshot: Pick<Snapshot, "items">, from: Cell, kind:
   let bestDistance = Number.POSITIVE_INFINITY;
   for (const item of snapshot.items) {
     if (kind !== "any" && item.kind !== kind) continue;
-    const distance = Math.max(Math.abs(item.x - from.x), Math.abs(item.y - from.y));
-    if (distance < bestDistance || (distance === bestDistance && best !== undefined && (item.y < best.y || (item.y === best.y && item.x < best.x)))) {
+    const distance = chebyshev(from, item);
+    if (best === undefined || compareItemSquares(item, distance, best, bestDistance) < 0) {
       best = item;
       bestDistance = distance;
     }
   }
   return best;
+}
+
+/** Magnet uses the same distance and tie order as the nearest-item strategy rules. */
+export function nearestItems(items: Iterable<BoardItem>, from: Cell, reach: number, limit: number): BoardItem[] {
+  const nearby: { readonly item: BoardItem; readonly distance: number }[] = [];
+  for (const item of items) {
+    const distance = chebyshev(from, item);
+    if (distance <= reach) nearby.push({ item, distance });
+  }
+  nearby.sort((a, b) => compareItemSquares(a.item, a.distance, b.item, b.distance));
+  return nearby.slice(0, limit).map(({ item }) => item);
+}
+
+function compareItemSquares(a: Cell, aDistance: number, b: Cell, bDistance: number): number {
+  return aDistance - bDistance || a.y - b.y || a.x - b.x;
 }
 
 /** True when the tank would take an item on its square: only with an empty hand. */

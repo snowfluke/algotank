@@ -8,7 +8,7 @@ import { TARGET_SELECTORS } from "./vocabulary.ts";
 import { DIRECTION_STEP } from "../directions.ts";
 import { botsThatCanHit, isFree } from "./geometry.ts";
 import { decide } from "./decide.ts";
-import { act, bot, contextFor, mode, rule, snapshotOf, strategyOf, stubRng, when } from "./test-helpers.ts";
+import { act, bot, contextFor, mode, rule, snapshotOf, strategyOf, stubRng, when, withPlacement } from "./test-helpers.ts";
 
 /** The move of an action that is expected to act. */
 function run(actionId: string, bots: readonly BotState[], params: ParamValues = {}, rngInt = 0): Move {
@@ -257,7 +257,7 @@ describe("a bot never turns back and forth or pushes against a blocker", () => {
       snapshot = {
         ...snapshot,
         tick: tick + 1,
-        bots: snapshot.bots.map((b, i) => ({ ...b, ...resolved.placements[i]! })),
+        bots: snapshot.bots.map((b, i) => withPlacement(b, resolved.placements[i]!)),
       };
     }
     return played;

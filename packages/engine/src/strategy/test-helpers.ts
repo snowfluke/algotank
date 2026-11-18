@@ -16,7 +16,8 @@ import type {
   Strategy,
 } from "../types.ts";
 import { STANDARD_RULE_SET_ID, ruleSet } from "../combat/rule-sets.ts";
-import { ITEM_RULES } from "../items/items.ts";
+import { ITEM_RULES, itemHandOf } from "../items/items.ts";
+import type { Placement } from "../round/resolve.ts";
 import { parseStrategy } from "./parse.ts";
 
 const ZERO_BUILD = { reach: 0, aim: 0, dodge: 0 } as const;
@@ -25,6 +26,7 @@ const ZERO_BUILD = { reach: 0, aim: 0, dodge: 0 } as const;
 export const STANDARD = ruleSet(STANDARD_RULE_SET_ID);
 
 export function bot(id: string, x: number, y: number, direction: Direction, overrides: Partial<BotState> = {}): BotState {
+  const { item = null, itemsWaiting, itemUses = item === null ? 0 : ITEM_RULES.uses[item], ...rest } = overrides;
   return {
     id,
     x,
@@ -42,18 +44,22 @@ export function bot(id: string, x: number, y: number, direction: Direction, over
     hitsTaken: 0,
     ticksSinceLandedHit: null,
     water: STANDARD.waterCapacity,
-    item: null,
-    itemUses: 0,
+    ...itemHandOf({ item, itemsWaiting }),
+    itemUses,
     effect: null,
-    ...overrides,
-    // A tank given an item holds its full uses, as after a pick-up, unless the test sets them.
-    ...(overrides.item != null && overrides.itemUses === undefined ? { itemUses: ITEM_RULES.uses[overrides.item] } : {}),
+    ...rest,
   };
 }
 
 /** The tank holding `item` with its full uses, as after a pick-up. */
 export function holding(tank: BotState, item: ItemKind): BotState {
   return { ...tank, item, itemUses: ITEM_RULES.uses[item] };
+}
+
+export function withPlacement(tank: BotState, placement: Placement): BotState {
+  const { itemsWaiting: _previousQueue, ...base } = tank;
+  const { itemsWaiting: _newQueue, ...place } = placement;
+  return { ...base, ...place, ...itemHandOf(placement) };
 }
 
 /** A 9 x 7 arena under the standard set. */

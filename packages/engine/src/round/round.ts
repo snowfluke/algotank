@@ -49,7 +49,7 @@ import type {
   UltimateFire,
 } from "../types.ts";
 import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
-import { countDown, newEffect, spinDecision, spinsThisTurn } from "../items/items.ts";
+import { countDown, itemHandOf, newEffect, spinDecision, spinsThisTurn } from "../items/items.ts";
 import { ULTIMATE_RULES, chargeAfterTurn, ultimateDecision, ultimateEffectAfterTurn, type UltimateId } from "../ultimates/ultimates.ts";
 import { decide } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
@@ -339,7 +339,7 @@ function nextBotState(
   const hitter = hits.lastHitBy.get(bot.id);
   const wasHit = hitter !== undefined;
   const landedNow = hits.landed.get(bot.id) ?? 0;
-  const { ultimate, ultimateEffect: _previousUltimateEffect, ...withoutUltimate } = bot;
+  const { ultimate, ultimateEffect: _previousUltimateEffect, itemsWaiting: _previousQueue, ...withoutUltimate } = bot;
   return {
     ...withoutUltimate,
     x: placement.x,
@@ -359,7 +359,7 @@ function nextBotState(
     // 0 on the tick after a landed hit, like ticksSinceHit.
     ticksSinceLandedHit:
       landedNow > 0 ? 0 : bot.ticksSinceLandedHit === null ? null : bot.ticksSinceLandedHit + 1,
-    item: placement.item,
+    ...itemHandOf(placement),
     itemUses: placement.itemUses,
     // The effect from before the tick counts down; a hit on this tick starts a new one in its place.
     effect: inflicted ?? countDown(bot.effect),

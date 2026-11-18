@@ -13,7 +13,8 @@
 
 import { canThrow, throwRange } from "../combat/combat.ts";
 import { rulesOf } from "../combat/rule-sets.ts";
-import { directionOfSigns, eighthsBetween } from "../directions.ts";
+import { chebyshev, directionOfSigns, eighthsBetween } from "../directions.ts";
+import { canTake } from "../items/items.ts";
 import { cellAhead } from "../round/grid.ts";
 import { botsThatCanHit, firstBotInLine, isFree } from "../strategy/geometry.ts";
 import { forEachBotNear } from "../strategy/snapshot-index.ts";
@@ -36,7 +37,12 @@ export const ULTIMATE_RULES = {
   mudBomb: { stuckTurns: 5, reach: 1 },
   whirlwind: { reach: 2, dizzyTurns: 4, spinTurns: 2, triggerTanks: 2 },
   bigUmbrella: { blocks: 4, blockedEighths: [0, 1, 2, 6, 7] as readonly number[], aimedAtMe: 1 },
+  magnet: { reach: 4, handSize: 3 },
 } as const;
+
+export function magnetSpace(tank: Pick<BotState, "item" | "itemsWaiting">): number {
+  return ULTIMATE_RULES.magnet.handSize - (canTake(tank) ? 0 : 1 + (tank.itemsWaiting?.length ?? 0));
+}
 
 function tanksNear(snapshot: Snapshot, tank: BotState, reach: number): number {
   let count = 0;
@@ -65,8 +71,8 @@ const TRIGGERS: Record<UltimateId, (snapshot: Snapshot, tank: BotState) => boole
   whirlwind: (snapshot, tank) => tanksNear(snapshot, tank, ULTIMATE_RULES.whirlwind.reach) >= ULTIMATE_RULES.whirlwind.triggerTanks,
   bigUmbrella: (snapshot, tank) => tank.ultimateEffect?.kind !== "bigUmbrella" &&
     botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.bigUmbrella.aimedAtMe,
-  // ponytail: Magnet charges now. The item pull and hand queue arrive in the next phase.
-  magnet: () => false,
+  magnet: (snapshot, tank) => magnetSpace(tank) > 0 &&
+    snapshot.items.some((item) => chebyshev(tank, item) <= ULTIMATE_RULES.magnet.reach),
 };
 
 export function ultimateDecision(snapshot: Snapshot, tank: BotState): Decision | null {

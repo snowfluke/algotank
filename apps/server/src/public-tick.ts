@@ -3,7 +3,7 @@
 // (PublicBot in @game/arena) decides what leaves the server.
 
 import { compactTick, type CompactTick, type PlayerId, type PublicBot, type PublicSnapshot, type PublicTick, type StreamMessage } from "@game/arena";
-import type { BotState, Decision, Snapshot, TickResult } from "@game/engine";
+import { itemHandOf, type BotState, type Decision, type Snapshot, type TickResult } from "@game/engine";
 
 function toPublicBot(bot: BotState): PublicBot {
   return {
@@ -17,7 +17,7 @@ function toPublicBot(bot: BotState): PublicBot {
     hitsLanded: bot.hitsLanded,
     hitsTaken: bot.hitsTaken,
     water: bot.water,
-    item: bot.item,
+    ...itemHandOf(bot),
     effect: bot.effect,
   };
 }
@@ -38,6 +38,7 @@ export function toPublicSnapshot(snapshot: Snapshot): PublicSnapshot {
 
 /** Drops the rules behind each move. The live stream and the replay both use it. */
 export function toPublicTick(result: TickResult): PublicTick {
+  const magnetFires = result.fires?.filter((fire) => fire.kind === "magnet");
   return {
     tick: result.tick,
     order: result.order,
@@ -45,6 +46,7 @@ export function toPublicTick(result: TickResult): PublicTick {
     throws: result.throws,
     pickups: result.pickups,
     snapshot: toPublicSnapshot(result.snapshot),
+    ...(magnetFires?.length ? { magnetFires } : {}),
   };
 }
 

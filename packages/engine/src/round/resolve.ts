@@ -7,17 +7,17 @@ import { rulesOf } from "../combat/rule-sets.ts";
 import type { RoundRules } from "../combat/rule-sets.ts";
 import { DIRECTIONS } from "../types.ts";
 import type {
-  BoardItem, BotId, BotState, Build, Pickup, Rng, ShotProtection, Snapshot,
+  BoardItem, BotId, BotState, Build, MagnetFire, Pickup, Rng, ShotProtection, Snapshot,
   SplashSquare, TankEffect, TankEffectKind, ThrowEvent, TurnAction, UltimateFire,
 } from "../types.ts";
-import { ITEM_RULES, actsOnOwnHit, ageItems, effectOfHit, holderBlocks, newEffect, pickUp, spawnItems, useOnce } from "../items/items.ts";
-import { ULTIMATE_RULES, bigUmbrellaCovers, type UltimateId } from "../ultimates/ultimates.ts";
+import { ITEM_RULES, actsOnOwnHit, ageItems, effectOfHit, holdItem, holderBlocks, nearestItems, newEffect, pickUp, spawnItems, useOnce } from "../items/items.ts";
+import { ULTIMATE_RULES, bigUmbrellaCovers, magnetSpace, type UltimateId } from "../ultimates/ultimates.ts";
 import { TURN_EIGHTHS, rotate } from "../directions.ts";
 import { cellAhead, cellKey, isInside } from "./grid.ts";
 import type { ArenaSize, Cell } from "./grid.ts";
 
 /** The fields of a bot that a turn changes through moves and attacks. */
-export type Placement = Pick<BotState, "id" | "x" | "y" | "direction" | "score" | "water" | "item" | "itemUses" | "ultimateEffect">;
+export type Placement = Pick<BotState, "id" | "x" | "y" | "direction" | "score" | "water" | "item" | "itemUses" | "itemsWaiting" | "ultimateEffect">;
 
 export type TickMove = { readonly botId: BotId } & TurnAction;
 
@@ -90,6 +90,7 @@ export function resolveTick(
       place: {
         id: bot.id, x: bot.x, y: bot.y, direction: bot.direction, score: bot.score,
         water: bot.water, item: bot.item, itemUses: bot.itemUses,
+        ...(bot.itemsWaiting === undefined ? {} : { itemsWaiting: bot.itemsWaiting }),
         ...(bot.ultimateEffect === undefined ? {} : { ultimateEffect: bot.ultimateEffect }),
       },
       build: bot.build,
@@ -108,11 +109,16 @@ export function resolveTick(
   const throws: ThrowEvent[] = [];
   const inflicted = new Map<BotId, TankEffect>();
   const pendingFires: (UltimateFire | PendingSplash)[] = [];
+  const boardItems = itemTurn?.items ?? [];
+  let remainingItems: Set<BoardItem> | undefined;
   for (const botId of order) {
     const slot = slots.get(botId);
     if (slot === undefined) throw new Error(`order names a bot that is not in the snapshot: "${botId}"`);
     const { action, place, stuck } = slot;
-    if (action.ultimate !== undefined) {
+    if (action.ultimate === "magnet") {
+      remainingItems ??= new Set(boardItems);
+      pendingFires.push(resolveMagnet(slot, remainingItems));
+    } else if (action.ultimate !== undefined) {
       const fire = resolveUltimate(action.ultimate, slot, snapshot, rules, occupant, inflicted);
       if (fire !== null) pendingFires.push(fire);
     } else if (action.move === "T") {
@@ -129,7 +135,7 @@ export function resolveTick(
     }
     return slot.place;
   });
-  const { items: left, pickups, backfires } = pickUp(itemTurn?.items ?? [], placements, rng);
+  const { items: left, pickups, backfires } = pickUp(remainingItems ?? boardItems, placements, rng);
   for (const pickup of pickups) {
     const slot = slots.get(pickup.botId);
     if (slot !== undefined && pickup.item === "umbrella") slot.freshUmbrella = true;
@@ -262,7 +268,7 @@ function movePoints(source: Slot, target: Slot, points: number): void {
 }
 
 function resolveUltimate(
-  kind: UltimateId,
+  kind: Exclude<UltimateId, "magnet">,
   source: Slot,
   size: ArenaSize,
   rules: RoundRules,
@@ -318,9 +324,22 @@ function resolveUltimate(
       const affected = inflictInArea(area, occupant, source, inflicted, { kind: "dizzy", turnsLeft: dizzyTurns, spinTurnsLeft: spinTurns });
       return { ...fire, kind, area, affected };
     }
-    case "magnet":
-      throw new Error("Magnet cannot fire in this phase");
   }
+}
+
+function resolveMagnet({ place }: Slot, boardItems: Set<BoardItem>): MagnetFire {
+  // The trigger saw the old board. The first Magnet in move order gets first pick, and the
+  // items it took are already off the board when driving pickups run (85-ultimates.md, 2026-11-18).
+  const at = { x: place.x, y: place.y };
+  const items = nearestItems(boardItems, at, ULTIMATE_RULES.magnet.reach, magnetSpace(place));
+  return {
+    botId: place.id, at, kind: "magnet",
+    items: items.map((item) => {
+      boardItems.delete(item);
+      holdItem(place, item.kind);
+      return { kind: item.kind, from: { x: item.x, y: item.y } };
+    }),
+  };
 }
 
 function squaresWithin(size: ArenaSize, center: Cell, reach: number): Cell[] {

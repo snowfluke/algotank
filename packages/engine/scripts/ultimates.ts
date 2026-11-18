@@ -52,6 +52,8 @@ for (let seed = 1; seed <= FINALS; seed++) {
         tallyFor(ultimates, fire.kind).fires++;
         if (fire.kind === "bigUmbrella" || fire.kind === "smoke") defenses[fire.kind].uses++;
         if (fire.kind === "splash") for (const square of fire.squares) countProtection(square.protection);
+        // A pulled umbrella counts from acquisition, like an umbrella picked up by driving.
+        if (fire.kind === "magnet") for (const { kind } of fire.items) if (kind === "umbrella") defenses.umbrella.uses++;
       }
     }
     const winner = standings(round)[0];

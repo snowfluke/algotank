@@ -9,7 +9,7 @@
 // The engine keeps the snapshot's bot order for the whole round (stepRound maps
 // `before.bots` in place), so a spawn index names the same tank on every turn.
 //
-// Layout (every value is an integer):
+// Layout (all scalar values are integers):
 //   bots[i]   = [x, y, direction index, score, water, flags, hitsLanded, hitsTaken]
 //               for the tank at spawn index i. Flags bit 0: was hit this turn. Bits 1 to 3:
 //               the held item's index in ITEM_KINDS + 1, or 0. Bits 4 and 5: the effect's
@@ -23,12 +23,15 @@
 //               outcome "bucketHit" exists only here: it is a hit with `bucket: true`.
 //   items[k]  = [item index, x, y, turns left], the items on the board after the turn.
 //   pickups[k]= [bot index, item index], the items taken on the turn.
+//   itemsWaiting[k] = [bot index, first item index, optional second item index].
+//   magnetFires[k]  = [bot index, x, y, [[item index, source x, source y], ...]].
+//   Both Magnet fields are sparse and separate so older bundles still read the same bot rows.
 //
 // expandTick throws an Error on a compact tick that does not fit the spawn (an
 // index out of range, a value of the wrong kind). The client treats that as a
 // protocol error.
 
-import { DIRECTIONS, ITEM_KINDS, MOVES, TANK_EFFECT_KINDS, type BoardItem, type Direction, type ItemKind, type Move, type Pickup, type TankEffect, type ThrowEvent } from "@game/engine";
+import { DIRECTIONS, ITEM_KINDS, MOVES, TANK_EFFECT_KINDS, ULTIMATE_RULES, itemHandOf, type BoardItem, type Direction, type ItemKind, type MagnetFire, type Move, type Pickup, type TankEffect, type ThrowEvent, type WaitingItems } from "@game/engine";
 import type { PlayerId, PublicBot, PublicSnapshot, PublicTick } from "./types.ts";
 
 /** One turn in a compact form. Indexes refer to the order of `roundStart.snapshot.bots`. */
@@ -44,6 +47,8 @@ export interface CompactTick {
   readonly items: readonly (readonly number[])[];
   /** [bot index, item index]: the items taken on the turn. */
   readonly pickups: readonly (readonly number[])[];
+  readonly itemsWaiting?: readonly (readonly number[])[];
+  readonly magnetFires?: readonly (readonly [number, number, number, readonly (readonly number[])[]])[];
 }
 
 /** Direction index to direction. The engine's own table, clockwise from north. */
@@ -122,6 +127,10 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
 
   const moveOf = new Map<PlayerId, Move>();
   for (const { botId, move } of tick.moves) moveOf.set(botId, move);
+  const itemsWaiting: number[][] = [];
+  bots.forEach((bot, i) => {
+    if (bot.itemsWaiting !== undefined) itemsWaiting.push([i, ...bot.itemsWaiting.map((kind) => indexIn(COMPACT_ITEMS, kind, "item"))]);
+  });
 
   return {
     tick: tick.tick,
@@ -148,6 +157,12 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
     }),
     items: tick.snapshot.items.map((item) => [indexIn(COMPACT_ITEMS, item.kind, "item"), item.x, item.y, item.turnsLeft]),
     pickups: tick.pickups.map((p) => [idx(p.botId), indexIn(COMPACT_ITEMS, p.item, "item")]),
+    ...(itemsWaiting.length === 0 ? {} : { itemsWaiting }),
+    ...(tick.magnetFires === undefined ? {} : {
+      magnetFires: tick.magnetFires.map(({ botId, at, items }) => [
+        idx(botId), at.x, at.y, items.map(({ kind, from }) => [indexIn(COMPACT_ITEMS, kind, "item"), from.x, from.y]),
+      ]),
+    }),
   };
 }
 
@@ -169,12 +184,22 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
     throw new Error(`the tick has ${compact.bots.length} tanks, the round ${spawnBots.length}`);
   }
   const botAt = (index: unknown, what: string): PublicBot => entry(spawnBots, index, what);
+  const waitingOf = new Map<PlayerId, WaitingItems>();
+  for (const values of compact.itemsWaiting ?? []) {
+    if (values.length < 2 || values.length > ULTIMATE_RULES.magnet.handSize) throw new Error(`a waiting hand has ${values.length} values`);
+    const [botIndex, first, second] = values;
+    const { id } = botAt(botIndex, "waiting hand tank");
+    if (waitingOf.has(id)) throw new Error(`two waiting hands for tank ${id}`);
+    const head = entry(COMPACT_ITEMS, first, "waiting item");
+    waitingOf.set(id, values.length === 2 ? [head] : [head, entry(COMPACT_ITEMS, second, "waiting item")]);
+  }
 
   const bots = compact.bots.map((values, i): PublicBot => {
     if (values.length !== COMPACT_BOT_LENGTH) throw new Error(`tank ${i} has ${values.length} values`);
     const [x, y, direction, score, water, flags, hitsLanded, hitsTaken] = values;
     const base = spawnBots[i] as PublicBot;
     const bits = integer(flags, "flags");
+    const itemsWaiting = waitingOf.get(base.id);
     return {
       id: base.id,
       x: integer(x, "x"),
@@ -186,7 +211,7 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       hitsLanded: integer(hitsLanded, "hitsLanded"),
       hitsTaken: integer(hitsTaken, "hitsTaken"),
       water: integer(water, "water"),
-      item: itemOfFlags(bits),
+      ...itemHandOf({ item: itemOfFlags(bits), itemsWaiting }),
       effect: effectOfFlags(bits),
     };
   });
@@ -226,6 +251,18 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
     const [botIndex, kind] = values;
     return { botId: botAt(botIndex, "pickup tank").id, item: entry(COMPACT_ITEMS, kind, "item") };
   });
+  const magnetFires = compact.magnetFires?.map((values): MagnetFire => {
+    if (values.length !== 4) throw new Error(`a Magnet fire has ${values.length} values`);
+    const [botIndex, x, y, pulled] = values;
+    if (pulled.length > ULTIMATE_RULES.magnet.handSize) throw new Error(`Magnet pulled ${pulled.length} items`);
+    return {
+      botId: botAt(botIndex, "Magnet tank").id, at: { x: integer(x, "Magnet x"), y: integer(y, "Magnet y") }, kind: "magnet",
+      items: pulled.map((item) => {
+        if (item.length !== 3) throw new Error(`a pulled item has ${item.length} values`);
+        return { kind: entry(COMPACT_ITEMS, item[0], "item"), from: { x: integer(item[1], "item x"), y: integer(item[2], "item y") } };
+      }),
+    };
+  });
 
   return {
     tick: integer(compact.tick, "tick"),
@@ -244,5 +281,6 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       bots,
       items,
     },
+    ...(magnetFires === undefined ? {} : { magnetFires }),
   };
 }

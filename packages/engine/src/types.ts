@@ -261,7 +261,15 @@ export interface Preset {
 // Round state
 // ---------------------------------------------------------------------------
 
-export interface BotState {
+/** At most two items behind the acting item. They keep their full uses until they come forward. */
+export type WaitingItems = readonly [ItemKind, ItemKind?];
+
+/** The acting item, or null for an empty hand. Only Magnet can add waiting items. */
+export type ItemHand =
+  | { readonly item: ItemKind | null; readonly itemsWaiting?: never }
+  | { readonly item: ItemKind; readonly itemsWaiting: WaitingItems };
+
+export type BotState = ItemHand & {
   readonly id: BotId;
   readonly x: number;
   /** y grows downward; "N" faces toward y - 1. */
@@ -301,9 +309,7 @@ export interface BotState {
    * waterRefillPerTick (see RoundRules). Every condition, selector and screen counts in this unit.
    */
   readonly water: number;
-  /** The item the tank holds, or null. */
-  readonly item: ItemKind | null;
-  /** Uses left of the held item (ITEM_RULES.uses); 0 when it holds none. Not sent to the pages. */
+  /** Uses left of the acting item (ITEM_RULES.uses); 0 when the hand is empty. Not sent to the pages. */
   readonly itemUses: number;
   /** Dizzy or stuck, while it lasts, or null. */
   readonly effect: TankEffect | null;
@@ -319,7 +325,7 @@ export interface BotState {
    * round, so those play exactly as before. Never sent to viewers (PublicBot).
    */
   readonly tieRank?: number;
-}
+};
 
 export interface Snapshot {
   readonly width: number;
@@ -438,13 +444,21 @@ export type SplashSquare = Cell & (
   | { readonly outcome: "miss" | "hit" | "blocked" | "dodged"; readonly targetId: BotId; readonly protection?: ShotProtection }
 );
 
+export interface MagnetFire {
+  readonly kind: "magnet";
+  readonly botId: BotId;
+  readonly at: Cell;
+  /** Closest first, in the order the items joined the hand. */
+  readonly items: readonly { readonly kind: ItemKind; readonly from: Cell }[];
+}
+
 export type UltimateFire = { readonly botId: BotId; readonly at: Cell } & (
   | { readonly kind: "dash"; readonly path: readonly Cell[] }
   | { readonly kind: "splash"; readonly squares: readonly SplashSquare[] }
   | { readonly kind: "mudBomb"; readonly center: Cell | null; readonly area: readonly Cell[]; readonly affected: readonly BotId[] }
   | { readonly kind: "whirlwind"; readonly area: readonly Cell[]; readonly affected: readonly BotId[] }
   | { readonly kind: "smoke" | "fullTank" | "bigUmbrella" }
-);
+) | MagnetFire;
 
 export interface TickResult {
   /** The tick just played, starting at 0. */

@@ -306,8 +306,7 @@ const defs = withLiteralIds<ActionDef>()([
     group: ITEMS,
     label: "Go to the nearest item ({item})",
     params: [itemParam()],
-    // It cannot act when no such item is on the board or the tank's hand is full, because the
-    // tank would not take the item. After the older entries, so their order stays.
+    // Driving picks up an item only with an empty hand, even when Magnet has room to pull more.
     toMove: (ctx, params) => {
       const item = canTake(ctx.self) ? nearestItem(ctx.snapshot, ctx.self, itemValue(params)) : undefined;
       return item === undefined ? null : stepTowards(ctx, stepToward(ctx.self, item));

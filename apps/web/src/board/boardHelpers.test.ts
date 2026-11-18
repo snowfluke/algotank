@@ -18,7 +18,7 @@ import {
   youMarkerBelow,
 } from "./boardHelpers.ts";
 
-function bot(id: string, score: number, over: Partial<BotState> = {}): BotState {
+function bot(id: string, score: number, over: Partial<Omit<BotState, "itemsWaiting">> = {}): BotState {
   return {
     id,
     x: 0,

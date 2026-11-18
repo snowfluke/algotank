@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { BoardItem, BotState, ItemKind, RoundState, Snapshot, Strategy } from "../types.ts";
 import { STANDARD_RULE_SET_ID } from "../combat/rule-sets.ts";
 import { decide } from "../strategy/decide.ts";
-import { act, bot, holding, mode, rule, snapshotOf, strategyOf, stubRng, when } from "../strategy/test-helpers.ts";
+import { act, bot, holding, mode, rule, snapshotOf, strategyOf, stubRng, when, withPlacement } from "../strategy/test-helpers.ts";
 import { resolveTick } from "../round/resolve.ts";
 import { createOpenRound, createRound, joinRound, stepRound } from "../round/round.ts";
 import { createRng } from "../round/rng.ts";
@@ -85,7 +85,7 @@ describe("a hit with an item", () => {
       const [after, hit] = result.placements;
       if (after === undefined || hit === undefined) throw new Error("test setup");
       gains.push(after.score - shooter.score);
-      shooter = { ...shooter, score: after.score, item: after.item, itemUses: after.itemUses, water: shooter.water };
+      shooter = withPlacement(shooter, { ...after, water: shooter.water });
       target = { ...target, score: hit.score };
     }
     expect(gains).toEqual([ITEM_RULES.bucketHitPoints, ITEM_RULES.bucketHitPoints, 1]);
@@ -138,7 +138,7 @@ describe("how long an effect lasts", () => {
       // From here b faces south with free squares ahead, and a stops throwing.
       (state as { snapshot: Snapshot }).snapshot = {
         ...state.snapshot,
-        bots: state.snapshot.bots.map((t) => (t.id === "b" ? { ...t, direction: "S" as const } : { ...t, item: null })),
+        bots: state.snapshot.bots.map(({ itemsWaiting: _queue, ...t }) => (t.id === "b" ? { ...t, direction: "S" as const } : { ...t, item: null })),
       };
       const rows: number[] = [];
       const stuck = ITEM_RULES.effectTurns.stuck;

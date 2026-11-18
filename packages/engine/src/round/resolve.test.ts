@@ -15,7 +15,7 @@ const WATER_CAPACITY = STANDARD.waterCapacity;
 const WATER_PER_THROW = STANDARD.waterPerThrow;
 const WATER_REFILL_PER_TICK = STANDARD.waterRefillPerTick;
 
-function bot(id: string, x: number, y: number, direction: Direction, extra: Partial<BotState> = {}): BotState {
+function bot(id: string, x: number, y: number, direction: Direction, extra: Partial<Omit<BotState, "itemsWaiting">> = {}): BotState {
   return {
     id,
     x,

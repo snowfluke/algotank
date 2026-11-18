@@ -12,7 +12,7 @@ import { Scoreboard } from "./Scoreboard.tsx";
 
 const standard = ruleSet("standard");
 
-function bot(i: number, over: Partial<BotState> = {}): BotState {
+function bot(i: number, over: Partial<Omit<BotState, "itemsWaiting">> = {}): BotState {
   return {
     id: `p${i}`,
     x: i % 4,

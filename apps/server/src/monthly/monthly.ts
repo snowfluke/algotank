@@ -55,6 +55,7 @@ import {
   parseTankLook,
   type AccountId,
   type AdminPlayer,
+  type LeagueActivityEvent,
   type LeagueDayRecord,
   type LeagueDaysResponse,
   type LeagueLive,
@@ -139,6 +140,8 @@ export class MonthlyLeagues {
   private month: MonthState = { month: "", days: [], records: [] };
   private today: CalendarDay = { day: "", month: "", startsAt: 0, endsAt: 0 };
   private readonly days = new Map<number, LeagueDay>();
+  // Keep state broadcasts from the turn loop (reshuffles) free of activity queries.
+  private activity = new Map<number, readonly LeagueActivityEvent[]>();
   private closing = false;
   /** Read at the start and after each admin change: the turn loop never asks the database. */
   private gameMasters: ReadonlySet<AccountId> = new Set();
@@ -176,6 +179,7 @@ export class MonthlyLeagues {
       this.openDay(null);
       this.checkpoint();
     }
+    this.activity = store.openActivityMonth(this.today.month);
     this.stops = [scheduler.every(() => this.pulse(), tickMs), scheduler.every(() => this.checkpoint(), CHECKPOINT_MS)];
   }
 
@@ -282,7 +286,10 @@ export class MonthlyLeagues {
       const leaguesBefore = this.seats.leagues;
       if (next.month !== ended.month) {
         this.closeMonthOf(month);
-        this.month = this.options.store.readMonth(next.month);
+        const nextMonth = this.options.store.readMonth(next.month);
+        const nextActivity = this.options.store.openActivityMonth(next.month);
+        this.month = nextMonth;
+        this.activity = nextActivity;
       }
       this.today = next;
       this.openDay(null);
@@ -435,8 +442,7 @@ export class MonthlyLeagues {
       seats: new Map(this.seats.seats).set(accountId, seat),
       names: new Map(this.seats.names).set(accountId, { month: this.today.month, name }),
     };
-    this.options.store.writeSeats(next);
-    this.seats = next;
+    this.saveSeatActivity(next, seat, "joined");
     if (!this.days.has(league)) this.days.set(league, new LeagueDay(league, this.options.random, this.options.now));
     // A tank that left today and comes back the same day goes on where it stopped, and today counts again: leaving
     // is a pause, like "Change rules" (owner, 2026-11-17: a rejoin started over at 0 and its day did not count). The
@@ -488,8 +494,7 @@ export class MonthlyLeagues {
     const seats = new Map(this.seats.seats);
     seats.delete(accountId);
     const next: SeatsState = { ...this.seats, seats };
-    this.options.store.writeSeats(next);
-    this.seats = next;
+    this.saveSeatActivity(next, seat, "left");
     day.unseat(seat.seatId);
     this.sendState(seat.league);
   }
@@ -508,8 +513,7 @@ export class MonthlyLeagues {
     // The same rules again change nothing, so a save never restarts the tank's mode.
     if (JSON.stringify(seat.strategy) === JSON.stringify(parsed.strategy)) return;
     const next: SeatsState = { ...this.seats, seats: new Map(this.seats.seats).set(accountId, { ...seat, strategy: parsed.strategy }) };
-    this.options.store.writeSeats(next);
-    this.seats = next;
+    this.saveSeatActivity(next, seat, "changedRules");
     this.dayOf(seat.league).restrategy(seat.seatId, parsed.strategy);
     this.sendState(seat.league);
   }
@@ -564,11 +568,22 @@ export class MonthlyLeagues {
   /** The seat's new look, between turns: stored, given to the day round, and sent to the viewers. Nothing when it is the same. */
   private restyle(accountId: AccountId, seat: Seat, look: TankLook): void {
     if (JSON.stringify(seat.look) === JSON.stringify(look)) return;
-    const next: SeatsState = { ...this.seats, seats: new Map(this.seats.seats).set(accountId, { ...seat, look }) };
-    this.options.store.writeSeats(next);
-    this.seats = next;
+    const updated = { ...seat, look };
+    const next: SeatsState = { ...this.seats, seats: new Map(this.seats.seats).set(accountId, updated) };
+    this.saveSeatActivity(next, updated, "changedLook");
     this.dayOf(seat.league).restyle(seat.seatId, look);
     this.sendState(seat.league);
+  }
+
+  /** The public snapshot includes only fields the board shows (86-monthly-activity.md). */
+  private saveSeatActivity(next: SeatsState, { league, seatId, name, look }: Seat, kind: LeagueActivityEvent["kind"]): void {
+    const activity = this.options.store.writeSeats(next, {
+      month: this.today.month,
+      league,
+      event: { kind, seatId, name, look, at: this.options.now() },
+    });
+    this.seats = next;
+    this.activity.set(league, activity);
   }
 
   /** POST /api/monthly/me/move-seen. */
@@ -637,6 +652,7 @@ export class MonthlyLeagues {
       tickMs: this.options.tickMs,
       phase: this.closing ? "closing" : this.dayOf(league).phase(),
       tanks: view.tanks,
+      activity: this.activity.get(league) ?? [],
       board: toPublicSnapshot(view.board),
     };
   }

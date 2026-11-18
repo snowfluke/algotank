@@ -4,11 +4,11 @@
 // hundreds of tanks that move every turn without a server.
 
 import { useEffect, useState } from "react";
-import type { CompactTick, LeagueLive } from "@game/arena";
+import { parseLeagueActivity, type CompactTick, type LeagueLive } from "@game/arena";
 import { nextLeagueLoad, type LeagueLiveLoad } from "./leagueLive.ts";
 
 interface RecordedStream {
-  readonly state: LeagueLive;
+  readonly state: Omit<LeagueLive, "activity"> & Partial<Pick<LeagueLive, "activity">>;
   readonly ticks: readonly CompactTick[];
 }
 
@@ -27,7 +27,11 @@ export function useStreamReplay(url: string | null): LeagueLiveLoad | null {
       .then(({ state, ticks }) => {
         if (cancelled) return;
         let at = 0;
-        setLoad((current) => nextLeagueLoad(current ?? { kind: "connecting" }, { type: "state", state }, Date.now()));
+        // Recordings made before 86-monthly-activity.md have no activity list.
+        const activity = state.activity === undefined ? [] : parseLeagueActivity(state.activity);
+        if (activity === null) throw new Error("The recorded stream has invalid activity.");
+        const live = { ...state, activity };
+        setLoad((current) => nextLeagueLoad(current ?? { kind: "connecting" }, { type: "state", state: live }, Date.now()));
         timer = setInterval(() => {
           const tick = ticks[at];
           if (tick === undefined) {

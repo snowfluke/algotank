@@ -35,7 +35,14 @@ export const en = {
     body: "Your tank can be the first one on this board.",
   },
   /** The phone's tabs. */
-  tabs: { label: "Parts of the monthly arena", arena: "Arena", ranking: "Ranking", mine: "Your tank" },
+  tabs: { label: "Parts of the monthly arena", arena: "Arena", ranking: "Ranking", mine: "Your tank", activity: "Activity" },
+  activity: {
+    joined: (name: string) => `${name} joined the arena.`,
+    left: (name: string) => `${name} left the arena.`,
+    changedRules: (name: string) => `${name} changed its rules.`,
+    changedLook: (name: string) => `${name} changed its look.`,
+    justNow: "Just now",
+  },
   /** The ranking's switch. */
   ranking: { label: "Ranking", today: "Today", month: "This month" },
   /** After the name of a tank that quit the arena today; its points of today stay in the ranking. */
@@ -192,7 +199,14 @@ export const id: typeof en = {
     title: "Belum ada tank yang main di liga ini.",
     body: "Tank kamu bisa jadi tank pertama di papan ini.",
   },
-  tabs: { label: "Bagian arena bulanan", arena: "Arena", ranking: "Peringkat", mine: "Tank kamu" },
+  tabs: { label: "Bagian arena bulanan", arena: "Arena", ranking: "Peringkat", mine: "Tank kamu", activity: "Aktivitas" },
+  activity: {
+    joined: (name) => `${name} masuk ke arena.`,
+    left: (name) => `${name} keluar dari arena.`,
+    changedRules: (name) => `${name} mengganti aturannya.`,
+    changedLook: (name) => `${name} mengganti tampilannya.`,
+    justNow: "Baru saja",
+  },
   ranking: { label: "Peringkat", today: "Hari ini", month: "Bulan ini" },
   left: "Keluar",
   todayEmpty: "Belum ada tank yang main di liga ini hari ini.",

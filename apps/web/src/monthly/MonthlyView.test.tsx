@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
-import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureRanking, fixtureSeat, OWN_SEAT } from "./monthlyFixtures.ts";
+import { FIXTURE_MOVE, fixtureActivity, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureRanking, fixtureSeat, OWN_SEAT } from "./monthlyFixtures.ts";
 import { MonthlyPhoneBar, MonthlyView, type MonthlyViewProps } from "./MonthlyView.tsx";
 import { en } from "./messages.ts";
 
@@ -67,6 +67,35 @@ describe("the monthly page", () => {
     expect(render(props({}, 0), "id")).toContain("Belum ada tank yang main di liga ini.");
     // An owner looking at an empty league is not invited.
     expect(render(props({ seat: fixtureSeat(2), onJoin: null }, 0))).not.toContain("can be the first");
+  });
+
+  test("the Activity tab is available to visitors and players, and an empty log leaves it blank", () => {
+    const visitor = render(props({ tab: "activity" }));
+    expect(visitor).toMatch(/aria-selected="true"[^>]+data-tab="activity"/);
+    expect(visitor).toContain(">Activity</span>");
+    expect(visitor).toContain('data-tab-panel="activity"');
+    expect(visitor).not.toContain("data-monthly-activity");
+    const seated = render(props({ tab: "activity", seat: fixtureSeat(1), onJoin: null }), "id");
+    expect(seated).toContain(">Aktivitas</span>");
+    expect(seated).toContain('data-tab="mine"');
+  });
+
+  test("activity draws the four events, newest first, with their tank and relative time in both languages", () => {
+    const live = { ...fixtureLive(1, 5), activity: fixtureActivity(NOW, 4) };
+    const input = props({ tab: "activity", load: fixtureLoad(live, NOW) });
+    const english = render(input);
+    const list = english.match(/<ol data-monthly-activity=""[^>]*>(.*?)<\/ol>/)?.[1] ?? "";
+    expect(Array.from(list.matchAll(/<p[^>]*>([^<]+)<\/p>/g), ([, sentence]) => sentence)).toEqual([
+      "Bima changed its look.", "Bartholomew Kusu changed its rules.", "Citra left the arena.", "Dewi joined the arena.",
+    ]);
+    expect(Array.from(list.matchAll(/<time[^>]*>([^<]+)<\/time>/g), ([, time]) => time)).toEqual([
+      "Just now", "1 minute ago", "2 minutes ago", "3 minutes ago",
+    ]);
+    expect(list.match(/<svg /g)?.length).toBe(4);
+    const indonesian = render(input, "id");
+    for (const sentence of ["Bima mengganti tampilannya.", "Bartholomew Kusu mengganti aturannya.", "Citra keluar dari arena.", "Dewi masuk ke arena.", "Baru saja", "1 menit yang lalu"]) {
+      expect(indonesian).toContain(sentence);
+    }
   });
 
   test("the league switch: none for one league, buttons for two, a list for nine with the own league named", () => {

@@ -11,7 +11,7 @@ import { insertAccount, insertRow, memoryDatabase } from "./testing.ts";
 
 const ACCOUNT = "account-1";
 const ARENA = "ABCDEF";
-const PREVIOUS_VERSION = 9;
+const PREVIOUS_VERSION = 10;
 const preset = (id: PresetId) => PRESETS.find((p) => p.id === id)!.strategy;
 const legacy = ({ modes, build }: StrategyInput) => ({ modes, build });
 const exact = legacy(preset("evader"));
@@ -23,7 +23,7 @@ const custom = {
 
 function previousDatabase() {
   const db = memoryDatabase();
-  // Version 10 only rewrites existing data, so the empty schema is also the version 9 schema.
+  // Version 11 only rewrites existing data, so the empty schema is also the version 10 schema.
   db.run(`PRAGMA user_version = ${PREVIOUS_VERSION}`);
   insertAccount(db, ACCOUNT);
   const style = { account_id: ACCOUNT, name: "Saved", updated_at: 1 };
@@ -55,7 +55,7 @@ function previousDatabase() {
   return db;
 }
 
-test("the read-only dry run and migration visit each version 9 strategy, including replay players", () => {
+test("the read-only dry run and migration visit each version 10 strategy, including replay players", () => {
   const directory = mkdtempSync(join(tmpdir(), "algotank-ultimates-"));
   const path = join(directory, DATABASE_FILE);
   try {

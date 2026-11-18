@@ -5,12 +5,16 @@ import { Disclosure } from "./disclosure.ts";
 import { GameMasters } from "./game-masters.ts";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Database } from "bun:sqlite";
-import { plainTankLook, ULTIMATES_FROM, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { LEAGUE_ACTIVITY_LIMIT, plainTankLook, ULTIMATES_FROM, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
 import { arenaSize, PRESETS, ruleSet, STANDARD_RULE_SET_ID, ULTIMATE_RULES } from "@game/engine";
 import { HttpError } from "../http.ts";
 import { manualScheduler, type ManualScheduler } from "../test-helpers.ts";
 import { DEFAULT_LEAGUE_TIME_ZONE, zoneCalendar, type LeagueCalendar } from "./calendar.ts";
 import { Champions } from "./champions.ts";
+import { openDatabase } from "../db/open.ts";
 import { insertAccount, memoryDatabase } from "../db/testing.ts";
 import { LeagueStore } from "./league-store.ts";
 import { BOARD_GROWTH, RESHUFFLE_TURNS } from "./league-day.ts";
@@ -431,8 +435,10 @@ describe("the month close", () => {
     expect(l.monthly.live(1).day).toBe("2026-11-30");
     // Six quit from League 1, so League 2's only tank moves up to fill and League 2 closes.
     for (const owner of owners.slice(10, 16)) l.monthly.quit(owner);
+    expect(l.monthly.live(1).activity[0]?.kind).toBe("left");
+    expect(l.monthly.live(2).activity.map((event) => event.kind)).toEqual(["joined"]);
     nextDay(l);
-    expect(l.monthly.live(1)).toMatchObject({ day: "2026-12-01", month: "2026-12" });
+    expect(l.monthly.live(1)).toMatchObject({ day: "2026-12-01", month: "2026-12", activity: [] });
     const [record] = l.champions.records();
     expect(record?.month).toBe("2026-11");
     expect(record?.champion).toMatchObject({ rank: 1, games: 7 });
@@ -533,6 +539,114 @@ describe("what anyone may read about a tank (monthly-protocol.ts, the visibility
   });
 });
 
+describe("monthly activity", () => {
+  test("the public stream records each change and a same-day return with only board fields", async () => {
+    const l = startLeague();
+    const owner = newAccount();
+    const name = "Ada";
+    const look = plainTankLook(2);
+    const newLook = plainTankLook(3);
+    const watcher = collect(l.streams.open(1, null, l.monthly.live(1)));
+    try {
+      const joinedAt = l.ticks.now();
+      take(l, owner, { name, look, strategy: strategy() });
+      const { seatId } = seatOf(l, owner);
+      nextDay(l);
+      const at = l.ticks.now();
+      l.monthly.changeStrategy(owner, { strategy: strategy(1) });
+      l.monthly.changeLook(owner, { look: newLook });
+      l.ticks.advance(1000);
+      l.monthly.changeLook(owner, { look: newLook });
+      l.monthly.changeStrategy(owner, { strategy: strategy(1) });
+      l.monthly.quit(owner);
+      take(l, owner, { look: newLook });
+      const rejoined = seatOf(l, owner);
+      expect(rejoined.countsToday).toBe(true);
+      expect(rejoined.seatId).not.toBe(seatId);
+
+      const { messages } = await watcher.take();
+      const states = messages.filter((message) => message.type === "state");
+      expect(states.map(({ state }) => state.activity[0]?.kind)).toEqual([
+        undefined, "joined", "joined", "changedRules", "changedLook", "left", "joined",
+      ]);
+      // Exact equality also checks that the stream carries no account id, email or rules in activity.
+      expect(states.at(-1)?.state.activity).toEqual([
+        { kind: "joined", seatId: rejoined.seatId, name, look: newLook, at: at + 1000 },
+        { kind: "left", seatId, name, look: newLook, at: at + 1000 },
+        { kind: "changedLook", seatId, name, look: newLook, at },
+        { kind: "changedRules", seatId, name, look, at },
+        { kind: "joined", seatId, name, look, at: joinedAt },
+      ]);
+    } finally {
+      l.streams.closeAll();
+      l.monthly.stop();
+    }
+  });
+
+  test("only the latest event in the league merges, through 10 minutes", () => {
+    const l = startLeague();
+    const ada = newAccount();
+    const bo = newAccount();
+    take(l, ada, { strategy: strategy() });
+    take(l, bo, { strategy: strategy() });
+    l.monthly.changeStrategy(ada, { strategy: strategy(1) });
+    l.ticks.advance(600_000);
+    l.monthly.changeStrategy(ada, { strategy: strategy(2) });
+    const mergedAt = l.ticks.now();
+    expect(l.monthly.live(1).activity).toHaveLength(3);
+    expect(l.monthly.live(1).activity[0]?.at).toBe(mergedAt);
+
+    l.ticks.advance(600_001);
+    l.monthly.changeStrategy(ada, { strategy: strategy(1) });
+    l.monthly.changeStrategy(bo, { strategy: strategy(1) });
+    l.monthly.changeStrategy(ada, { strategy: strategy(2) });
+    expect(l.monthly.live(1).activity.slice(0, 4).map(({ seatId, kind, at }) => [seatId, kind, at])).toEqual([
+      [seatOf(l, ada).seatId, "changedRules", l.ticks.now()],
+      [seatOf(l, bo).seatId, "changedRules", l.ticks.now()],
+      [seatOf(l, ada).seatId, "changedRules", l.ticks.now()],
+      [seatOf(l, ada).seatId, "changedRules", mergedAt],
+    ]);
+  });
+
+  test("the newest 50 survive reopening the database, separately for each league", () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "algotank-activity-"));
+    try {
+      const location = { kind: "file", dataDir } as const;
+      const db = openDatabase(location);
+      const first = startLeague({ db, seatsPerLeague: 1 });
+      const ada = newAccount();
+      const bo = newAccount();
+      take(first, ada, { look: plainTankLook(1), strategy: strategy() });
+      take(first, bo);
+      for (let i = 0; i < LEAGUE_ACTIVITY_LIMIT; i++) {
+        first.ticks.advance(1000);
+        first.monthly.changeStrategy(ada, { strategy: strategy(i % 2 + 1) });
+        first.monthly.followLook(ada, plainTankLook(i % 2 === 0 ? 2 : 1));
+      }
+      const leagueOne = first.monthly.live(1).activity;
+      const leagueTwo = first.monthly.live(2).activity;
+      first.monthly.stop();
+      db.close();
+      expect(leagueOne).toHaveLength(LEAGUE_ACTIVITY_LIMIT);
+      expect(leagueOne.every((event) => event.kind === "changedRules" || event.kind === "changedLook")).toBe(true);
+      expect(leagueOne[0]).toMatchObject({ kind: "changedLook", look: plainTankLook(1), at: first.ticks.now() });
+      expect(leagueTwo.map((event) => event.kind)).toEqual(["joined"]);
+
+      const reopened = openDatabase(location);
+      try {
+        const second = startLeague({ db: reopened, ticks: first.ticks });
+        expect(second.monthly.live(1).activity).toEqual(leagueOne);
+        expect(second.monthly.live(2).activity).toEqual(leagueTwo);
+        second.monthly.stop();
+      } finally {
+        reopened.close();
+      }
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("the host's rename", () => {
   test("the tank, the board and this month's day records take the new name", () => {
     const l = startLeague();
@@ -598,16 +712,19 @@ describe("the streams", () => {
 });
 
 describe("restart", () => {
+  // Chargers always walk at the nearest tank and throw, so points move within a few turns. The default strategy
+  // follows a counter shared by the whole file, and some trios of play styles never meet.
+  const FIGHTER = { strategy: PRESETS.find((preset) => preset.id === "charger")!.strategy };
   test("a clean stop writes the checkpoint; the start resumes the day with each tank's points and counts", () => {
     const db = memoryDatabase();
     const first = startLeague({ db });
     const ada = newAccount();
     const bo = newAccount();
-    take(first, ada);
-    take(first, bo);
+    take(first, ada, FIGHTER);
+    take(first, bo, FIGHTER);
     nextDay(first);
     const cy = newAccount();
-    take(first, cy);
+    take(first, cy, FIGHTER);
     for (let i = 0; i < 3000 && seatOf(first, ada).points === 0; i++) first.ticks.tick();
     const before = [ada, bo, cy].map((owner) => seatOf(first, owner));
     expect(before.some((seat) => seat.points !== 0)).toBe(true);
@@ -626,8 +743,8 @@ describe("restart", () => {
     const db = memoryDatabase();
     const first = startLeague({ db });
     const ada = newAccount();
-    take(first, ada);
-    take(first, newAccount());
+    take(first, ada, FIGHTER);
+    take(first, newAccount(), FIGHTER);
     nextDay(first);
     for (let i = 0; i < 3000 && seatOf(first, ada).points === 0; i++) first.ticks.tick();
     const points = seatOf(first, ada).points;

@@ -11,10 +11,11 @@
 // open-field rules, whose board is larger (27 tanks give 23 x 17, 40 give 28 x 21);
 // `stream=<url>` replays a recorded league (apps/server/scripts/perf-stream.ts) turn by turn, with the
 // day's clock running, so the board's cost shows with hundreds of tanks that move;
-// `leagues` = 1 (default), 2 or 9; `tab` = arena, ranking or mine (the phone's tab); `side` =
-// today, month or mine (the pane beside the board, and the phone's ranking switch); `quit` = 1
-// opens the quit question.
+// `leagues` = 1 (default), 2 or 9; `tab` = arena, ranking, mine or activity (the phone's tab);
+// `side` = today, month, mine or activity (beside the board); `activity` = full adds a full
+// activity list; `quit` = 1 opens the quit question.
 
+import { LEAGUE_ACTIVITY_LIMIT } from "@game/arena";
 import { RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
 import { useMemo, useState } from "react";
 import { AppHeader } from "../ui/AppHeader.tsx";
@@ -22,7 +23,7 @@ import { AppShell } from "../ui/AppShell.tsx";
 import { Dialog } from "../ui/Dialog.tsx";
 import { useFitLayout, useLaptopLayout } from "../ui/layout.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
-import { FIXTURE_MOVE, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureOwnTurns, fixtureRanking, fixtureRankedSeat, fixtureSeat } from "./monthlyFixtures.ts";
+import { FIXTURE_MOVE, fixtureActivity, fixtureDays, fixtureLeagues, fixtureLive, fixtureLoad, fixtureOwnTurns, fixtureRanking, fixtureRankedSeat, fixtureSeat } from "./monthlyFixtures.ts";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
 import { useStreamReplay } from "./useStreamReplay.ts";
 import { MonthlyPhoneBar, MonthlyView, type DayChange, type MonthlySide, type MonthlyTab } from "./MonthlyView.tsx";
@@ -47,8 +48,8 @@ export function MonthlyHarness() {
   const m = useMessages();
   const which = param("case", CASES, "visitor");
   const leagueCount = Number(param("leagues", ["1", "2", "9"], "1"));
-  const [tab, setTab] = useState<MonthlyTab>(param<MonthlyTab>("tab", ["arena", "ranking", "mine"], "arena"));
-  const [side, setSide] = useState<MonthlySide>(param<MonthlySide>("side", ["today", "month", "mine"], "today"));
+  const [tab, setTab] = useState<MonthlyTab>(param<MonthlyTab>("tab", ["arena", "ranking", "mine", "activity"], "arena"));
+  const [side, setSide] = useState<MonthlySide>(param<MonthlySide>("side", ["today", "month", "mine", "activity"], "today"));
   // quit=1: the quit dialog. "Change rules" opens the join steps' tank step, which the join audit covers.
   const [quitting, setQuitting] = useState<"leave" | null>(() => {
     const value = new URLSearchParams(window.location.search).get("quit");
@@ -69,7 +70,11 @@ export function MonthlyHarness() {
   const tanks = tanksParam(TANKS[which]);
   const field = param("field", ["standard", "open"], "standard");
   // field=open draws the larger open-field board; rules=<id> only names another condition over the same board.
-  const live = useMemo(() => fixtureLive(league, tanks, field === "open" ? "open-field" : rules), [league, tanks, field, rules]);
+  const fullActivity = param("activity", ["empty", "full"], "empty") === "full";
+  const live = useMemo(() => ({
+    ...fixtureLive(league, tanks, field === "open" ? "open-field" : rules),
+    activity: fixtureActivity(now, fullActivity ? LEAGUE_ACTIVITY_LIMIT : 0),
+  }), [league, tanks, field, rules, fullActivity, now]);
   const shownLive = replay?.kind === "ready" ? replay.board.live : live;
   const ranking = useMemo(() => (tanks === 0 ? { ...fixtureRanking(shownLive), today: [], thisMonth: [] } : fixtureRanking(shownLive)), [shownLive, tanks]);
   const load: LeagueLiveLoad =

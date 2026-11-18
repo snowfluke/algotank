@@ -17,6 +17,7 @@ const live: LeagueLive = {
     { id: "b", name: "Bo", look: plainTankLook(2), isBot: false },
   ],
   board,
+  activity: [],
 };
 const next: PublicSnapshot = { ...board, tick: 1, bots: [{ ...bot("a", 2), score: 1 }, { ...bot("b", 3), score: -1 }] };
 const tick = compactTick({ tick: 0, order: ["a", "b"], moves: [{ botId: "a", move: "F" }, { botId: "b", move: "W" }], throws: [], pickups: [], snapshot: next }, ["a", "b"]);
@@ -79,5 +80,19 @@ describe("a league's live state", () => {
     expect(parseLeagueMessage("not json")).toBeNull();
     expect(parseLeagueMessage(JSON.stringify({ type: "arena" }))).toBeNull();
     expect(parseLeagueMessage(JSON.stringify({ type: "state", state: live }))?.type).toBe("state");
+  });
+
+  test("state messages deliver the validated activity through turns and replace it on a new state", () => {
+    const activity: LeagueLive["activity"] = [{ kind: "joined", seatId: "a", name: "Ada", look: plainTankLook(1), at: 1000 }];
+    const parse = (events: unknown) => parseLeagueMessage(JSON.stringify({ type: "state", state: { ...live, activity: events } }));
+    expect(parse([{ ...activity[0], at: "today" }])).toBeNull();
+    expect(parse(undefined)).toBeNull();
+    const message = parse(activity);
+    if (message?.type !== "state") throw new Error("expected a state");
+    const ready = nextLeagueLoad({ kind: "connecting" }, message, 1000);
+    const moved = nextLeagueLoad(ready, { type: "tick", tick, own: null }, 1000);
+    const replaced = nextLeagueLoad(moved, { type: "state", state: live }, 1000);
+    expect(moved.kind === "ready" ? moved.board.live.activity : null).toEqual(activity);
+    expect(replaced.kind === "ready" ? replaced.board.live.activity : null).toEqual([]);
   });
 });

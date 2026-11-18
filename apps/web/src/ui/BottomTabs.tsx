@@ -83,7 +83,7 @@ export function BottomTabs<T extends string>({ idBase, label, tabs, value, onCha
       aria-label={label}
       data-bottom-tabs={idBase}
       onKeyDown={onKeyDown}
-      className={inline ? "grid w-full grid-flow-col auto-cols-fr gap-1" : "mx-auto grid w-full max-w-xl grid-flow-col auto-cols-fr gap-1 px-2 py-1"}
+      className={inline ? "grid w-full grid-flow-col auto-cols-[minmax(min-content,1fr)] gap-1" : "mx-auto grid w-full max-w-xl grid-flow-col auto-cols-fr gap-1 px-2 py-1"}
     >
       {tabs.map((tab, i) => {
         const selected = i === current;

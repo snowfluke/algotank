@@ -285,7 +285,24 @@ const MIGRATIONS: readonly (string | ((db: Database) => void))[] = [
     PRIMARY KEY (month, seat_id)
   ) STRICT;
   `,
-  // 10: Assign the ultimate once, while the strategies are still at rest (85-ultimates.md).
+
+  // 10: public monthly arena activity (owner, 2026-11-18, 86-monthly-activity.md).
+  // The seat can leave while its activity stays. look_json is the whole board look at the event.
+  `
+  CREATE TABLE league_activity (
+    id INTEGER PRIMARY KEY,
+    month TEXT NOT NULL CHECK (month GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]'),
+    league INTEGER NOT NULL CHECK (league >= 1),
+    seat_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    look_json TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('joined', 'left', 'changedRules', 'changedLook')),
+    at INTEGER NOT NULL CHECK (at >= 0)
+  ) STRICT;
+  CREATE INDEX league_activity_by_month_league ON league_activity (month, league, id DESC);
+  `,
+  // 11: Assign the ultimate once, while the strategies are still at rest (85-ultimates.md). It was 10 on the
+  // ultimates branch until the activity table was released as 10 on 2026-11-18.
   migrateStrategyUltimates,
 ];
 

@@ -119,3 +119,16 @@ Status 2026-11-14: the owner confirmed three choices as built: the month's rank 
 | Reduced motion | The tank is at the new square at once, with a small ring at both squares. |
 | Feed | When the viewer's own tank takes a fresh start, the feed says so in one line: "Tank kamu masuk terowongan dan keluar di petak lain dengan air penuh." / "Your tank went through a tunnel and came out on another square with full water." |
 | Notice | The "Diacak ulang" notice remains only for a rebuild (a rush of joiners that needs a bigger board), which still starts the round again. |
+
+### Weather change (2026-11-19)
+
+Owner, 2026-11-16: "randomize the arena condition each reshuffle". The round no longer starts again, so the condition changes during the round instead (owner, 2026-11-19, chose "weather change, no restart"):
+
+| Rule | Decision |
+|---|---|
+| When | Every 333 turns (`RESHUFFLE_TURNS`), the league draws a condition from `MONTHLY_CONDITIONS`, each as likely. A draw of the condition that plays now changes nothing. A new day, a restart and a rebuild draw one as before. |
+| Tanks | They keep their squares, points, statistics, tie ranks and running step sequences. Water above the new condition's limit is cut to the limit. |
+| Lapangan luas | It needs the larger board. Into Lapangan luas, the board grows on its right and bottom edges, and the tanks keep their squares. Out of it, the board shrinks back; a tank outside the new board takes a tunnel (a fresh start), and an item outside it is removed. |
+| Stream | A change sends one `state`, which keeps the turn number, so the page does not count it as a reshuffle. |
+| Page | A notice for a few seconds: "Kondisi arena berubah menjadi {name}." / "The arena condition changed to {name}." The condition line under the clock shows the new name. |
+| Rules | A rule that reads the arena condition reads the one that plays in that turn. |

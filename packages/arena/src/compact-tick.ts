@@ -6,8 +6,8 @@
 // directions, moves and outcomes by their index in the tables below, so a turn is
 // a few arrays of numbers.
 //
-// The engine keeps the snapshot's bot order for the whole round (stepRound maps
-// `before.bots` in place), so a spawn index names the same tank on every turn.
+// In rooms a spawn index names the same tank on every turn. In monthly rounds
+// each fresh start moves a tank to the end of the order for the next turn.
 //
 // Layout (every value is an integer):
 //   bots[i]   = [x, y, direction index, score, water, flags, hitsLanded, hitsTaken]
@@ -23,13 +23,15 @@
 //               outcome "bucketHit" exists only here: it is a hit with `bucket: true`.
 //   items[k]  = [item index, x, y, turns left], the items on the board after the turn.
 //   pickups[k]= [bot index, item index], the items taken on the turn.
+//   freshStarts[k] = [bot index, x, y], the tunnel destinations after the moves,
+//                    in order. Absent on room ticks and turns without a fresh start.
 //
 // expandTick throws an Error on a compact tick that does not fit the spawn (an
 // index out of range, a value of the wrong kind). The client treats that as a
 // protocol error.
 
 import { DIRECTIONS, ITEM_KINDS, MOVES, TANK_EFFECT_KINDS, type BoardItem, type Direction, type ItemKind, type Move, type Pickup, type TankEffect, type ThrowEvent } from "@game/engine";
-import type { PlayerId, PublicBot, PublicSnapshot, PublicTick } from "./types.ts";
+import type { FreshStart, PlayerId, PublicBot, PublicSnapshot, PublicTick } from "./types.ts";
 
 /** One turn in a compact form. Indexes refer to the order of `roundStart.snapshot.bots`. */
 export interface CompactTick {
@@ -44,6 +46,7 @@ export interface CompactTick {
   readonly items: readonly (readonly number[])[];
   /** [bot index, item index]: the items taken on the turn. */
   readonly pickups: readonly (readonly number[])[];
+  readonly freshStarts?: readonly (readonly [number, number, number])[];
 }
 
 /** Direction index to direction. The engine's own table, clockwise from north. */
@@ -148,6 +151,7 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
     }),
     items: tick.snapshot.items.map((item) => [indexIn(COMPACT_ITEMS, item.kind, "item"), item.x, item.y, item.turnsLeft]),
     pickups: tick.pickups.map((p) => [idx(p.botId), indexIn(COMPACT_ITEMS, p.item, "item")]),
+    ...(tick.freshStarts?.length ? { freshStarts: tick.freshStarts.map(({ id, x, y }): [number, number, number] => [idx(id), x, y]) } : {}),
   };
 }
 
@@ -160,6 +164,27 @@ function entry<T>(table: readonly T[], index: unknown, what: string): T {
   const value = table[integer(index, what)];
   if (value === undefined) throw new Error(`${what} ${String(index)} is out of range`);
   return value;
+}
+
+function expandFreshStarts(value: unknown, bots: readonly PublicBot[], board: PublicSnapshot): readonly FreshStart[] {
+  if (!Array.isArray(value)) throw new Error("fresh starts must be a list");
+  const started = new Set<PlayerId>();
+  const destinations = new Set<number>();
+  return value.map((values: unknown) => {
+    if (!Array.isArray(values) || values.length !== 3) throw new Error("a fresh start needs a tank and a square");
+    const bot = entry(bots, values[0], "fresh start tank");
+    const x = integer(values[1], "fresh start x");
+    const y = integer(values[2], "fresh start y");
+    if (x < 0 || y < 0 || x >= board.width || y >= board.height || (x === bot.x && y === bot.y)) {
+      throw new Error("a fresh start needs a different square on the board");
+    }
+    const square = y * board.width + x;
+    if (started.has(bot.id)) throw new Error(`two fresh starts for tank "${bot.id}"`);
+    if (destinations.has(square)) throw new Error("two fresh starts on the same square");
+    started.add(bot.id);
+    destinations.add(square);
+    return { id: bot.id, x, y };
+  });
 }
 
 /** Rebuilds the PublicTick that compactTick was given. `spawn` is the round's `roundStart.snapshot`. */
@@ -226,6 +251,7 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
     const [botIndex, kind] = values;
     return { botId: botAt(botIndex, "pickup tank").id, item: entry(COMPACT_ITEMS, kind, "item") };
   });
+  const freshStarts = compact.freshStarts === undefined ? undefined : expandFreshStarts(compact.freshStarts, bots, spawn);
 
   return {
     tick: integer(compact.tick, "tick"),
@@ -244,5 +270,6 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       bots,
       items,
     },
+    ...(freshStarts?.length ? { freshStarts } : {}),
   };
 }

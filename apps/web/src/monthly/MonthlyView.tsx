@@ -71,7 +71,7 @@ export interface MonthlyViewProps {
   /** The visitor's one action; null for a seated owner and while the account is not known yet. */
   readonly onJoin: (() => void) | null;
   readonly dayChange: DayChange | null;
-  /** True for a moment after a new round of today put every tank on a new square (leagueLive.ts, `reshuffles`). */
+  /** True for a moment after the round rebuilt for board growth (leagueLive.ts, `reshuffles`). */
   readonly reshuffled: boolean;
   onQuit(): void;
   /** A seated owner's way to new rules (flow.ts, askChangeRules). */
@@ -220,6 +220,7 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row, ranking }
       <MonthlyBoard
         snapshot={board.snapshot}
         throws={board.throws}
+        tunnels={board.tunnels}
         names={names}
         highlightId={ownSeatId}
         tickMs={live.tickMs}
@@ -329,9 +330,10 @@ function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: num
 }
 
 /** The owner's tank: today, the counted days, the turns, and the way out. */
-function OwnPane({ seat, league, ranking, onLeague, onQuit, actions }: {
+function OwnPane({ seat, league, board, ranking, onLeague, onQuit, actions }: {
   seat: MonthlySeat;
   league: number;
+  board: LeagueBoard | null;
   ranking: LeagueRankingResponse | null;
   onLeague(next: number): void;
   onQuit(): void;
@@ -341,6 +343,7 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit, actions }: {
   const t = m.monthly.own;
   const [language] = useLanguage();
   const here = seat.league === league;
+  const freshStart = here && board?.ownFreshStart?.id === seat.seatId ? board.ownFreshStart : null;
   const todayRow = ranking?.today.find((row) => row.seatId === seat.seatId) ?? null;
   // K2: today's statistics card in place of the summary, so each has the pane's height.
   const [part, setPart] = useState<"summary" | "stats">("summary");
@@ -348,7 +351,7 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit, actions }: {
   const countingLevel = here ? 2 : 1;
   const detail = useFitDetail<HTMLElement>(
     countingLevel + 1,
-    `${language}|${part}|${here}|${seat.league}|${todayRow === null}|${seat.countsToday}|${seat.rank === null}`,
+    `${language}|${part}|${here}|${seat.league}|${todayRow === null}|${seat.countsToday}|${seat.rank === null}|${freshStart !== null}`,
   );
   return (
     <section ref={detail.ref} data-own-pane="" aria-label={t.heading} className={`${PANE} fit:overflow-hidden`}>
@@ -396,7 +399,12 @@ function OwnPane({ seat, league, ranking, onLeague, onQuit, actions }: {
             ) : null}
             <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score, seat.countedDays)}</p>
           </div>
-          {/* No live turn text here: it changed every 0.9 s, faster than a player reads (owner, 2026-11-16). The Statistik tab counts the rules instead. */}
+          {/* Keep the latest tunnel in the own feed (owner, 2026-11-19), so it can be read after the turn. */}
+          {freshStart === null ? null : (
+            <p data-own-fresh-start="" role="status" className="min-w-0 shrink-0 [overflow-wrap:anywhere]">
+              <span key={freshStart.tick}>{t.freshStart}</span>
+            </p>
+          )}
           <div className="min-h-0 flex-1" />
         </>
       )}
@@ -531,7 +539,7 @@ function PresenterLayout(props: MonthlyViewProps) {
             <SegmentedControl legend={t.tabs.label} hideLegend size="sm" value={side} onChange={props.onSide} options={sideOptions} />
           </div>
           {side === "mine" && seat !== null ? (
-            <OwnPane seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />
+            <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />
           ) : side === "activity" ? (
             <ActivityList events={board?.live.league === league ? board.live.activity : []} fixedNow={props.now} />
           ) : (
@@ -593,6 +601,7 @@ function PhoneLayout(props: MonthlyViewProps) {
       <OwnPane
         seat={seat}
         league={league}
+        board={board}
         ranking={props.ranking}
         onLeague={props.onLeague}
         onQuit={props.onQuit}

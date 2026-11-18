@@ -1,11 +1,12 @@
 // The bot draw of a league's day round (league-day.ts, "Bot rule"), through its public methods.
 import { describe, expect, test } from "bun:test";
 import { plainTankLook } from "@game/arena";
-import { PRESETS, RULE_SET_IDS, type RuleSetId } from "@game/engine";
+import { parseStrategy, PRESETS, RULE_SET_IDS, ruleSet, type RuleSetId } from "@game/engine";
 import { LeagueDay, MONTHLY_CONDITIONS, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
 const botsOf = (day: LeagueDay) => day.view(1000).tanks.filter((t) => t.isBot);
+const waiter = parseStrategy({ modes: [{ id: "main", name: "Wait", rules: [], fallback: { action: "wait", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
 
 describe("the league's bots", () => {
   test("a high draw gives 3 bots, each with its own name and a colour no other tank has", () => {
@@ -27,21 +28,72 @@ describe("the league's bots", () => {
     expect(botsOf(lone)).toHaveLength(1);
   });
 
-  test("each new start draws again, and the seated tanks keep their points", () => {
-    let draw = 0.99;
-    const day = new LeagueDay(1, () => draw);
-    day.start([1, 2].map((n) => ({ tank: tank(n), points: 5 * n, counts: true, stats: undefined })), 5000);
-    expect(botsOf(day)).toHaveLength(3);
-    for (let i = 0; i < RESHUFFLE_TURNS; i++) day.step();
-    expect(day.reshuffleDue()).toBe(true);
-    // A new start seats the tanks in a random order, so the points are compared by tank.
-    const pointsById = () => Object.fromEntries(day.standings().map((s) => [s.id, s.points]));
-    const points = pointsById();
-    draw = 0;
-    day.rebuild(4000);
-    expect(botsOf(day)).toHaveLength(0);
-    expect(pointsById()).toEqual(points);
-  });
+  for (const [seats, drawn, remaining] of [[1, 0, 1], [2, 0, 0], [2, 0.99, 1]] as const) {
+    test(`with ${seats} seats, a bot's fresh start draw of ${drawn} leaves ${remaining} bots`, () => {
+      let draw = 0.3; // One bot at the start.
+      const day = new LeagueDay(1, () => draw);
+      day.start(Array.from({ length: seats }, (_, i) => ({ tank: tank(i + 1), points: 0, counts: true, stats: undefined })), 5000);
+      const original = botsOf(day)[0];
+      if (original === undefined) throw new Error("expected a bot");
+      draw = drawn;
+      for (let i = 0; i < RESHUFFLE_TURNS; i++) {
+        const turn = day.step();
+        if (!turn?.botsChanged) continue;
+        const bots = botsOf(day);
+        expect(bots).toHaveLength(remaining);
+        expect(bots.some((b) => b.id === original.id)).toBe(false);
+        if (remaining > 0) {
+          const old = turn.snapshot.bots.find((b) => b.id === original.id);
+          const added = day.view(1000).board.bots.at(-1);
+          expect([added?.x, added?.y]).not.toEqual([old?.x, old?.y]);
+          expect(added?.score).toBe(0);
+        }
+        return;
+      }
+      throw new Error("the bot missed its turn");
+    });
+  }
+});
+
+describe("the fresh start rotation", () => {
+  for (const count of [5, RESHUFFLE_TURNS + 5]) {
+    test(`each of ${count} tanks takes one fresh start every ${RESHUFFLE_TURNS} turns`, () => {
+      if (!waiter.ok) throw new Error(JSON.stringify(waiter.errors));
+      const strategy = waiter.strategy;
+      const turns = 3 * RESHUFFLE_TURNS;
+      const day = new LeagueDay(1, () => 0);
+      day.start(Array.from({ length: count }, (_, i) => ({
+        tank: { ...tank(i + 1), strategy },
+        points: i,
+        counts: true,
+        stats: undefined,
+      })), turns);
+      const visits = new Map<string, number[]>(day.view(turns).board.bots.map(({ id }) => [id, []]));
+      const water = ruleSet(day.view(turns).board.ruleSetId).waterCapacity;
+      for (let i = 0; i < turns; i++) {
+        const turn = day.step();
+        if (turn === null) throw new Error("the round stopped early");
+        if (turn.tick !== i) throw new Error("the round's tick stopped counting");
+        if (turn.freshStarts.length === 0) continue;
+        expect(turn.freshStarts.length).toBeLessThanOrEqual(Math.ceil(count / RESHUFFLE_TURNS));
+        const placed = day.view(turns - i).board.bots.slice(-turn.freshStarts.length);
+        for (const [j, fresh] of turn.freshStarts.entries()) {
+          const old = turn.snapshot.bots.find((b) => b.id === fresh.id);
+          const bot = placed[j];
+          expect(bot).toMatchObject({ ...fresh, water, score: old?.score });
+          expect(bot?.tieRank).not.toBe(old?.tieRank);
+          expect(day.statsOf(fresh.id).turns).toBe(i + 1);
+          visits.get(fresh.id)?.push(i);
+        }
+      }
+      expect(day.view(0).board.tick).toBe(turns);
+      for (const visitsOfTank of visits.values()) {
+        expect(visitsOfTank).toHaveLength(3);
+        const first = visitsOfTank[0] as number;
+        expect(visitsOfTank).toEqual([first, first + RESHUFFLE_TURNS, first + 2 * RESHUFFLE_TURNS]);
+      }
+    });
+  }
 });
 
 describe("the arena condition", () => {
@@ -83,7 +135,7 @@ describe("new rules for a seated tank", () => {
     expect([placed?.x, placed?.y, placed?.direction, placed?.water]).toEqual([place?.x, place?.y, place?.direction, place?.water]);
     expect([day.pointsOf("seat-1"), day.countsToday("seat-1"), day.statsOf("seat-1")]).toEqual([40, true, stats]);
     expect(day.view(1000).tanks.filter((t) => t.id === "seat-1")).toHaveLength(1);
-    // The round goes on with it, and a reshuffle keeps the new rules' tank and its points.
+    // The round goes on with it, and a rebuild keeps the new rules' tank and its points.
     expect(() => day.step()).not.toThrow();
     day.rebuild(1000);
     expect(day.countsToday("seat-1")).toBe(true);

@@ -72,6 +72,22 @@ describe("ArenaBoard", () => {
     for (const label of botLabels(names).values()) expect(html).toContain(`>${label}</text>`);
   });
 
+  test("draws a tunnel at both squares with turn-timed motion and skips the tank's glide", () => {
+    const from = bot(0);
+    const next = { ...snapshot, bots: [{ ...from, x: 1, y: 1 }, ...snapshot.bots.slice(1)] };
+    const html = renderToStaticMarkup(
+      <ArenaBoard snapshot={next} throws={throws} tunnels={[{ kind: "through", from }]} names={names} highlightId="p0" tickMs={900} />,
+    );
+    expect(html).toContain('data-tunnel-from="p0" transform="translate(5 5)"');
+    expect(html).toContain('data-tunnel-to="p0" transform="translate(15 15)"');
+    expect(html).toContain('data-tunnel-dust="sink"');
+    expect(html).toContain('data-tunnel-dust="rise"');
+    expect(html).toContain('class="ab-anim ab-tunnel-sink"');
+    expect(html).toMatch(/<g data-bot-id="p0"[^>]+translate\(15px, 15px\)[^>]*><title>.*?<\/title><g class="ab-anim ab-tunnel-rise">/);
+    expect(html).toContain('class="ab-move" data-bot-id="p1"');
+    expect(html).toContain("--tick-ms:900ms");
+  });
+
   test("each shot kind has its own shape: a jet with a splash, a lob with a puff, a short jet, and drops", () => {
     expect(count(html, 'data-throw="hit"')).toBe(1);
     expect(count(html, 'data-throw="miss"')).toBe(1);

@@ -11,7 +11,7 @@ export { createRng } from "./round/rng.ts";
 export { arenaSize } from "./round/grid.ts";
 export { createRound, stepRound, runRound, standings } from "./round/round.ts";
 // An open round of the monthly league: tanks join and leave between turns.
-export { createOpenRound, joinRound, leaveRound, replaceStrategy } from "./round/round.ts";
+export { createOpenRound, freshStartRound, joinRound, leaveRound, replaceStrategy } from "./round/round.ts";
 export type { OpenRoundConfig } from "./round/round.ts";
 export { RULES } from "./round/rules.ts";
 

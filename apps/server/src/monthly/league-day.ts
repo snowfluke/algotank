@@ -13,9 +13,9 @@
 // | withoutBot   | withoutBot   |                  | bot joins at once                                         |
 // | withBot or   | idle         | owner: quit      | the last tank leaves; the round and its bots are dropped  |
 // | withoutBot   |              |                  | (its points were saved at the quit)                       |
-// | withBot or   | withBot or   | server (turns)   | the round played RESHUFFLE_TURNS turns: a new round with  |
-// | withoutBot   | withoutBot   |                  | the same tanks, points and statistics on new squares, and |
-// |              |              |                  | the bots are drawn again                                  |
+// | withBot or   | withBot or   | server (turns)   | after the moves, the next tanks in the rotation go through |
+// | withoutBot   | withoutBot   |                  | a tunnel and keep points and stats; a bot is redrawn or    |
+// |              |              |                  | leaves if the draw is 0. The round keeps counting.         |
 // | any          | closing      | server (clock)   | the day's end: monthly.ts records the day; no turn runs   |
 // | closing      | idle, withBot| server           | the records are saved: a new day round with every seated  |
 // |              | or withoutBot|                  | tank at 0 points (closing stays while a save fails)       |
@@ -30,26 +30,28 @@
 // Ties: a target selector settles a tie by the tanks' tie ranks in an open round (BotState.tieRank,
 // drawn at each join), and some rules by the board's tank order. Both change at every new round:
 // the engine draws new ranks, and start() seats the tanks in a random order. A seat's fixed id was
-// worth thousands of points a day before (2026-11-16).
+// worth thousands of points a day before (2026-11-16). A fresh start draws one tank's rank
+// and puts it last in board order (owner, 2026-11-19).
 //
-// Board size: every new round (a new day, a restart, a new start, a rebuild) gets a board for the
+// Board size: every new round (a new day, a restart, a rebuild) gets a board for the
 // tanks seated then (boardTanksFor), so a few tanks still meet and a full league has room. A board
 // for N tanks has about 6.7 N squares (round/grid.ts), so the seats can pass N by half before the
 // rebuild with up to MAX_BOTS bots and never run out of squares.
 //
 // Bot rule (owner, 2026-11-14: bots come and go every few minutes; a bot never appears in a ranking):
-// | Seated tanks | Bots drawn at each new round (a new start, a new day, a rebuild)        |
+// | Seated tanks | Bots drawn at each new round (a new day, a restart, a rebuild)           |
 // |--------------|--------------------------------------------------------------------------|
 // | 0            | none; no turn runs and the page shows the empty board                    |
 // | 1            | 1 to 3: a draw of 0 is raised to 1, so the tank always has an opponent   |
 // | 2 or more    | 0 to 3                                                                   |
 // Each bot takes a play style from BOT_LINEUP (apps/server/src/bots.ts), the practice arena's mix
 // of weak, middle and strong bots. A player keeps the points won from or lost to a bot; the bot's
-// own points go with it at the next new start.
+// own points go with it at its fresh start (owner, 2026-11-19). A positive draw replaces
+// just that bot and a zero removes it. The same draw keeps at least one bot for a lone seat.
 
-import { plainTankLook, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
+import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, arenaSize, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS } from "@game/arena";
 
@@ -88,14 +90,20 @@ interface LeagueBot {
 }
 
 /**
- * Turns a day round plays before its tanks start again on new random squares with full water,
- * keeping their points: 333 turns are 5 minutes at 900 ms a turn, the owner's choice. A day is
+ * Turns between a tank's fresh starts: 333 turns are 5 minutes at 900 ms a turn. A day is
  * one round of about 96,000 turns, and two or three tanks could settle into a loop that ran for
  * the rest of it: in one measured field the same tank hit the same target 15,833 times in a row.
  * Measured on 14 November 2026 over 3 seeds with a new start every 1,000 turns: that run was at
  * most 70, and fields without a loop kept their result. 333 turns cut a loop shorter still.
  */
 export const RESHUFFLE_TURNS = 333;
+
+/** The usual turn result up to the end of the moves, with the tunnels that follow. */
+export interface LeagueTurn extends TickResult {
+  readonly freshStarts: readonly FreshStart[];
+  /** Bot quits and joins still use a state message after the tick. */
+  readonly botsChanged: boolean;
+}
 
 /** A seat that makes the seated tanks more than this many times the board's tanks rebuilds the round at once. */
 export const BOARD_GROWTH = 1.5;
@@ -134,6 +142,7 @@ export class LeagueDay {
   private round: RoundState | null = null;
   private readonly seated = new Map<PlayerId, Seated>();
   private bots: LeagueBot[] = [];
+  private freshStartRemainder = 0;
   /** The tanks the round's board is sized for. */
   private boardFor = boardTanksFor(0);
 
@@ -145,26 +154,31 @@ export class LeagueDay {
   /**
    * Seats a tank between turns. `ticksLeft` sizes a round that starts now. `points` is 0, or
    * today's points of a tank that resumes after a restart; `counts` whether today counts for it.
+   * Returns true when the board had to grow.
    */
-  seat(tank: DayTank, points: number, counts: boolean, ticksLeft: number, stats: TankStats = EMPTY_STATS): void {
+  seat(tank: DayTank, points: number, counts: boolean, ticksLeft: number, stats: TankStats = EMPTY_STATS): boolean {
     if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
     const fresh = this.round === null;
     if (this.round === null) this.round = this.newRound(1, ticksLeft);
     joinRound(this.round, { id: tank.id, strategy: tank.strategy }, points);
     this.seated.set(tank.id, { tank, counts, stats });
     if (fresh) this.drawBots();
-    // A rush of joiners: the next new start may be minutes away, so the board grows now.
-    else if (this.seated.size > this.boardFor * BOARD_GROWTH) this.rebuild(ticksLeft);
+    else if (this.seated.size > this.boardFor * BOARD_GROWTH) {
+      this.rebuild(ticksLeft);
+      return true;
+    }
+    return false;
   }
 
   /**
    * A round on a board for `tanks` tanks (boardTanksFor), under an arena condition (round rules)
    * drawn for it, each one as likely: owner, 2026-11-16, "randomize the arena condition each
-   * reshuffle". The draw comes first, before the seating order and the bots. "open-field" makes
-   * the board about twice as large (engine arenaSize).
+   * reshuffle". The draw comes first, before the seating order and the bots. A tunnel keeps
+   * the round's condition (2026-11-19). "open-field" makes the board about twice as large.
    */
   private newRound(tanks: number, ticksLeft: number): RoundState {
     this.boardFor = boardTanksFor(tanks);
+    this.freshStartRemainder = 0;
     const ruleSetId = MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
     return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true });
   }
@@ -222,7 +236,7 @@ export class LeagueDay {
     return seated.counts;
   }
 
-  /** Every seated tank with its points now and whether today counts, in board order. */
+  /** Every seated tank with its points now and whether today counts. */
   standings(): readonly { readonly id: PlayerId; readonly points: number; readonly counts: boolean }[] {
     return [...this.seated.values()].map(({ tank, counts }) => ({ id: tank.id, points: this.pointsOf(tank.id), counts }));
   }
@@ -239,12 +253,31 @@ export class LeagueDay {
   }
 
   /** One turn, or null when no turn runs: no tank, or the planned turns of the day are played and the clock has not closed it yet. */
-  step(): TickResult | null {
-    if (this.round === null || this.seated.size === 0 || this.round.isOver) return null;
-    const before = this.round.snapshot;
-    const result = stepRound(this.round);
+  step(): LeagueTurn | null {
+    const round = this.round;
+    if (round === null || this.seated.size === 0 || round.isOver) return null;
+    const before = round.snapshot;
+    const result = stepRound(round);
     this.count(before, result);
-    return result;
+    // Board order is the queue: a fresh start or join goes to its end. Carry the remainder
+    // (77-monthly-league.md, 2026-11-19) so gaps alternate between floor and ceil of 333 / N
+    // for small boards. Above 333, at most ceil(N / 333) go per turn. Even when N does not
+    // divide 333, exactly N tanks go in 333 turns at a stable tank count.
+    const credit = this.freshStartRemainder + before.bots.length;
+    const count = Math.floor(credit / RESHUFFLE_TURNS);
+    this.freshStartRemainder = credit % RESHUFFLE_TURNS;
+    const freshStarts: FreshStart[] = [];
+    let botsChanged = false;
+    for (const { id } of before.bots.slice(0, count)) {
+      if (this.seated.has(id)) {
+        const { x, y } = freshStartRound(round, id);
+        freshStarts.push({ id, x, y });
+      } else {
+        this.freshStartBot(round, id);
+        botsChanged = true;
+      }
+    }
+    return { ...result, freshStarts, botsChanged };
   }
 
   /**
@@ -264,14 +297,9 @@ export class LeagueDay {
     }
   }
 
-  /** True when the round has played RESHUFFLE_TURNS turns, so monthly.ts starts it again with rebuild. */
-  reshuffleDue(): boolean {
-    return this.round !== null && this.round.snapshot.tick >= RESHUFFLE_TURNS;
-  }
-
   /**
-   * A new round with the same tanks, points and statistics: every RESHUFFLE_TURNS turns, and for a
-   * round the engine could not step. Positions, water and running step sequences are lost, as
+   * A new round with the same tanks, points and statistics: for board growth or a round the
+   * engine could not step. Positions, water and running step sequences are lost, as
    * after a restart, and the bots are drawn again as new tanks with 0 points.
    */
   rebuild(ticksLeft: number): void {
@@ -332,9 +360,23 @@ export class LeagueDay {
 
   /** The bot rule of the header, at a new round: the round holds the seated tanks and no bot yet. */
   private drawBots(): void {
-    const drawn = Math.min(MAX_BOTS, Math.floor(this.random() * (MAX_BOTS + 1)));
-    const count = this.seated.size === 1 ? Math.max(1, drawn) : drawn;
+    const count = this.drawBotCount();
     for (let i = 0; i < count; i++) this.addBot();
+  }
+
+  private drawBotCount(): number {
+    const drawn = Math.min(MAX_BOTS, Math.floor(this.random() * (MAX_BOTS + 1)));
+    return this.seated.size === 1 ? Math.max(1, drawn) : drawn;
+  }
+
+  private freshStartBot(round: RoundState, id: PlayerId): void {
+    const replaced = this.bots.findIndex((bot) => bot.id === id);
+    if (replaced < 0) throw new Error(`Bot ${id} is not in league ${this.league}.`);
+    const count = this.drawBotCount();
+    // Join while the old square is still occupied so the new bot always comes out elsewhere.
+    this.bots.splice(replaced, 1);
+    if (count > 0) this.addBot();
+    leaveRound(round, id);
   }
 
   /** One bot with a play style from the practice mix, a bot name and a colour no seated tank has, if one is free. */
@@ -345,7 +387,7 @@ export class LeagueDay {
     const taken = new Set<number>([...this.seated.values()].map(({ tank }) => tank.look.colour));
     for (const bot of this.bots) taken.add(bot.look.colour);
     const colour = ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const).find((c) => !taken.has(c)) ?? (((this.bots.length % 12) + 1) as TankColour);
-    const name = BOT_NAMES[this.bots.length] ?? `Bot ${this.bots.length + 1}`;
+    const name = BOT_NAMES.find((name) => this.bots.every((bot) => bot.name !== name)) ?? `Bot ${this.bots.length + 1}`;
     const bot: LeagueBot = { id: newBotId(), name, look: plainTankLook(colour) };
     joinRound(this.round, { id: bot.id, strategy });
     this.bots.push(bot);

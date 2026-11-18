@@ -25,6 +25,7 @@
 export const ARENA_MOTION_CSS = `
 .ab-move { transition: transform var(--tick-ms, 200ms) linear; }
 .ab-anim { transform-box: fill-box; transform-origin: center; }
+.ab-tunnel-sink { opacity: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .ab-live .ab-jet { animation: ab-jet var(--fx-ms, 400ms) ease-out both; }
   .ab-live .ab-splash { animation: ab-splash var(--fx-ms, 400ms) linear both; }
@@ -39,6 +40,33 @@ export const ARENA_MOTION_CSS = `
   .ab-live .ab-item-fade { animation: ab-item-fade 900ms ease-in-out infinite; }
   .ab-live .ab-pinwheel { animation: ab-spin 2.4s linear infinite; }
   .ab-live .ab-dizzy { animation: ab-spin 1.4s linear infinite; }
+  .ab-live .ab-tunnel-sink { animation: ab-tunnel-sink var(--tick-ms, 900ms) ease-in both; }
+  .ab-live .ab-tunnel-rise { animation: ab-tunnel-rise var(--tick-ms, 900ms) ease-out both; }
+  .ab-live .ab-tunnel-dust-sink { animation: ab-tunnel-dust-sink var(--tick-ms, 900ms) ease-out both; }
+  .ab-live .ab-tunnel-dust-rise { animation: ab-tunnel-dust-rise var(--tick-ms, 900ms) ease-out both; }
+  .ab-live .ab-tunnel-camera { animation: ab-tunnel-camera var(--tick-ms, 900ms) steps(1, end) both; }
+}
+@keyframes ab-tunnel-sink {
+  0% { opacity: 1; transform: none; }
+  45%, 100% { opacity: 0; transform: translateY(1px) scale(0.55, 0.2); }
+}
+@keyframes ab-tunnel-rise {
+  0%, 45% { opacity: 0; transform: translateY(1px) scale(0.55, 0.2); }
+  85%, 100% { opacity: 1; transform: none; }
+}
+@keyframes ab-tunnel-dust-sink {
+  0% { opacity: 0; transform: scale(0.65); }
+  18% { opacity: 1; }
+  45%, 100% { opacity: 0; transform: scale(1.35); }
+}
+@keyframes ab-tunnel-dust-rise {
+  0%, 45% { opacity: 0; transform: scale(0.65); }
+  62% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+@keyframes ab-tunnel-camera {
+  0% { transform: translate(var(--tunnel-from-x), var(--tunnel-from-y)); }
+  45%, 100% { transform: translate(var(--tunnel-to-x), var(--tunnel-to-y)); }
 }
 @keyframes ab-umbrella {
   0%, 20% { opacity: 0; transform: scale(0.2, 0.5); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }

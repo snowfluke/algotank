@@ -5,7 +5,7 @@ import { act, bot, mode, rule, snapshotOf, strategyOf, when } from "../strategy/
 import { TARGET_SELECTORS } from "../strategy/vocabulary.ts";
 import type { RoundState, Strategy } from "../types.ts";
 import { arenaSize } from "./grid.ts";
-import { createOpenRound, createRound, joinRound, leaveRound, replaceStrategy, roundHoldings, standings, stepRound } from "./round.ts";
+import { createOpenRound, createRound, freshStartRound, joinRound, leaveRound, replaceStrategy, roundHoldings, standings, stepRound } from "./round.ts";
 
 const strategyAt = (i: number): Strategy => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
 const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ seed, ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false });
@@ -42,6 +42,33 @@ describe("an open round", () => {
     const round = open();
     expect(joinRound(round, { id: "a", strategy: strategyAt(0) }, 12).score).toBe(12);
     expect(() => joinRound(round, { id: "b", strategy: strategyAt(0) }, 1.5)).toThrow();
+  });
+
+  test("a fresh start keeps points and hits, refills water, draws a tie rank, ends the sequence and goes last", () => {
+    const always = when("myWater", { compare: "atLeast", n: 0 });
+    const strategy = strategyOf([mode("main", [rule("go", [always], { steps: [act("wait"), act("wait"), act("wait")] })], act("wait"))]);
+    const round = open();
+    joinRound(round, { id: "a", strategy }, 12);
+    joinRound(round, { id: "b", strategy: strategyOf([mode("main", [], act("wait"))]) });
+    const played = stepRound(round).snapshot;
+    const [a, b] = played.bots;
+    if (a === undefined || b === undefined) throw new Error("expected two tanks");
+    const old = { ...a, hitsLanded: 5, hitsTaken: 4, water: 1 };
+    // Start from a partly spent tank in a running sequence, independent of the shots a seed gives.
+    Object.assign(round, { snapshot: { ...played, bots: [old, b] } });
+    expect(roundHoldings(round).sequences).toBe(1);
+
+    const placed = freshStartRound(round, "a");
+    expect([placed.x, placed.y]).not.toEqual([old.x, old.y]);
+    expect([placed.x, placed.y]).not.toEqual([b.x, b.y]);
+    expect(placed.water).toBe(ruleSet(STANDARD_RULE_SET_ID).waterCapacity);
+    expect(placed.tieRank).not.toBe(old.tieRank);
+    expect([placed.score, placed.hitsLanded, placed.hitsTaken]).toEqual([12, 5, 4]);
+    expect(round.snapshot.bots).toEqual([b, placed]);
+    expect(roundHoldings(round).sequences).toBe(0);
+    const next = stepRound(round);
+    expect(next.tick).toBe(1);
+    expect(next.decisions.find((decision) => decision.botId === "a")?.step?.index).toBe(1);
   });
 
   test("a tank that leaves is gone from the next turn, its sequence and tie-break included", () => {

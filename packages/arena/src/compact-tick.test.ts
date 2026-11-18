@@ -52,6 +52,22 @@ function playRound(ruleSetId: (typeof RULE_SET_IDS)[number], seed: number) {
 }
 
 describe("compactTick and expandTick", () => {
+  test("fresh starts append only destinations, and a room or an empty list gives the original bytes", () => {
+    const { spawn } = playRound("standard", 7);
+    const bot = spawn.bots[0] as PublicSnapshot["bots"][number];
+    const board = { ...spawn, bots: [{ ...bot, x: 0, y: 0, direction: "N" as const, water: 2, item: null, effect: null }] };
+    const tick: PublicTick = { tick: 0, order: [bot.id], moves: [{ botId: bot.id, move: "W" }], throws: [], pickups: [], snapshot: { ...board, tick: 1 } };
+    const bytes = '{"tick":0,"bots":[[0,0,0,0,2,0,0,0]],"moves":[[0,6]],"throws":[],"items":[],"pickups":[]}';
+    expect(JSON.stringify(compactTick(tick, [bot.id]))).toBe(bytes);
+    expect(JSON.stringify(compactTick({ ...tick, freshStarts: [] }, [bot.id]))).toBe(bytes);
+    expect(expandTick(JSON.parse(bytes) as CompactTick, board)).toEqual(tick);
+
+    const fresh = { ...tick, freshStarts: [{ id: bot.id, x: 1, y: 0 }] };
+    const wire = JSON.stringify(compactTick(fresh, [bot.id]));
+    expect(wire).toBe(bytes.slice(0, -1) + ',"freshStarts":[[0,1,0]]}');
+    expect(expandTick(JSON.parse(wire) as CompactTick, board)).toEqual(fresh);
+  });
+
   for (const ruleSetId of RULE_SET_IDS) {
     test(`a real round under "${ruleSetId}" survives the round trip, every outcome included`, () => {
       const { spawn, ticks } = playRound(ruleSetId, 7);
@@ -110,6 +126,9 @@ describe("compactTick and expandTick", () => {
       ["a move index is out of range", { ...good, moves: [[0, 6], ...good.moves.slice(1)] }],
       ["a throw names a tank out of range", { ...good, throws: [[999, 3, 0, 1, 90]] }],
       ["a throw has too few values", { ...good, throws: [[0, 3, 1]] }],
+      ["a fresh start names a tank out of range", { ...good, freshStarts: [[999, 0, 0]] }],
+      ["a fresh start lands off the board", { ...good, freshStarts: [[0, spawn.width, 0]] }],
+      ["a tank takes two fresh starts", { ...good, freshStarts: [[0, 0, 0], [0, 1, 0]] }],
     ];
     for (const [name, bad] of cases) {
       test(name, () => {

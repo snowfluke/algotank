@@ -15,6 +15,7 @@
 //                so it draws neither.
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
+//   freshStartRound: one free cell (int), then one tie rank (next).
 //
 // An open round (createOpenRound) is a round of the monthly league
 // (docs/specs/revamp/77-monthly-league.md): it starts with no tank on a board sized for a
@@ -23,6 +24,7 @@
 // |------------|------------|------------------|------------------------------------------------|
 // | (none)     | playing    | caller: joinRound| between turns; the id is new; a free cell left |
 // | playing    | (none)     | caller: leaveRound| between turns; the id is on the board         |
+// | playing    | playing    | freshStartRound  | between turns; a different free square         |
 // A tank that leaves loses its place in a running sequence and its tie-break number. A round
 // that never calls joinRound or leaveRound draws exactly what it drew before they existed.
 
@@ -190,14 +192,10 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   if (!Number.isSafeInteger(score)) throw new Error(`score must be a whole number, got ${score}`);
   const before = round.snapshot;
   if (before.bots.some((bot) => bot.id === player.id)) throw new Error(`player "${player.id}" is already in the round`);
-  // A joining tank never lands on an item: it would take it without driving there.
-  const taken = new Set([...before.bots, ...before.items].map(cellKey));
-  const freeCells = allCells(before).filter((cell) => !taken.has(cellKey(cell)));
-  if (freeCells.length === 0) throw new Error(`no free square is left for player "${player.id}"`);
-  const cell = freeCells[round.rng.int(freeCells.length)];
+  const cell = drawFreeCell(round, player.id);
   const direction = DIRECTIONS[round.rng.int(DIRECTIONS.length)];
   const firstMode = player.strategy.modes[0];
-  if (cell === undefined || direction === undefined || firstMode === undefined) throw new Error(`could not place player "${player.id}"`);
+  if (direction === undefined || firstMode === undefined) throw new Error(`could not place player "${player.id}"`);
   // The tie-break number also settles target ties in this round (BotState.tieRank), so a join draws nothing more.
   const tieRank = round.rng.next();
   const bot: BotState = { ...spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, ruleSet(before.ruleSetId).waterCapacity), tieRank };
@@ -205,6 +203,15 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   round.strategies.set(player.id, player.strategy);
   round.snapshot = { ...before, bots: [...before.bots, bot] };
   return bot;
+}
+
+/** Tanks appear on empty squares, so they cannot take an item without driving there. */
+function drawFreeCell(round: RoundRuntime, id: BotId): Cell {
+  const board = round.snapshot;
+  const taken = new Set([...board.bots, ...board.items].map(cellKey));
+  const free = allCells(board).filter((cell) => !taken.has(cellKey(cell)));
+  if (free.length === 0) throw new Error(`no free square is left for player "${id}"`);
+  return free[round.rng.int(free.length)] as Cell;
 }
 
 /** Takes a tank off the board between two turns, with its running sequence. Throws when the id is not on the board. */
@@ -216,6 +223,24 @@ export function leaveRound(state: RoundState, id: BotId): void {
   round.strategies.delete(id);
   round.tieBreaks.delete(id);
   round.sequences.delete(id);
+}
+
+/**
+ * A monthly fresh start (77-monthly-league.md, owner 2026-11-19). Draw while the old square is
+ * still occupied so the tank always emerges somewhere else. Keep its points and hit counts.
+ */
+export function freshStartRound(state: RoundState, id: BotId): BotState {
+  const round = runtimeOf(state);
+  const before = round.snapshot;
+  const old = before.bots.find((bot) => bot.id === id);
+  if (old === undefined) throw new Error(`player "${id}" is not in the round`);
+  const cell = drawFreeCell(round, id);
+  const tieRank = round.rng.next();
+  const bot = { ...old, ...cell, water: ruleSet(before.ruleSetId).waterCapacity, tieRank };
+  round.tieBreaks.set(id, tieRank);
+  round.sequences.delete(id);
+  round.snapshot = { ...before, bots: [...before.bots.filter((b) => b.id !== id), bot] };
+  return bot;
 }
 
 /**

@@ -16,10 +16,10 @@ import { createPortal } from "react-dom";
 import type { PublicSnapshot } from "@game/arena";
 import type { BotId, ThrowEvent } from "@game/engine";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
-import { bestOrientation, rotateSnapshot } from "../board/boardOrientation.ts";
+import { bestOrientation, rotateBot, rotateSnapshot } from "../board/boardOrientation.ts";
 import { followWindow, wholeArenaCellPx, zoomCellPx, type CameraMode } from "../board/camera.ts";
 import { boardAspect, fittedSize } from "../board/FittedBoard.tsx";
-import type { TankInfo } from "../board/props.ts";
+import type { TankInfo, TankTunnel } from "../board/props.ts";
 import { useFollowTarget } from "../board/useFollowTarget.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { useFitLayout } from "../ui/layout.ts";
@@ -63,6 +63,7 @@ export interface BoardRow {
 export interface MonthlyBoardProps {
   readonly snapshot: PublicSnapshot;
   readonly throws: readonly ThrowEvent[];
+  readonly tunnels: readonly TankTunnel[];
   readonly names: Readonly<Record<BotId, string>>;
   /** The owner's tank in this league, or null. */
   readonly highlightId: BotId | null;
@@ -75,7 +76,7 @@ export interface MonthlyBoardProps {
   readonly trailIds: ReadonlySet<BotId>;
 }
 
-export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tanks, overlay, row, trailIds }: MonthlyBoardProps) {
+export function MonthlyBoard({ snapshot, throws, tunnels, names, highlightId, tickMs, tanks, overlay, row, trailIds }: MonthlyBoardProps) {
   const m = useMessages();
   const fit = useFitLayout();
   const { ref, box } = useBoxSize<HTMLDivElement>();
@@ -84,6 +85,10 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
   // Outside the fixed-height layout the board takes the width and its shape gives the height, so the box says nothing about height.
   const orientation = fit ? bestOrientation(box, snapshot) : "sideways";
   const shown = useMemo(() => (orientation === "upright" ? rotateSnapshot(snapshot) : snapshot), [snapshot, orientation]);
+  const shownTunnels = useMemo(
+    () => orientation === "upright" ? tunnels.map((tunnel) => tunnel.kind === "enter" ? tunnel : { ...tunnel, from: rotateBot(tunnel.from, snapshot.height) }) : tunnels,
+    [tunnels, orientation, snapshot.height],
+  );
   const arena = { width: shown.width, height: shown.height };
   // The zoomed view (ZOOM_SQUARES across the short side, camera.ts) is offered wherever it shows the board closer than
   // the whole view does, on a phone or a laptop (owner, 2026-11-17). Outside the fixed-height layout only the width counts.
@@ -157,7 +162,7 @@ export function MonthlyBoard({ snapshot, throws, names, highlightId, tickMs, tan
       >
         <div className="relative min-w-0" style={boardStyle}>
           {/* A new orientation starts a new board: tanks would otherwise glide across it and spin a quarter. */}
-          <ArenaBoard key={orientation} snapshot={shown} throws={throws} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} trailIds={trailIds} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
+          <ArenaBoard key={orientation} snapshot={shown} throws={throws} tunnels={shownTunnels} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} trailIds={trailIds} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
         </div>
         {/* Over the board's whole area, not only the board: a small board on a short phone cut the midnight notice. */}
         {overlay}

@@ -618,6 +618,13 @@ export interface PublicSnapshot
   readonly bots: readonly PublicBot[];
 }
 
+/** A monthly tank's destination after the turn's moves (77-monthly-league.md, 2026-11-19). */
+export interface FreshStart {
+  readonly id: PlayerId;
+  readonly x: number;
+  readonly y: number;
+}
+
 /** One tick as every viewer sees it: moves and outcomes, without the rules behind them. */
 export interface PublicTick {
   readonly tick: number;
@@ -627,6 +634,8 @@ export interface PublicTick {
   /** Items taken on this tick (docs/specs/revamp/84-items.md). Every viewer sees an item on the board and on its tank. */
   readonly pickups: readonly Pickup[];
   readonly snapshot: PublicSnapshot;
+  /** In rotation order. The snapshot is from after the moves, before the tunnels. */
+  readonly freshStarts?: readonly FreshStart[];
 }
 
 /**

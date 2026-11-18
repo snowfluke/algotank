@@ -29,7 +29,7 @@ import { Countdown } from "../ui/Countdown.tsx";
 import { ARENA_MOTION_CSS } from "./arenaMotion.ts";
 import { botLabels } from "./botLabels.ts";
 import { ARENA_GROUNDS, groundMarksPath, marksFilled } from "./arenaGround.ts";
-import { CULL_MARGIN, inWindow } from "./camera.ts";
+import { CULL_MARGIN, followWindow, inWindow } from "./camera.ts";
 import { nextTrail, stepAngle, TRAIL_OPACITY, type TrailState } from "./tankTrail.ts";
 import {
   CELL,
@@ -48,7 +48,7 @@ import {
   youMarkerBelow,
 } from "./boardHelpers.ts";
 import type { ShotShape } from "./boardHelpers.ts";
-import { Crown, DryDrops, JetShape, Puff, Splash } from "./boardShapes.tsx";
+import { Crown, DryDrops, DustRing, JetShape, Puff, Splash } from "./boardShapes.tsx";
 import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import type { ArenaBoardProps } from "./props.ts";
 import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
@@ -66,14 +66,14 @@ const DIM_OPACITY = 0.8;
  * Each trail tank's trail, moved on once per turn: a render for another reason (the camera, a poll) keeps it.
  * A board turned to the other orientation is a new board (MonthlyBoard.tsx), so its trails start again.
  */
-function useTrails(bots: readonly PublicBot[], tick: number, trailIds: ReadonlySet<BotId> | undefined): ReadonlyMap<BotId, TrailState> {
+function useTrails(bots: readonly PublicBot[], tick: number, trailIds: ReadonlySet<BotId> | undefined, arrivals: ReadonlySet<BotId>): ReadonlyMap<BotId, TrailState> {
   const state = useRef<{ tick: number; trails: ReadonlyMap<BotId, TrailState> }>({ tick: -1, trails: new Map() });
   if (trailIds === undefined || trailIds.size === 0) return NO_TRAILS;
   if (state.current.tick !== tick) {
     const next = new Map<BotId, TrailState>();
     for (const id of trailIds) {
       const bot = bots.find((b) => b.id === id);
-      if (bot !== undefined) next.set(id, nextTrail(state.current.trails.get(id), { x: bot.x, y: bot.y }));
+      if (bot !== undefined) next.set(id, nextTrail(state.current.trails.get(id), { x: bot.x, y: bot.y }, arrivals.has(id)));
     }
     state.current = { tick, trails: next };
   }
@@ -131,12 +131,14 @@ function crowdPaints(bots: readonly PublicBot[], looks: ReadonlyMap<BotId, TankL
  */
 function useTurnAngles(bots: readonly PublicBot[]): ReadonlyMap<BotId, number> {
   const stored = useRef(new Map<BotId, number>());
+  const next = new Map<BotId, number>();
   for (const bot of bots) {
     const target = directionDegrees(bot.direction);
     const previous = stored.current.get(bot.id);
-    stored.current.set(bot.id, previous === undefined ? target : unwrapAngle(previous, target));
+    next.set(bot.id, previous === undefined ? target : unwrapAngle(previous, target));
   }
-  return stored.current;
+  stored.current = next;
+  return next;
 }
 
 /** Plays the turn's sounds when a live board moves on by exactly one turn, and the countdown's beeps. `ownId` is the viewer's tank, whose events alone make sound. */
@@ -177,7 +179,7 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
  * Memoised: a parent that renders for another reason (the ranking's poll, a notice) leaves the board alone. A turn gives
  * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
  */
-export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap, underlay, overlay }: ArenaBoardProps) {
+export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, tunnels, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap, underlay, overlay }: ArenaBoardProps) {
   // The zoomed view's other tanks, a little dimmer than the followed tank and the viewer's own (props.ts, focusId).
   const dimmed = (id: BotId) => focusId !== null && id !== focusId && id !== highlightId;
   const m = useMessages();
@@ -185,7 +187,16 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
   const rules = rulesOf(snapshot);
   const { width, height, bots, tick } = snapshot;
   const angles = useTurnAngles(bots);
-  const trails = useTrails(bots, tick, trailIds);
+  const arrivals = new Set<BotId>();
+  const departures = new Map<BotId, { tank: PublicBot; look?: TankLook }>();
+  for (const tunnel of tunnels ?? []) {
+    if (tunnel.kind === "enter") arrivals.add(tunnel.id);
+    else {
+      departures.set(tunnel.from.id, { tank: tunnel.from, ...(tunnel.kind === "exit" ? { look: tunnel.look } : {}) });
+      if (tunnel.kind === "through") arrivals.add(tunnel.from.id);
+    }
+  }
+  const trails = useTrails(bots, tick, trailIds, arrivals);
   const labels = useMemo(() => botLabels(names), [names]);
   const looks = tankLooks(bots, tanks);
   const spanX = camera === null ? width + (2 * WALL) / CELL : camera.width;
@@ -208,19 +219,26 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
   // tanks cost nothing while the viewer reads the ranking. A window draws only the tanks in it and near it
   // (board/camera.ts); the whole arena draws every tank.
   const hidden = cellPx === 0;
-  const drawn = hidden ? [] : camera === null ? bots : bots.filter((bot) => inWindow(camera, bot.x, bot.y, CULL_MARGIN));
-  const drawnIds = camera === null && !hidden ? null : new Set(drawn.map((bot) => bot.id));
-  const drawnItems = hidden ? [] : camera === null ? snapshot.items : snapshot.items.filter((item) => inWindow(camera, item.x, item.y, CULL_MARGIN));
+  const followedDeparture = focusId === null ? undefined : departures.get(focusId);
+  const tunnelCamera = camera === null || followedDeparture === undefined || !arrivals.has(followedDeparture.tank.id)
+    ? null
+    : followWindow(camera, snapshot, followedDeparture.tank.x, followedDeparture.tank.y, 1);
+  const visible = ({ x, y }: { x: number; y: number }) => !hidden &&
+    (camera === null || inWindow(camera, x, y, CULL_MARGIN) || (tunnelCamera !== null && inWindow(tunnelCamera, x, y, CULL_MARGIN)));
+  const drawn = bots.filter(visible);
+  const drawnItems = snapshot.items.filter(visible);
   // SVG has no z-index, so the highlighted tank is drawn last to stay on top.
   const drawOrder = [...drawn.filter((bot) => bot.id !== highlightId), ...drawn.filter((bot) => bot.id === highlightId)];
 
   const shots: { id: BotId; shape: ShotShape }[] = [];
   const hitTargets = new Set<BotId>();
   const shooters = new Set<BotId>();
+  // The moves and shots happened at the tunnel mouth, before the fresh start.
+  const shooterAt = (id: BotId) => departures.get(id)?.tank ?? botsById.get(id);
   for (const event of throws) {
     // An unknown shooter cannot happen in a snapshot from the engine; skipping keeps the screen alive.
-    const shooter = botsById.get(event.throwerId);
-    if (shooter === undefined || hidden || (drawnIds !== null && !drawnIds.has(shooter.id))) continue;
+    const shooter = shooterAt(event.throwerId);
+    if (shooter === undefined || !visible(shooter)) continue;
     if (crowd && shooter.id !== highlightId && (event.outcome === "dry" || event.outcome === "empty")) continue;
     shots.push({ id: event.throwerId, shape: shotShape(shooter, event, snapshot) });
     if (event.outcome === "hit") hitTargets.add(event.targetId);
@@ -289,8 +307,16 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
             Keyed by the view, so a switch between the window and the whole arena does not glide. */}
         <g
           key={camera === null ? "whole" : "window"}
-          className={camera === null ? undefined : "ab-move"}
-          style={camera === null ? undefined : { transform: `translate(${-camera.x * CELL}px, ${-camera.y * CELL}px)` }}
+          className={camera === null ? undefined : tunnelCamera === null ? "ab-move" : "ab-tunnel-camera"}
+          style={camera === null ? undefined : {
+            transform: `translate(${-camera.x * CELL}px, ${-camera.y * CELL}px)`,
+            ...(tunnelCamera === null ? {} : {
+              "--tunnel-from-x": `${-tunnelCamera.x * CELL}px`,
+              "--tunnel-from-y": `${-tunnelCamera.y * CELL}px`,
+              "--tunnel-to-x": `${-camera.x * CELL}px`,
+              "--tunnel-to-y": `${-camera.y * CELL}px`,
+            }),
+          } as CSSProperties}
         >
         <Floor width={width} height={height} ruleSetId={snapshot.ruleSetId} />
         {underlay}
@@ -360,12 +386,47 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           )}
         </g>
 
+        {tunnels?.length ? (
+          <g key={`tunnels-${tick}`} aria-hidden="true" pointerEvents="none">
+            {[...departures.values()].filter(({ tank }) => visible(tank)).map(({ tank, look }) => {
+              const centre = cellCenter(tank.x, tank.y);
+              const hull = look ?? looks.get(tank.id) ?? FALLBACK_LOOK;
+              const angle = directionDegrees(tank.direction);
+              const isSelf = tank.id === highlightId;
+              const scale = isSelf && crowd ? selfCrowdScale(cellPx) : TANK_SCALE;
+              const label = labels.get(tank.id);
+              return (
+                <g key={tank.id} data-tunnel-from={tank.id} transform={`translate(${centre.x} ${centre.y})`}>
+                  <DustRing colour={ARENA_GROUNDS[snapshot.ruleSetId].wall} phase="sink" />
+                  <g className="ab-anim ab-tunnel-sink">
+                    <g transform={`translate(0 ${-TANK_LIFT}) scale(${scale})`}>
+                      <TankShape look={hull} self={isSelf} angle={angle} {...(label === undefined ? {} : { label })} detail={isSelf && crowd ? "simple" : detail.tank} showFlag />
+                    </g>
+                  </g>
+                </g>
+              );
+            })}
+            {drawn.filter((bot) => arrivals.has(bot.id)).map((bot) => {
+              const centre = cellCenter(bot.x, bot.y);
+              return (
+                <g key={bot.id} data-tunnel-to={bot.id} transform={`translate(${centre.x} ${centre.y})`}>
+                  <DustRing colour={ARENA_GROUNDS[snapshot.ruleSetId].wall} phase="rise" />
+                </g>
+              );
+            })}
+          </g>
+        ) : null}
+
         {drawOrder.map((bot) => {
           const isSelf = bot.id === highlightId;
           const angle = angles.get(bot.id) ?? directionDegrees(bot.direction);
           const centre = cellCenter(bot.x, bot.y);
           const look = looks.get(bot.id) ?? FALLBACK_LOOK;
-          const reaction = hitTargets.has(bot.id) ? "ab-anim ab-wobble" : shooters.has(bot.id) && (!crowd || isSelf) ? "ab-anim ab-recoil" : undefined;
+          const arriving = arrivals.has(bot.id);
+          const moveClass = arriving ? undefined : "ab-move";
+          const riseClass = arriving ? "ab-anim ab-tunnel-rise" : undefined;
+          const riseKey = arriving ? `rise-${tick}` : "rest";
+          const reaction = arriving ? undefined : hitTargets.has(bot.id) ? "ab-anim ab-wobble" : shooters.has(bot.id) && (!crowd || isSelf) ? "ab-anim ab-recoil" : undefined;
           const tankLabel = detail.labels ? labels.get(bot.id) : undefined;
           // The viewer's own tank is never tiny, so it keeps its hatch in a crowd.
           const tankDetail = isSelf && detail.tank === "tiny" ? "simple" : detail.tank;
@@ -377,13 +438,15 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
                 // Its own key: the full drawing below keeps the turn on an inner group, and the browser glided between
                 // the two transforms, turning a tank's day of turns (rotate(3600deg)) back to 0 in one glide (2026-11-17).
                 key={`crowd-${bot.id}`}
-                className="ab-move"
+                className={moveClass}
                 data-bot-id={bot.id}
                 opacity={dimmed(bot.id) ? DIM_OPACITY : undefined}
                 style={{ transform: `translate(${centre.x}px, ${centre.y - TANK_LIFT}px) scale(${TANK_SCALE}) rotate(${angle}deg)` }}
               >
-                <g key={reaction === undefined ? "rest" : `react-${tick}`} className={reaction}>
-                  <use href={`#${symbolBase}-tank-${paintKey(look)}`} />
+                <g key={riseKey} className={riseClass}>
+                  <g key={reaction === undefined ? "rest" : `react-${tick}`} className={reaction}>
+                    <use href={`#${symbolBase}-tank-${paintKey(look)}`} />
+                  </g>
                 </g>
               </g>
             );
@@ -391,58 +454,60 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           return (
             <g
               key={bot.id}
-              className="ab-move"
+              className={moveClass}
               data-bot-id={bot.id}
               data-self={isSelf ? "true" : undefined}
               opacity={dimmed(bot.id) ? DIM_OPACITY : undefined}
               style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}
             >
               <title>{m.board.tankTitle(displayName(names, bot.id), bot.water, rules.waterCapacity, canThrow(bot.water, rules))}</title>
-              {/* The plate lies on the square and does not turn with the tank. */}
-              {look.plate === null ? null : (
-                <g transform={`scale(${PLATE_SCALE})`}>
-                  <TankPlate colour={look.plate} />
-                </g>
-              )}
-              {stuck ? (
-                <g data-effect="stuck">
-                  <MudPuddle />
-                </g>
-              ) : null}
-              <g transform={`translate(0 ${-TANK_LIFT}) scale(${isSelf && crowd ? selfCrowdScale(cellPx) : TANK_SCALE})`}>
-                {isSelf && counting ? (
-                  <circle r={7.6} fill="none" strokeWidth={1.2} className="ab-anim ab-you-pulse" style={{ stroke: "var(--color-self)" }} />
-                ) : null}
-                <g className="ab-move" style={{ transform: `rotate(${angle}deg)` }}>
-                  {/* Only this group is keyed by the turn, so a reaction replays without breaking the glide of the groups around it. */}
-                  <g key={reaction === undefined ? "rest" : `react-${tick}`} className={reaction}>
-                    <TankShape look={{ ...look, plate: null, icon: null }} self={isSelf} detail={tankDetail} showFlag heading={angle} />
+              <g key={riseKey} className={riseClass}>
+                {/* The plate lies on the square and does not turn with the tank. */}
+                {look.plate === null ? null : (
+                  <g transform={`scale(${PLATE_SCALE})`}>
+                    <TankPlate colour={look.plate} />
                   </g>
-                  {hatchContent(look, tankLabel, tankDetail) === null ? null : (
-                    <g transform={`translate(${TURRET_X} 0)`}>
-                      {/* Turns back by the same angle with the same transition, so the icon or label stays upright while the tank turns. */}
-                      <g className="ab-move" style={{ transform: `rotate(${-angle}deg)` }}>
-                        <TankHatch look={look} label={tankLabel} detail={tankDetail} />
-                      </g>
+                )}
+                {stuck ? (
+                  <g data-effect="stuck">
+                    <MudPuddle />
+                  </g>
+                ) : null}
+                <g transform={`translate(0 ${-TANK_LIFT}) scale(${isSelf && crowd ? selfCrowdScale(cellPx) : TANK_SCALE})`}>
+                  {isSelf && counting ? (
+                    <circle r={7.6} fill="none" strokeWidth={1.2} className="ab-anim ab-you-pulse" style={{ stroke: "var(--color-self)" }} />
+                  ) : null}
+                  <g className={moveClass} style={{ transform: `rotate(${angle}deg)` }}>
+                    {/* Only this group is keyed by the turn, so a reaction replays without breaking the glide of the groups around it. */}
+                    <g key={reaction === undefined ? "rest" : `react-${tick}`} className={reaction}>
+                      <TankShape look={{ ...look, plate: null, icon: null }} self={isSelf} detail={tankDetail} showFlag heading={angle} />
                     </g>
-                  )}
-                </g>
-                {/* The effects keep still while the tank turns, like the plate. */}
-                {stuck ? <MudSplats /> : null}
-                {bot.effect?.kind === "dizzy" ? (
-                  <g data-effect="dizzy">
-                    <DizzyStars motion="ab-anim ab-dizzy" />
+                    {hatchContent(look, tankLabel, tankDetail) === null ? null : (
+                      <g transform={`translate(${TURRET_X} 0)`}>
+                        {/* Turns back by the same angle with the same transition, so the icon or label stays upright while the tank turns. */}
+                        <g className={moveClass} style={{ transform: `rotate(${-angle}deg)` }}>
+                          <TankHatch look={look} label={tankLabel} detail={tankDetail} />
+                        </g>
+                      </g>
+                    )}
                   </g>
-                ) : null}
+                  {/* The effects keep still while the tank turns, like the plate. */}
+                  {stuck ? <MudSplats /> : null}
+                  {bot.effect?.kind === "dizzy" ? (
+                    <g data-effect="dizzy">
+                      <DizzyStars motion="ab-anim ab-dizzy" />
+                    </g>
+                  ) : null}
+                </g>
+                {bot.item === null ? null : (
+                  // Keyed by the item, so the disc pops in on the turn the tank takes it.
+                  <g key={`held-${bot.item}`} transform={`translate(${BADGE_AT.x} ${BADGE_AT.y}) scale(${BADGE_SCALE})`} data-held={bot.item}>
+                    <g className="ab-anim ab-item-in">
+                      <HeldBadge kind={bot.item} />
+                    </g>
+                  </g>
+                )}
               </g>
-              {bot.item === null ? null : (
-                // Keyed by the item, so the disc pops in on the turn the tank takes it.
-                <g key={`held-${bot.item}`} transform={`translate(${BADGE_AT.x} ${BADGE_AT.y}) scale(${BADGE_SCALE})`} data-held={bot.item}>
-                  <g className="ab-anim ab-item-in">
-                    <HeldBadge kind={bot.item} />
-                  </g>
-                </g>
-              )}
             </g>
           );
         })}
@@ -458,22 +523,25 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, names, hi
           const gauge = detail.gauges || bot.id === highlightId;
           if (!gauge && bot.id !== leader) return null;
           const centre = cellCenter(bot.x, bot.y);
+          const arriving = arrivals.has(bot.id);
           return (
-            <g key={bot.id} className="ab-move" opacity={dimmed(bot.id) ? DIM_OPACITY : undefined} style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
-              {gauge ? <WaterGauge water={bot.water} rules={rules} small={!detail.labels} /> : null}
-              {bot.id === leader ? (
-                <g transform={`translate(0 ${-CELL / 2 + 0.6})`} data-leader="true">
-                  <title>{m.board.leaderTitle(displayName(names, bot.id))}</title>
-                  <Crown />
-                </g>
-              ) : null}
+            <g key={bot.id} className={arriving ? undefined : "ab-move"} opacity={dimmed(bot.id) ? DIM_OPACITY : undefined} style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
+              <g key={arriving ? `rise-${tick}` : "rest"} className={arriving ? "ab-anim ab-tunnel-rise" : undefined}>
+                {gauge ? <WaterGauge water={bot.water} rules={rules} small={!detail.labels} /> : null}
+                {bot.id === leader ? (
+                  <g transform={`translate(0 ${-CELL / 2 + 0.6})`} data-leader="true">
+                    <title>{m.board.leaderTitle(displayName(names, bot.id))}</title>
+                    <Crown />
+                  </g>
+                ) : null}
+              </g>
             </g>
           );
         })}
 
         <g key={`plus-${tick}`} aria-hidden="true">
           {[...shooters].flatMap((id) => {
-            const shooter = botsById.get(id);
+            const shooter = shooterAt(id);
             if (crowd && id !== highlightId) return [];
             const hit = throws.find((event) => event.throwerId === id && event.outcome === "hit");
             if (shooter === undefined || hit === undefined) return [];

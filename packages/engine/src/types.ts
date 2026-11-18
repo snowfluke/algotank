@@ -298,8 +298,8 @@ export interface BotState {
   /**
    * Only in an open round (joinRound): a number from the round seed, drawn at join, that settles a
    * target selector's tie in place of the id (strategy/targets.ts). A monthly seat keeps its id all
-   * month, and a fixed tie order was worth thousands of points a day (2026-11-16); the league
-   * starts a new round every few minutes, so the order changes with it. Absent in every other
+   * month, and a fixed tie order was worth thousands of points a day (2026-11-16); each tank
+   * draws a new rank at its fresh start (2026-11-19). Absent in every other
    * round, so those play exactly as before. Never sent to viewers (PublicBot).
    */
   readonly tieRank?: number;

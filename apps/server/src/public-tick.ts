@@ -53,8 +53,10 @@ export function toPublicTick(result: TickResult): PublicTick {
  * spawn's bot order for the whole round, so the snapshot's own order is the index order
  * the client knows from roundStart.
  */
-export function toCompactTick(result: TickResult): CompactTick {
-  return compactTick(toPublicTick(result), result.snapshot.bots.map((bot) => bot.id));
+export function toCompactTick(result: TickResult & Pick<PublicTick, "freshStarts">): CompactTick {
+  const tick = toPublicTick(result);
+  const { freshStarts } = result;
+  return compactTick(freshStarts?.length ? { ...tick, freshStarts } : tick, result.snapshot.bots.map((bot) => bot.id));
 }
 
 /**

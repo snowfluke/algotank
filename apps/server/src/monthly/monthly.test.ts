@@ -140,7 +140,7 @@ describe("the day round", () => {
     expect(l.monthly.live(1).board.ticksTotal).toBe(96_000);
   });
 
-  test("0 tanks: no turn runs; 1 tank: at least one bot; a second tank keeps the bots until the next new start, which draws again", () => {
+  test("0 tanks: no turn runs; 1 tank: at least one bot; a second tank keeps the bot until its fresh start", () => {
     const l = startLeague();
     const empty = l.monthly.live(1);
     expect(empty).toMatchObject({ phase: "idle", tanks: [] });
@@ -160,8 +160,8 @@ describe("the day round", () => {
     const two = l.monthly.live(1);
     expect(two.phase).toBe("withBot");
     expect(two.tanks).toHaveLength(3);
-    // The next new start draws again; every draw is 0 here, and two tanks need no bot.
-    while (l.monthly.live(1).board.tick !== 0) l.ticks.tick();
+    // The bot draws on its turn. Every draw is 0 here, and two tanks need no bot.
+    for (let i = 0; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
     const drawn = l.monthly.live(1);
     expect(drawn.phase).toBe("withoutBot");
     expect(drawn.tanks).toHaveLength(2);
@@ -202,9 +202,10 @@ describe("the day round", () => {
     };
     expect(cells()).toBeGreaterThan(small);
     expect(cells()).toBeGreaterThanOrEqual(cellsFor(Math.ceil(100 / BOARD_GROWTH)));
-    // The next new start sizes the board for exactly the seated tanks.
+    const grown = cells();
+    // Fresh starts keep the current board, even if the rush continued after the last rebuild.
     for (let i = 0; i < RESHUFFLE_TURNS + 1; i++) l.ticks.tick();
-    expect(cells()).toBe(cellsFor(100));
+    expect(cells()).toBe(grown);
   });
 
   test("a tank that joins during the day plays from the next turn, and the day does not count for it", () => {
@@ -221,27 +222,37 @@ describe("the day round", () => {
     expect(turns[0]).toContain(me.seatId);
   });
 
-  test("every RESHUFFLE_TURNS turns the tanks start again on new squares with their points, and open pages get the new board", async () => {
+  test("fresh starts stream with the moves, and only the bot's quit sends a state", async () => {
     const l = startLeague();
     const ada = newAccount();
     const bo = newAccount();
     take(l, ada);
     take(l, bo);
+    const page = collect(l.streams.open(1, ada, l.monthly.live(1)));
+    for (let i = 0; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
+    const { messages } = await page.take();
+    l.streams.closeAll();
+    const states = messages.filter((message) => message.type === "state");
+    expect(states.map((message) => message.change)).toEqual([undefined, "botFreshStart"]);
+    expect(states[1]?.state.tanks.every((tank) => !tank.isBot)).toBe(true);
+    const turns = messages.filter((message) => message.type === "tick");
+    expect(turns.map((message) => message.tick.tick)).toEqual(Array.from({ length: RESHUFFLE_TURNS }, (_, i) => i));
+    const fresh = turns.filter((message) => message.tick.freshStarts !== undefined);
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0]?.own?.botId).toBe(seatOf(l, ada).seatId);
+    const [start] = fresh[0]?.tick.freshStarts ?? [];
+    expect(start?.[0]).toBe(0);
+    expect(l.monthly.live(1).board.tick).toBe(RESHUFFLE_TURNS);
+  });
+
+  test("a rush of joiners marks the rebuild for the reshuffle notice", async () => {
+    const l = startLeague({ seatsPerLeague: null });
+    for (let i = 0; i < BOARD_GROWTH * 16; i++) take(l, newAccount());
     const page = collect(l.streams.open(1, null, l.monthly.live(1)));
-    for (let i = 0; i < RESHUFFLE_TURNS - 1; i++) l.ticks.tick();
-    expect(l.monthly.live(1).board.tick).toBe(RESHUFFLE_TURNS - 1);
-    await page.take();
-    const before = [seatOf(l, ada).points, seatOf(l, bo).points];
-    // The turn that reaches the limit is played, then the round starts again.
-    l.ticks.tick();
-    const after = l.monthly.live(1);
-    expect(after.board.tick).toBe(0);
-    expect(after.board.bots.every((bot) => bot.water === after.board.bots[0]?.water)).toBe(true);
-    const played = [seatOf(l, ada).points, seatOf(l, bo).points];
-    // The points are kept: only the one turn played before the new start can change them, by a few hits at most.
-    for (const [i, points] of played.entries()) expect(Math.abs(points - (before[i] ?? 0))).toBeLessThanOrEqual(3);
-    const types = (await page.take()).messages.map((message) => message.type);
-    expect(types.slice(-2)).toEqual(["tick", "state"]);
+    take(l, newAccount());
+    const { messages } = await page.take();
+    l.streams.closeAll();
+    expect(messages.filter((message) => message.type === "state").map((message) => message.change)).toEqual([undefined, "growth"]);
   });
 
   test("a new day respawns every seated tank with 0 points, and it counts for all of them", () => {
@@ -359,7 +370,7 @@ describe("seats", () => {
     for (const owner of owners) take(l, owner);
     expect(seatOf(l, owners[16] ?? "").league).toBe(2);
     expect(l.monthly.overview().leagues).toEqual([
-      // League 1's first tank got a bot, which stays until the next new start.
+      // League 1's first tank got a bot, which stays until its fresh start.
       { league: 1, tanks: 16, phase: "withBot" },
       { league: 2, tanks: 1, phase: "withBot" },
     ]);
@@ -756,8 +767,7 @@ describe("memory", () => {
     const early = l.monthly.holdings();
     for (let i = 0; i < 5000; i++) l.ticks.tick();
     expect(l.monthly.holdings()).toEqual(early);
-    // Every turn was played: after 5,500 turns the round counter shows the turns since the last new start (RESHUFFLE_TURNS).
-    expect(l.monthly.live(1).board.tick).toBe(5500 % RESHUFFLE_TURNS);
+    expect(l.monthly.live(1).board.tick).toBe(5500);
   });
 
   test("a turn runs no SQL: only the seat changes, the minute's checkpoint and the day's close reach the database", () => {

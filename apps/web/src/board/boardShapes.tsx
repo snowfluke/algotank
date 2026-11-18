@@ -55,6 +55,15 @@ export function Puff({ motion = "" }: { motion?: string }) {
   );
 }
 
+/** Dust at a tunnel mouth (77-monthly-league.md, owner 2026-11-19). */
+export function DustRing({ colour, phase }: { colour: string; phase: "sink" | "rise" }) {
+  return (
+    <g className={`ab-anim ab-tunnel-dust-${phase}`} data-tunnel-dust={phase}>
+      <circle r={3.4} fill="none" strokeWidth={0.8} strokeDasharray="1.7 0.8" style={{ stroke: colour }} />
+    </g>
+  );
+}
+
 const DROP_RADII = [0.8, 0.62, 0.45] as const;
 
 /** A dry shot: three shrinking drops in front of the nozzle and no jet. `drops` are absolute points. */

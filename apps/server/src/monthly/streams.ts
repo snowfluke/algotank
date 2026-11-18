@@ -1,6 +1,6 @@
 // The event streams of the leagues: GET /api/monthly/leagues/:league/events. A stream starts with
 // the league's state and then gets every turn; a join, a quit or a new day sends the state again
-// before the next turn, because the compact tick's indexes refer to the tanks of the last state.
+// before the next turn. A fresh start moves the tank's index to the end for the next turn.
 // Nothing is kept per turn: a turn is encoded once and written to the open streams.
 // Watching needs no session and no presence is tracked, so nothing depends on an open page.
 //
@@ -9,8 +9,8 @@
 // change `own` at the next turn without a new connection. A league that the month close
 // closes gets `closed` and its streams end, so no page waits on a league that no longer runs.
 
-import type { AccountId, LeagueLive, LeagueStreamMessage, PlayerId } from "@game/arena";
-import type { TickResult } from "@game/engine";
+import type { AccountId, LeagueLive, LeagueStateChange, LeagueStreamMessage, PlayerId } from "@game/arena";
+import type { LeagueTurn } from "./league-day.ts";
 import { HttpError } from "../http.ts";
 import { toCompactTick } from "../public-tick.ts";
 import { Connection } from "../stream.ts";
@@ -55,24 +55,24 @@ export class LeagueStreams {
     });
   }
 
-  sendState(league: number, state: LeagueLive): void {
+  sendState(league: number, state: LeagueLive, change?: LeagueStateChange): void {
     const connections = this.byLeague.get(league);
     if (connections === undefined) return;
-    const chunk = encode({ type: "state", state });
+    const chunk = encode({ type: "state", state, ...(change === undefined ? {} : { change }) });
     for (const connection of connections) connection.send(chunk);
   }
 
   /** `seats`: the seat id of each account seated in this league now. */
-  sendTick(league: number, result: TickResult, seats: ReadonlyMap<AccountId, PlayerId>): void {
+  sendTick(league: number, turn: LeagueTurn, seats: ReadonlyMap<AccountId, PlayerId>): void {
     const connections = this.byLeague.get(league);
     if (connections === undefined) return;
     // The compact tick is the large part and the same for every stream; only `own` differs.
-    const head = `event: tick\ndata: {"type":"tick","tick":${JSON.stringify(toCompactTick(result))},"own":`;
+    const head = `event: tick\ndata: {"type":"tick","tick":${JSON.stringify(toCompactTick(turn))},"own":`;
     const viewer = encoder.encode(`${head}null}\n\n`);
     for (const connection of connections) {
       const accountId = this.accounts.get(connection) ?? null;
       const seatId = accountId === null ? undefined : seats.get(accountId);
-      const own = seatId === undefined ? undefined : result.decisions.find((d) => d.botId === seatId);
+      const own = seatId === undefined ? undefined : turn.decisions.find((d) => d.botId === seatId);
       connection.send(own === undefined ? viewer : encoder.encode(`${head}${JSON.stringify(own)}}\n\n`));
     }
   }

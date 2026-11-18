@@ -20,19 +20,27 @@ export function rotateDirection(direction: Direction): Direction {
   return DIRECTIONS[(DIRECTIONS.indexOf(direction) + 2) % DIRECTIONS.length] as Direction;
 }
 
+function rotateCell<T extends { readonly x: number; readonly y: number }>(cell: T, height: number): T {
+  return { ...cell, x: height - 1 - cell.y, y: cell.x };
+}
+
+/** Also used for a tank at the mouth of its tunnel, before it leaves the square. */
+export function rotateBot(bot: PublicBot, height: number): PublicBot {
+  return { ...rotateCell(bot, height), direction: rotateDirection(bot.direction) };
+}
+
 /**
  * The snapshot turned a quarter clockwise: the top-left square becomes the top-right one
  * and a tank facing north faces east. y grows downward, so (x, y) goes to (height - 1 - y, x).
  */
 export function rotateSnapshot(snapshot: PublicSnapshot): PublicSnapshot {
   const { width, height } = snapshot;
-  const turn = <T extends { readonly x: number; readonly y: number }>(cell: T): T => ({ ...cell, x: height - 1 - cell.y, y: cell.x });
   return {
     ...snapshot,
     width: height,
     height: width,
-    bots: snapshot.bots.map((bot): PublicBot => ({ ...turn(bot), direction: rotateDirection(bot.direction) })),
-    items: snapshot.items.map((item): BoardItem => turn(item)),
+    bots: snapshot.bots.map((bot) => rotateBot(bot, height)),
+    items: snapshot.items.map((item): BoardItem => rotateCell(item, height)),
   };
 }
 

@@ -8,19 +8,21 @@
 // |                                     | top 3                                                    | day and at a day close   |
 // | league_checkpoint                   | one row: the day, and per seat today's points, whether   | every minute, at a clean |
 // |                                     | the day counts, and today's statistics (K2), as JSON     | stop and at a day close  |
+// | league_activity                     | this month's public activity (86-monthly-activity.md)  | with its seat change     |
 // MonthlyLeagues (monthly.ts) holds all of it in memory, because the turn loop reads the seats,
 // and calls this store at the moments above; nothing is written per turn. Each write is one
 // transaction, and every row read goes through the checks below; a damaged row stops the start
 // with its table and key. A strategy goes through parseStrategy again at load.
 
 import { SQLiteError, type Database, type Statement } from "bun:sqlite";
-import { parsePlayerName, parseTankLook, type AccountId, type MonthMove, type PlayerId, type TankLook } from "@game/arena";
+import { LEAGUE_ACTIVITY_LIMIT, parseLeagueActivityEvent, parsePlayerName, parseTankLook, type AccountId, type LeagueActivityEvent, type MonthMove, type PlayerId, type TankLook } from "@game/arena";
 import { LIMITS, parseStrategy, type RuleUse, type Strategy, type TankStats } from "@game/engine";
 import { invalidRow, jsonColumn } from "../db/rows.ts";
 import { HttpError, isRecord } from "../http.ts";
 
 const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+const ACTIVITY_MERGE_MS = 10 * 60 * 1000;
 
 /** One account's tank in a league. Its name, look and strategy are fixed while it is seated. */
 export interface Seat {
@@ -136,6 +138,31 @@ interface DayRecordRow {
   readonly points: number;
 }
 
+interface ActivityRow {
+  readonly id: number;
+  readonly league: number;
+  readonly seat_id: string;
+  readonly name: string;
+  readonly look_json: string;
+  readonly kind: string;
+  readonly at: number;
+}
+
+interface ActivityWrite {
+  readonly month: string;
+  readonly league: number;
+  readonly event: LeagueActivityEvent;
+}
+
+function readActivity(row: ActivityRow): LeagueActivityEvent {
+  const key = String(row.id);
+  if (!Number.isSafeInteger(row.league) || row.league < 1) throw invalidRow("league_activity", key, "the league must be a positive integer.");
+  const look = jsonColumn("league_activity", key, "look_json", row.look_json);
+  const event = parseLeagueActivityEvent({ seatId: row.seat_id, name: row.name, look, kind: row.kind, at: row.at });
+  if (event === null) throw invalidRow("league_activity", key, "the activity event is invalid.");
+  return event;
+}
+
 const SEAT_COLUMNS = "account_id, seat_id, league, name, look_json, strategy_json, seat_order";
 const DAY_SCORE_COLUMNS = "account_id, day, seat_id, name, look_json, seat_order, league, points, place";
 const DAY_RECORD_COLUMNS = "day, league, place, account_id, name, look_json, points";
@@ -159,6 +186,12 @@ export class LeagueStore {
   private readonly upsertDayRecord: Statement<unknown, [string, number, number, string, string, string, number]>;
   private readonly selectCheckpoint: Statement<{ readonly written_at: number; readonly checkpoint_json: string }, []>;
   private readonly upsertCheckpoint: Statement<unknown, [number, string]>;
+  private readonly selectMonthActivity: Statement<ActivityRow, [string]>;
+  private readonly selectLeagueActivity: Statement<ActivityRow, [string, number]>;
+  private readonly deleteOlderActivity: Statement<unknown, [string]>;
+  private readonly insertActivity: Statement<unknown, [string, number, string, string, string, string, number]>;
+  private readonly refreshActivity: Statement<unknown, [string, string, number, number]>;
+  private readonly trimActivity: Statement<unknown, [string, number, number]>;
 
   /** `now` dates the checkpoint row, for the health gauges. */
   constructor(
@@ -195,6 +228,12 @@ export class LeagueStore {
     this.upsertCheckpoint = db.prepare(
       "INSERT INTO league_checkpoint (id, written_at, checkpoint_json) VALUES (1, ?, ?) ON CONFLICT (id) DO UPDATE SET written_at = excluded.written_at, checkpoint_json = excluded.checkpoint_json",
     );
+    this.selectMonthActivity = db.prepare("SELECT * FROM league_activity WHERE month = ? ORDER BY league, id DESC");
+    this.selectLeagueActivity = db.prepare("SELECT * FROM league_activity WHERE month = ? AND league = ? ORDER BY id DESC");
+    this.deleteOlderActivity = db.prepare("DELETE FROM league_activity WHERE month < ?");
+    this.insertActivity = db.prepare("INSERT INTO league_activity (month, league, seat_id, name, look_json, kind, at) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    this.refreshActivity = db.prepare("UPDATE league_activity SET name = ?, look_json = ?, at = ? WHERE id = ?");
+    this.trimActivity = db.prepare("DELETE FROM league_activity WHERE id IN (SELECT id FROM league_activity WHERE month = ? AND league = ? ORDER BY id DESC LIMIT -1 OFFSET ?)");
   }
 
   readSeats(): SeatsState {
@@ -237,9 +276,11 @@ export class LeagueStore {
    * of the name rule in monthly.ts and answers the same 409 name_taken.
    * ponytail: rewrites every seat at each change, O(seats); a write of the changed seat alone would scale further.
    */
-  writeSeats(state: SeatsState): void {
+  writeSeats(state: SeatsState): void;
+  writeSeats(state: SeatsState, activity: ActivityWrite): readonly LeagueActivityEvent[];
+  writeSeats(state: SeatsState, activity?: ActivityWrite): readonly LeagueActivityEvent[] | undefined {
     try {
-      this.db.transaction(() => {
+      return this.db.transaction(() => {
         this.upsertState.run(state.leagues, state.nextOrder, state.closedMonth);
         this.deleteSeats.run();
         for (const seat of state.seats.values()) {
@@ -249,6 +290,8 @@ export class LeagueStore {
         for (const [accountId, record] of state.names) this.insertName.run(accountId, record.month, record.name);
         this.deleteMoves.run();
         for (const [accountId, move] of state.moves) this.insertMove.run(accountId, move.month, move.from, move.to, move.kind);
+        // A recorded action and its seat change commit together (86-monthly-activity.md).
+        if (activity !== undefined) return this.writeActivity(activity);
       }).immediate();
     } catch (error) {
       if (error instanceof SQLiteError && error.code === "SQLITE_CONSTRAINT_UNIQUE" && error.message.includes("league_seat.name")) {
@@ -256,6 +299,35 @@ export class LeagueStore {
       }
       throw error;
     }
+  }
+
+  /** Drop expired logs and load the public snapshots when opening the month, never during a turn. */
+  openActivityMonth(month: string): Map<number, readonly LeagueActivityEvent[]> {
+    return this.db.transaction(() => {
+      this.deleteOlderActivity.run(month);
+      const activity = new Map<number, LeagueActivityEvent[]>();
+      for (const row of this.selectMonthActivity.all(month)) {
+        const events = activity.get(row.league) ?? [];
+        events.push(readActivity(row));
+        activity.set(row.league, events);
+      }
+      return activity;
+    }).immediate();
+  }
+
+  /** Runs inside writeSeats' transaction. The id breaks ties between changes at the same millisecond. */
+  private writeActivity({ month, league, event }: ActivityWrite): readonly LeagueActivityEvent[] {
+    const previous = this.selectLeagueActivity.all(month, league);
+    const events = previous.map(readActivity);
+    const newest = previous[0];
+    const elapsed = newest === undefined ? Infinity : event.at - newest.at;
+    if (newest?.seat_id === event.seatId && newest.kind === event.kind && elapsed >= 0 && elapsed <= ACTIVITY_MERGE_MS) {
+      this.refreshActivity.run(event.name, JSON.stringify(event.look), event.at, newest.id);
+      return [event, ...events.slice(1)];
+    }
+    this.insertActivity.run(month, league, event.seatId, event.name, JSON.stringify(event.look), event.kind, event.at);
+    if (previous.length >= LEAGUE_ACTIVITY_LIMIT) this.trimActivity.run(month, league, LEAGUE_ACTIVITY_LIMIT);
+    return [event, ...events.slice(0, LEAGUE_ACTIVITY_LIMIT - 1)];
   }
 
   readMonth(month: string): MonthState {

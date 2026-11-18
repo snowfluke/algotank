@@ -14,10 +14,11 @@
 // carries `own` only for tanks in that league. A switch in "Tank kamu" shows today's statistics
 // card (K2, stats/StatsCard.tsx) in place of the summary; the numbers come from /api/monthly/me.
 
-import { ListOrdered, Palette, SlidersHorizontal, Swords, UserRound } from "lucide-react";
+import { History, ListOrdered, Palette, SlidersHorizontal, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { FIRST_PUBLISHED_RULES_MONTH, MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
 import { ArenaCondition } from "./ArenaCondition.tsx";
+import { ActivityList } from "./ActivityList.tsx";
 import { TankSheet, type SheetSource, type SheetTank } from "./TankSheet.tsx";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
@@ -42,9 +43,9 @@ import { useNow } from "./useNow.ts";
 
 export type MonthlySeat = NonNullable<MonthlyMeResponse["seat"]>;
 /** The phone's tabs; "mine" only for a seated owner. */
-export type MonthlyTab = "arena" | "ranking" | "mine";
+export type MonthlyTab = "arena" | "ranking" | "mine" | "activity";
 /** The pane beside the board on a laptop, and the ranking's switch on a phone ("mine" shows today there). */
-export type MonthlySide = "today" | "month" | "mine";
+export type MonthlySide = "today" | "month" | "mine" | "activity";
 
 /** What the board says around midnight: the day's end while it is recorded, then the finished day for a few seconds. */
 export type DayChange = { readonly kind: "closing" } | { readonly kind: "done"; readonly day: string; readonly winner: LeagueDayRecord | null };
@@ -457,6 +458,7 @@ function PresenterLayout(props: MonthlyViewProps) {
     { value: "today", label: t.ranking.today },
     { value: "month", label: t.ranking.month },
     ...(seat === null ? [] : [{ value: "mine" as const, label: t.tabs.mine }]),
+    { value: "activity", label: t.tabs.activity },
   ];
   const side = seat === null && props.side === "mine" ? "today" : props.side;
   const leagueTitle = leagueTitleOf(t, league, leagues);
@@ -513,17 +515,20 @@ function PresenterLayout(props: MonthlyViewProps) {
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
         <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={{ place: { kind: "slot", element: switchSlot }, follow }} ranking={props.ranking} />}</div>
-        <section aria-label={t.ranking.label} className={`${PANE} basis-0`}>
-          <div className="shrink-0">
-            <SegmentedControl legend={t.ranking.label} hideLegend value={side} onChange={props.onSide} options={sideOptions} />
+        <section aria-label={side === "activity" ? t.tabs.activity : t.ranking.label} className={`${PANE} basis-0`}>
+          <div className="shrink-0 [&_label]:px-1 min-[1100px]:[&_label]:px-3">
+            <SegmentedControl legend={t.tabs.label} hideLegend size="sm" value={side} onChange={props.onSide} options={sideOptions} />
           </div>
           {side === "mine" && seat !== null ? (
             <OwnPane seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} onQuit={props.onQuit} />
+          ) : side === "activity" ? (
+            <ActivityList events={board?.live.league === league ? board.live.activity : []} fixedNow={props.now} />
           ) : (
-            <Ranking part={side === "month" ? "month" : "today"} ranking={props.ranking} ownSeatId={ownSeatId} />
+            <>
+              <Ranking part={side === "month" ? "month" : "today"} ranking={props.ranking} ownSeatId={ownSeatId} />
+              <LastWinner days={props.days} today={board?.live.day ?? null} />
+            </>
           )}
-          {/* Yesterday's winner goes with the rankings; beside the own tank it took the room of the quit button (2026-11-16). */}
-          {side === "mine" && seat !== null ? null : <LastWinner days={props.days} today={board?.live.day ?? null} />}
         </section>
       </div>
     </div>
@@ -534,6 +539,7 @@ const TAB_ICONS: Record<MonthlyTab, ReactNode> = {
   arena: <Swords aria-hidden size={22} />,
   ranking: <ListOrdered aria-hidden size={22} />,
   mine: <UserRound aria-hidden size={22} />,
+  activity: <History aria-hidden size={22} />,
 };
 
 /** The phone's bottom bar: the visitor's action above the tabs. MonthlyPage puts it in AppShell's `bottom`. */
@@ -544,7 +550,7 @@ function BarAction({ hook, icon, label, onClick }: { readonly hook: "change-rule
       type="button"
       {...(hook === "change-rules" ? { "data-change-rules": "" } : { "data-change-look": "" })}
       onClick={onClick}
-      className="press flex min-h-13 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] px-0.5 text-center font-display text-caption font-semibold leading-tight text-muted [word-break:keep-all] hover:text-ink"
+      className="press flex min-h-13 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] px-0.5 text-center font-display text-caption font-semibold leading-tight text-muted [word-break:keep-all] hover:text-ink max-[359px]:col-span-2"
     >
       {icon}
       <span className="min-w-0">{label}</span>
@@ -558,7 +564,7 @@ export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab
   const laptop = useLaptopLayout();
   const fit = useFitLayout();
   if (laptop && fit) return null;
-  const tabs: MonthlyTab[] = seat === null ? ["arena", "ranking"] : ["arena", "ranking", "mine"];
+  const tabs: MonthlyTab[] = seat === null ? ["arena", "ranking", "activity"] : ["arena", "ranking", "mine", "activity"];
   return (
     <>
       {onJoin === null ? null : (
@@ -573,8 +579,8 @@ export function MonthlyPhoneBar({ seat, onJoin, onChangeRules, onChangeLook, tab
       {seat === null ? (
         <BottomTabs idBase="monthly" label={t.tabs.label} value={seat === null && tab === "mine" ? "arena" : tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
       ) : (
-        <div className="mx-auto grid w-full max-w-xl min-w-0 grid-cols-5 gap-1 px-2 py-1">
-          <div className="col-span-3 min-w-0">
+        <div className="mx-auto grid w-full max-w-xl min-w-0 grid-cols-4 gap-1 px-2 py-1 min-[360px]:grid-cols-6">
+          <div className="col-span-4 min-w-0">
             <BottomTabs inline idBase="monthly" label={t.tabs.label} value={tab} onChange={onTab} tabs={tabs.map((value) => ({ value, label: t.tabs[value], icon: TAB_ICONS[value] }))} />
           </div>
           <BarAction hook="change-rules" icon={<SlidersHorizontal aria-hidden size={22} />} label={t.changeRules.open} onClick={onChangeRules} />
@@ -609,6 +615,8 @@ function PhoneLayout(props: MonthlyViewProps) {
         <Ranking part={part} ranking={props.ranking} ownSeatId={ownSeatId} />
       </section>
     );
+  } else if (tab === "activity") {
+    pane = <ActivityList events={board?.live.league === league ? board.live.activity : []} fixedNow={props.now} />;
   } else {
     pane = (
       <div className={PANE}>

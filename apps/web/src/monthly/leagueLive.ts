@@ -18,7 +18,7 @@
 // | failed       | Try again                     | connecting   |                                            |
 // Terminal: closed (the page moves to a league that exists, which is a new stream).
 
-import { expandTick, type LeagueLive, type LeagueStreamMessage, type PublicSnapshot } from "@game/arena";
+import { expandTick, parseLeagueActivity, type LeagueLive, type LeagueStreamMessage, type PublicSnapshot } from "@game/arena";
 import type { ThrowEvent } from "@game/engine";
 import { OWN_DECISIONS_KEPT, type OwnDecision } from "../stream/streamState.ts";
 import { throwOf } from "../water/water.ts";
@@ -58,7 +58,12 @@ export function parseLeagueMessage(data: string): LeagueStreamMessage | null {
     return null;
   }
   if (!isRecord(raw)) return null;
-  if (raw["type"] === "state" && isRecord(raw["state"]) && Array.isArray(raw["state"]["tanks"]) && isRecord(raw["state"]["board"])) return raw as unknown as LeagueStreamMessage;
+  if (raw["type"] === "state" && isRecord(raw["state"]) && Array.isArray(raw["state"]["tanks"]) && isRecord(raw["state"]["board"])) {
+    const activity = parseLeagueActivity(raw["state"]["activity"]);
+    if (activity === null) return null;
+    const state = raw["state"] as unknown as LeagueLive;
+    return { type: "state", state: { ...state, activity } };
+  }
   if (raw["type"] === "tick" && isRecord(raw["tick"])) return raw as unknown as LeagueStreamMessage;
   if (raw["type"] === "closed" && typeof raw["leagues"] === "number" && raw["leagues"] >= 1) return raw as unknown as LeagueStreamMessage;
   return null;

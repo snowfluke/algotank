@@ -72,7 +72,7 @@ import type { Decision, StatsView, StrategyInput } from "@game/engine";
 // numbers of a finished day (DayNumbers) are open to everyone; they say what it did, not its rules.
 import type { CompactTick } from "./compact-tick.ts";
 import type { MonthRecord } from "./public-protocol.ts";
-import type { PlayerId, PublicSnapshot, TankLook } from "./types.ts";
+import { parsePlayerName, parseTankLook, type PlayerId, type PublicSnapshot, type TankLook } from "./types.ts";
 
 /**
  * Seats in one league. When every league is full, a new lowest league opens. 512 since 2026-11-16
@@ -109,6 +109,43 @@ export interface LeagueTank {
   readonly isBot: boolean;
 }
 
+/** Public activity is a snapshot of the tank as it looked when the event happened (86-monthly-activity.md). */
+export type LeagueActivityEvent = {
+  readonly seatId: PlayerId;
+  readonly name: string;
+  readonly look: TankLook;
+  readonly at: number;
+} & (
+  | { readonly kind: "joined" }
+  | { readonly kind: "left" }
+  | { readonly kind: "changedRules" }
+  | { readonly kind: "changedLook" }
+);
+
+export const LEAGUE_ACTIVITY_LIMIT = 50;
+
+export function parseLeagueActivityEvent(value: unknown): LeagueActivityEvent | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const { kind, seatId, name, look, at } = value as Record<string, unknown>;
+  if (kind !== "joined" && kind !== "left" && kind !== "changedRules" && kind !== "changedLook") return null;
+  if (typeof seatId !== "string" || seatId.length === 0) return null;
+  if (typeof at !== "number" || !Number.isSafeInteger(at) || at < 0 || at > 8.64e15) return null;
+  const validName = parsePlayerName(name);
+  const validLook = parseTankLook(look);
+  return validName === null || validLook === null ? null : { kind, seatId, name: validName, look: validLook, at };
+}
+
+export function parseLeagueActivity(value: unknown): readonly LeagueActivityEvent[] | null {
+  if (!Array.isArray(value) || value.length > LEAGUE_ACTIVITY_LIMIT) return null;
+  const activity: LeagueActivityEvent[] = [];
+  for (const entry of value) {
+    const event = parseLeagueActivityEvent(entry);
+    if (event === null) return null;
+    activity.push(event);
+  }
+  return activity;
+}
+
 /** What a viewer sees of a league now: sent on connect and after every join, quit and day change. */
 export interface LeagueLive {
   /** 1 is the top league. */
@@ -124,6 +161,8 @@ export interface LeagueLive {
   readonly phase: LeagueDayPhase;
   /** The tanks in the board's order: the indexes of every following compact tick refer to this list. */
   readonly tanks: readonly LeagueTank[];
+  /** This month's activity in this league, newest first. */
+  readonly activity: readonly LeagueActivityEvent[];
   /** The board now. With no tank it is the empty board, which keeps its size all day. */
   readonly board: PublicSnapshot;
 }

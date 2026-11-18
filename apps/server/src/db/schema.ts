@@ -284,6 +284,22 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (month, seat_id)
   ) STRICT;
   `,
+
+  // 10: public monthly arena activity (owner, 2026-11-18, 86-monthly-activity.md).
+  // The seat can leave while its activity stays. look_json is the whole board look at the event.
+  `
+  CREATE TABLE league_activity (
+    id INTEGER PRIMARY KEY,
+    month TEXT NOT NULL CHECK (month GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]'),
+    league INTEGER NOT NULL CHECK (league >= 1),
+    seat_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    look_json TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('joined', 'left', 'changedRules', 'changedLook')),
+    at INTEGER NOT NULL CHECK (at >= 0)
+  ) STRICT;
+  CREATE INDEX league_activity_by_month_league ON league_activity (month, league, id DESC);
+  `,
 ];
 
 /** The version this code writes. */

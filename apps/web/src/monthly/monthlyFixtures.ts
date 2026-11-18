@@ -2,7 +2,7 @@
 // state of the page shows without a server. The names include one as long as the name rule allows.
 
 import { playedStats } from "../stats/statsFixtures.ts";
-import { MONTHLY_BOARD_MIN_TANKS, MONTHLY_SEATS, plainTankLook, type LeagueDayRecord, type LeagueLive, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow, type MonthMove, type PublicSnapshot, type TankLook } from "@game/arena";
+import { MONTHLY_BOARD_MIN_TANKS, MONTHLY_SEATS, plainTankLook, type LeagueActivityEvent, type LeagueDayRecord, type LeagueLive, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow, type MonthMove, type PublicSnapshot, type TankLook } from "@game/arena";
 import { arenaSize, DEFAULT_PRESET_ID, PRESETS, ruleSet, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
 import type { OwnDecision } from "../stream/streamState.ts";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
@@ -54,7 +54,19 @@ export function fixtureLive(league: number, count: number, ruleSetId: RuleSetId 
     })),
     items: [],
   };
-  return { league, month: "2026-11", day: FIXTURE_DAY, dayEndsInMs: (5 * 3600 + 12 * 60 + 44) * 1000, tickMs: 900, phase: count === 0 ? "idle" : bot ? "withBot" : "withoutBot", tanks, board };
+  return { league, month: "2026-11", day: FIXTURE_DAY, dayEndsInMs: (5 * 3600 + 12 * 60 + 44) * 1000, tickMs: 900, phase: count === 0 ? "idle" : bot ? "withBot" : "withoutBot", tanks, board, activity: [] };
+}
+
+const ACTIVITY_KINDS = ["changedLook", "changedRules", "left", "joined"] as const;
+
+export function fixtureActivity(now: number, count: number): LeagueActivityEvent[] {
+  return Array.from({ length: count }, (_, i) => ({
+    kind: ACTIVITY_KINDS[i % ACTIVITY_KINDS.length] ?? "joined",
+    seatId: `seat-${i + 1}`,
+    name: NAMES[i % NAMES.length] ?? "Tank",
+    look: fixtureLook(i),
+    at: now - i * 60_000,
+  }));
 }
 
 export function fixtureLoad(live: LeagueLive, now: number, own: readonly OwnDecision[] = []): LeagueLiveLoad {

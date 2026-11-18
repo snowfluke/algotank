@@ -61,7 +61,7 @@ const seats: DayTank[] = Array.from({ length: tanks }, (_, i) => ({
 }));
 day.start(seats.map((tank) => ({ tank, points: 0, counts: true, stats: undefined })), 96_000);
 const view = day.view(96_000);
-const state: LeagueLive = { league: 1, month: "2026-11", day: "2026-11-16", dayEndsInMs: 5 * 3600 * 1000, tickMs: 900, phase: day.phase(), tanks: view.tanks, board: toPublicBoard(view.board) };
+const state: LeagueLive = { league: 1, month: "2026-11", day: "2026-11-16", dayEndsInMs: 5 * 3600 * 1000, tickMs: 900, phase: day.phase(), tanks: view.tanks, board: toPublicBoard(view.board), activity: [] };
 
 function toPublicBoard(board: typeof view.board): LeagueLive["board"] {
   return { ...board, bots: board.bots.map(({ id, x, y, direction, score, wasHit, build, hitsLanded, hitsTaken, water, item, effect }) => ({ id, x, y, direction, score, wasHit, build, hitsLanded, hitsTaken, water, item, effect })) };

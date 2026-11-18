@@ -34,8 +34,8 @@
 // Hooks the screens provide (language-neutral, so one step works in both languages): tabs
 // carry data-tab="<value>" (ui/Tabs.tsx, ui/BottomTabs.tsx); the other hooks are named in the
 // state table below and listed in docs/specs/revamp/11-foundation-guide.md, section 11.
-// Exempt from (b) and (c): a textarea's own text and Pager's invisible measuring layer. No
-// other part of the interface may scroll inside itself.
+// Exempt from (b) and (c): a textarea's own text and Pager's invisible measuring layer.
+// The monthly activity list (86-monthly-activity.md) can scroll vertically within its pane.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -1102,6 +1102,8 @@ STATES.push(
   monthlyKit("leagues-9", "case=visitor&leagues=9"),
   monthlyKit("leagues-9-open", "case=visitor&leagues=9", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: '[data-picker="league"]' }, { wait: "[data-picker-list]" }] }),
   monthlyKit("visitor-ranking", "case=visitor&tab=ranking"),
+  monthlyKit("activity-empty", "case=visitor&tab=activity&side=activity"),
+  monthlyKit("activity-full", "case=seated&tab=activity&side=activity&activity=full", { steps: [{ wait: "[data-monthly-activity]" }] }),
   monthlyKit("seated", "case=seated&leagues=2"),
   monthlyKit("seated-ranking-month", "case=seated&tab=ranking&side=month"),
   monthlyKit("seated-ranking-month-last-page", "case=seated&tab=ranking&side=month", { steps: [{ wait: "[data-monthly-page]" }, { pageToEnd: "[data-monthly-ranking] [data-pager-next]" }] }),
@@ -1575,6 +1577,7 @@ export function measureInPage(kind) {
     return `${el.tagName.toLowerCase()}${cls ? `.${cls}` : ""}${text ? ` "${text}"` : ""}`;
   };
   const exempt = (el) => el.closest("[data-pager-measure]") !== null;
+  const activityList = "[data-monthly-activity]";
   const a = [];
   if (doc.scrollWidth > viewportWidth + 1) a.push(`document is ${doc.scrollWidth} px wide in a ${viewportWidth} px viewport`);
   if (kind === "fit" && doc.scrollHeight > viewportHeight + 1) a.push(`document is ${doc.scrollHeight} px tall in a ${viewportHeight} px viewport`);
@@ -1585,11 +1588,14 @@ export function measureInPage(kind) {
     if (el.tagName === "TEXTAREA" || exempt(el)) continue;
     const style = getComputedStyle(el);
     if (scrolls(style.overflowX) && el.scrollWidth > el.clientWidth + 1) b.push(`${describe(el)} scrolls sideways (${el.scrollWidth} > ${el.clientWidth})`);
-    if (kind === "fit" && scrolls(style.overflowY) && el.scrollHeight > el.clientHeight + 1) b.push(`${describe(el)} scrolls (${el.scrollHeight} > ${el.clientHeight})`);
+    if (kind === "fit" && scrolls(style.overflowY) && el.scrollHeight > el.clientHeight + 1) {
+      if (!el.matches(activityList)) b.push(`${describe(el)} scrolls (${el.scrollHeight} > ${el.clientHeight})`);
+      else if (style.overscrollBehaviorY !== "contain") b.push(`${describe(el)} lets vertical scrolling reach the page`);
+    }
   }
 
   const c = [];
-  const CONTROL = 'a[href], button, input, select, textarea, summary, [role="button"], [role="tab"], [role="switch"], [role="radio"], [role="checkbox"], [role="slider"], [role="option"], [role="combobox"]';
+  const CONTROL = 'a[href], button, input, select, textarea, summary, [role="button"], [role="tab"], [role="switch"], [role="radio"], [role="checkbox"], [role="slider"], [role="option"], [role="combobox"], [data-monthly-activity]';
   const hides = (value) => value === "hidden" || value === "clip";
   for (const el of document.body.querySelectorAll("*")) {
     const tag = el.tagName.toLowerCase();
@@ -1603,6 +1609,11 @@ export function measureInPage(kind) {
     const box = el.getBoundingClientRect();
     // Screen-reader-only text is a 1 px box on purpose.
     if (box.width <= 1 || box.height <= 1) continue;
+    // Measure only the visible height of activity rows. Width and the pane's own bounds still have to fit.
+    const scrollPane = el.parentElement?.closest(activityList);
+    const scrollBox = scrollPane && scrolls(getComputedStyle(scrollPane).overflowY) ? scrollPane.getBoundingClientRect() : null;
+    const visibleTop = scrollBox === null ? box.top : Math.min(scrollBox.bottom, Math.max(scrollBox.top, box.top));
+    const visibleBottom = scrollBox === null ? box.bottom : Math.min(scrollBox.bottom, Math.max(scrollBox.top, box.bottom));
     let problem = null;
     let srOnly = false;
     for (let parent = el.parentElement; parent !== null && parent !== document.body; parent = parent.parentElement) {
@@ -1620,14 +1631,14 @@ export function measureInPage(kind) {
         const right = left + parent.clientWidth;
         const bottom = top + parent.clientHeight;
         if (clipX && (box.left < left - 1 || box.right > right + 1)) problem = `${describe(el)} is cut at the side by ${describe(parent)}`;
-        if (clipY && (box.top < top - 1 || box.bottom > bottom + 1)) problem = `${describe(el)} is cut at the ${box.bottom > bottom + 1 ? "bottom" : "top"} by ${describe(parent)}`;
+        if (clipY && (visibleTop < top - 1 || visibleBottom > bottom + 1)) problem = `${describe(el)} is cut at the ${visibleBottom > bottom + 1 ? "bottom" : "top"} by ${describe(parent)}`;
         if (problem !== null) break;
       }
       if (parentStyle.position === "fixed") break;
     }
     if (srOnly) continue;
     if (problem === null && box.right > viewportWidth + 1) problem = `${describe(el)} runs past the right edge of the viewport`;
-    if (problem === null && kind === "fit" && (box.bottom > viewportHeight + 1 || box.top < -1)) problem = `${describe(el)} is outside the viewport height`;
+    if (problem === null && kind === "fit" && (visibleBottom > viewportHeight + 1 || visibleTop < -1)) problem = `${describe(el)} is outside the viewport height`;
     if (problem !== null) c.push(problem);
   }
   const unique = (list) => [...new Set(list)].slice(0, 8);

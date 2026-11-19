@@ -24,6 +24,7 @@
 //               hit chance or -1], in resolution order. "empty" has no target and
 //               no distance, and "dry" has no hit chance; both write -1 there. The
 //               outcome "bucketHit" exists only here: it is a hit with `bucket: true`.
+//               "deflected" appends [neighbour index, clockwise eighths from the shot, result index].
 //   items[k]  = [item index, x, y, turns left], the items on the board after the turn.
 //   pickups[k]= [bot index, item index], the items taken on the turn.
 //   itemsWaiting[k] = [bot index, first item index, optional second item index].
@@ -56,7 +57,7 @@ export interface CompactTick {
   readonly bots: readonly (readonly number[])[];
   /** In the order the moves resolved: [bot index, move index]. */
   readonly moves: readonly (readonly [number, number])[];
-  /** [thrower index, outcome index, target index or -1, distance, hit chance or -1]. */
+  /** [thrower index, outcome index, target index or -1, distance, hit chance or -1, ...deflection]. */
   readonly throws: readonly (readonly number[])[];
   /** [item index, x, y, turns left]: the items on the board after the turn. */
   readonly items: readonly (readonly number[])[];
@@ -75,8 +76,9 @@ export const COMPACT_DIRECTIONS: readonly Direction[] = DIRECTIONS;
 /** Move index to move. The engine's own table. */
 export const COMPACT_MOVES: readonly Move[] = MOVES;
 /** Outcome index to throw outcome. Appended values keep the older indexes. "bucketHit" is a hit with `bucket: true`. */
-export const COMPACT_OUTCOMES = ["empty", "dry", "miss", "hit", "blocked", "bucketHit", "dodged"] as const;
+export const COMPACT_OUTCOMES = ["empty", "dry", "miss", "hit", "blocked", "bucketHit", "dodged", "deflected"] as const;
 type CompactOutcome = (typeof COMPACT_OUTCOMES)[number];
+const DEFLECTION_OUTCOMES = ["hit", "blocked", "dodged"] as const;
 /** Item index to item kind. The engine's own table. */
 export const COMPACT_ITEMS: readonly ItemKind[] = ITEM_KINDS;
 
@@ -92,6 +94,7 @@ const TURNS_MASK = 0b1111;
 /** Number of values in one compact bot, throw, item and pickup. */
 export const COMPACT_BOT_LENGTH = 8;
 export const COMPACT_THROW_LENGTH = 5;
+const COMPACT_DEFLECT_LENGTH = COMPACT_THROW_LENGTH + 3;
 export const COMPACT_ITEM_LENGTH = 4;
 export const COMPACT_PICKUP_LENGTH = 2;
 
@@ -178,7 +181,9 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
       const outcome = indexIn(COMPACT_OUTCOMES, wireOutcome(t), "outcome");
       if (t.outcome === "empty") return [idx(t.throwerId), outcome, NONE, NONE, NONE];
       if (t.outcome === "dry" || t.outcome === "dodged") return [idx(t.throwerId), outcome, idx(t.targetId), t.distance, NONE];
-      return [idx(t.throwerId), outcome, idx(t.targetId), t.distance, t.hitChance];
+      const rolled = [idx(t.throwerId), outcome, idx(t.targetId), t.distance, t.hitChance];
+      if (t.outcome !== "deflected") return rolled;
+      return [...rolled, idx(t.deflectedTo), t.deflectedTurn, indexIn(DEFLECTION_OUTCOMES, t.deflection, "deflection")];
     }),
     items: tick.snapshot.items.map((item) => [indexIn(COMPACT_ITEMS, item.kind, "item"), item.x, item.y, item.turnsLeft]),
     pickups: tick.pickups.map((p) => [idx(p.botId), indexIn(COMPACT_ITEMS, p.item, "item")]),
@@ -291,14 +296,25 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
   const moves = spawnBots.map((bot, i) => ({ botId: bot.id, move: moveByIndex[i] as Move }));
 
   const throws = compact.throws.map((values): ThrowEvent => {
-    if (values.length !== COMPACT_THROW_LENGTH) throw new Error(`a throw has ${values.length} values`);
+    if (values.length !== COMPACT_THROW_LENGTH && values.length !== COMPACT_DEFLECT_LENGTH) throw new Error(`a throw has ${values.length} values`);
     const [thrower, outcomeIndex, target, distance, hitChance] = values;
     const throwerId = botAt(thrower, "thrower").id;
     const outcome = entry(COMPACT_OUTCOMES, outcomeIndex, "outcome");
+    if (values.length !== (outcome === "deflected" ? COMPACT_DEFLECT_LENGTH : COMPACT_THROW_LENGTH)) {
+      throw new Error(`a ${outcome} throw has ${values.length} values`);
+    }
     if (outcome === "empty") return { throwerId, outcome };
     const targetId = botAt(target, "target").id;
     if (outcome === "dry" || outcome === "dodged") return { throwerId, outcome, targetId, distance: integer(distance, "distance") };
     const rolled = { throwerId, targetId, distance: integer(distance, "distance"), hitChance: integer(hitChance, "hit chance") };
+    if (outcome === "deflected") {
+      const [, , , , , neighbour, turn, result] = values;
+      const deflectedTo = botAt(neighbour, "deflected target").id;
+      const deflectedTurn = integer(turn, "deflected turn");
+      if (deflectedTo === throwerId || deflectedTo === targetId) throw new Error("a deflection needs another tank");
+      if (deflectedTurn < 0 || deflectedTurn >= DIRECTIONS.length) throw new Error("deflected turn is out of range");
+      return { ...rolled, outcome, deflectedTo, deflectedTurn, deflection: entry(DEFLECTION_OUTCOMES, result, "deflection") };
+    }
     return outcome === "bucketHit" ? { ...rolled, outcome: "hit", bucket: true } : { ...rolled, outcome };
   });
 

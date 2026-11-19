@@ -56,6 +56,8 @@ function outcomeText(t: FeedText, entry: OwnDecision): string | null {
       return entry.throwEvent.bucket === true ? t.bucketHit : t.hit;
     case "blocked":
       return t.blocked;
+    case "deflected":
+      return t.deflected;
     case "miss":
     case "dodged":
       return t.miss;

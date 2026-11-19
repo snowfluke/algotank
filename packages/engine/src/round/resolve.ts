@@ -11,7 +11,7 @@ import type {
 } from "../types.ts";
 import { ITEM_RULES, actsOnOwnHit, ageItems, effectOfHit, holdItem, holderBlocks, nearestItems, newEffect, pickUp, receiveEffect, spawnItems, useOnce } from "../items/items.ts";
 import { ULTIMATE_RULES, bigUmbrellaCovers, magnetSpace, type UltimateId } from "../ultimates/ultimates.ts";
-import { TURN_EIGHTHS, chebyshev, rotate } from "../directions.ts";
+import { TURN_EIGHTHS, chebyshev, eighthsBetween, rotate } from "../directions.ts";
 import { cellAhead, cellKey, isInside } from "./grid.ts";
 import type { ArenaSize, Cell } from "./grid.ts";
 
@@ -197,6 +197,15 @@ function resolveThrow(
   const bucket = me.item === "bucket";
   const points = bucket ? ITEM_RULES.bucketHitPoints : POINTS_PER_HIT;
   const impact = rollImpact(target, me, baseChance, hitChance, points, rng);
+  if (impact.outcome === "miss" && impact.stoppedBySmoke === true) {
+    const deflection = deflectThrow(thrower, target, occupant, rng);
+    if (deflection !== null) {
+      return {
+        ...info, hitChance, outcome: "deflected", ...deflection,
+        ...(impact.protection === undefined ? {} : { protection: impact.protection }),
+      };
+    }
+  }
   if (impact.outcome === "hit") {
     movePoints(thrower, target, points);
     const effect = effectOfHit(me);
@@ -208,6 +217,28 @@ function resolveThrow(
     throwerId: info.throwerId, outcome: impact.outcome, targetId: info.targetId, distance, hitChance,
     ...(bucket && impact.outcome === "hit" ? { bucket: true } : {}),
     ...(target.ultimatesOn && impact.protection !== undefined ? { protection: impact.protection } : {}),
+  };
+}
+
+type Deflection = Pick<Extract<ThrowEvent, { outcome: "deflected" }>, "deflectedTo" | "deflectedTurn" | "deflection" | "deflectedProtection">;
+
+function deflectThrow(
+  thrower: Slot, smoked: Slot, occupant: ReadonlyMap<string, Slot>, rng: Rng,
+): Deflection | null {
+  // A smoke-caused miss can bend once (85-ultimates.md, owner 2026-11-19).
+  const neighbours = DIRECTIONS.flatMap((direction) => {
+    const tank = occupant.get(cellKey(cellAhead(smoked.place, direction)));
+    return tank === undefined || tank === thrower ? [] : [{ tank, direction }];
+  });
+  if (neighbours.length === 0 || rng.next() >= ULTIMATE_RULES.smoke.deflectChance) return null;
+  const { tank, direction } = neighbours[rng.int(neighbours.length)]!;
+  const aim = { deflectedTo: tank.place.id, deflectedTurn: eighthsBetween(thrower.place.direction, direction) };
+  if (isDashing(tank)) return { ...aim, deflection: "dodged" };
+  const impact = resolveHit(tank, smoked.place, POINTS_PER_HIT);
+  if (impact.outcome === "hit") movePoints(smoked, tank, POINTS_PER_HIT);
+  return {
+    ...aim, deflection: impact.outcome,
+    ...(impact.protection === undefined ? {} : { deflectedProtection: impact.protection }),
   };
 }
 
@@ -232,14 +263,16 @@ function rollImpact(
   hitChance: number,
   points: number,
   rng: Rng,
-): Impact | { readonly outcome: "miss"; readonly protection?: ShotProtection } {
+): Impact | { readonly outcome: "miss"; readonly stoppedBySmoke?: true; readonly protection?: ShotProtection } {
   if (hitChance < baseChance) {
     // Use the existing roll for both chances to measure what smoke saved, with no extra draw.
     const roll = rng.next() * 100;
     if (roll >= hitChance) {
-      return roll < baseChance && umbrellaAt(target, from) === null
-        ? { outcome: "miss", protection: { kind: "smoke", pointsSaved: points } }
-        : { outcome: "miss" };
+      if (roll >= baseChance) return { outcome: "miss" };
+      return {
+        outcome: "miss", stoppedBySmoke: true,
+        ...(umbrellaAt(target, from) === null ? { protection: { kind: "smoke", pointsSaved: points } } : {}),
+      };
     }
   } else if (!rng.chance(hitChance)) {
     return { outcome: "miss" };
@@ -434,7 +467,8 @@ function resolveSplash(source: Slot, size: ArenaSize, occupant: ReadonlyMap<stri
     const impact = hitChance === SURE_HIT ? resolveHit(target, me, points)
       : rollImpact(target, me, SURE_HIT, hitChance, points, rng);
     if (impact.outcome === "hit") movePoints(source, target, points);
-    squares.push({ ...cell, targetId, ...impact });
+    squares.push({ ...cell, targetId, outcome: impact.outcome,
+      ...(impact.protection === undefined ? {} : { protection: impact.protection }) });
   }
   return squares;
 }

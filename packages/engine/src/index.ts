@@ -4,7 +4,7 @@ export * from "./types.ts";
 export { intParamAllows } from "./strategy/define.ts";
 
 // The eight facings and their geometry, shared by the round, the strategies and the board.
-export { DIRECTION_STEP, directionDegreesFromNorth, isDiagonal } from "./directions.ts";
+export { DIRECTION_STEP, directionDegreesFromNorth, isDiagonal, rotate } from "./directions.ts";
 
 // round/ owns the rules of play: the grid, spawning, move resolution, throws,
 // scoring and the final standings.

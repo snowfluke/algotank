@@ -434,6 +434,21 @@ export type ThrowEvent =
     } & ({ readonly outcome: "dry" } | { readonly outcome: "dodged" })
   | {
       readonly throwerId: BotId;
+      readonly outcome: "deflected";
+      /** The smoked tank in the throw line, which scores if the deflection hits. */
+      readonly targetId: BotId;
+      readonly distance: number;
+      readonly hitChance: number;
+      readonly deflectedTo: BotId;
+      /** Clockwise eighths from the original shot to the neighbour's square at impact. */
+      readonly deflectedTurn: number;
+      readonly deflection: "hit" | "blocked" | "dodged";
+      /** Balance measurements for the original miss and the deflected impact. */
+      readonly protection?: ShotProtection;
+      readonly deflectedProtection?: ShotProtection;
+    }
+  | {
+      readonly throwerId: BotId;
       /** "blocked": the roll hit, and the target's umbrella stopped it, so no point moved. */
       readonly outcome: "miss" | "hit" | "blocked";
       /** The first bot in the line within range. */

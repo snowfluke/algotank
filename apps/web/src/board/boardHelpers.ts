@@ -3,7 +3,7 @@
 // rules about geometry and ranking are tested without rendering.
 
 import type { PublicBot } from "@game/arena";
-import { DIRECTION_STEP, canThrow, directionDegreesFromNorth } from "@game/engine";
+import { DIRECTION_STEP, canThrow, directionDegreesFromNorth, rotate } from "@game/engine";
 import type { BotId, Direction, RoundRules, ThrowEvent } from "@game/engine";
 import { tankColourByOrder } from "../tank/colours.ts";
 import { plainTankLook, type TankLook } from "../tank/look.ts";
@@ -179,14 +179,17 @@ export interface Jet {
  * nothing, and "dry" is three drops at the nozzle: no jet, because the tank had too
  * little water. "blocked" is a hard jet that stops at the umbrella the target opens,
  * whose dome faces the shooter (`angle`, in degrees, turns the dome from straight up).
- * The five differ by shape, not only by colour.
+ * A deflection continues from the smoke to the neighbour with one of the same impact marks.
  */
 export type ShotShape =
   | { readonly kind: "hit"; readonly jet: Jet; readonly splash: Point }
   | { readonly kind: "blocked"; readonly jet: Jet; readonly umbrella: Point; readonly angle: number }
   | { readonly kind: "miss"; readonly jet: Jet }
   | { readonly kind: "empty"; readonly jet: Jet }
-  | { readonly kind: "dry"; readonly drops: readonly Point[] };
+  | { readonly kind: "dry"; readonly drops: readonly Point[] }
+  | { readonly kind: "deflected"; readonly jet: Jet; readonly at: Point; readonly impact: DeflectedImpact };
+
+type DeflectedImpact = Extract<ShotShape, { kind: "hit" | "miss" | "blocked" }>;
 
 export interface ArenaBounds {
   readonly width: number;
@@ -216,8 +219,17 @@ function arcJet(from: Point, to: Point, rise: number): Jet {
 }
 
 /** SVG path data of a jet. */
-export function jetPath(jet: Jet): string {
-  return `M${jet.from.x} ${jet.from.y}Q${jet.control.x} ${jet.control.y} ${jet.to.x} ${jet.to.y}`;
+export function jetPath(jet: Jet, continuation?: Jet): string {
+  const curve = ({ control, to }: Jet) => `Q${control.x} ${control.y} ${to.x} ${to.y}`;
+  return `M${jet.from.x} ${jet.from.y}${curve(jet)}${continuation === undefined ? "" : curve(continuation)}`;
+}
+
+function shotImpact(from: Point, target: Point, direction: Direction, outcome: "hit" | "blocked"): DeflectedImpact {
+  const unit = unitStep(direction);
+  if (outcome === "hit") return { kind: "hit", jet: arcJet(from, along(target, unit, -HIT_SHORT), HIT_ARC), splash: target };
+  // The dome faces back along the jet, including when the jet comes from the smoke.
+  const angle = directionDegrees(direction) - 90;
+  return { kind: "blocked", jet: arcJet(from, along(target, unit, -BLOCK_SHORT), HIT_ARC), umbrella: along(target, unit, -UMBRELLA_FRONT), angle };
 }
 
 /**
@@ -234,20 +246,26 @@ export function shotShape(shooter: PublicBot, event: ThrowEvent, bounds: ArenaBo
       return { kind: "empty", jet: arcJet(nozzle, clampToFloor(along(nozzle, unit, EMPTY_LENGTH), bounds), HIT_ARC) };
     case "dry":
       return { kind: "dry", drops: DRY_DROPS.map((distance) => along(nozzle, unit, distance)) };
-    case "hit": {
+    case "hit":
+    case "blocked": {
       const target = along(centre, cellStep(shooter.direction), event.distance * CELL);
-      return { kind: "hit", jet: arcJet(nozzle, along(target, unit, -HIT_SHORT), HIT_ARC), splash: target };
+      return shotImpact(nozzle, target, shooter.direction, event.outcome);
     }
     case "miss":
     case "dodged": {
       const target = along(centre, cellStep(shooter.direction), event.distance * CELL);
       return { kind: "miss", jet: arcJet(nozzle, clampToFloor(along(target, unit, MISS_PAST), bounds), MISS_ARC) };
     }
-    case "blocked": {
-      const target = along(centre, cellStep(shooter.direction), event.distance * CELL);
-      // The dome faces back along the jet: straight up turned to the shooter's side.
-      const angle = directionDegrees(shooter.direction) - 90;
-      return { kind: "blocked", jet: arcJet(nozzle, along(target, unit, -BLOCK_SHORT), HIT_ARC), umbrella: along(target, unit, -UMBRELLA_FRONT), angle };
+    case "deflected": {
+      const at = along(shooter, cellStep(shooter.direction), event.distance);
+      const smoke = tankCenter(at.x, at.y);
+      const direction = rotate(shooter.direction, event.deflectedTurn);
+      const target = along(smoke, cellStep(direction), CELL);
+      // The relative bearing keeps the impact on the square it happened on, even after a move or a board rotation.
+      const impact: DeflectedImpact = event.deflection === "dodged"
+        ? { kind: "miss", jet: arcJet(smoke, clampToFloor(along(target, unitStep(direction), MISS_PAST), bounds), MISS_ARC) }
+        : shotImpact(smoke, target, direction, event.deflection);
+      return { kind: "deflected", jet: arcJet(nozzle, smoke, HIT_ARC), at, impact };
     }
   }
 }

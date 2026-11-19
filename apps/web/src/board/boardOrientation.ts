@@ -6,7 +6,8 @@
 //
 // Fields of a snapshot that hold a cell or a direction (packages/arena/src/types.ts,
 // packages/engine/src/types.ts): width and height, every bot's x, y and direction, every
-// item's x and y. A ThrowEvent holds ids and a distance only, so throws need no turn.
+// item's x and y. Throw distances and deflection bearings are relative to the shooter,
+// so the throw events need no turn.
 
 import type { PublicBot, PublicSnapshot } from "@game/arena";
 import { DIRECTIONS, type BoardItem, type Direction } from "@game/engine";

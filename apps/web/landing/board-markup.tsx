@@ -66,6 +66,8 @@ function shotMarkup(shooter: BotState, event: ThrowEvent, bounds: { width: numbe
     case "blocked":
       // demo-round.ts plays with items off, so no tank holds an umbrella.
       throw new Error("The landing demo plays without items, so no throw can be blocked.");
+    case "deflected":
+      throw new Error("Smoke deflections require ultimates in the landing demo.");
   }
 }
 

@@ -83,7 +83,10 @@ for (let seed = 1; seed <= FINALS; seed++) {
     while (!round.isOver) {
       const tick = stepRound(round);
       if (tick.fires === undefined) continue;
-      for (const event of tick.throws) if ("protection" in event) countProtection(event.protection);
+      for (const event of tick.throws) {
+        if ("protection" in event) countProtection(event.protection);
+        if (event.outcome === "deflected") countProtection(event.deflectedProtection);
+      }
       for (const { item } of tick.pickups) if (item === "umbrella") defenses.umbrella.uses++;
       for (const fire of tick.fires) {
         tallyFor(ultimates, fire.kind).fires++;

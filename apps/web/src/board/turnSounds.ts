@@ -21,18 +21,21 @@ import type { SoundName } from "../sound/sounds.ts";
 export function turnSounds(throws: readonly ThrowEvent[], ownId: BotId | null, ownItem: ItemKind | null = null): SoundName[] {
   const fired = ownId === null ? throws : throws.filter((event) => event.throwerId === ownId);
   const outcomes = new Set(fired.map((event) => event.outcome));
+  const deflectHit = throws.some((event) => event.outcome === "deflected" && event.deflection === "hit" &&
+    (ownId === null || event.throwerId === ownId || event.targetId === ownId || event.deflectedTo === ownId));
   const hitOwn = ownId !== null && throws.some((event) => event.outcome === "hit" && event.targetId === ownId);
-  const blockedOwn = ownId !== null && throws.some((event) => event.outcome === "blocked" && event.targetId === ownId);
+  const blockedOwn = ownId !== null && throws.some((event) => (event.outcome === "blocked" && event.targetId === ownId) ||
+    (event.outcome === "deflected" && event.deflection === "blocked" && event.deflectedTo === ownId));
   const sounds: SoundName[] = [];
   // A throw an umbrella blocked (84-items.md) is a shot whose water lands nowhere: the miss sound, never the splash.
-  if (outcomes.has("hit") || outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked")) sounds.push("shot");
+  if (outcomes.has("hit") || outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked") || outcomes.has("deflected")) sounds.push("shot");
   // The item the viewer's tank held before the turn does its job (owner, 2026-11-19): its own sound takes the
   // place of the splash or the miss, so a turn still makes one sound for its outcome.
   const itemHit = ownId !== null && outcomes.has("hit") && ownItem !== null && ownItem !== "umbrella" ? ITEM_HIT_SOUND[ownItem] : null;
   if (itemHit !== null) sounds.push(itemHit);
   else if (blockedOwn && ownItem === "umbrella") sounds.push("useUmbrella");
-  else if (outcomes.has("hit") || hitOwn) sounds.push("splash");
-  else if (outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked")) sounds.push("miss");
+  else if (outcomes.has("hit") || hitOwn || deflectHit) sounds.push("splash");
+  else if (outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked") || outcomes.has("deflected")) sounds.push("miss");
   if (outcomes.has("dry")) sounds.push("dry");
   return sounds;
 }

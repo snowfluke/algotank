@@ -81,6 +81,7 @@ export interface Checkpoint {
   readonly month: string;
   readonly startsAt: number;
   readonly endsAt: number;
+  readonly normalStreaks?: readonly { readonly league: number; readonly normalStreak: number }[];
   readonly tanks: readonly { readonly seatId: PlayerId; readonly points: number; readonly counts: boolean; readonly stats: TankStats }[];
 }
 
@@ -456,7 +457,11 @@ function readCheckpointJson(raw: unknown): Checkpoint {
     need(isRecord(entry) && text(entry["seatId"]) && integer(entry["points"]) && typeof entry["counts"] === "boolean", `tanks[${i}] must have a seat id, points and counts`);
     return { seatId: entry["seatId"], points: entry["points"], counts: entry["counts"], stats: readStats(entry["stats"], `tanks[${i}].stats`) };
   });
-  return { day, month, startsAt, endsAt, tanks };
+  const normalStreaks = raw["normalStreaks"] === undefined ? undefined : list(raw["normalStreaks"], "normalStreaks").map((entry, i) => {
+    need(isRecord(entry) && whole(entry["league"], 1) && whole(entry["normalStreak"], 0), `normalStreaks[${i}] must have a league and a normal streak`);
+    return { league: entry["league"], normalStreak: entry["normalStreak"] };
+  });
+  return { day, month, startsAt, endsAt, tanks, ...(normalStreaks === undefined ? {} : { normalStreaks }) };
 }
 
 /** One entry per rule and per "If no rule fits" of one strategy at most, so a damaged row cannot grow memory. */

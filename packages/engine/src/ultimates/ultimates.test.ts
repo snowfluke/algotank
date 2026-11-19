@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   ACTIONS, CONDITIONS, DIRECTIONS, ITEM_RULES, PRESETS, STANDARD_RULE_SET_ID, ULTIMATE_IDS, ULTIMATE_RULES, createArenaLayout,
-  createOpenRound, createRng, createRound, joinRound, parseStrategy, replaceStrategy, ruleSet, runRound, statsOfRound, statsView,
+  createOpenRound, createRng, createRound, hitChancePercent, joinRound, parseStrategy, replaceStrategy, ruleSet, runRound, statsOfRound, statsView,
   stepRound, ultimateReach, waterAfterTick,
 } from "../index.ts";
 import type { BoardItem, BotState, Direction, ItemKind, Move, RoundState, Snapshot, Strategy, UltimateId } from "../index.ts";
@@ -499,6 +499,101 @@ describe("Dash", () => {
 });
 
 describe("Smoke", () => {
+  const smoked = tankWith("smoke");
+  const shooter = bot("shooter", 2, 3, "E");
+  const neighbour = bot("neighbour", 4, 4, "NW");
+  const baseChance = hitChancePercent(shooter.build, smoked.build, 1, STANDARD);
+  const smokeChance = Math.floor(baseChance / ULTIMATE_RULES.smoke.chanceDivisor);
+
+  function smokeShot(
+    rolls: number[], near: BotState | null = neighbour, action = move("neighbour"), attackItem: ItemKind | null = null,
+  ) {
+    const rng = stubRng({ int: near === null ? [] : [0] });
+    const attacker = bot(shooter.id, shooter.x, shooter.y, shooter.direction, { item: attackItem });
+    const result = resolveTick(
+      snapshotOf([attacker, smoked, ...(near === null ? [] : [near])]),
+      [move("shooter", "T"), fire("self", "smoke"), ...(near === null ? [] : [action])],
+      ["shooter", "self", ...(near === null ? [] : [near.id])],
+      { ...rng, next: () => {
+        rng.calls.push("next");
+        const roll = rolls.shift();
+        if (roll === undefined) throw new Error("unexpected smoke roll");
+        return roll;
+      } },
+    );
+    return { result, calls: rng.calls };
+  }
+
+  test("only the same roll between the reduced and full chances can deflect", () => {
+    const direct = smokeShot([(smokeChance - 1) / 100]);
+    expect(direct.calls).toEqual(["next"]);
+    expect(direct.result.throws[0]).toMatchObject({ outcome: "hit", targetId: "self", hitChance: smokeChance });
+    const miss = smokeShot([baseChance / 100]);
+    expect(miss.calls).toEqual(["next"]);
+    expect(miss.result.throws[0]).toMatchObject({ outcome: "miss" });
+    const keptMiss = smokeShot([smokeChance / 100, ULTIMATE_RULES.smoke.deflectChance]);
+    expect(keptMiss.calls).toEqual(["next", "next"]);
+    expect(keptMiss.result.throws[0]).toMatchObject({ outcome: "miss" });
+  });
+
+  test("the adjacent shooter is ineligible and a smoke miss with no other neighbour stays a miss", () => {
+    const { result, calls } = smokeShot([smokeChance / 100], null);
+    expect(calls).toEqual(["next"]);
+    expect(result.throws[0]).toMatchObject({ outcome: "miss", protection: { kind: "smoke", pointsSaved: 1 } });
+  });
+
+  test.each(["bucket", "pinwheel", "mudBall"] as const)("a deflection scores for the smoked tank and keeps the shooter's %s", (item) => {
+    const { result, calls } = smokeShot([smokeChance / 100, 0], { ...neighbour, direction: "E" }, move("neighbour", "F"), item);
+    expect(calls).toEqual(["next", "next", "int:1"]);
+    expect(result.throws[0]).toMatchObject({ outcome: "deflected", targetId: "self", deflectedTo: "neighbour", deflectedTurn: 1, deflection: "hit" });
+    expect(placement(result, "shooter")).toMatchObject({ score: 0, item, itemUses: ITEM_RULES.uses[item], water: waterCapacity - waterPerThrow });
+    expect(placement(result, "self").score).toBe(1);
+    expect(placement(result, "neighbour")).toMatchObject({ score: -1, x: 5, y: 4 });
+    expect(result.inflicted.size).toBe(0);
+  });
+
+  test("the neighbour's Big Umbrella faces the smoke, and the item umbrella can block on its own", () => {
+    for (const kind of ["umbrella", "bigUmbrella"] as const) {
+      // North (smoke) is covered from this facing. North-west (shooter) is behind it.
+      const near = { ...neighbour, x: smoked.x, direction: "E" as const, item: "umbrella" as const, itemUses: 2,
+        ultimateEffect: kind === "bigUmbrella" ? { kind, blocksLeft: 1 } as const : null };
+      const { result } = smokeShot([smokeChance / 100, 0], near);
+      expect(result.throws[0]).toMatchObject({ outcome: "deflected", deflection: "blocked", deflectedProtection: { kind, pointsSaved: 1 } });
+      expect(placement(result, near.id)).toMatchObject({ score: 0, itemUses: kind === "umbrella" ? 1 : 2, ultimateEffect: null });
+      expect(placement(result, smoked.id).score).toBe(0);
+    }
+  });
+
+  test("a neighbour dodges even when its dash will happen after the deflection", () => {
+    const { result } = smokeShot([smokeChance / 100, 0], { ...neighbour, direction: "E" }, fire("neighbour", "dash"));
+    expect(result.throws[0]).toMatchObject({ outcome: "deflected", deflection: "dodged" });
+    expect(placement(result, "neighbour").score).toBe(0);
+    expect(placement(result, "self").score).toBe(0);
+  });
+
+  test("seeded rounds repeat their deflection target and give the hit to the smoked tank", () => {
+    const throwing = waiting("magnet", mode("main", [], act("throw")));
+    const play = (seed: number) => {
+      const round = placedRound([shooter, smoked, neighbour, bot("other", 3, 2, "N")], { shooter: throwing }, {}, true, seed);
+      const before = round.snapshot;
+      const tick = stepRound(round);
+      return { tick, before };
+    };
+    const targets = new Set<string>();
+    for (let seed = 1; seed <= 60; seed++) {
+      const { tick, before } = play(seed);
+      expect(play(seed).tick).toEqual(tick);
+      const shot = tick.throws[0];
+      if (shot?.outcome !== "deflected" || shot.deflection !== "hit") continue;
+      targets.add(shot.deflectedTo);
+      expect(tick.snapshot.bots.find(({ id }) => id === smoked.id)).toMatchObject({ score: 1, hitsLanded: 1 });
+      expect(tick.snapshot.bots.find(({ id }) => id === shooter.id)).toMatchObject({ score: 0, hitsLanded: 0 });
+      expect(tick.snapshot.bots.find(({ id }) => id === shot.deflectedTo)).toMatchObject({ score: -1, lastHitBy: smoked.id, hitsTaken: 1 });
+      expect(statsOfRound(before, [tick], shot.deflectedTo).timesHit).toBe(1);
+    }
+    expect(targets).toEqual(new Set(["neighbour", "other"]));
+  });
+
   test("quarters and rounds down the existing throw roll even when Smoke moves second", () => {
     const smoked = tankWith("smoke", { x: 4, effect: { kind: "stuck", turnsLeft: 2 } });
     const shooter = bot("shooter", 0, 3, "E", { build: { reach: 1, aim: 0, dodge: 0 }, item: "bucket" });

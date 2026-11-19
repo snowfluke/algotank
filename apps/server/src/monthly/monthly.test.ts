@@ -9,7 +9,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expandTick, LEAGUE_ACTIVITY_LIMIT, plainTankLook, ULTIMATES_FROM, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
-import { arenaSize, PRESETS, ruleSet, STANDARD_RULE_SET_ID, ULTIMATE_RULES } from "@game/engine";
+import { ARENA_LAYOUT_IDS, arenaSize, PRESETS, ruleSet, STANDARD_RULE_SET_ID, ULTIMATE_RULES, waterCapacityOf } from "@game/engine";
 import { HttpError } from "../http.ts";
 import { manualScheduler, type ManualScheduler } from "../test-helpers.ts";
 import { DEFAULT_LEAGUE_TIME_ZONE, zoneCalendar, type LeagueCalendar } from "./calendar.ts";
@@ -317,14 +317,14 @@ describe("the day round", () => {
     expect(destination).toBeDefined();
     expect([destination?.x, destination?.y]).not.toEqual([before?.x, before?.y]);
     expect(afterTunnel.bots.find((bot) => bot.id === destination?.id)).toMatchObject({
-      ...destination, score: before?.score, water: ruleSet(afterTunnel.ruleSetId).waterCapacity,
+      ...destination, score: before?.score, water: waterCapacityOf(afterTunnel),
     });
     expect(l.monthly.live(1).board.tick).toBe(RESHUFFLE_TURNS);
   });
 
   test("weather and a bot's fresh start share one state at the same turn as the tick", async () => {
-    let draw = 0;
-    const l = startLeague({ random: () => draw });
+    const draws = [0.99, 0];
+    const l = startLeague({ random: () => draws.shift() ?? 0 });
     const ada = newAccount();
     take(l, ada);
     const start = l.monthly.live(1);
@@ -332,7 +332,7 @@ describe("the day round", () => {
     if (bot === undefined) throw new Error("expected a bot");
     for (let i = 1; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
     const page = collect(l.streams.open(1, ada, l.monthly.live(1)));
-    draw = (MONTHLY_CONDITIONS.indexOf("open-field") + 0.5) / MONTHLY_CONDITIONS.length;
+    draws.push(0.99, (MONTHLY_CONDITIONS.indexOf("open-field") + 0.5) / MONTHLY_CONDITIONS.length, 0.5);
     l.ticks.tick();
     l.ticks.tick();
     const { messages } = await page.take();
@@ -349,14 +349,15 @@ describe("the day round", () => {
   });
 
   test("one weather state starts the rain front and the band then moves through compact ticks", async () => {
-    let draw = 0;
-    const l = startLeague({ random: () => draw });
+    const draws = [0.99, 0];
+    const l = startLeague({ random: () => draws.shift() ?? 0 });
     take(l, newAccount());
     take(l, newAccount());
+    draws.push(0.99, 0);
     nextDay(l);
     for (let i = 1; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
     const page = collect(l.streams.open(1, null, l.monthly.live(1)));
-    draw = (MONTHLY_CONDITIONS.indexOf("rainFront") + 0.5) / MONTHLY_CONDITIONS.length;
+    draws.push(0, (ARENA_LAYOUT_IDS.indexOf("rainFront") + 0.5) / ARENA_LAYOUT_IDS.length);
     for (let i = 0; i <= 30; i++) l.ticks.tick();
     const { messages } = await page.take();
     l.streams.closeAll();
@@ -825,6 +826,29 @@ describe("restart", () => {
   // Chargers always walk at the nearest tank and throw, so points move within a few turns. The default strategy
   // follows a counter shared by the whole file, and some trios of play styles never meet.
   const FIGHTER = { strategy: PRESETS.find((preset) => preset.id === "charger")!.strategy };
+  test("the saved weather streak affects the restart draw and a new day starts at 20 percent", () => {
+    const db = memoryDatabase();
+    const draws = [0.99, 0];
+    const random = () => draws.shift() ?? 0;
+    const first = startLeague({ db, random });
+    take(first, newAccount());
+    take(first, newAccount());
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) first.ticks.tick();
+    draws.push(0.99, 0);
+    first.ticks.tick();
+    first.monthly.stop();
+    expect(new LeagueStore(db, first.ticks.now).readCheckpoint()?.normalStreaks).toEqual([{ league: 1, normalStreak: 2 }]);
+
+    draws.push(0.30, (ARENA_LAYOUT_IDS.indexOf("rainFront") + 0.5) / ARENA_LAYOUT_IDS.length);
+    const second = startLeague({ db, ticks: first.ticks, random });
+    expect(second.monthly.live(1).board.layout?.id).toBe("rainFront");
+    draws.push(0.30, 0);
+    nextDay(second);
+    expect(second.monthly.live(1).board.layout).toBeUndefined();
+    expect(second.monthly.live(1).board.ruleSetId).toBe("standard");
+    second.monthly.stop();
+  });
+
   test("a clean stop writes the checkpoint; the start resumes the day with each tank's points and counts", () => {
     const db = memoryDatabase();
     const first = startLeague({ db });

@@ -5,6 +5,7 @@ import { canThrow, ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, ruleSet, throwRange, 
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
 import { paths } from "../app/route.ts";
+import { ArenaBoard } from "../board/ArenaBoard.tsx";
 import { CATALOGUE_SECTIONS, placeFromSearch, searchWithPlace, type CatalogueSection } from "./catalogue.tsx";
 import { CatalogueView } from "./CataloguePage.tsx";
 import { ULTIMATE_IDS } from "@game/engine";
@@ -105,6 +106,20 @@ describe("catalogue scenes follow the arena's rules", () => {
     expect(source).toMatchObject({ id: "you", score: 16, water: 0 });
     expect(targets.map(({ score }) => score)).toEqual(Array(8).fill(-2));
     expect(steps[keyStep + 1]!.snapshot.bots[0]?.water).toBe(ruleSet("standard").waterRefillPerTick);
+  });
+
+  test("Smoke draws a bent jet, splashes the neighbour and gives the smoked tank the point", () => {
+    const { steps, keyStep } = ULTIMATE_SCENES.smoke;
+    const { snapshot, throws, fires } = steps[keyStep]!;
+    expect(snapshot.bots.map(({ id, score, wasHit }) => [id, score, wasHit])).toEqual([
+      ["you", 1, false], ["a", 0, false], ["b", -1, true],
+    ]);
+    const afterMove = { ...snapshot, bots: snapshot.bots.map((bot) => bot.id === "b" ? { ...bot, x: 4 } : bot) };
+    const html = renderToStaticMarkup(<ArenaBoard snapshot={afterMove} throws={throws} fires={fires} names={{}} highlightId="you" tickMs={900} />);
+    expect(html).toContain('data-ultimate-smoke="you"');
+    expect(html).toMatch(/data-throw="deflected".*?<path d="M[^"]+Q[^"]+ 35 14\.2Q[^"]+"/);
+    expect(html).toContain('data-mark="hit" transform="translate(35 24.2)"');
+    expect(html).toMatch(/transform="translate\(38 [^"]+"[^>]*><text[^>]*>\+1<\/text>/);
   });
 
   test("the Whirlwind scene shows four right turns and clears the effect on the last", () => {

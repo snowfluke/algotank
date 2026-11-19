@@ -40,9 +40,9 @@
 // uses it in any league or another account fixed it this month, so a month close that moves
 // tanks between leagues cannot bring two tanks of one name together.
 //
-// Restart: the checkpoint (league-store.ts) holds the day and per seat today's points, whether
-// the day counts and today's statistics (K2). Lost and named: positions, water, running step
-// sequences, and after a crash up to one minute of points and statistics. A quit and a day close
+// Restart: the checkpoint (league-store.ts) holds the day, each league's normal weather streak
+// and each seat's points, whether the day counts and statistics (K2). Positions, water and running
+// step sequences are lost, and a crash can lose up to one minute of changes. A quit and a day close
 // are saved at once. Statistics: a quit drops the seat's, a new seat starts at zero, a new day
 // starts every seat at zero, and only the owner's /api/monthly/me carries them.
 
@@ -243,14 +243,18 @@ export class MonthlyLeagues {
 
   private checkpointOf(): Checkpoint {
     const tanks = [...this.days.values()].flatMap((day) => day.standings().map(({ id, points, counts }) => ({ seatId: id, points, counts, stats: day.statsOf(id) })));
-    return { ...this.today, tanks };
+    const normalStreaks = [...this.days.values()].flatMap((day) => {
+      const normalStreak = day.normalWeatherStreak();
+      return normalStreak === 0 ? [] : [{ league: day.league, normalStreak }];
+    });
+    return { ...this.today, tanks, ...(normalStreaks.length === 0 ? {} : { normalStreaks }) };
   }
 
   private ticksLeft(): number {
     return Math.max(1, Math.ceil((this.today.endsAt - this.options.now()) / this.options.tickMs));
   }
 
-  /** New day rounds for every league. With a checkpoint each seat gets its points and "counts"; without one, 0 points and counts. */
+  /** Start each league's day round, restoring its weather streak and each seat's record from the checkpoint. */
   private openDay(checkpoint: Checkpoint | null): void {
     this.days.clear();
     for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, new LeagueDay(league, this.options.random, this.options.now));
@@ -266,7 +270,7 @@ export class MonthlyLeagues {
           const saved = checkpoint?.tanks.find((t) => t.seatId === seat.seatId);
           return { tank: dayTankOf(seat), points: saved?.points ?? 0, counts: checkpoint === null ? true : (saved?.counts ?? false), stats: saved?.stats };
         });
-      day.start(tanks, ticksLeft);
+      day.start(tanks, ticksLeft, checkpoint?.normalStreaks?.find((entry) => entry.league === league)?.normalStreak ?? 0);
     }
   }
 

@@ -13,8 +13,8 @@ const WATER = "var(--color-water)";
 const OUTLINE = "var(--color-tank-outline)";
 const WHITE = "var(--color-panel)";
 
-export function JetShape({ jet, motion = "" }: { jet: Jet; motion?: string }) {
-  const d = jetPath(jet);
+export function JetShape({ jet, continuation, motion = "" }: { jet: Jet; continuation?: Jet; motion?: string }) {
+  const d = jetPath(jet, continuation);
   return (
     // pathLength 1 lets the motion draw the jet with dash values that fit every length.
     <g className={motion} strokeLinecap="round" fill="none" strokeDasharray="1 2" strokeDashoffset={0}>

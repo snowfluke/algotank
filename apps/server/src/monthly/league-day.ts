@@ -53,7 +53,7 @@
 
 import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS, ultimatesOn } from "@game/arena";
 import type { Clock } from "../timers.ts";
@@ -114,10 +114,9 @@ export interface LeagueTurn extends TickResult {
 /** A seat that makes the seated tanks more than this many times the board's tanks rebuilds the round at once. */
 export const BOARD_GROWTH = 1.5;
 
-/** The tanks a new round's board is sized for: the seated tanks, and at least MONTHLY_BOARD_MIN_TANKS. */
 /**
- * The arena conditions a monthly round draws from (owner, 2026-11-16): the ones under which the
- * presets play about equal, every preset within 40 points a day of the field mean, measured with
+ * The single conditions originally chosen on 2026-11-16 kept every preset within 40
+ * points a day of the field mean, measured with
  * 4 tanks of each of the 7 designed presets on one board, the same 24 seeded days for every
  * condition (paired runs, standard error 3 to 6) and then 16 other days. Points a day against the
  * field mean, worst preset each way, 24 days (hold-out of 16 days):
@@ -126,15 +125,16 @@ export const BOARD_GROWTH = 1.5;
  * - dry-spell: item-hunter +25, picker and dry-hunter -18 (+24, -19). No tank grabs items there.
  * - arms-length: picker -29, item-hunter +28 (dry-hunter -38, item-hunter +34).
  * - open-field: item-hunter +26, dry-hunter -20 (+30, -31). A square is about 14 px wide on a phone.
- * Left out: downpour (evader +129, dry-hunter -113, picker -109, ambusher +47, item-hunter +46, 24
+ * Left out at the time: downpour (evader +129, dry-hunter -113, picker -109, ambusher +47, item-hunter +46, 24
  * days). Giving the Picker and the Dry hunter a chase of the nearest tank when none holds less water,
  * a throw while they refill, and no grab rule for the Evader there did not bring it in (12 days).
  * Before the grab rules of presets.ts the same days gave item-hunter +56 and evader -40 in standard,
  * and item-hunter +126 and evader -63 in open-field.
  */
-// Owner, 2026-11-19 (87-hybrid-arenas.md): each layout gets one place in the same draw.
-export const MONTHLY_CONDITIONS: readonly ArenaConditionId[] = ["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field", ...ARENA_LAYOUT_IDS];
+// Owner, 2026-11-19 (87-hybrid-arenas.md): all six single conditions share the normal draw.
+export const MONTHLY_CONDITIONS = RULE_SET_IDS;
 
+/** The tanks a new round's board is sized for: the seated tanks, and at least MONTHLY_BOARD_MIN_TANKS. */
 export function boardTanksFor(seated: number): number {
   return Math.max(MONTHLY_BOARD_MIN_TANKS, seated);
 }
@@ -150,6 +150,7 @@ export class LeagueDay {
   private readonly seated = new Map<PlayerId, Seated>();
   private bots: LeagueBot[] = [];
   private freshStartCredit = 0;
+  private normalStreak = 0;
   private pendingWeather: ArenaConditionId | undefined;
   /** The tanks the round's board is sized for. */
   private boardFor = boardTanksFor(0);
@@ -159,7 +160,7 @@ export class LeagueDay {
     private readonly random: Random = Math.random,
     private readonly now: Clock,
     // The balance script pairs round seeds and holds one condition for each run.
-    private readonly field: { readonly seed: () => number; readonly conditions: readonly ArenaConditionId[] } = { seed: newSeed, conditions: MONTHLY_CONDITIONS },
+    private readonly field: { readonly seed: () => number; readonly conditions?: readonly ArenaConditionId[] } = { seed: newSeed },
   ) {}
 
   /**
@@ -196,8 +197,21 @@ export class LeagueDay {
   }
 
   private drawCondition(): ArenaConditionId {
-    const { conditions } = this.field;
+    // The balance script fixes a condition for its paired runs.
+    const fixed = this.field.conditions;
+    if (fixed !== undefined) return fixed[Math.floor(this.random() * fixed.length)] ?? STANDARD_RULE_SET_ID;
+
+    // The odds rise after each pair of normal draws, including repeats (87-hybrid-arenas.md, owner 2026-11-19).
+    const hybridChance = Math.min(100, 20 + 20 * Math.floor(this.normalStreak / 2));
+    const hybrid = this.random() * 100 < hybridChance;
+    this.normalStreak = hybrid ? 0 : this.normalStreak + 1;
+    const conditions = hybrid ? ARENA_LAYOUT_IDS : MONTHLY_CONDITIONS;
     return conditions[Math.floor(this.random() * conditions.length)] ?? STANDARD_RULE_SET_ID;
+  }
+
+  /** Consecutive normal draws, saved so a restart draws at the same odds. */
+  normalWeatherStreak(): number {
+    return this.normalStreak;
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */
@@ -358,8 +372,9 @@ export class LeagueDay {
    * A new round with all these tanks at once, then one draw of the bots: a new day, a restart and
    * a rebuild. Seating them one by one would make the first draw see one tank and always add a bot.
    */
-  start(tanks: readonly { readonly tank: DayTank; readonly points: number; readonly counts: boolean; readonly stats: TankStats | undefined }[], ticksLeft: number): void {
+  start(tanks: readonly { readonly tank: DayTank; readonly points: number; readonly counts: boolean; readonly stats: TankStats | undefined }[], ticksLeft: number, normalStreak = this.normalStreak): void {
     if (this.round !== null) throw new Error(`League ${this.league} already has a round.`);
+    this.normalStreak = normalStreak;
     if (tanks.length === 0) return;
     const round = this.newRound(tanks.length, ticksLeft);
     this.round = round;

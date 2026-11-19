@@ -126,7 +126,7 @@ Owner, 2026-11-16: "randomize the arena condition each reshuffle". The round no 
 
 | Rule | Decision |
 |---|---|
-| When | Every 333 turns (`RESHUFFLE_TURNS`), the league draws a condition from `MONTHLY_CONDITIONS`, each as likely. A draw of the condition that plays now changes nothing. A new day, a restart and a rebuild draw one as before. |
+| When | Every 333 turns (`RESHUFFLE_TURNS`), the league first draws normal or hybrid by its streak, then picks uniformly within that group (87-hybrid-arenas.md, "Frequency"). A repeat leaves the board as it is and still updates the streak. A new day, a restart and a rebuild also draw. The checkpoint carries the streak on a restart, and a new day starts at zero. |
 | Tanks | They keep their squares, points, statistics, tie ranks and running step sequences. Water above the new condition's limit is cut to the limit. |
 | Lapangan luas | It needs the larger board. Into Lapangan luas, the board grows on its right and bottom edges, and the tanks keep their squares. Out of it, the board shrinks back; a tank outside the new board takes a tunnel (a fresh start), and an item outside it is removed. |
 | Stream | A change sends one `state`, which keeps the turn number, so the page does not count it as a reshuffle. |

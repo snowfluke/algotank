@@ -38,7 +38,9 @@ interface Pose {
   readonly waiting?: WaitingItems;
 }
 
-type Shot = readonly [from: SceneTankId, to: SceneTankId, outcome: "hit" | "miss" | "blocked" | "dry" | "dodged", bucket?: true];
+type Shot =
+  | readonly [from: SceneTankId, to: SceneTankId, outcome: "hit" | "miss" | "blocked" | "dry" | "dodged", bucket?: true]
+  | readonly [from: SceneTankId, to: SceneTankId, outcome: "deflected", neighbour: SceneTankId, turn: number];
 
 interface Turn {
   readonly tanks: Partial<Record<SceneTankId, Pose>>;
@@ -74,17 +76,21 @@ function tank(id: SceneTankId, pose: Pose, ruleSetId: RuleSetId, hit: boolean): 
 
 function scene(ruleSetId: RuleSetId, width: number, height: number, turns: readonly Turn[], keyStep: number, ultimate?: UltimateId): Scene {
   const steps = turns.map((turn, index): SceneStep => {
-    const throws = (turn.shots ?? []).map(([from, to, outcome, bucket]): ThrowEvent => {
+    const throws = (turn.shots ?? []).map(([from, to, outcome, extra, turnBy]): ThrowEvent => {
       const a = turn.tanks[from];
       const b = turn.tanks[to];
       if (a === undefined || b === undefined) throw new Error(`A shot of a scene names a tank that is not on the board: ${from} at ${to}.`);
       const distance = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
       if (outcome === "dry" || outcome === "dodged") return { throwerId: from, outcome, targetId: to, distance };
       const hitChance = b.active?.kind === "smoke" ? Math.floor(60 / ULTIMATE_RULES.smoke.chanceDivisor) : 60;
-      return { throwerId: from, outcome, targetId: to, distance, hitChance, ...(bucket === true ? { bucket } : {}) };
+      if (outcome === "deflected") {
+        return { throwerId: from, outcome, targetId: to, distance, hitChance, deflectedTo: extra, deflectedTurn: turnBy, deflection: "hit" };
+      }
+      return { throwerId: from, outcome, targetId: to, distance, hitChance, ...(extra === true ? { bucket: true } : {}) };
     });
     if (turn.fire?.kind === "dash") throws.push(turn.fire.shot);
-    const hitIds = new Set(throws.filter((t) => t.outcome === "hit").map((t) => (t.outcome === "hit" ? t.targetId : "")));
+    const hitIds = new Set(throws.flatMap((shot) =>
+      shot.outcome === "hit" ? [shot.targetId] : shot.outcome === "deflected" && shot.deflection === "hit" ? [shot.deflectedTo] : []));
     const bots = SCENE_TANKS.flatMap<BotState>((id) => {
       const pose = turn.tanks[id];
       if (pose === undefined) return [];
@@ -271,14 +277,14 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
   ], 1, "dash"),
   // The smoke comes up on a turn of its own, and the shots meet it after (owner, 2026-11-19: "active first then the hit").
   smoke: scene("standard", 5, 3, [
-    { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" } } },
+    { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" }, b: { x: 3, y: 2, dir: "N" } } },
     {
-      tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 15 } }, a: { x: 0, y: 1, dir: "E" } },
+      tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 15 } }, a: { x: 0, y: 1, dir: "E" }, b: { x: 3, y: 2, dir: "N" } },
       fire: { botId: "you", kind: "smoke", at: { x: 3, y: 1 } },
     },
-    { tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 14 } }, a: { x: 0, y: 1, dir: "E", water: 6 } }, shots: [["a", "you", "miss"]] },
-    { tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 13 } }, a: { x: 0, y: 1, dir: "E", water: 3 } }, shots: [["a", "you", "miss"]] },
-    { tanks: { you: { x: 3, y: 1, dir: "W", score: -1, active: { kind: "smoke", turnsLeft: 12 } }, a: { x: 0, y: 1, dir: "E", score: 1, water: 0 } }, shots: [["a", "you", "hit"]] },
+    { tanks: { you: { x: 3, y: 1, dir: "W", score: 1, active: { kind: "smoke", turnsLeft: 14 } }, a: { x: 0, y: 1, dir: "E", water: 6 }, b: { x: 3, y: 2, dir: "N", score: -1 } }, shots: [["a", "you", "deflected", "b", 2]] },
+    { tanks: { you: { x: 3, y: 1, dir: "W", score: 1, active: { kind: "smoke", turnsLeft: 13 } }, a: { x: 0, y: 1, dir: "E", water: 3 }, b: { x: 3, y: 2, dir: "N", score: -1 } }, shots: [["a", "you", "miss"]] },
+    { tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 12 } }, a: { x: 0, y: 1, dir: "E", score: 1, water: 0 }, b: { x: 3, y: 2, dir: "N", score: -1 } }, shots: [["a", "you", "hit"]] },
   ], 2, "smoke"),
   splash: scene("standard", 3, 3, [
     { tanks: { you: { x: 1, y: 1, dir: "N" }, ...RING_TANKS } },

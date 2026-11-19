@@ -4,7 +4,23 @@ Owner, 2026-11-19, on the proposal of four layouts: "i approve all of it, all la
 
 ## Scope
 
-The monthly arena only. A hybrid layout is one more entry in the monthly condition draw (`MONTHLY_CONDITIONS`), so a weather change (77-monthly-league.md, "Weather change") can draw a layout like any single condition. Rooms, practice and test matches keep single conditions. They can get the layouts later.
+The monthly arena only. A weather change can draw a hybrid layout or a single condition (77-monthly-league.md, "Weather change"). Rooms, practice and test matches keep single conditions. They can get the layouts later.
+
+## Frequency
+
+Owner, 2026-11-19: "for every two random arena goes to normal arena condition type, increase the likelihood the next arena is hybrid type. Reset the chance after it showed." The owner chose a 20% starting chance and an increase of 20 percentage points after every two consecutive normal draws.
+
+| Consecutive normal draws before this draw | Chance of a hybrid layout |
+|---|---:|
+| 0–1 | 20% |
+| 2–3 | 40% |
+| 4–5 | 60% |
+| 6–7 | 80% |
+| 8 or more | 100% |
+
+First draw the group, then pick uniformly from its four layouts or six single conditions. The six include Downpour, which was outside the earlier monthly draw. A repeat of the current condition counts as a draw. A hybrid draw resets the streak as soon as it is drawn, even if a Dash delays applying the weather.
+
+Each league tracks its own streak for the day. The first draw of a new day uses 20%. Rebuilds keep the streak. A restart resumes the streak in the last checkpoint and uses it for the new round's draw. Older checkpoints start at zero.
 
 ## Areas
 

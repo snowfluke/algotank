@@ -74,6 +74,16 @@ describe("describeDecision", () => {
     expect(say(decision({}), dry).text).toEndWith("My water was too low, so nothing came out.");
   });
 
+  test("the shooter sees that smoke deflected the shot in both languages", () => {
+    const throwEvent: ThrowEvent = {
+      throwerId: "p", outcome: "deflected", targetId: "q", distance: 1, hitChance: 22,
+      deflectedTo: "r", deflectedTurn: 2, deflection: "hit",
+    };
+    expect(say(decision({}), throwEvent).text).toEndWith("Smoke deflected my shot.");
+    expect(describeDecision({ tick: 0, decision: decision({}), throwEvent }, strategy, vocabularyId, liveId.feed).text)
+      .toEndWith("Kabut membelokkan tembakanku.");
+  });
+
   test("an item's part in the turn is said: a blocked shot, a bucket hit, and a dizzy tank's bottom-up reading", () => {
     const blocked: ThrowEvent = { throwerId: "p", outcome: "blocked", targetId: "q", distance: 1, hitChance: 90 };
     const bucket: ThrowEvent = { throwerId: "p", outcome: "hit", targetId: "q", distance: 1, hitChance: 90, bucket: true };

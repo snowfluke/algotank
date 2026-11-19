@@ -33,7 +33,8 @@ export const ULTIMATE_RULES = {
   firstReadyTurn: 8,
   rechargeTurns: 40,
   dash: { squares: 3, triggerMinDistance: 2, triggerMaxDistance: 4, aimedAtMe: 1, points: 2 },
-  smoke: { turns: 15, aimedAtMe: 1, chanceDivisor: 4 },
+  // Owner, 2026-11-19 (85-ultimates.md): a shot stopped by smoke can turn on a neighbour.
+  smoke: { turns: 15, aimedAtMe: 1, chanceDivisor: 4, deflectChance: 0.25 },
   // Owner, 2026-11-18 (85-ultimates.md): more points per hit, with the whole tank of water.
   splash: { reach: 1, triggerTanks: 2, points: 2, waterAfter: 0 },
   fullTank: { freeShots: 3 },

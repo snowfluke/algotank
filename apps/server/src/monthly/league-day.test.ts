@@ -1,11 +1,25 @@
 // The bot draw of a league's day round (league-day.ts, "Bot rule"), through its public methods.
 import { describe, expect, test } from "bun:test";
 import { plainTankLook, ULTIMATES_FROM } from "@game/arena";
-import { ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, parseStrategy, PRESETS, ruleSet, type ArenaConditionId, type Strategy, type UltimateId } from "@game/engine";
+import { ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, createRng, isArenaLayoutId, parseStrategy, PRESETS, ruleSet, waterCapacityOf, type ArenaConditionId, type Strategy, type UltimateId } from "@game/engine";
 import { LeagueDay, MONTHLY_CONDITIONS, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
-const drawFor = (id: ArenaConditionId) => (MONTHLY_CONDITIONS.indexOf(id) + 0.5) / MONTHLY_CONDITIONS.length;
+function weatherDraws() {
+  let pending: number[] = [];
+  let count = 0;
+  return {
+    set(id: ArenaConditionId, odds = isArenaLayoutId(id) ? 0 : 0.99) {
+      const group: readonly ArenaConditionId[] = isArenaLayoutId(id) ? ARENA_LAYOUT_IDS : MONTHLY_CONDITIONS;
+      pending = [odds, (group.indexOf(id) + 0.5) / group.length];
+    },
+    random() {
+      count++;
+      return pending.shift() ?? 0;
+    },
+    count: () => count,
+  };
+}
 const botsOf = (day: LeagueDay) => day.view(1000).tanks.filter((t) => t.isBot);
 const waiter = parseStrategy({ ultimate: "fullTank", modes: [{ id: "main", name: "Wait", rules: [], fallback: { action: "wait", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
 
@@ -104,7 +118,7 @@ describe("the fresh start rotation", () => {
         stats: undefined,
       })), turns);
       const visits = new Map<string, number[]>(day.view(turns).board.bots.map(({ id }) => [id, []]));
-      const water = ruleSet(day.view(turns).board.ruleSetId).waterCapacity;
+      const water = waterCapacityOf(day.view(turns).board);
       for (let i = 0; i < turns; i++) {
         const turn = day.step();
         if (turn === null) throw new Error("the round stopped early");
@@ -133,22 +147,61 @@ describe("the fresh start rotation", () => {
 
 describe("the arena condition", () => {
   const two = [tank(1), tank(2)].map((t) => ({ tank: t, points: 0, counts: true, stats: undefined }));
-  const conditionWith = (draw: number, now = 0) => {
-    const day = new LeagueDay(1, () => draw, () => now);
+  const conditionWith = (id: ArenaConditionId, now = 0) => {
+    const draw = weatherDraws();
+    draw.set(id);
+    const day = new LeagueDay(1, draw.random, () => now);
     day.start(two, 1000);
     return day.view(1000).board;
   };
 
-  test("each single condition and layout takes one equal slot in the monthly draw", () => {
-    const drawn = MONTHLY_CONDITIONS.map((id) => arenaConditionOf(conditionWith(drawFor(id))));
-    expect(drawn).toEqual(["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field", ...ARENA_LAYOUT_IDS]);
-    expect(arenaConditionOf(conditionWith(0.99))).toBe("hills");
+  test("all six normal conditions and all four layouts share equal odds within their group", () => {
+    expect(MONTHLY_CONDITIONS).toHaveLength(6);
+    expect(ARENA_LAYOUT_IDS).toHaveLength(4);
+    const day = new LeagueDay(1, createRng(8237).next, () => 0, { seed: () => 10 });
+    const totals = new Map<ArenaConditionId, number>();
+    day.start(two, 1000);
+    for (let i = 0; i < 4000; i++) {
+      day.rebuild(1000);
+      const id = arenaConditionOf(day.view(1000).board);
+      totals.set(id, (totals.get(id) ?? 0) + 1);
+    }
+    for (const group of [MONTHLY_CONDITIONS, ARENA_LAYOUT_IDS]) {
+      const mean = group.reduce((sum, id) => sum + (totals.get(id) ?? 0), 0) / group.length;
+      for (const id of group) expect(Math.abs((totals.get(id) ?? 0) / mean - 1), id).toBeLessThan(0.15);
+    }
+  });
+
+  test("hybrid odds rise after each pair of normal draws and return to 20 percent after a hybrid", () => {
+    const draw = weatherDraws();
+    const day = new LeagueDay(1, draw.random, () => 0);
+    for (const [streak, chance] of [20, 20, 40, 40, 60, 60, 80, 80, 100].entries()) {
+      const odds = Math.min(chance / 100, 0.999);
+      draw.set(chance === 100 ? "fourQuarters" : "standard", odds);
+      if (streak === 0) day.start(two, 1000);
+      else day.rebuild(1000);
+      expect(arenaConditionOf(day.view(1000).board)).toBe(chance === 100 ? "fourQuarters" : "standard");
+      expect(day.normalWeatherStreak()).toBe(chance === 100 ? 0 : streak + 1);
+
+      // A draw just below the threshold also checks that the real odds are not lower.
+      const probe = new LeagueDay(1, draw.random, () => 0);
+      draw.set("fourQuarters", (chance - 0.1) / 100);
+      probe.start(two, 1000, streak);
+      expect(arenaConditionOf(probe.view(1000).board)).toBe("fourQuarters");
+    }
+    draw.set("standard", 0.20);
+    day.rebuild(1000);
+    expect(day.normalWeatherStreak()).toBe(1);
+    draw.set("eyeOfStorm", 0.199);
+    day.rebuild(1000);
+    expect(arenaConditionOf(day.view(1000).board)).toBe("eyeOfStorm");
+    expect(day.normalWeatherStreak()).toBe(0);
   });
 
   test("each layout can start a new round on either side of the ultimates release gate", () => {
     for (const layout of ARENA_LAYOUT_IDS) {
-      const before = conditionWith(drawFor(layout), ULTIMATES_FROM - 1);
-      const after = conditionWith(drawFor(layout), ULTIMATES_FROM);
+      const before = conditionWith(layout, ULTIMATES_FROM - 1);
+      const after = conditionWith(layout, ULTIMATES_FROM);
       expect(arenaConditionOf(before)).toBe(layout);
       expect(arenaConditionOf(after)).toBe(layout);
       expect(before.bots[0]?.ultimate).toBeUndefined();
@@ -157,36 +210,36 @@ describe("the arena condition", () => {
   });
 
   test("a rebuild draws again", () => {
-    let draw = 0.01;
-    const day = new LeagueDay(1, () => draw, () => 0);
+    const draw = weatherDraws();
+    draw.set("standard");
+    const day = new LeagueDay(1, draw.random, () => 0);
     day.start(two, 1000);
     expect(arenaConditionOf(day.view(1000).board)).toBe("standard");
-    draw = 0.99;
+    draw.set("hills");
     day.rebuild(1000);
     expect(arenaConditionOf(day.view(1000).board)).toBe("hills");
   });
 
   test("draws once on each weather turn and leaves the round alone when the draw repeats", () => {
-    let draw = 0;
-    let draws = 0;
-    const day = new LeagueDay(1, () => {
-      draws++;
-      return draw;
-    }, () => 0);
+    const draw = weatherDraws();
+    draw.set("standard");
+    const day = new LeagueDay(1, draw.random, () => 0);
     const total = 2 * RESHUFFLE_TURNS + 1;
     day.start(two, total);
-    draws = 0;
+    const drawsBefore = draw.count();
     for (let i = 1; i < RESHUFFLE_TURNS; i++) expect(day.step()?.weatherChanged).toBe(false);
-    expect(draws).toBe(0);
+    expect(draw.count()).toBe(drawsBefore);
+    draw.set("standard");
     expect(day.step()?.weatherChanged).toBe(false);
-    expect(draws).toBe(1);
+    expect(draw.count()).toBe(drawsBefore + 2);
+    expect(day.normalWeatherStreak()).toBe(2);
     expect(day.view(total).board).toMatchObject({ tick: RESHUFFLE_TURNS, ticksTotal: total, ruleSetId: "standard" });
 
-    draw = drawFor("dry-spell");
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    draw.set("dry-spell");
     const turn = day.step();
     expect(turn?.weatherChanged).toBe(true);
-    expect(draws).toBe(2);
+    expect(draw.count()).toBe(drawsBefore + 4);
     const board = day.view(total).board;
     expect(board).toMatchObject({ tick: turn?.snapshot.tick, ticksTotal: total, ruleSetId: "dry-spell" });
     const scores = (bots: typeof board.bots) => Object.fromEntries(bots.map(({ id, score }) => [id, score]));
@@ -195,15 +248,17 @@ describe("the arena condition", () => {
   });
 
   test("weather can enter a layout and a repeat keeps its map and rain clock", () => {
-    let draw = 0;
-    const day = new LeagueDay(1, () => draw, () => 0);
+    const draw = weatherDraws();
+    draw.set("standard");
+    const day = new LeagueDay(1, draw.random, () => 0);
     const total = 2 * RESHUFFLE_TURNS + 1;
     day.start(two, total);
-    draw = drawFor("rainFront");
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    draw.set("rainFront");
     expect(day.step()?.weatherChanged).toBe(true);
     expect(day.view(total).board.layout).toEqual({ id: "rainFront", areas: [], firstColumn: 0 });
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    draw.set("rainFront");
     expect(day.step()?.weatherChanged).toBe(false);
     expect(day.view(total).board.layout).toEqual({ id: "rainFront", areas: [], firstColumn: 11 });
   });
@@ -235,11 +290,12 @@ describe("ultimates in a running league", () => {
   });
 
   test("weather keeps charge and active effects through the new state", () => {
-    let draw = 0;
-    const day = new LeagueDay(1, () => draw, () => ULTIMATES_FROM);
+    const draw = weatherDraws();
+    draw.set("standard");
+    const day = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
     day.start(seats, total);
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
-    draw = drawFor("dry-spell");
+    draw.set("dry-spell");
 
     const turn = day.step();
     expect(turn?.weatherChanged).toBe(true);
@@ -255,12 +311,13 @@ describe("ultimates in a running league", () => {
   });
 
   test("weather enters and leaves Rain front with ultimates on and preserves each tank's charge and effect", () => {
-    let draw = drawFor("standard");
-    const day = new LeagueDay(1, () => draw, () => ULTIMATES_FROM);
+    const draw = weatherDraws();
+    draw.set("standard");
+    const day = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
     day.start(seats, total);
     for (const [condition, previous] of [["rainFront", "standard"], ["standard", "rainFront"]] as const) {
-      draw = drawFor(condition);
       for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+      draw.set(condition);
       const turn = day.step()!;
       expect(turn.weatherChanged).toBe(true);
       expect(arenaConditionOf(turn.snapshot)).toBe(previous);
@@ -282,13 +339,9 @@ describe("ultimates in a running league", () => {
   ] as const) {
     const shrink = condition !== null;
     test(`Dash defers ${tunnel}`, () => {
-      let draw = 0;
-      let first = true;
-      const day = new LeagueDay(1, () => {
-        const result = first && shrink ? drawFor("open-field") : draw;
-        first = false;
-        return result;
-      }, () => ULTIMATES_FROM);
+      const draw = weatherDraws();
+      draw.set(shrink ? "open-field" : "standard");
+      const day = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
       day.start(seats, total);
       const scheduled = shrink ? RESHUFFLE_TURNS : Math.ceil(RESHUFFLE_TURNS / seats.length);
       for (let i = 1; i < scheduled; i++) day.step();
@@ -304,14 +357,15 @@ describe("ultimates in a running league", () => {
           : { ...bot, x: 0, y: 1 }) },
       });
 
-      if (condition !== null) draw = drawFor(condition);
+      if (condition !== null) draw.set(condition);
       const dash = day.step();
       expect(dash?.fires).toContainEqual(expect.objectContaining({ botId: id, kind: "dash" }));
       expect(dash?.freshStarts.some((fresh) => fresh.id === id)).toBe(false);
       expect(dash?.weatherChanged).toBe(false);
 
-      draw = 0.5; // A deferred weather change applies the original draw.
+      const drawsBefore = draw.count();
       const tunnel = day.step();
+      expect(draw.count()).toBe(drawsBefore); // A deferred weather change applies the original draw.
       expect(tunnel?.fires?.some((fire) => fire.botId === id && fire.kind === "dash")).toBe(false);
       expect(tunnel?.freshStarts).toContainEqual(expect.objectContaining({ id }));
       expect(tunnel?.weatherChanged).toBe(shrink);

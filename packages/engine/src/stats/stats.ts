@@ -94,9 +94,11 @@ export function turnsOf(before: Snapshot, result: TickResult): Map<BotId, TankTu
   const hitsOn = new Map<BotId, number>();
   for (const event of result.throws) {
     if (event.outcome === "empty" || event.outcome === "dry") continue;
-    // An umbrella block or a dodge still costs a shot, and it hit nobody.
+    // A deflected shot counts as a miss for the shooter, even when smoke hits another tank.
     shots.set(event.throwerId, event.outcome === "hit" ? "hit" : "miss");
-    if (event.outcome === "hit") hitsOn.set(event.targetId, (hitsOn.get(event.targetId) ?? 0) + 1);
+    const hit = event.outcome === "hit" ? event.targetId
+      : event.outcome === "deflected" && event.deflection === "hit" ? event.deflectedTo : undefined;
+    if (hit !== undefined) hitsOn.set(hit, (hitsOn.get(hit) ?? 0) + 1);
   }
   const turns = new Map<BotId, TankTurn>();
   before.bots.forEach((was, i) => {

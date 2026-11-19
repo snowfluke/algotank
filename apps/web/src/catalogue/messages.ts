@@ -36,7 +36,7 @@ export const en = {
   // what it gives, in at most two sentences. Exact numbers live in 85-ultimates.md.
   ultimates: {
     dash: { name: "Dash", body: "Your tank zooms up to 3 squares ahead and bumps the first tank in front for 2 points. No shot can hit it that turn." },
-    smoke: { name: "Smoke screen", body: "Your tank hides in smoke for 15 turns, so shots hit it only 1 time in 4." },
+    smoke: { name: "Smoke screen", body: "Your tank hides in smoke for 15 turns, so shots hit it only 1 time in 4. A shot the smoke turns away can hit a tank next to yours, and your tank gets 1 point." },
     splash: { name: "Splash ring", body: "Your tank sprays all 8 squares around it and uses up its water. Every tank it hits gives 2 points." },
     fullTank: { name: "Full tank", body: "Your tank fills up with water, and its next 3 shots use no water." },
     mudBomb: { name: "Mud bomb", body: "Your tank throws mud at the first tank in line. That tank and every tank next to it get stuck for 5 turns, and each gives 1 point." },
@@ -70,7 +70,7 @@ export const id: typeof en = {
   nextStep: "Langkah berikutnya",
   ultimates: {
     dash: { name: "Lari kencang", body: "Tankmu melaju hingga 3 petak ke depan dan menabrak tank pertama di depannya untuk 2 poin. Tembakan tidak bisa mengenai tankmu pada giliran itu." },
-    smoke: { name: "Kabut", body: "Tankmu bersembunyi dalam kabut selama 15 giliran, jadi tembakan hanya mengenainya 1 dari 4 kali." },
+    smoke: { name: "Kabut", body: "Tankmu bersembunyi dalam kabut selama 15 giliran, jadi tembakan hanya mengenainya 1 dari 4 kali. Tembakan yang dibelokkan kabut bisa mengenai tank di sebelahmu, dan tankmu mendapat 1 poin." },
     splash: { name: "Percikan", body: "Tankmu menyemprot 8 petak di sekelilingnya sampai airnya habis. Tiap tank yang kena memberi 2 poin." },
     fullTank: { name: "Tangki penuh", body: "Air tankmu terisi penuh, dan 3 tembakan berikutnya tidak memakai air." },
     mudBomb: { name: "Bom lumpur", body: "Tankmu melempar lumpur ke tank pertama di garis tembak. Tank itu dan semua tank di sebelahnya terjebak selama 5 giliran, dan tiap tank memberi 1 poin." },

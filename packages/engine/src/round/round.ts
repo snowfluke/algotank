@@ -392,7 +392,7 @@ export function stepRound(state: RoundState): TickResult {
 interface HitTally {
   readonly landed: ReadonlyMap<BotId, number>;
   readonly taken: ReadonlyMap<BotId, number>;
-  /** The thrower of the last hit on each bot this tick, in resolution order. */
+  /** The tank credited with the last hit on each bot this tick, in resolution order. */
   readonly lastHitBy: ReadonlyMap<BotId, BotId>;
 }
 
@@ -401,15 +401,21 @@ function tallyHits(throws: readonly ThrowEvent[], fires: readonly UltimateFire[]
   const taken = new Map<BotId, number>();
   const lastHitBy = new Map<BotId, BotId>();
   const moveIndex = fires.some(({ kind }) => kind === "splash") ? new Map(order.map((id, i) => [id, i])) : undefined;
-  function add(throwerId: BotId, targetId: BotId): void {
+  const lastHitOrder = moveIndex === undefined ? undefined : new Map<BotId, number>();
+  function add(throwerId: BotId, targetId: BotId, turnId = throwerId): void {
     landed.set(throwerId, (landed.get(throwerId) ?? 0) + 1);
     taken.set(targetId, (taken.get(targetId) ?? 0) + 1);
-    const previous = lastHitBy.get(targetId);
-    if (previous === undefined || moveIndex === undefined || moveIndex.get(throwerId)! > moveIndex.get(previous)!) {
+    const at = moveIndex?.get(turnId);
+    if (at === undefined || at > (lastHitOrder?.get(targetId) ?? -1)) {
       lastHitBy.set(targetId, throwerId);
+      if (at !== undefined) lastHitOrder?.set(targetId, at);
     }
   }
-  for (const event of throws) if (event.outcome === "hit") add(event.throwerId, event.targetId);
+  for (const event of throws) {
+    if (event.outcome === "hit") add(event.throwerId, event.targetId);
+    // Credit the smoked tank, at the point in move order when the original shot went off.
+    if (event.outcome === "deflected" && event.deflection === "hit") add(event.targetId, event.deflectedTo, event.throwerId);
+  }
   for (const fire of fires) {
     if (fire.kind !== "splash") continue;
     for (const square of fire.squares) if (square.outcome === "hit") add(fire.botId, square.targetId);

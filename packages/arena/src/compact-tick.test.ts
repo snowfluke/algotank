@@ -146,7 +146,7 @@ describe("compactTick and expandTick", () => {
     for (const ruleSetId of RULE_SET_IDS) {
       for (const tick of playRound(ruleSetId, 11).ticks) for (const t of tick.throws) seen.add(t.outcome === "hit" && t.bucket === true ? "bucketHit" : t.outcome);
     }
-    expect([...seen].sort()).toEqual(COMPACT_OUTCOMES.filter((outcome) => outcome !== "dodged").sort());
+    expect([...seen].sort()).toEqual(COMPACT_OUTCOMES.filter((outcome) => outcome !== "dodged" && outcome !== "deflected").sort());
   });
 
   test("a dodge uses the appended outcome and carries no hit chance", () => {
@@ -155,6 +155,26 @@ describe("compactTick and expandTick", () => {
     const compact = compactTick(tick, spawn.bots.map((bot) => bot.id));
     expect(compact.throws).toEqual([[0, 6, 1, 2, -1]]);
     expect(expandTick(compact, spawn)).toEqual(tick);
+  });
+
+  test("smoke deflections append the neighbour, impact direction and result only to their own throw rows", () => {
+    const { spawn, ticks } = playRound("standard", 7);
+    const order = spawn.bots.map((bot) => bot.id);
+    const turn: PublicTick = { ...ticks[0]!, throws: [{ throwerId: "p0", targetId: "p1", distance: 2, hitChance: 17, outcome: "miss" }] };
+    const original = compactTick(turn, order);
+    expect(original.throws).toEqual([[0, 2, 1, 2, 17]]);
+    const results = ["hit", "blocked", "dodged"] as const;
+    for (const [index, deflection] of results.entries()) {
+      const tick: PublicTick = { ...turn, throws: [...turn.throws, {
+        throwerId: "p3", targetId: "p4", distance: 3, hitChance: 12, outcome: "deflected", deflectedTo: "p5", deflectedTurn: 6, deflection,
+      }] };
+      const wire = JSON.stringify(compactTick(tick, order));
+      expect(wire).toBe(JSON.stringify({ ...original, throws: [[0, 2, 1, 2, 17], [3, 7, 4, 3, 12, 5, 6, index]] }));
+      expect(expandTick(JSON.parse(wire) as CompactTick, spawn)).toEqual(tick);
+    }
+    for (const row of [[3, 7, 4, 3, 12], [3, 7, 4, 3, 12, 3, 6, 0], [3, 7, 4, 3, 12, 5, 8, 0], [3, 7, 4, 3, 12, 5, 6, 3]]) {
+      expect(() => expandTick({ ...original, throws: [row] }, spawn)).toThrow();
+    }
   });
 
   test("Magnet queues and bucket-first pulls round-trip while legacy ticks still expand", () => {

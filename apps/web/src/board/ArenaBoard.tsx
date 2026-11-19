@@ -18,7 +18,7 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { memo, useEffect, useId, useMemo, useRef } from "react";
 import type { PublicBot, PublicSnapshot } from "@game/arena";
-import { ULTIMATE_RULES, canThrow, rulesAt, waterCapacityOf } from "@game/engine";
+import { POINTS_PER_HIT, ULTIMATE_RULES, canThrow, rulesAt, waterCapacityOf } from "@game/engine";
 import type { BoardItem, BotId, ItemKind, RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { duckMusicUnder } from "../sound/music.ts";
@@ -273,14 +273,32 @@ function ArenaBoardDrawing({ snapshot, terrainTurned = false, throws, fires, tun
   for (const event of throws) {
     // An unknown shooter cannot happen in a snapshot from the engine; skipping keeps the screen alive.
     const shooter = turnBots.get(event.throwerId);
-    if (shooter === undefined || !visible(shooter)) continue;
+    if (shooter === undefined || hidden) continue;
+    if (event.outcome === "deflected") {
+      const shape = shotShape(shooter, event, snapshot);
+      if (shape.kind !== "deflected") continue;
+      const neighbour = turnBots.get(event.deflectedTo);
+      if (visible(shooter) || visible(shape.at) || (neighbour !== undefined && visible(neighbour))) {
+        shots.push({ id: event.throwerId, shape });
+        shooters.add(event.throwerId);
+      }
+      if (event.deflection === "hit") {
+        hitTargets.add(event.deflectedTo);
+        const scored = scores.get(event.targetId);
+        scores.set(event.targetId, { points: (scored?.points ?? 0) + POINTS_PER_HIT, ultimate: true });
+      }
+      continue;
+    }
+    if (!visible(shooter)) continue;
     if (crowd && shooter.id !== highlightId && (event.outcome === "dry" || event.outcome === "empty")) continue;
     // Dash puts its ram in the throws list for scoring. Its own drawing uses the path and plays after the drive.
     if (firesById.get(shooter.id)?.kind !== "dash") {
       shots.push({ id: event.throwerId, shape: shotShape(shooter, event, snapshot) });
       if (event.outcome !== "dry") shooters.add(event.throwerId);
-      if (event.outcome === "hit" && !scores.has(event.throwerId)) {
-        scores.set(event.throwerId, { points: event.bucket === true ? 2 : 1, ultimate: false });
+      if (event.outcome === "hit") {
+        const scored = scores.get(event.throwerId);
+        const points = event.bucket === true ? 2 : POINTS_PER_HIT;
+        scores.set(event.throwerId, { points: (scored?.points ?? 0) + points, ultimate: scored?.ultimate ?? false });
       }
     }
     if (event.outcome === "hit") hitTargets.add(event.targetId);
@@ -452,7 +470,9 @@ function ArenaBoardDrawing({ snapshot, terrainTurned = false, throws, fires, tun
           {shots.map(({ id, shape }) =>
             shape.kind === "dry" ? null : (
               <g key={id} data-throw={shape.kind}>
-                <JetShape jet={shape.jet} motion="ab-jet" />
+                {shape.kind === "deflected"
+                  ? <JetShape jet={shape.jet} continuation={shape.impact.jet} motion="ab-jet" />
+                  : <JetShape jet={shape.jet} motion="ab-jet" />}
               </g>
             ),
           )}
@@ -595,7 +615,7 @@ function ArenaBoardDrawing({ snapshot, terrainTurned = false, throws, fires, tun
         })}
 
         <g key={`marks-${tick}`}>
-          {shots.map(({ id, shape }) => (crowd && id !== highlightId && shape.kind !== "hit" ? null : <ShotMark key={id} shape={shape} />))}
+          {shots.map(({ id, shape }) => (crowd && id !== highlightId && shape.kind !== "hit" && shape.kind !== "deflected" ? null : <ShotMark key={id} shape={shape} />))}
         </g>
 
         {ultimateArt ? (
@@ -700,6 +720,8 @@ const Floor = memo(function Floor({ width, height, ruleSetId, hybrid }: { width:
 /** What the shot left: a splash on the tank that was hit, a puff where a jet landed, or the drops of a dry shot. */
 function ShotMark({ shape }: { shape: ShotShape }) {
   switch (shape.kind) {
+    case "deflected":
+      return <ShotMark shape={shape.impact} />;
     case "hit":
       return (
         <g data-mark="hit" transform={`translate(${shape.splash.x} ${shape.splash.y})`}>

@@ -337,16 +337,19 @@ function resolveUltimate(
 function resolveMagnet(source: Slot, boardItems: Set<BoardItem>, magnets: ReadonlySet<Slot>): MagnetFire {
   const { place } = source;
   const at = { x: place.x, y: place.y };
-  const items = magnetItems(source, boardItems, magnets).map((item): MagnetFire["items"][number] => {
-    boardItems.delete(item);
-    holdItem(place, item.kind);
-    return { kind: item.kind, from: { x: item.x, y: item.y } };
-  });
-  // The bucket joins after the floor pulls and goes straight into the hand (85-ultimates.md, owner 2026-11-18).
+  const floorItems = magnetItems(source, boardItems, magnets);
+  const items: MagnetFire["items"][number][] = [];
+  // The bucket comes first, before the floor pulls (owner, 2026-11-19): a pulled umbrella held in front of it
+  // would keep the bucket waiting until a hit used the umbrella. An item held before the fire keeps its place.
   if (magnetSpace(place) > 0) {
     const kind = ULTIMATE_RULES.magnet.newItem;
     holdItem(place, kind);
     items.push({ kind });
+  }
+  for (const item of floorItems) {
+    boardItems.delete(item);
+    holdItem(place, item.kind);
+    items.push({ kind: item.kind, from: { x: item.x, y: item.y } });
   }
   return { botId: place.id, at, kind: "magnet", items };
 }
@@ -354,9 +357,11 @@ function resolveMagnet(source: Slot, boardItems: Set<BoardItem>, magnets: Readon
 function magnetItems(source: Slot, boardItems: ReadonlySet<BoardItem>, magnets: ReadonlySet<Slot>): BoardItem[] {
   if (boardItems.size === 0) return [];
   const { reach } = ULTIMATE_RULES.magnet;
-  if (magnets.size === 1) return nearestItems(boardItems, source.place, reach, magnetSpace(source.place));
+  // Reserve one slot for the bucket in each Magnet's hand before adding any items.
+  const room = (slot: Slot) => Math.max(0, magnetSpace(slot.place) - 1);
+  if (magnets.size === 1) return nearestItems(boardItems, source.place, reach, room(source));
 
-  const space = new Map([...magnets].map((slot) => [slot, magnetSpace(slot.place)]));
+  const space = new Map([...magnets].map((slot) => [slot, room(slot)]));
   const candidates = [...magnets].flatMap((slot) =>
     nearestItems(boardItems, slot.place, reach, boardItems.size).map((item) => ({ slot, item, distance: chebyshev(slot.place, item) })));
   // Stable sorting keeps move order, then row and column, at equal distances. Reserve for

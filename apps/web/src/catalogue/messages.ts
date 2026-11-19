@@ -42,7 +42,7 @@ export const en = {
     mudBomb: { name: "Mud bomb", body: "Your tank throws mud at the first tank in line. That tank and every tank next to it get stuck for 5 turns, and each gives 1 point." },
     whirlwind: { name: "Whirlwind", body: "Your tank makes every tank within 2 squares spin for 4 turns. Each tank right next to your tank gives 1 point." },
     bigUmbrella: { name: "Big umbrella", body: "Your tank opens a big umbrella that stops the next 3 shots from the front or the sides. Shots from behind still hit." },
-    magnet: { name: "Magnet", body: "Your tank pulls the nearest items within 4 squares, and a new bucket when there is still room. Your tank can hold 3 items." },
+    magnet: { name: "Magnet", body: "Your tank gets a new bucket first, then pulls the nearest items within 4 squares to fill any remaining space. Your tank can hold 3 items." },
   } satisfies Record<UltimateId, UltimateText>,
   /** The links to this page. */
   open: "Open the catalogue",
@@ -76,7 +76,7 @@ export const id: typeof en = {
     mudBomb: { name: "Bom lumpur", body: "Tankmu melempar lumpur ke tank pertama di garis tembak. Tank itu dan semua tank di sebelahnya terjebak selama 5 giliran, dan tiap tank memberi 1 poin." },
     whirlwind: { name: "Angin puyuh", body: "Tankmu membuat semua tank dalam jarak 2 petak berputar selama 4 giliran. Tiap tank tepat di sebelah tankmu memberi 1 poin." },
     bigUmbrella: { name: "Payung besar", body: "Tankmu membuka payung besar yang menahan 3 tembakan berikutnya dari depan atau samping. Tembakan dari belakang tetap kena." },
-    magnet: { name: "Magnet", body: "Tankmu menarik item terdekat dalam jarak 4 petak, dan ember baru kalau masih ada tempat. Tankmu bisa membawa 3 item." },
+    magnet: { name: "Magnet", body: "Tankmu mendapat ember baru dulu, lalu menarik item terdekat dalam jarak 4 petak untuk mengisi tempat yang tersisa. Tankmu bisa membawa 3 item." },
   },
   open: "Buka katalog",
   homeTile: { title: "Katalog", body: "Cari tahu apa yang ditemui tank di arena, dengan adegan pendek untuk masing-masing." },

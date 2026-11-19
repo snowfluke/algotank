@@ -128,7 +128,7 @@ describe("compactTick and expandTick", () => {
     expect(expandTick(compact, spawn)).toEqual(tick);
   });
 
-  test("Magnet queues and pulls round-trip in appended fields while legacy bots keep eight values", () => {
+  test("Magnet queues and bucket-first pulls round-trip while legacy ticks still expand", () => {
     const { spawn, ticks } = playRound("standard", 7);
     const turn = ticks[0]!;
     const tick: PublicTick = {
@@ -137,15 +137,20 @@ describe("compactTick and expandTick", () => {
         ? { ...bot, item: "bucket", itemsWaiting: ["mudBall", "umbrella"] }
         : bot) },
       magnetFires: [{ kind: "magnet", botId: "p0", at: { x: 3, y: 2 }, items: [
-        { kind: "mudBall", from: { x: 3, y: 1 } }, { kind: "umbrella", from: { x: 2, y: 2 } },
+        { kind: "bucket" }, { kind: "mudBall", from: { x: 3, y: 1 } }, { kind: "umbrella", from: { x: 2, y: 2 } },
       ] }],
     };
     const order = spawn.bots.map((bot) => bot.id);
     const wire = JSON.parse(JSON.stringify(compactTick(tick, order))) as CompactTick;
     expect(wire.itemsWaiting).toEqual([[0, 3, 1]]);
-    expect(wire.magnetFires).toEqual([[0, 3, 2, [[3, 3, 1], [1, 2, 2]]]]);
+    expect(wire.magnetFires).toEqual([[0, 3, 2, [[3, 3, 1], [1, 2, 2]], 2]]);
     expect(wire.bots.every((bot) => bot.length === 8)).toBe(true);
     expect(expandTick(wire, spawn)).toEqual({ ...tick, fires: tick.magnetFires! });
+
+    const oldFire = expandTick({ ...wire, magnetFires: [[0, 3, 2, [[3, 3, 1], [1, 2, 2]], 1]] }, spawn).magnetFires?.[0];
+    expect(oldFire?.items).toEqual([
+      { kind: "mudBall", from: { x: 3, y: 1 } }, { kind: "umbrella", from: { x: 2, y: 2 } }, { kind: "bucket" },
+    ]);
 
     const { itemsWaiting: _queue, magnetFires: _fires, ...legacy } = wire;
     const next = expandTick(legacy, tick.snapshot);

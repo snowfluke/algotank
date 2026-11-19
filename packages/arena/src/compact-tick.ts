@@ -26,7 +26,8 @@
 //   items[k]  = [item index, x, y, turns left], the items on the board after the turn.
 //   pickups[k]= [bot index, item index], the items taken on the turn.
 //   itemsWaiting[k] = [bot index, first item index, optional second item index].
-//   magnetFires[k]  = [bot index, x, y, [[item index, source x, source y], ...], optional 1 for the new bucket].
+//   magnetFires[k]  = [bot index, x, y, [[item index, source x, source y], ...], optional bucket marker].
+//                    1 puts the bucket last (or alone), 2 puts it before the floor pulls.
 //   ultimates[k] = [bot index, ultimate index, charge turns, active count, total charge turns].
 //   fires[k] = [bot index, ultimate id, x, y, ...payload] for fires other than Magnet.
 //   The appended fields leave the bot rows at eight values. See ultimate-wire.ts.
@@ -42,7 +43,7 @@ import type { FreshStart, PlayerId, PublicBot, PublicSnapshot, PublicTick } from
 import { compactFire, compactUltimate, expandFire, expandUltimate, hasCompactUltimateFields, type CompactFire, type CompactUltimate } from "./ultimate-wire.ts";
 
 type CompactMagnetFire = readonly [
-  bot: number, x: number, y: number, pulled: readonly (readonly number[])[], newBucket?: 1,
+  bot: number, x: number, y: number, pulled: readonly (readonly number[])[], newBucket?: 1 | 2,
 ];
 
 /** One compact turn. Indexes use spawn order in rooms and the board's pre-turn order in leagues. */
@@ -182,8 +183,8 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
       magnetFires: magnetFires.map(({ botId, at, items }): CompactMagnetFire => {
         const pulled = items.flatMap(({ kind, from }) => from === undefined ? [] : [[indexIn(COMPACT_ITEMS, kind, "item"), from.x, from.y]]);
         const row = [idx(botId), at.x, at.y, pulled] as const;
-        // The new bucket has no floor square (85-ultimates.md, owner 2026-11-18). Keep the floor rows intact.
-        return pulled.length === items.length ? row : [...row, 1];
+        if (pulled.length === items.length) return row;
+        return [...row, pulled.length > 0 && items[0]?.from === undefined ? 2 : 1];
       }),
     }),
     ...(ultimates.length === 0 ? {} : { ultimates }),
@@ -307,15 +308,16 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
     return { botId: botAt(botIndex, "pickup tank").id, item: entry(COMPACT_ITEMS, kind, "item") };
   });
   const magnetFires = compact.magnetFires?.map((values): MagnetFire => {
-    if (values.length !== 4 && (values.length !== 5 || values[4] !== 1)) throw new Error("invalid Magnet fire row");
+    if (values.length !== 4 && (values.length !== 5 || (values[4] !== 1 && values[4] !== 2))) throw new Error("invalid Magnet fire row");
     const [botIndex, x, y, pulled, newBucket] = values;
-    const count = pulled.length + (newBucket ?? 0);
+    const count = pulled.length + Number(newBucket !== undefined);
     if (count > ULTIMATE_RULES.magnet.handSize) throw new Error(`Magnet gained ${count} items`);
     const items = pulled.map((item): MagnetFire["items"][number] => {
       if (item.length !== 3) throw new Error(`a pulled item has ${item.length} values`);
       return { kind: entry(COMPACT_ITEMS, item[0], "item"), from: { x: integer(item[1], "item x"), y: integer(item[2], "item y") } };
     });
     if (newBucket === 1) items.push({ kind: ULTIMATE_RULES.magnet.newItem });
+    if (newBucket === 2) items.unshift({ kind: ULTIMATE_RULES.magnet.newItem });
     return {
       botId: botAt(botIndex, "Magnet tank").id, at: { x: integer(x, "Magnet x"), y: integer(y, "Magnet y") }, kind: "magnet",
       items,

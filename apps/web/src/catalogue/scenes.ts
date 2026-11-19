@@ -257,7 +257,7 @@ const MAGNET_PULLS = [
   { kind: "pinwheel", from: { x: 5, y: 2 } },
 ] as const;
 const MAGNET_BUCKET = { kind: ULTIMATE_RULES.magnet.newItem } as const;
-const MAGNET_HAND = { x: 3, y: 1, dir: "N", item: MAGNET_PULLS[0].kind, waiting: [MAGNET_PULLS[1].kind, MAGNET_BUCKET.kind] } as const;
+const MAGNET_HAND = { x: 3, y: 1, dir: "N", item: MAGNET_BUCKET.kind, waiting: [MAGNET_PULLS[0].kind, MAGNET_PULLS[1].kind] } as const;
 
 export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
   dash: scene("standard", 5, 3, [
@@ -334,7 +334,7 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: MAGNET_PULLS.map(({ kind, from }) => ({ kind, ...from })) },
     {
       tanks: { you: MAGNET_HAND },
-      fire: { botId: "you", kind: "magnet", at: { x: 3, y: 1 }, items: [...MAGNET_PULLS, MAGNET_BUCKET] },
+      fire: { botId: "you", kind: "magnet", at: { x: 3, y: 1 }, items: [MAGNET_BUCKET, ...MAGNET_PULLS] },
     },
     { tanks: { you: MAGNET_HAND } },
   ], 1, "magnet"),

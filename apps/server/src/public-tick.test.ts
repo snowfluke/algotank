@@ -59,7 +59,7 @@ test("the public water is the engine water, and a bot starts with the full tank 
   expect(toPublicTick(last).snapshot.bots.map((b) => b.water)).toEqual(last.snapshot.bots.map((b) => b.water));
 });
 
-test("a Magnet pull reaches both the public turn and the compact wire", () => {
+test("a bucket-first Magnet pull reaches both the public turn and the compact wire", () => {
   const state = createRound({
     seed: 5, ticksTotal: 12, items: true, ultimates: true, survivorsAfterRound: null, ruleSetId: "standard",
     players: ["a", "b"].map((id) => ({ id, strategy })),
@@ -74,14 +74,14 @@ test("a Magnet pull reaches both the public turn and the compact wire", () => {
   const engine = stepRound(state);
   const tick = toPublicTick(engine);
   const wire = toCompactTick(engine);
-  expect(tick.snapshot.bots[0]).toMatchObject({ item: "bucket", itemsWaiting: ["umbrella", "bucket"] });
+  expect(tick.snapshot.bots[0]).toMatchObject({ item: "bucket", itemsWaiting: ["bucket", "umbrella"] });
   expect(tick.snapshot.bots[0]).not.toHaveProperty("itemUses");
   const fire = engine.fires?.[0];
   if (fire?.kind !== "magnet") throw new Error("expected Magnet");
-  expect(fire.items).toEqual([{ kind: "bucket", from: { x: 2, y: 1 } }, { kind: "umbrella", from: { x: 1, y: 2 } }, { kind: "bucket" }]);
+  expect(fire.items).toEqual([{ kind: "bucket" }, { kind: "bucket", from: { x: 2, y: 1 } }, { kind: "umbrella", from: { x: 1, y: 2 } }]);
   expect(tick.magnetFires).toEqual([fire]);
-  expect(wire.magnetFires).toEqual([[0, 2, 2, [[0, 2, 1], [1, 1, 2]], 1]]);
-  expect(wire.itemsWaiting).toEqual([[0, 1, 0]]);
+  expect(wire.magnetFires).toEqual([[0, 2, 2, [[0, 2, 1], [1, 1, 2]], 2]]);
+  expect(wire.itemsWaiting).toEqual([[0, 0, 1]]);
   const { firstReadyTurn, rechargeTurns } = ULTIMATE_RULES;
   expect(tick.snapshot.bots[0]?.ultimate).toEqual({ id: "magnet", kind: "charging", turnsLeft: rechargeTurns, turnsTotal: rechargeTurns });
   expect(wire.ultimates).toEqual([

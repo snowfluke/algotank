@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PublicSnapshot, PublicTick } from "@game/arena";
-import { ULTIMATE_IDS, type UltimateId } from "@game/engine";
+import { ULTIMATE_IDS, type UltimateId, type WaitingItems } from "@game/engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { sceneNames } from "../../catalogue/scenes.ts";
 import { I18nProvider } from "../../i18n/I18nProvider.tsx";
@@ -20,7 +20,7 @@ const MARKS: Readonly<Record<UltimateId, readonly string[]>> = {
   whirlwind: ['data-ultimate-wind=""', 'data-ultimate-area="whirlwind"', 'data-ultimate-caught="c"', 'data-effect="dizzy"', '>+1</text>'],
   // The catalogue opens the umbrella on a turn of its own; the blocked shot comes a turn later (scenes.ts).
   bigUmbrella: ['data-ultimate-active="bigUmbrella"', 'data-ultimate-blocks="3"'],
-  magnet: ['data-ultimate-pull="umbrella"', 'data-ultimate-pull="pinwheel"', 'data-ultimate-drop="bucket"', 'data-held="umbrella"', 'data-ultimate-stack=""', 'data-waiting-item="pinwheel"', 'data-waiting-item="bucket"'],
+  magnet: ['data-ultimate-pull="umbrella"', 'data-ultimate-pull="pinwheel"', 'data-ultimate-drop="bucket"', 'data-held="bucket"', 'data-ultimate-stack=""', 'data-waiting-item="umbrella"', 'data-waiting-item="pinwheel"'],
 };
 
 function renderBoard({ snapshot, throws, fires }: Pick<PublicTick, "snapshot" | "throws" | "fires">): string {
@@ -40,6 +40,39 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
     if (id === "magnet") expect(html).not.toContain('data-ultimate-pull="bucket"');
     // The ram is a contact effect, so the board does not draw its wire throw as a water jet.
     if (id === "dash") expect(html).not.toContain('data-throw="hit"');
+  });
+
+  test("Magnet drops the bucket into the first free slot and animates only the new badges", () => {
+    const tick = ultimateTickFixture("magnet");
+    const fire = tick.fires?.[0];
+    if (fire?.kind !== "magnet") throw new Error("Missing Magnet fire");
+    expect(fire.items[0]).toEqual({ kind: "bucket" });
+    expect(tick.snapshot.bots.find((bot) => bot.id === fire.botId)).toMatchObject({ item: "bucket", itemsWaiting: ["umbrella", "pinwheel"] });
+
+    const emptyHand = renderBoard(tick);
+    expect(emptyHand).toContain('data-ultimate-drop="bucket" transform="translate(31.5 11.7)"');
+    expect(emptyHand).toContain('data-held="bucket"><g class="ue-held"');
+    expect(emptyHand).toContain('class="ue-held" data-waiting-item="umbrella"');
+    expect(emptyHand).toContain('class="ue-held" data-waiting-item="pinwheel"');
+
+    const renderWithHand = (itemsWaiting: WaitingItems, items: typeof fire.items) => renderBoard({
+      ...tick,
+      snapshot: { ...tick.snapshot, bots: tick.snapshot.bots.map((bot) => bot.id === fire.botId
+        ? { ...bot, item: "mudBall", itemsWaiting }
+        : bot) },
+      fires: [{ ...fire, items }],
+    });
+    const oneItem = renderWithHand(["bucket", "pinwheel"], [{ kind: "bucket" }, { kind: "pinwheel", from: { x: 5, y: 2 } }]);
+    expect(oneItem).toContain('data-ultimate-drop="bucket" transform="translate(31.3 14.8)"');
+    expect(oneItem).toContain('data-held="mudBall"><g class="ab-anim ab-item-in"');
+    expect(oneItem).toContain('class="ue-held" data-waiting-item="bucket"');
+    expect(oneItem).toContain('class="ue-held" data-waiting-item="pinwheel"');
+
+    const twoItems = renderWithHand(["umbrella", "bucket"], [{ kind: "bucket" }]);
+    expect(twoItems).toContain('data-ultimate-drop="bucket" transform="translate(31.3 17.6)"');
+    expect(twoItems).toContain('data-held="mudBall"><g class="ab-anim ab-item-in"');
+    expect(twoItems).toContain('<g data-waiting-item="umbrella"');
+    expect(twoItems).toContain('class="ue-held" data-waiting-item="bucket"');
   });
 
   test("splash distinguishes every result carried by the fire", () => {

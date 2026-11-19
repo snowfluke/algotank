@@ -226,13 +226,21 @@ function MagnetIcon({ square }: { readonly square: Square }) {
 }
 
 /** Floor items slide in, and the bucket drops from above because it has no floor square (85-ultimates.md). */
-function MagnetPull({ square, items, waiting }: { readonly square: Square; readonly items: MagnetFire["items"]; readonly waiting: number }) {
+function MagnetPull({ square, items, source }: {
+  readonly square: Square;
+  readonly items: MagnetFire["items"];
+  readonly source: PublicBot | undefined;
+}) {
   const c = at(square);
+  const held = source?.item != null ? 1 : 0;
+  const firstNew = held + (source?.itemsWaiting?.length ?? 0) - items.length;
   return (
     <g>
       {items.map((item, i) => {
         if (item.from === undefined) {
-          const hand = waiting === 0 ? HELD_ITEM_AT : waitingItemAt(waiting - 1);
+          // Older replays place the new bucket after the floor pulls.
+          const slot = Math.max(0, firstNew + i);
+          const hand = slot === 0 ? HELD_ITEM_AT : waitingItemAt(slot - 1);
           return (
             <g key="new-bucket" data-ultimate-drop={item.kind} transform={`translate(${c.x + hand.x} ${c.y + hand.y})`}>
               <g className="ue-drop"><ItemShape kind={item.kind} /></g>
@@ -393,7 +401,7 @@ export function UltimateFireDrawing({ fire, bots, board, layer }: {
           <><AffectedArea kind={fire.kind} area={fire.area} /><Whirlwind square={fire.at} reach={ULTIMATE_RULES.whirlwind.reach} /><CaughtTanks kind={fire.kind} affected={fire.affected} bots={bots} /></>
         ) : null}
         {fire.kind === "magnet" && fire.items.length > 0 ? (
-          floor ? <MagnetField square={fire.at} /> : <><MagnetIcon square={fire.at} /><MagnetPull square={fire.at} items={fire.items} waiting={source?.itemsWaiting?.length ?? 0} /></>
+          floor ? <MagnetField square={fire.at} /> : <><MagnetIcon square={fire.at} /><MagnetPull square={fire.at} items={fire.items} source={source} /></>
         ) : null}
       </g>
       {fire.kind === "dash" && !floor && source !== undefined ? <Ram fire={fire} shooter={source} board={board} /> : null}

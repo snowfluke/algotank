@@ -1,5 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { BUILD_BUDGET, parseStrategy, PRESETS, ruleSet } from "@game/engine";
 import type { StrategyIssue } from "@game/engine";
 import { addRule } from "../editor/edit.ts";
@@ -8,7 +10,10 @@ import { en, id, issueSentence } from "./messages.ts";
 import { currentPlayStyle, movingStyle, PLAY_STYLES, traitsOf } from "./playStyles.ts";
 import { neighbourLinks } from "./modes.ts";
 import { stripFit } from "./RulesList.tsx";
-import { benchLayout } from "./UpgradesPane.tsx";
+import { benchLayout, UpgradesPane } from "./UpgradesPane.tsx";
+import { I18nProvider } from "../i18n/I18nProvider.tsx";
+import { createLanguageStore } from "../i18n/language.ts";
+import { plainTankLook } from "../tank/look.ts";
 import { emptyBuild } from "../editor/build.ts";
 import { en as vocabularyEn, id as vocabularyId } from "../vocabulary/messages.ts";
 import { saveView } from "./saveView.ts";
@@ -29,6 +34,9 @@ describe("play styles", () => {
   test("a preset is recognised, and a hand edit is not", () => {
     const picker = PRESETS.find((preset) => preset.id === "picker")!.strategy;
     expect(currentPlayStyle(picker)).toBe("picker");
+    const { camouflage: _camouflage, ...savedBuild } = picker.build;
+    expect(currentPlayStyle({ ...picker, build: savedBuild })).toBe("picker");
+    expect(currentPlayStyle({ ...picker, build: { ...savedBuild, camouflage: 1 } })).toBeNull();
     expect(currentPlayStyle(addRule(picker, picker.modes[0]!.id))).toBeNull();
   });
 
@@ -51,23 +59,50 @@ describe("play styles", () => {
 describe("the upgrade bench", () => {
   const full = { reach: 0, aim: 3, dodge: 3 };
 
-  test("Range has 2 sockets of 2 points, Aim and Dodge 3 of 1, and the sockets hold the whole budget twice over at most", () => {
-    expect(socketsOf("reach")).toEqual([{ level: 1, tokens: 2 }, { level: 2, tokens: 2 }]);
-    expect(socketsOf("aim")).toEqual([{ level: 1, tokens: 1 }, { level: 2, tokens: 1 }, { level: 3, tokens: 1 }]);
-    expect(BUILD_BUDGET).toBe(6);
+  test("the pane renders all four attributes and two Camouflage sockets in both languages", () => {
+    for (const [language, name, effect] of [
+      ["en", "Camouflage", "Camouflage is still empty, so tanks that hunt by points find your tank anywhere."],
+      ["id", "Kamuflase", "Kamuflase masih kosong, jadi tank pemburu poin bisa menemukan tankmu di mana saja."],
+    ] as const) {
+      const pane = createElement(UpgradesPane, {
+        strategy: { ...PRESETS[0]!.strategy, build: full },
+        rules: ruleSet("standard"),
+        problems: [],
+        look: plainTankLook(1),
+        onChange: () => {},
+      });
+      const html = renderToStaticMarkup(createElement(I18nProvider, {
+        store: createLanguageStore({ store: null, initial: language }),
+        children: pane,
+      }));
+      expect([...html.matchAll(/data-upgrade="([^"]+)"/g)].map((match) => match[1]))
+        .toEqual(["reach", "aim", "dodge", "camouflage"]);
+      expect(html).toContain(name);
+      expect(html).toContain(effect);
+      expect(html.match(/data-socket="camouflage-[12]"/g)).toHaveLength(2);
+    }
   });
 
-  test("a built-in style opens with no free point", () => {
-    expect(freePoints(full)).toBe(0);
-    expect(freePoints({ reach: 0, aim: 1, dodge: 3 })).toBe(2);
+  test("Range has 2 sockets of 2 points, Aim and Dodge 3 of 1, and Camouflage 2 of 1", () => {
+    expect(socketsOf("reach")).toEqual([{ level: 1, tokens: 2 }, { level: 2, tokens: 2 }]);
+    expect(socketsOf("aim")).toEqual([{ level: 1, tokens: 1 }, { level: 2, tokens: 1 }, { level: 3, tokens: 1 }]);
+    expect(socketsOf("dodge")).toEqual(socketsOf("aim"));
+    expect(socketsOf("camouflage")).toEqual([{ level: 1, tokens: 1 }, { level: 2, tokens: 1 }]);
+    expect(BUILD_BUDGET).toBe(7);
+  });
+
+  test("a built-in style opens with one free point", () => {
+    expect(freePoints(full)).toBe(1);
+    expect(freePoints({ reach: 0, aim: 1, dodge: 3 })).toBe(3);
     // An over-budget draft shows an empty tray; its problem says what to fix.
     expect(freePoints({ reach: 2, aim: 3, dodge: 3 })).toBe(0);
   });
 
   test("an empty socket fills up to its level when the points allow, and says what it needs when they do not", () => {
     expect(tapSocket({ reach: 0, aim: 1, dodge: 3 }, "aim", 3)).toEqual({ kind: "set", level: 3 });
-    expect(tapSocket(full, "reach", 1)).toEqual({ kind: "blocked", need: 2, have: 0 });
-    expect(tapSocket({ reach: 0, aim: 2, dodge: 3 }, "reach", 1)).toEqual({ kind: "blocked", need: 2, have: 1 });
+    expect(tapSocket(full, "reach", 1)).toEqual({ kind: "blocked", need: 2, have: 1 });
+    expect(tapSocket(full, "camouflage", 1)).toEqual({ kind: "set", level: 1 });
+    expect(tapSocket(full, "camouflage", 2)).toEqual({ kind: "blocked", need: 2, have: 1 });
     expect(tapSocket({ reach: 0, aim: 0, dodge: 0 }, "reach", 2)).toEqual({ kind: "set", level: 2 });
   });
 
@@ -78,7 +113,7 @@ describe("the upgrade bench", () => {
 
   test("plus and minus: blocked when the points run out, nothing at the ends", () => {
     expect(tapPlus(full, "aim")).toEqual({ kind: "none" });
-    expect(tapPlus(full, "reach")).toEqual({ kind: "blocked", need: 2, have: 0 });
+    expect(tapPlus(full, "reach")).toEqual({ kind: "blocked", need: 2, have: 1 });
     expect(tapPlus({ reach: 0, aim: 1, dodge: 3 }, "reach")).toEqual({ kind: "set", level: 1 });
     expect(tapMinus(full, "reach")).toEqual({ kind: "none" });
     expect(tapMinus(full, "dodge")).toEqual({ kind: "set", level: 2 });
@@ -119,7 +154,7 @@ describe("the upgrade bench", () => {
 
   test("the tray says how many points lie free, and one sentence when all are placed", () => {
     expect(en.upgrades.free(2)).toBe("You have 2 points to place.");
-    expect(en.upgrades.allPlaced(6)).toBe("All 6 points are placed, so take one out to move it.");
+    expect(en.upgrades.allPlaced(BUILD_BUDGET)).toBe("All 7 points are placed, so take one out to move it.");
     expect(en.upgrades.blocked(2, 1)).toBe("You need 2 points and have 1, so take a point out of another upgrade first.");
   });
 });
@@ -191,7 +226,7 @@ describe("save line", () => {
 });
 
 describe("layouts that follow the pane", () => {
-  test("the bench: three columns on a wide pane, rows below that, the drawing on top on a phone, and no drawing last", () => {
+  test("the bench: four columns on a wide pane, rows below that, the drawing on top on a phone, and no drawing last", () => {
     expect(benchLayout(960, 0)).toBe("columns");
     expect(benchLayout(776, 0)).toBe("rows");
     expect(benchLayout(358, 0)).toBe("stacked");

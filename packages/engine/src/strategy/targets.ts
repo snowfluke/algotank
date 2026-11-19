@@ -3,7 +3,7 @@
 // measure first, then by lower distance (Chebyshev: a diagonal step counts as 1), then by the lower tie rank
 // of an open round (BotState.tieRank), else by the lower id. Neither changes in a round, so a tie never flips.
 
-import { attributeLevel, hitChancePercent, throwRange } from "../combat/combat.ts";
+import { attributeLevel, hitChancePercent, NOTICE, throwRange } from "../combat/combat.ts";
 import { rulesAt } from "../round/arena-layouts.ts";
 import type { AttributeId } from "../combat/combat.ts";
 import type { BotState, DecisionContext, ParamValues, TargetSelectorDef } from "../types.ts";
@@ -38,6 +38,11 @@ function byDistance(ctx: DecisionContext): Compare {
 
 function byDistanceThen(ctx: DecisionContext, measure: (bot: BotState) => number): Compare {
   return (a, b) => measure(a) - measure(b) || byDistance(ctx)(a, b);
+}
+
+function noticedByPoints(ctx: DecisionContext, bot: BotState): boolean {
+  const level = attributeLevel(bot.build, "camouflage");
+  return level === 0 || chebyshev(ctx.self, bot) <= (NOTICE[level] ?? 0);
 }
 
 /** The enemy with the highest level of one attribute. */
@@ -78,15 +83,19 @@ const defs = withLiteralIds<TargetSelectorDef>()([
   {
     id: "highestScore",
     label: "the bot with the most points, or the one in second place when I lead",
-    // Enemies only, so when I lead the best of the others is second place.
-    pick: (ctx) => pickBest(enemiesOf(ctx.snapshot, ctx.self), byDistanceThen(ctx, (bot) => -bot.score)),
+    // Enemies only, so the leader cannot pick itself.
+    pick: (ctx) =>
+      pickBest(
+        enemiesOf(ctx.snapshot, ctx.self).filter((bot) => noticedByPoints(ctx, bot)),
+        byDistanceThen(ctx, (bot) => -bot.score),
+      ),
   },
   {
     id: "nearestWithMorePoints",
     label: "the nearest bot with more points than me",
     pick: (ctx) =>
       pickBest(
-        enemiesOf(ctx.snapshot, ctx.self).filter((bot) => bot.score > ctx.self.score),
+        enemiesOf(ctx.snapshot, ctx.self).filter((bot) => bot.score > ctx.self.score && noticedByPoints(ctx, bot)),
         byDistance(ctx),
       ),
   },
@@ -95,7 +104,7 @@ const defs = withLiteralIds<TargetSelectorDef>()([
     label: "the nearest bot with fewer points than me",
     pick: (ctx) =>
       pickBest(
-        enemiesOf(ctx.snapshot, ctx.self).filter((bot) => bot.score < ctx.self.score),
+        enemiesOf(ctx.snapshot, ctx.self).filter((bot) => bot.score < ctx.self.score && noticedByPoints(ctx, bot)),
         byDistance(ctx),
       ),
   },
@@ -103,10 +112,11 @@ const defs = withLiteralIds<TargetSelectorDef>()([
     id: "cutRival",
     label: "the bot across the cut line whose score is closest to mine (in a final: the leader, or second place when I lead)",
     pick: (ctx) => {
+      // The cut uses the full standings. Camouflage limits which tanks at the rival score can be picked.
       const across = scoreAcrossCut(ctx.snapshot, ctx.self);
       if (across === null) return null;
       return pickBest(
-        enemiesOf(ctx.snapshot, ctx.self).filter((bot) => bot.score === across),
+        enemiesOf(ctx.snapshot, ctx.self).filter((bot) => bot.score === across && noticedByPoints(ctx, bot)),
         byDistance(ctx),
       );
     },

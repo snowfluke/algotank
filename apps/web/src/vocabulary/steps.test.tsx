@@ -8,7 +8,7 @@ import { parseStrategy } from "@game/engine";
 import type { Rule } from "@game/engine";
 import { StepRow } from "../prep/StepRow.tsx";
 import { en, id } from "./messages.ts";
-import { ruleBriefText, ruleParts, ruleText, stepBlocks } from "./sentence.ts";
+import { conditionText, ruleBriefText, ruleParts, ruleText, stepBlocks } from "./sentence.ts";
 import { STEP_KINDS, stepKindOf, stepRefOf } from "./steps.ts";
 
 /** The owner's example: "if I get shot, I move forward, turn left, move forward". */
@@ -20,6 +20,15 @@ const shot: Rule = {
   chance: 100,
   switchToMode: null,
 };
+
+test("attribute conditions read with Camouflage in both languages", () => {
+  const target = { condition: "targetBuild", params: { target: "nearest", attribute: "camouflage", level: 1 }, negate: false };
+  const field = { condition: "fieldTrait", params: { percent: 50, attribute: "camouflage", level: 2 }, negate: false };
+  expect(conditionText(en, target)).toBe("the nearest tank has Camouflage at level 1 or higher");
+  expect(conditionText(id, target)).toBe("tank terdekat punya Kamuflase level 1 atau lebih");
+  expect(conditionText(en, field)).toBe("at least 50% of the other tanks have Camouflage at level 2 or higher");
+  expect(conditionText(id, field)).toBe("minimal 50% tank lain punya Kamuflase level 2 atau lebih");
+});
 
 describe("a rule with steps in order", () => {
   test("reads as one sentence with the steps in order, in English", () => {

@@ -60,11 +60,12 @@ describe("presets", () => {
     }
   });
 
-  test("each has a name, a one-sentence summary and a build that spends the whole budget", () => {
+  test("each has a name, a one-sentence summary and a build that leaves one point free", () => {
     for (const preset of PRESETS) {
       expect(preset.name.length, preset.id).toBeGreaterThan(0);
       expect(preset.summary.endsWith("."), preset.id).toBe(true);
-      expect(buildCost(preset.strategy.build), preset.id).toBe(BUILD_BUDGET);
+      expect(buildCost(preset.strategy.build), preset.id).toBe(BUILD_BUDGET - 1);
+      expect(preset.strategy.build["camouflage"], preset.id).toBe(0);
     }
   });
 

@@ -11,7 +11,7 @@ import { CircleCheck, Wrench } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { StrategyInput } from "@game/engine";
 import { paths } from "../app/route.ts";
-import { sameData } from "../editor/compare.ts";
+import { sameStrategy } from "../editor/compare.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { playSound } from "../sound/player.ts";
 import { TankBadge } from "../tank/TankBadge.tsx";
@@ -41,7 +41,7 @@ type Source = "builtIn" | "mine";
 
 /** The saved play style the strategy still is, or null once the player changed it. */
 export function matchingSaved(strategy: StrategyInput, styles: readonly MyPlayStyle[]): MyPlayStyle | null {
-  return styles.find((style) => sameData(style.strategy, strategy)) ?? null;
+  return styles.find((style) => sameStrategy(style.strategy, strategy)) ?? null;
 }
 
 function MineRow({ style, chosen, look, nowMs, onUse }: { readonly style: MyPlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly nowMs: number | undefined; onUse(): void }) {
@@ -103,7 +103,7 @@ export function StylePane({ strategy, look, wide, nowMs, onChange, onSaveNow }: 
   function apply(next: StrategyInput, name: string, used: LastStyle): void {
     playSound("tap");
     rememberLastStyle(used);
-    if (sameData(next, strategy)) return;
+    if (sameStrategy(next, strategy)) return;
     if (current === null) {
       before.current = strategy;
       toast.show({
@@ -164,7 +164,7 @@ export function StylePane({ strategy, look, wide, nowMs, onChange, onSaveNow }: 
           itemKey={(style) => style.id}
           ordered={false}
           // Each row compares itself, so a saved copy of a built-in style is marked too.
-          renderItem={(style) => <MineRow style={style} chosen={sameData(style.strategy, strategy)} look={look} nowMs={nowMs} onUse={() => apply(style.strategy, style.name, { kind: "mine", id: style.id })} />}
+          renderItem={(style) => <MineRow style={style} chosen={sameStrategy(style.strategy, strategy)} look={look} nowMs={nowMs} onUse={() => apply(style.strategy, style.name, { kind: "mine", id: style.id })} />}
         />
       )}
     </div>

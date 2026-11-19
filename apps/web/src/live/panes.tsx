@@ -40,6 +40,7 @@ import { useMemo, type ReactNode } from "react";
 import type { PlayerId, PublicArena, PublicPlayer } from "@game/arena";
 import type { StrategyInput } from "@game/engine";
 import { ArenaView } from "../board/ArenaView.tsx";
+import { useMusicCondition } from "../sound/music.ts";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -113,6 +114,7 @@ export function ArenaPane({ arena, stream, viewerId, onShowAround }: ArenaPanePr
   const tanks = useMemo(() => tankInfos(arena), [arena]);
   const countdown = useSecondsUntil(stream.firstTurnAt);
   const snapshot = arena.phase.kind === "running" ? snapshotFor(stream, arena.phase.round) : null;
+  useMusicCondition(snapshot?.ruleSetId ?? null);
   if (arena.phase.kind !== "running" || snapshot === null) {
     return (
       <div className={PANE}>

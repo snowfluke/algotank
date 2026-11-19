@@ -8,20 +8,21 @@
 // | From              | Event      | Guard                         | To                | Actor                           |
 // |-------------------|------------|-------------------------------|-------------------|---------------------------------|
 // | off               | enable     | not gestured                  | waitingForGesture | person (switch) or page (venue) |
-// | off               | enable     | gestured, buffered, visible   | playing           | person (switch) or page (venue) |
-// | off               | enable     | gestured, buffered, hidden    | hidden            | person (switch) or page (venue) |
-// | off               | enable     | gestured, not buffered        | loading           | person (switch) or page (venue) |
+// | off               | enable     | gestured, hidden              | hidden            | person (switch) or page (venue) |
+// | off               | enable     | gestured, visible, buffered   | playing           | person (switch) or page (venue) |
+// | off               | enable     | gestured, visible, unbuffered | loading           | person (switch) or page (venue) |
 // | waitingForGesture | gesture    | buffered, visible             | playing           | person (first tap or key)       |
-// | waitingForGesture | gesture    | buffered, hidden              | hidden            | person (first tap or key)       |
-// | waitingForGesture | gesture    | not buffered                  | loading           | person (first tap or key)       |
+// | waitingForGesture | gesture    | hidden                        | hidden            | person (first tap or key)       |
+// | waitingForGesture | gesture    | visible, unbuffered           | loading           | person (first tap or key)       |
 // | loading           | loaded     | visible                       | playing           | network and decoder             |
 // | loading           | loaded     | hidden                        | hidden            | network and decoder             |
 // | loading           | loadFailed |                               | failed            | network and decoder             |
 // | playing           | duck       |                               | ducked            | the player's own shot or hit    |
 // | ducked            | duck       |                               | ducked            | the player's own shot or hit    |
 // | ducked            | duckEnded  |                               | playing           | timer (DUCK_MS)                 |
-// | playing, ducked   | hide       |                               | hidden            | browser (tab hidden)            |
-// | hidden            | show       |                               | playing           | browser (tab shown)             |
+// | loading, playing, ducked | hide |                              | hidden            | browser (tab hidden)            |
+// | hidden            | show       | buffered                      | playing           | browser (tab shown)             |
+// | hidden            | show       | unbuffered                    | loading           | browser (tab shown)             |
 // | any but off       | disable    |                               | off               | person (switch) or page (venue) |
 //
 // Every other pair is rejected: `transition` returns null and the state stays. For example a
@@ -29,6 +30,7 @@
 // driver keeps the decoded track for later). No state is terminal: the page can always turn the
 // music on or off. "failed" is added to the spec's six states so the panel can say that the music
 // could not load; turning the music off and on again retries the download.
+// Condition changes go through the driver, so a crossfade keeps the playing or ducked state.
 
 export const MUSIC_STATES = ["off", "waitingForGesture", "loading", "playing", "ducked", "hidden", "failed"] as const;
 export type MusicState = (typeof MUSIC_STATES)[number];
@@ -47,12 +49,12 @@ export type MusicEvent =
   | { readonly type: "duck" }
   | { readonly type: "duckEnded" }
   | { readonly type: "hide" }
-  | { readonly type: "show" }
+  | { readonly type: "show"; readonly buffered: boolean }
   | { readonly type: "disable" };
 
 function start(buffered: boolean, visible: boolean): MusicState {
-  if (!buffered) return "loading";
-  return visible ? "playing" : "hidden";
+  if (!visible) return "hidden";
+  return buffered ? "playing" : "loading";
 }
 
 /** The next state, or null when no row of the table allows the event in this state. */
@@ -73,9 +75,9 @@ export function transition(state: MusicState, event: MusicEvent): MusicState | n
     case "duckEnded":
       return state === "ducked" ? "playing" : null;
     case "hide":
-      return state === "playing" || state === "ducked" ? "hidden" : null;
+      return state === "loading" || isAudible(state) ? "hidden" : null;
     case "show":
-      return state === "hidden" ? "playing" : null;
+      return state === "hidden" ? start(event.buffered, true) : null;
     case "disable":
       return state === "off" ? null : "off";
   }

@@ -6,18 +6,22 @@ import { DUCK_GAIN, DUCK_MS, FADE_SECONDS, type MusicTrack } from "./musicTracks
 import { musicLine } from "./SoundControl.tsx";
 
 const TRACK: MusicTrack = { url: "/music/test.mp3", loopStart: 0.5, loopEnd: 100.5 };
+const RAIN: MusicTrack = { url: "/music/rain.mp3", loopStart: 0.25, loopEnd: 40.25 };
+const DRY: MusicTrack = { url: "/music/dry.mp3", loopStart: 0.5, loopEnd: 60.5 };
 
 /** An AudioParam that keeps the value it was last sent towards, enough to read a fade's target. */
 class FakeParam {
   value = 1;
   target = 1;
+  rampEndsAt: number | null = null;
   setValueAtTime(value: number) {
     this.value = value;
     this.target = value;
     return this;
   }
-  linearRampToValueAtTime(value: number) {
+  linearRampToValueAtTime(value: number, when: number) {
     this.target = value;
+    this.rampEndsAt = when;
     return this;
   }
   setTargetAtTime(value: number) {
@@ -36,12 +40,14 @@ interface FakeSource {
   loopEnd: number;
   started: { when: number; offset: number } | null;
   stoppedAt: number | null;
+  fade: FakeParam | null;
 }
 
 function fakeAudio() {
   const sources: FakeSource[] = [];
   const gains: FakeParam[] = [];
   const decoded = { duration: 101 };
+  const decodes: ArrayBuffer[] = [];
   const ctx = {
     currentTime: 10,
     destination: {},
@@ -53,14 +59,17 @@ function fakeAudio() {
       return { gain, connect: (node: unknown) => node };
     },
     createBufferSource() {
-      const source: FakeSource & { connect(node: unknown): unknown; start(when: number, offset: number): void; stop(when: number): void } = {
+      const source: FakeSource & { connect(node: { gain: FakeParam }): void; start(when: number, offset: number): void; stop(when: number): void } = {
         buffer: null,
         loop: false,
         loopStart: 0,
         loopEnd: 0,
         started: null,
         stoppedAt: null,
-        connect: (node) => node,
+        fade: null,
+        connect(node) {
+          this.fade = node.gain;
+        },
         start(when, offset) {
           this.started = { when, offset };
         },
@@ -71,22 +80,25 @@ function fakeAudio() {
       sources.push(source);
       return source;
     },
-    decodeAudioData: async () => decoded,
+    async decodeAudioData(bytes: ArrayBuffer) {
+      decodes.push(bytes);
+      return decoded;
+    },
   };
-  return { ctx: ctx as unknown as MusicContext, clock: ctx, sources, gains, decoded };
+  return { ctx: ctx as unknown as MusicContext, clock: ctx, sources, gains, decoded, decodes };
 }
 
 function harness(options: { gestured?: boolean; visible?: boolean; context?: boolean } = {}) {
   const audio = fakeAudio();
   let gestured = options.gestured ?? false;
   let visible = options.visible ?? true;
-  const downloads: { resolve(bytes: ArrayBuffer): void; reject(error: Error): void }[] = [];
+  const downloads: { url: string; resolve(bytes: ArrayBuffer): void; reject(error: Error): void }[] = [];
   const timers: (() => void)[] = [];
   const errors: unknown[] = [];
   const player = createMusicPlayer({
     track: TRACK,
     getContext: () => (options.context === false ? null : audio.ctx),
-    fetchTrack: () => new Promise((resolve, reject) => downloads.push({ resolve, reject })),
+    fetchTrack: (url) => new Promise((resolve, reject) => downloads.push({ url, resolve, reject })),
     hasGesture: () => gestured,
     isVisible: () => visible,
     later: (run) => {
@@ -120,7 +132,7 @@ describe("music state machine", () => {
     const allowed: Record<MusicState, readonly MusicEvent["type"][]> = {
       off: ["enable"],
       waitingForGesture: ["gesture", "disable"],
-      loading: ["loaded", "loadFailed", "disable"],
+      loading: ["loaded", "loadFailed", "hide", "disable"],
       playing: ["duck", "hide", "disable"],
       ducked: ["duck", "duckEnded", "hide", "disable"],
       hidden: ["show", "disable"],
@@ -134,7 +146,7 @@ describe("music state machine", () => {
       { type: "duck" },
       { type: "duckEnded" },
       { type: "hide" },
-      { type: "show" },
+      { type: "show", buffered: true },
       { type: "disable" },
     ];
     for (const state of MUSIC_STATES) {
@@ -150,7 +162,9 @@ describe("music state machine", () => {
     expect(transition("off", { type: "enable", gestured: true, visible: true, buffered: false })).toBe("loading");
     expect(transition("off", { type: "enable", gestured: true, visible: true, buffered: true })).toBe("playing");
     expect(transition("off", { type: "enable", gestured: true, visible: false, buffered: true })).toBe("hidden");
+    expect(transition("off", { type: "enable", gestured: true, visible: false, buffered: false })).toBe("hidden");
     expect(transition("loading", { type: "loaded", visible: false })).toBe("hidden");
+    expect(transition("hidden", { type: "show", buffered: false })).toBe("loading");
   });
 });
 
@@ -178,7 +192,8 @@ describe("music player", () => {
     expect(h.player.getState()).toBe("failed");
     expect(h.errors).toHaveLength(1);
     expect(h.audio.sources).toHaveLength(0);
-    expect(musicLine(true, "failed", false)).toBe("musicFailed");
+    expect(musicLine(true, "failed")).toBe("musicFailed");
+    expect(musicLine(true, "playing")).toBeUndefined();
     h.player.setEnabled(false);
     h.player.setEnabled(true);
     expect(h.player.getState()).toBe("loading");
@@ -241,5 +256,128 @@ describe("music player", () => {
     h.player.setEnabled(true);
     expect(h.player.getState()).toBe("playing");
     expect(h.downloads).toHaveLength(1);
+  });
+
+  test("crossfades from the old track to the new loop start and decodes each file once", async () => {
+    const h = harness({ gestured: true });
+    h.player.setEnabled(true);
+    h.downloads[0]?.resolve(new ArrayBuffer(8));
+    await settle();
+    const old = h.audio.sources[0];
+    h.audio.clock.currentTime = 20;
+    h.player.setTrack(RAIN);
+    expect(old?.fade?.target).toBe(1);
+    const rainBytes = new ArrayBuffer(16);
+    expect(h.downloads[1]?.url).toBe(RAIN.url);
+    h.downloads[1]?.resolve(rainBytes);
+    await settle();
+    expect(old?.fade).toMatchObject({ value: 1, target: 0, rampEndsAt: 20 + FADE_SECONDS });
+    expect(old?.stoppedAt).toBeCloseTo(20 + FADE_SECONDS + 0.05);
+    const next = h.audio.sources[1];
+    expect(next).toMatchObject({
+      loopStart: RAIN.loopStart,
+      loopEnd: RAIN.loopEnd,
+      started: { when: 20, offset: RAIN.loopStart },
+      fade: { value: 0, target: 1, rampEndsAt: 20 + FADE_SECONDS },
+    });
+
+    h.audio.clock.currentTime += FADE_SECONDS / 2;
+    h.player.duck();
+    h.player.setTrack(TRACK);
+    await settle();
+    expect(next?.fade).toMatchObject({ value: 0.5, target: 0 });
+    expect(h.player.getState()).toBe("ducked");
+    expect(h.audio.sources[2]?.started?.offset).toBe(TRACK.loopStart);
+    h.player.setTrack(RAIN);
+    await settle();
+    expect(h.audio.sources[3]?.started?.offset).toBe(RAIN.loopStart);
+    expect(h.downloads.map(({ url }) => url)).toEqual([TRACK.url, RAIN.url]);
+    expect(h.audio.decodes).toHaveLength(2);
+  });
+
+  test("a change while off waits for music to turn on", async () => {
+    const h = harness({ gestured: true });
+    h.player.setTrack(RAIN);
+    expect(h.downloads).toHaveLength(0);
+    h.player.setEnabled(true);
+    expect(h.downloads.map(({ url }) => url)).toEqual([RAIN.url]);
+    h.downloads[0]?.resolve(new ArrayBuffer(8));
+    await settle();
+    expect(h.audio.sources[0]?.started?.offset).toBe(RAIN.loopStart);
+  });
+
+  test("a change while hidden waits until the tab shows", async () => {
+    const h = harness({ gestured: true });
+    h.player.setEnabled(true);
+    h.downloads[0]?.resolve(new ArrayBuffer(8));
+    await settle();
+    h.setVisible(false);
+    h.player.setTrack(RAIN);
+    expect(h.downloads).toHaveLength(1);
+    h.setVisible(true);
+    expect(h.player.getState()).toBe("loading");
+    h.downloads[1]?.resolve(new ArrayBuffer(8));
+    await settle();
+    expect(h.audio.sources[1]?.started?.offset).toBe(RAIN.loopStart);
+  });
+
+  test("a change during startup selects the latest condition after the pending load", async () => {
+    const h = harness({ gestured: true });
+    h.player.setEnabled(true);
+    h.player.setTrack(DRY);
+    h.player.setTrack(RAIN);
+    expect(h.downloads.map(({ url }) => url)).toEqual([TRACK.url]);
+    h.downloads[0]?.resolve(new ArrayBuffer(8));
+    await settle();
+    expect(h.audio.sources).toHaveLength(0);
+    expect(h.downloads.map(({ url }) => url)).toEqual([TRACK.url, RAIN.url]);
+    h.downloads[1]?.resolve(new ArrayBuffer(8));
+    await settle();
+    expect(h.audio.sources[0]?.started?.offset).toBe(RAIN.loopStart);
+  });
+
+  test("an earlier switch settling late cannot replace the desired track", async () => {
+    const h = harness({ gestured: true });
+    h.player.setEnabled(true);
+    h.downloads[0]?.resolve(new ArrayBuffer(8));
+    await settle();
+    h.player.setTrack(DRY);
+    h.player.setTrack(RAIN);
+    h.downloads[2]?.resolve(new ArrayBuffer(8));
+    await settle();
+    h.downloads[1]?.resolve(new ArrayBuffer(8));
+    await settle();
+    expect(h.audio.sources).toHaveLength(2);
+    expect(h.audio.sources[1]?.started?.offset).toBe(RAIN.loopStart);
+  });
+
+  test("a failed change reports the error and keeps the current source playing", async () => {
+    const h = harness({ gestured: true });
+    h.player.setEnabled(true);
+    h.downloads[0]?.resolve(new ArrayBuffer(8));
+    await settle();
+    h.player.setTrack(RAIN);
+    const failure = new Error("404");
+    h.downloads[1]?.reject(failure);
+    await settle();
+    expect(h.errors).toEqual([failure]);
+    expect(h.player.getState()).toBe("playing");
+    expect(h.audio.sources).toHaveLength(1);
+    expect(h.audio.sources[0]?.stoppedAt).toBeNull();
+    expect(h.audio.sources[0]?.fade?.target).toBe(1);
+  });
+
+  test("a failed condition on first start falls back to the default", async () => {
+    const h = harness({ gestured: true });
+    h.player.setTrack(RAIN);
+    h.player.setEnabled(true);
+    h.downloads[0]?.reject(new Error("404"));
+    await settle();
+    expect(h.downloads.map(({ url }) => url)).toEqual([RAIN.url, TRACK.url]);
+    h.downloads[1]?.resolve(new ArrayBuffer(8));
+    await settle();
+    expect(h.errors).toHaveLength(1);
+    expect(h.player.getState()).toBe("playing");
+    expect(h.audio.sources[0]?.started?.offset).toBe(TRACK.loopStart);
   });
 });

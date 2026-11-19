@@ -14,6 +14,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { parseStrategy } from "@game/engine";
 import type { PracticeProps } from "../editor/props.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
+import { useMusicCondition } from "../sound/music.ts";
 import { plainTankLook, type TankLook } from "../tank/look.ts";
 import { Button } from "../ui/Button.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
@@ -55,6 +56,8 @@ export function Practice({ strategy, name, defaultRuleSetId, look = DEFAULT_LOOK
   const opener = useRef<HTMLElement | null>(null);
   const headingId = useId();
   const showing = inArena && finished !== null;
+  // The run's condition stays with the replay when the next run's options change.
+  useMusicCondition(optionsOpen ? null : (finished?.run.spawn.ruleSetId ?? null));
   useEffect(() => (showing ? markTestMatchShown() : undefined), [showing]);
   const tanks = useMemo(() => (finished === null ? null : matchTanks(finished.run.spawn.bots.map((bot) => bot.id), look)), [finished, look]);
 

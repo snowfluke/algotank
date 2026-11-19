@@ -37,15 +37,7 @@ export const en = {
   close: "Close",
   music: "Music",
   effects: "Sound effects",
-  /** One sentence under the music switch for each state of the music. */
-  musicOn: "Calm music plays quietly while you play.",
-  musicLoading: "The music is loading now.",
   musicFailed: "The music could not load, so the game plays without it.",
-  musicOff: "The music is turned off.",
-  /** On the big screen the music starts off, so the room stays quiet until the presenter wants music. */
-  musicOffBigScreen: "The big screen plays music only after you turn it on.",
-  effectsOn: "Shots and hits make a short sound.",
-  effectsOff: "Shots and hits make no sound now.",
   names: namesEn,
 };
 
@@ -54,13 +46,7 @@ export const id: typeof en = {
   close: "Tutup",
   music: "Musik",
   effects: "Efek suara",
-  musicOn: "Musik tenang diputar pelan selama kamu main.",
-  musicLoading: "Musiknya sedang dimuat.",
   musicFailed: "Musiknya gagal dimuat, jadi permainan tetap jalan tanpa musik.",
-  musicOff: "Musiknya sedang dimatikan.",
-  musicOffBigScreen: "Layar besar baru memutar musik setelah kamu menyalakannya.",
-  effectsOn: "Tembakan dan cipratan berbunyi singkat.",
-  effectsOff: "Tembakan dan cipratan sedang tidak berbunyi.",
   names: {
     shot: "Tembakan",
     splash: "Cipratan kena",

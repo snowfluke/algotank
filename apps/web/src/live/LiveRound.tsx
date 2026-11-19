@@ -13,6 +13,7 @@ import { ArenaView } from "../board/ArenaView.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
+import { useMusicCondition } from "../sound/music.ts";
 import { LiveRanking } from "../standings/StandingsTable.tsx";
 import { liveRanking, playerNames, tankInfos } from "../standings/standings.ts";
 import { useBoxSize } from "../ui/useBoxSize.ts";
@@ -47,6 +48,7 @@ const WALL_SQUARES = 0.6;
 
 export function LiveRound({ arena, phase, snapshot, throws, fires = [], roundSpawn, layout, firstTurnAt = null }: LiveRoundProps) {
   const m = useMessages();
+  useMusicCondition(snapshot?.ruleSetId ?? null);
   const isScreen = layout === "screen";
   const { tickMs } = arena.settings;
   // One names record and one colour map per player list, so the board derives its labels once and not on every turn.

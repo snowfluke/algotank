@@ -377,3 +377,11 @@ export function cutPosition(survivorsAfterRound: number | null, botCount: number
   if (survivorsAfterRound === null || survivorsAfterRound <= 0 || survivorsAfterRound >= botCount) return null;
   return survivorsAfterRound;
 }
+
+/**
+ * Whose point of view the board's sounds take (owner, 2026-11-19: "whoever being focused, that's the POV"): a followed
+ * tank, else the viewer's own tank, else the leader. Null only when nobody leads yet (a tie), and then every shot plays.
+ */
+export function soundListener(followed: BotId | undefined, own: BotId | null, bots: readonly Pick<PublicBot, "id" | "score">[]): BotId | null {
+  return followed ?? own ?? leaderId(bots);
+}

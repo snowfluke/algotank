@@ -39,8 +39,7 @@ export function StyleCard({ style, full, nowMs, compactUltimate = false, onOpen,
           <TankBadge look={tank.look} size={40} name={null} detail="full" angle={-90} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <h2 className="truncate text-lead">{style.name}</h2>
-            {loadable ? <Traits traits={traitsOf(style.strategy)} /> : <p className="text-caption font-semibold text-hit">{w.hasProblem}</p>}
-            {compactUltimate ? null : <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />}
+            {loadable ? <Traits traits={traitsOf(style.strategy)} ultimate={compactUltimate ? undefined : style.strategy.ultimate} nowMs={nowMs} /> : <p className="text-caption font-semibold text-hit">{w.hasProblem}</p>}
           </div>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -50,7 +49,7 @@ export function StyleCard({ style, full, nowMs, compactUltimate = false, onOpen,
           <IconButton label={w.copy(style.name)} icon={<Copy aria-hidden size={20} />} disabled={full} onClick={onCopy} />
           <IconButton label={w.rename(style.name)} icon={<Pencil aria-hidden size={20} />} data-focus-key={`rename:${style.id}`} onClick={onRename} />
           <IconButton label={w.remove(style.name)} icon={<Trash2 aria-hidden size={20} />} onClick={onDelete} />
-          {compactUltimate ? <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} iconOnly /> : null}
+          {compactUltimate ? <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} size={{ kind: "icon" }} /> : null}
           <p className="min-w-0 text-caption text-muted @2xl:order-first @2xl:w-44">
             <time dateTime={new Date(style.updatedAt).toISOString()}>{w.changed(date)}</time>
           </p>

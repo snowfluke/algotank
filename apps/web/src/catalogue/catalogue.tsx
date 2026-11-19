@@ -4,10 +4,10 @@
 // - Play styles: the workshop's order (PICKER_ORDER) and texts (vocabulary playStyles).
 // - Items: the board legend's texts (board/messages.ts legend), and the item drawings.
 // - Arena conditions: every rule set (RULE_SET_IDS) with its name and note (vocabulary roundRules).
-// - Ultimates: each names its starting play style, with a tag and note before release (85-ultimates.md).
+// - Ultimates: one description each, with a tag before release (85-ultimates.md).
 
 import type { ReactNode } from "react";
-import { ITEM_KINDS, PICKER_ORDER, PRESETS, RULE_SET_IDS, ULTIMATE_IDS, type ItemKind, type PresetId, type RuleSetId, type UltimateId } from "@game/engine";
+import { ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, ULTIMATE_IDS, type ItemKind, type PresetId, type RuleSetId } from "@game/engine";
 import { ARENA_GROUNDS, groundMarksPath, marksFilled } from "../board/arenaGround.ts";
 import { ItemShape } from "../board/itemShapes.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -18,15 +18,6 @@ import { UltimateEmblem } from "./UltimateEmblem.tsx";
 
 export const CATALOGUE_SECTIONS = ["playStyles", "items", "conditions", "ultimates"] as const;
 export type CatalogueSection = (typeof CATALOGUE_SECTIONS)[number];
-
-/** The catalogue names a visible preset, so Dash lists the Leader chaser (85-ultimates.md). */
-export const ULTIMATE_DEFAULT_STYLE: Readonly<Record<UltimateId, PresetId>> = Object.fromEntries(
-  ULTIMATE_IDS.map((ultimate) => {
-    const preset = PRESETS.find((p) => p.strategy.ultimate === ultimate && PICKER_ORDER.some((id) => id === p.id));
-    if (preset === undefined) throw new Error(`No visible preset uses "${ultimate}".`);
-    return [ultimate, preset.id];
-  }),
-) as Record<UltimateId, PresetId>;
 
 /** The cards of a collection, by key, in order: the same keys the page draws. */
 export function catalogueKeys(section: CatalogueSection): readonly string[] {
@@ -150,7 +141,8 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
         key: id,
         name: m.catalogue.ultimates[id].name,
         body: m.catalogue.ultimates[id].body,
-        extra: `${m.catalogue.defaultFor(v.playStyles[ULTIMATE_DEFAULT_STYLE[id]].name)} ${m.catalogue.firing}${released ? "" : ` ${m.catalogue.ultimatesNote}`}`,
+        // One description: the "soon" tag already says it is not in the game yet (owner, 2026-11-19: "so much description").
+        extra: null,
         soon: !released,
         icon: <UltimateEmblem ultimate={id} size={40} />,
         preview: { kind: "board", scene: ULTIMATE_SCENES[id] },

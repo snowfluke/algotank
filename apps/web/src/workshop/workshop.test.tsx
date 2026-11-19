@@ -83,22 +83,20 @@ describe("workshop ultimates", () => {
     const style = { id: "style-0001", name: "Sneaky", strategy: { ...evader, ultimate: "fullTank" as const }, updatedAt: 1 };
     const card = (nowMs: number) => render(language, <StyleCard style={style} full={false} nowMs={nowMs} onOpen={noop} onCopy={noop} onRename={noop} onDelete={noop} />);
 
-    test(`the ${language} card links to its saved ultimate and the tag ends at release`, () => {
-      const link = 'data-ultimate-link="fullTank" href="/catalogue?section=ultimates&amp;card=fullTank"';
-      const before = card(ULTIMATES_FROM - 1);
-      const after = card(ULTIMATES_FROM);
-      expect(before).toContain(link);
-      expect(before).toContain(`>${m.catalogue.ultimates.fullTank.name}<`);
-      expect(before).toContain(m.catalogue.soon);
-      expect(after).toContain(link);
-      expect(after).not.toContain(m.catalogue.soon);
+    test(`the ${language} card shows its saved ultimate as the first chip, linked to its catalogue card`, () => {
+      const html = card(ULTIMATES_FROM);
+      expect(html).toContain('data-ultimate-link="fullTank" href="/catalogue?section=ultimates&amp;card=fullTank"');
+      expect(html).toContain(`>${m.catalogue.ultimates.fullTank.name}<`);
+      // The chip comes before the trait chips, in the same row.
+      expect(html.indexOf("data-ultimate-link")).toBeLessThan(html.indexOf(m.prep.style.traitsLabel));
     });
 
     test(`the ${language} saved editor offers to change its ultimate`, () => {
       const library = { styles: [style], account: { kind: "deviceOnly" as const }, persistent: true, keptOnDevice: 0 };
       const html = render(language, <WorkshopEditor style={style} library={library} nowMs={ULTIMATES_FROM} onBack={noop} />);
-      expect(html).toMatch(/data-workshop-ultimate[^>]*>.*?data-ultimate-link="fullTank"/);
-      expect(html).toContain(m.workshop.changeUltimate);
+      // One gold button beside the name: the emblem and the ultimate's name, and it opens the chooser.
+      expect(html).toMatch(/data-workshop-ultimate[^>]*>.*?data-ultimate-emblem="fullTank".*?</);
+      expect(html).toContain(`aria-label="${m.workshop.changeUltimate}: ${m.catalogue.ultimates.fullTank.name}"`);
       expect(html).toContain('data-focus-key="workshop-change-ultimate"');
     });
 

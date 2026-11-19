@@ -41,6 +41,7 @@ import {
   displayName,
   gridLinePath,
   leaderId,
+  soundListener,
   shotShape,
   tankCenter,
   tankLooks,
@@ -194,9 +195,9 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
  * a new snapshot, so each turn still renders it, and a new `camera` object (a followed window) renders it too.
  */
 export const ArenaBoard = memo(function ArenaBoard({ drawingKey, ...props }: ArenaBoardProps) {
-  const { snapshot, throws, fires = NO_FIRES, highlightId, paused = false, countdown = null } = props;
+  const { snapshot, throws, fires = NO_FIRES, highlightId, listenerId, paused = false, countdown = null } = props;
   // Keep the sound clock even when a new orientation or floor size restarts the drawing.
-  useBoardSounds(snapshot, throws, fires, highlightId, paused, countdown);
+  useBoardSounds(snapshot, throws, fires, soundListener(listenerId, highlightId, snapshot.bots), paused, countdown);
   return <ArenaBoardDrawing key={drawingKey} {...props} />;
 });
 

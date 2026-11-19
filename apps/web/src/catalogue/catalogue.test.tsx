@@ -28,19 +28,18 @@ describe("CatalogueView", () => {
     expect(cards(render("ultimates"))).toEqual([...ULTIMATE_IDS]);
   });
 
-  test("the ultimate tag and note disappear at the release time in both languages", () => {
+  test("the ultimate tag disappears at the release time, and an ultimate card has one description", () => {
     for (const section of CATALOGUE_SECTIONS) {
       expect(render(section).includes("data-catalogue-soon")).toBe(section === "ultimates");
     }
     for (const language of ["en", "id"] as const) {
       const soon = render("ultimates", language, "dash");
       expect(soon).toContain("data-catalogue-soon");
-      expect(soon).toContain(language === "en" ? "not in the game yet" : "belum ada di permainan");
       expect(soon).toContain(language === "en" ? "Coming soon" : "Segera hadir");
       const released = render("ultimates", language, "dash", ULTIMATES_FROM);
       expect(released).not.toContain("data-catalogue-soon");
-      expect(released).not.toContain(language === "en" ? "not in the game yet" : "belum ada di permainan");
-      expect(released).toContain(language === "en" ? "starts with this ultimate" : "memulai dengan jurus ini");
+      // Owner, 2026-11-19: "so much description". The card keeps its body and drops the second paragraph.
+      expect(released).not.toContain(language === "en" ? "starts with this ultimate" : "memulai dengan jurus ini");
     }
   });
 

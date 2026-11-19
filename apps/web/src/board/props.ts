@@ -35,6 +35,11 @@ export interface ArenaBoardProps {
   readonly names: Readonly<Record<BotId, string>>;
   /** The viewer's own tank, drawn so it stands out, or null for a spectator. */
   readonly highlightId: BotId | null;
+  /**
+   * A tank the view follows, whose point of view the sounds then take: its own shots, the hits on it, its items and its
+   * ultimate. Left out, the sounds follow the viewer's own tank, or the leader on a screen nobody owns (ArenaBoard).
+   */
+  readonly listenerId?: BotId;
   /** Milliseconds one turn takes on screen. */
   readonly tickMs: number;
   /** The look per tank. Without it, or for a tank missing from it, the tank is plain in a colour that follows the order of the tanks. */

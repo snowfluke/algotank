@@ -11,7 +11,6 @@ import { CircleCheck, Wrench } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { StrategyInput } from "@game/engine";
 import { paths } from "../app/route.ts";
-import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { sameData } from "../editor/compare.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { playSound } from "../sound/player.ts";
@@ -56,12 +55,11 @@ function MineRow({ style, chosen, look, nowMs, onUse }: { readonly style: MyPlay
         <TankBadge look={look} size={32} name={null} />
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="truncate font-display text-lead font-semibold">{style.name}</p>
-          <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />
         </div>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
-          {loadable ? <Traits traits={traits} /> : <p className="text-caption font-semibold text-hit [overflow-wrap:anywhere]">{s.cannotLoad}</p>}
+          {loadable ? <Traits traits={traits} ultimate={style.strategy.ultimate} nowMs={nowMs} /> : <p className="text-caption font-semibold text-hit [overflow-wrap:anywhere]">{s.cannotLoad}</p>}
         </div>
       {chosen ? (
         <span className="flex shrink-0 items-center gap-1 text-caption font-semibold text-water">

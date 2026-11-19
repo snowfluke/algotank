@@ -640,7 +640,7 @@ export const STATES = [
   ...[
     { state: "ultimate-picker", steps: [{ click: "[data-workshop-new]" }, { click: '[data-focus-key="workshop-empty-start"]' }, { wait: "[data-ultimate-picker]" }, { click: "[data-ultimate-save]" }, { wait: '[data-ultimate-save] + [role="alert"]' }] },
     { state: "card-ultimate", seedWorkshop: 1, steps: [{ wait: "[data-pager-item] [data-ultimate-link]" }] },
-    { state: "editor-ultimate", seedWorkshop: 1, steps: [{ click: "[data-workshop-open]" }, { wait: "[data-workshop-ultimate] [data-ultimate-link]" }] },
+    { state: "editor-ultimate", seedWorkshop: 1, steps: [{ click: "[data-workshop-open]" }, { wait: "[data-workshop-ultimate] [data-ultimate-emblem]" }] },
   ].map((state) => ({ screen: "workshop", owner: "D3", path: () => "/workshop", as: "visitor", sizes: ULTIMATE_WORKSHOP_SIZES, fixedTime: BEFORE_ULTIMATES, ...state })),
   ...["upgrades", "rules", "try"].map((pane) => ({
     screen: "workshop",

@@ -8,7 +8,7 @@ import { ArrowLeft, CircleAlert, CircleCheck, Cog, ListChecks, Pencil, Play, Sca
 import { useMemo, useRef, useState } from "react";
 import { ACCOUNT_STRATEGY_LIMITS } from "@game/arena";
 import { parseStrategy, ruleSet, RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId, type UltimateId } from "@game/engine";
-import { UltimateLink } from "../catalogue/UltimateLink.tsx";
+import { UltimateEmblem } from "../catalogue/UltimateEmblem.tsx";
 import { guideSignal } from "../guide/guideStore.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { WhenStrategyReady } from "../player/WhenStrategyReady.tsx";
@@ -156,7 +156,7 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
   const issues = parsed.ok ? [] : parsed.issues;
   const rules = ruleSet(ruleSetId);
   const save = workshopSaveView(parsed.ok, library.account, w);
-  // The ultimate row gives its height to any open rules step. On a phone the name row gives way too.
+  // On a phone the name row (with the ultimate button) gives its height to an open rules step.
   const stepOpen = pane === "rules" && resolveView(draft, nav).kind !== "list";
   const closeUltimatePicker = () => {
     setUltimateChoice(null);
@@ -206,6 +206,22 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
               <IconButton label={w.back} icon={<ArrowLeft aria-hidden size={22} />} variant="quiet" className="mt-0.5" data-focus-key="workshop-editor-back" onClick={onBack} />
               <NameField key={style.id} style={style} />
             </div>
+            {/* The ultimate sits beside the name as one gold button that opens the chooser, not a row of its own (owner,
+                2026-11-19). An open rules step needs the height, so the button gives way to it. */}
+            {stepOpen ? null : (
+            <button
+              type="button"
+              data-workshop-ultimate=""
+              data-focus-key="workshop-change-ultimate"
+              aria-label={`${w.changeUltimate}: ${m.catalogue.ultimates[draft.ultimate].name}`}
+              className="ultimate-tile press inline-flex min-h-11 max-w-full min-w-0 shrink-0 items-center gap-2 rounded-full border-2 border-b-4 border-guide-deep bg-guide-soft py-0.5 pr-3 pl-0.5 font-display font-semibold text-ink active:border-b-2"
+              onClick={() => setUltimateChoice(draft.ultimate)}
+            >
+              <UltimateEmblem ultimate={draft.ultimate} size={34} />
+              <span className="min-w-0 truncate">{m.catalogue.ultimates[draft.ultimate].name}</span>
+              <Pencil aria-hidden size={16} strokeWidth={2.5} className="shrink-0 text-guide-ink" />
+            </button>
+            )}
             <p role="status" data-coach="style-saved" className={`flex min-w-0 flex-[1_1_12rem] items-start gap-1.5 text-caption font-semibold ${save.kind === "problem" ? "text-hit" : save.kind === "saved" ? "text-ok" : "text-muted"}`}>
               {save.kind === "problem" ? <CircleAlert aria-hidden size={16} strokeWidth={2.5} className="mt-0.5 shrink-0" /> : save.kind === "saved" ? <CircleCheck aria-hidden size={16} strokeWidth={2.5} className="mt-0.5 shrink-0" /> : null}
               <span className="min-w-0 [overflow-wrap:anywhere]">{save.text}</span>
@@ -221,18 +237,6 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
             />
             <ChecklistLine compact onOpen={() => setChecklistOpen(true)} />
           </div>
-          {stepOpen ? null : (
-            <div data-workshop-ultimate="" className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
-              <UltimateLink ultimate={draft.ultimate} nowMs={nowMs} />
-              <IconButton
-                label={w.changeUltimate}
-                text={w.changeUltimate}
-                icon={<Pencil aria-hidden size={18} />}
-                data-focus-key="workshop-change-ultimate"
-                onClick={() => setUltimateChoice(draft.ultimate)}
-              />
-            </div>
-          )}
           <div {...tabPanelProps("workshop", pane)} className="flex min-h-0 min-w-0 flex-1 flex-col">
             <WhenStrategyReady strategy={session}>
               {() =>

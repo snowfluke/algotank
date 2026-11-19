@@ -398,7 +398,7 @@ function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions 
       ) : (
         <>
           <div className="flex min-w-0 shrink-0 flex-col gap-1">
-            {detail.level < ultimateLevel ? <UltimateLink ultimate={seat.strategy.ultimate} nowMs={now} state={ownUltimate} /> : null}
+            {detail.level < ultimateLevel ? <UltimateLink ultimate={seat.strategy.ultimate} nowMs={now} size={{ kind: "tile", state: ownUltimate }} /> : null}
             {here ? null : (
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 <p className="min-w-0 font-semibold">{t.otherLeague(seat.league)}</p>

@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { ruleSet } from "@game/engine";
 import type { BotState, Direction, ThrowEvent } from "@game/engine";
 import {
+  soundListener,
   CELL,
   boardDetail,
   cellCenter,
@@ -260,5 +261,17 @@ describe("youMarkerBelow", () => {
   test("the top row puts it under; the bottom row keeps it above", () => {
     expect(youMarkerBelow({ x: 3, y: 0 }, [], { inTopRow: true, inBottomRow: false })).toBe(true);
     expect(youMarkerBelow({ x: 3, y: 7 }, [{ x: 3, y: 6 }], { inTopRow: false, inBottomRow: true })).toBe(false);
+  });
+});
+
+describe("soundListener", () => {
+  const bots = [{ id: "a", score: 3 }, { id: "b", score: 5 }, { id: "c", score: 1 }];
+  test("a followed tank, then the viewer's own tank, then the leader takes the point of view", () => {
+    expect(soundListener("c", "a", bots)).toBe("c");
+    expect(soundListener(undefined, "a", bots)).toBe("a");
+    expect(soundListener(undefined, null, bots)).toBe("b");
+  });
+  test("with no single leader nobody is chosen, so every shot plays", () => {
+    expect(soundListener(undefined, null, [{ id: "a", score: 2 }, { id: "b", score: 2 }])).toBeNull();
   });
 });

@@ -17,6 +17,8 @@
 //                so it draws neither.
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
+//   freshStartRound: one free cell (int), then one tie rank (next).
+//   changeRoundRules: freshStartRound's draws for each tank outside a smaller board, in board order.
 //
 // An open round (createOpenRound) is a round of the monthly league
 // (docs/specs/revamp/77-monthly-league.md): it starts with no tank on a board sized for a
@@ -25,6 +27,7 @@
 // |------------|------------|------------------|------------------------------------------------|
 // | (none)     | playing    | caller: joinRound| between turns; the id is new; a free cell left |
 // | playing    | (none)     | caller: leaveRound| between turns; the id is on the board         |
+// | playing    | playing    | freshStartRound  | between turns; a different free square         |
 // A tank that leaves loses its place in a running sequence and its tie-break number. A round
 // that never calls joinRound or leaveRound draws exactly what it drew before they existed.
 
@@ -52,7 +55,7 @@ import { countDown, itemHandOf, newEffect, receiveEffect, spinDecision, spinsThi
 import { chargeAfterTurn, firstUltimateCharge, ultimateDecision, ultimateEffectAfterTurn, type UltimateId } from "../ultimates/ultimates.ts";
 import { decide, firesUltimateByRules } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
-import { allCells, arenaSize, cellKey, type Cell } from "./grid.ts";
+import { allCells, arenaSize, cellKey, isInside, type Cell } from "./grid.ts";
 import { createRng } from "./rng.ts";
 import { resolveTick } from "./resolve.ts";
 import type { Placement } from "./resolve.ts";
@@ -73,7 +76,7 @@ class RoundRuntime implements RoundState {
     readonly rng: Rng,
     /** Changed only by joinRound and leaveRound. */
     readonly strategies: Map<BotId, Strategy>,
-    /** Changed only by joinRound and leaveRound. */
+    /** Changed by joinRound, leaveRound and freshStartRound. */
     readonly tieBreaks: Map<BotId, number>,
   ) {
     this.snapshot = spawn;
@@ -157,7 +160,7 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
   };
 }
 
-/** An open round: no tank at the start, a board that never changes size. See the header. */
+/** An open round: no tank at the start, a board sized for a fixed number of tanks. See the header. */
 export interface OpenRoundConfig {
   /** A safe integer. */
   readonly seed: number;
@@ -196,14 +199,10 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   if (!Number.isSafeInteger(score)) throw new Error(`score must be a whole number, got ${score}`);
   const before = round.snapshot;
   if (before.bots.some((bot) => bot.id === player.id)) throw new Error(`player "${player.id}" is already in the round`);
-  // A joining tank never lands on an item: it would take it without driving there.
-  const taken = new Set([...before.bots, ...before.items].map(cellKey));
-  const freeCells = allCells(before).filter((cell) => !taken.has(cellKey(cell)));
-  if (freeCells.length === 0) throw new Error(`no free square is left for player "${player.id}"`);
-  const cell = freeCells[round.rng.int(freeCells.length)];
+  const cell = drawFreeCell(round, player.id);
   const direction = DIRECTIONS[round.rng.int(DIRECTIONS.length)];
   const firstMode = player.strategy.modes[0];
-  if (cell === undefined || direction === undefined || firstMode === undefined) throw new Error(`could not place player "${player.id}"`);
+  if (direction === undefined || firstMode === undefined) throw new Error(`could not place player "${player.id}"`);
   // The tie-break number also settles target ties in this round (BotState.tieRank), so a join draws nothing more.
   const tieRank = round.rng.next();
   const ultimate = round.config.ultimates ? player.strategy.ultimate : undefined;
@@ -212,6 +211,15 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   round.strategies.set(player.id, player.strategy);
   round.snapshot = { ...before, bots: [...before.bots, bot] };
   return bot;
+}
+
+/** Tanks appear on empty squares, so they cannot take an item without driving there. */
+function drawFreeCell(round: RoundRuntime, id: BotId): Cell {
+  const board = round.snapshot;
+  const taken = new Set([...board.bots, ...board.items].map(cellKey));
+  const free = allCells(board).filter((cell) => !taken.has(cellKey(cell)));
+  if (free.length === 0) throw new Error(`no free square is left for player "${id}"`);
+  return free[round.rng.int(free.length)] as Cell;
 }
 
 /** Takes a tank off the board between two turns, with its running sequence. Throws when the id is not on the board. */
@@ -223,6 +231,47 @@ export function leaveRound(state: RoundState, id: BotId): void {
   round.strategies.delete(id);
   round.tieBreaks.delete(id);
   round.sequences.delete(id);
+}
+
+/**
+ * A monthly fresh start (77-monthly-league.md, owner 2026-11-19). Draw while the old square is
+ * still occupied so the tank always emerges somewhere else. Keep its points, hit counts and
+ * ultimate state, including the active effect. This is a move within the existing round.
+ */
+export function freshStartRound(state: RoundState, id: BotId): BotState {
+  const round = runtimeOf(state);
+  const before = round.snapshot;
+  const old = before.bots.find((bot) => bot.id === id);
+  if (old === undefined) throw new Error(`player "${id}" is not in the round`);
+  const cell = drawFreeCell(round, id);
+  const tieRank = round.rng.next();
+  const bot = { ...old, ...cell, water: ruleSet(before.ruleSetId).waterCapacity, tieRank };
+  round.tieBreaks.set(id, tieRank);
+  round.sequences.delete(id);
+  round.snapshot = { ...before, bots: [...before.bots.filter((b) => b.id !== id), bot] };
+  return bot;
+}
+
+/**
+ * Monthly weather between turns (77-monthly-league.md, owner 2026-11-19). Keep the origin so
+ * tanks and items stay on their squares as the right and bottom edges move. Only tanks on
+ * removed squares need a fresh start. Returns those tanks in tunnel order.
+ */
+export function changeRoundRules(state: RoundState, ruleSetId: RuleSetId, boardFor: number): readonly BotState[] {
+  const round = runtimeOf(state);
+  const before = round.snapshot;
+  if (ruleSetId === before.ruleSetId) return [];
+  const rules = ruleSet(ruleSetId);
+  const size = arenaSize(boardFor, rules);
+  const shrinks = size.width < before.width || size.height < before.height;
+  const outside = shrinks ? before.bots.filter((bot) => !isInside(size, bot)) : [];
+  const items = shrinks ? before.items.filter((item) => isInside(size, item)) : before.items;
+  if (shrinks && before.bots.length + items.length > size.width * size.height) {
+    throw new Error("the smaller board has too few free squares");
+  }
+  const bots = before.bots.map((bot) => bot.water <= rules.waterCapacity ? bot : { ...bot, water: rules.waterCapacity });
+  round.snapshot = { ...before, ...size, ruleSetId, bots, items };
+  return outside.map(({ id }) => freshStartRound(round, id));
 }
 
 /**

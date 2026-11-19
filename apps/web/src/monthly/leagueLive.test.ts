@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { compactTick, plainTankLook, type LeagueLive, type PublicSnapshot } from "@game/arena";
-import { STANDARD_RULE_SET_ID } from "@game/engine";
+import { compactTick, plainTankLook, type LeagueLive, type LeagueStreamMessage, type PublicSnapshot } from "@game/arena";
+import { ruleSet, STANDARD_RULE_SET_ID, type Decision, type UltimateFire } from "@game/engine";
 import { nextLeagueLoad, parseLeagueMessage } from "./leagueLive.ts";
 
 const bot = (id: string, x: number) => ({ id, x, y: 1, direction: "N" as const, score: 0, wasHit: false, build: {}, hitsLanded: 0, hitsTaken: 0, water: 10, item: null, effect: null });
@@ -54,7 +54,7 @@ describe("a league's live state", () => {
     expect(owned(nextLeagueLoad(moved, { type: "state", state: { ...live, day: "2026-11-15" } }, 0))).toEqual([]);
   });
 
-  test("a new round of the same day counts as a reshuffle; a join, the first state and a new day do not", () => {
+  test("only board growth counts as a reshuffle", () => {
     const reshuffles = (load: ReturnType<typeof nextLeagueLoad>) => (load.kind === "ready" ? load.board.reshuffles : null);
     const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: live }, 0);
     expect(reshuffles(ready)).toBe(0);
@@ -62,11 +62,105 @@ describe("a league's live state", () => {
     // A join goes on with the round, so its state keeps the turn.
     const joined = nextLeagueLoad(moved, { type: "state", state: { ...live, board: next } }, 0);
     expect(reshuffles(joined)).toBe(0);
-    const again = nextLeagueLoad(joined, { type: "state", state: live }, 0);
+    // Error recovery may reset to turn 0 too, without growing the board.
+    expect(reshuffles(nextLeagueLoad(joined, { type: "state", state: live }, 0))).toBe(0);
+    const growth = parseLeagueMessage(JSON.stringify({ type: "state", state: live, change: "growth" }));
+    if (growth === null) throw new Error("expected growth");
+    const again = nextLeagueLoad(joined, growth, 0);
     expect(reshuffles(again)).toBe(1);
     // Two states at turn 0 in a row are one new round.
     expect(reshuffles(nextLeagueLoad(again, { type: "state", state: live }, 0))).toBe(1);
     expect(reshuffles(nextLeagueLoad(joined, { type: "state", state: { ...live, day: "2026-11-15" } }, 0))).toBe(0);
+  });
+
+  test("a fresh start gives the owner's feed one line and sets the order for the following tick", () => {
+    const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: live }, 0);
+    const own: Decision = { botId: "a", modeId: "main", nextModeId: "main", ruleId: null, actionId: "wait", move: "W" };
+    const fresh: LeagueStreamMessage = { type: "tick", tick: { ...tick, freshStarts: [[0, 4, 2]] }, own };
+    const moved = nextLeagueLoad(ready, fresh, 0);
+    if (moved.kind !== "ready") throw new Error("expected a board");
+    expect(moved.board.snapshot.bots.map(({ id, x, y }) => [id, x, y])).toEqual([["b", 3, 1], ["a", 4, 2]]);
+    expect(moved.board.snapshot.bots[1]?.water).toBe(ruleSet(STANDARD_RULE_SET_ID).waterCapacity);
+    expect(moved.board.tunnels).toMatchObject([{ kind: "through", from: { id: "a", x: 2, y: 1 } }]);
+    expect(moved.board.ownFreshStart).toEqual({ id: "a", tick: 0 });
+    expect(moved.board.reshuffles).toBe(0);
+    for (const other of [null, { ...own, botId: "b" }]) {
+      const watched = nextLeagueLoad(ready, { ...fresh, own: other }, 0);
+      expect(watched.kind === "ready" ? watched.board.ownFreshStart : undefined).toBeNull();
+    }
+
+    const snapshot = { ...moved.board.snapshot, tick: 2 };
+    const second = compactTick({ tick: 1, order: ["a", "b"], moves: [{ botId: "a", move: "W" }, { botId: "b", move: "W" }], throws: [], pickups: [], snapshot }, ["b", "a"]);
+    const after = nextLeagueLoad(moved, { type: "tick", tick: second, own }, 900);
+    if (after.kind !== "ready") throw new Error("expected a board");
+    expect(after.board.snapshot).toEqual(snapshot);
+    expect(after.board.tunnels).toEqual([]);
+    expect(after.board.ownFreshStart).toEqual(moved.board.ownFreshStart);
+  });
+
+  test("a bot quit and join uses state at the same turn with a dust ring at each bot's square", () => {
+    const withBot = { ...live, tanks: live.tanks.map((tank) => tank.id === "b" ? { ...tank, isBot: true } : tank) };
+    const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: withBot }, 0);
+    const moved = nextLeagueLoad(ready, { type: "tick", tick: { ...tick, freshStarts: [[0, 4, 2]] }, own: null }, 0);
+    const state = { ...withBot, tanks: withBot.tanks.map((tank) => tank.id === "b" ? { ...tank, id: "c" } : tank), board: { ...next, bots: [bot("a", 4), bot("c", 5)] } };
+    const changed = nextLeagueLoad(moved, { type: "state", state, change: "botFreshStart" }, 0);
+    if (changed.kind !== "ready") throw new Error("expected a board");
+    expect(changed.board.tunnels).toMatchObject([
+      { kind: "through", from: { id: "a", x: 2 } },
+      { kind: "exit", from: { id: "b", x: 3 }, look: plainTankLook(2) },
+      { kind: "enter", id: "c" },
+    ]);
+    expect(changed.board.reshuffles).toBe(0);
+  });
+
+  test("a weather state keeps the turn, tunnels, ultimate fires and feed without counting a reshuffle", () => {
+    const wide = { ...live, board: { ...board, width: 17, height: 13, ruleSetId: "open-field" as const } };
+    const withBot = { ...wide, tanks: wide.tanks.map((tank) => tank.id === "b" ? { ...tank, isBot: true } : tank) };
+    const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: withBot }, 0);
+    const own: Decision = { botId: "a", modeId: "main", nextModeId: "main", ruleId: null, actionId: "wait", move: "W" };
+    const active = {
+      ...bot("a", 16),
+      ultimate: { id: "fullTank", kind: "charging", turnsLeft: 40, turnsTotal: 40 },
+      ultimateEffect: { kind: "fullTank", freeShots: 3 },
+    } as const;
+    const fire: UltimateFire = { botId: "a", kind: "fullTank", at: { x: 16, y: 1 } };
+    const combined = compactTick({
+      tick: 0, order: ["a", "b"], moves: [{ botId: "a", move: "W" }, { botId: "b", move: "W" }],
+      throws: [], pickups: [], snapshot: { ...wide.board, tick: 1, bots: [active, bot("b", 3)] },
+      fires: [fire], freshStarts: [{ id: "a", x: 4, y: 2 }],
+    }, ["a", "b"]);
+    const message = parseLeagueMessage(JSON.stringify({ type: "tick", tick: combined, own }));
+    if (message?.type !== "tick") throw new Error("expected a tick");
+    const moved = nextLeagueLoad(ready, message, 0);
+    const state: LeagueLive = {
+      ...live,
+      tanks: [...live.tanks.slice(0, 1), { id: "c", name: "Cy", look: plainTankLook(3), isBot: true }],
+      board: { ...next, ruleSetId: "dry-spell", bots: [{ ...active, x: 4, y: 2, water: 6 }, bot("c", 5)] },
+    };
+    const weather = parseLeagueMessage(JSON.stringify({ type: "state", state, change: "weather" }));
+    if (weather?.type !== "state") throw new Error("expected a weather state");
+    const changed = nextLeagueLoad(moved, weather, 1000);
+    if (changed.kind !== "ready" || moved.kind !== "ready") throw new Error("expected a board");
+    expect(changed.board.snapshot).toEqual(state.board);
+    expect(changed.board.snapshot.tick).toBe(moved.board.snapshot.tick);
+    expect(changed.board.tunnels).toMatchObject([
+      { kind: "through", from: { id: "a", x: 16 } },
+      { kind: "exit", from: { id: "b" } },
+      { kind: "enter", id: "c" },
+    ]);
+    expect(changed.board.own).toEqual(moved.board.own);
+    expect(moved.board.snapshot.bots.find(({ id }) => id === "a")?.ultimateEffect).toEqual(active.ultimateEffect);
+    expect(changed.board.fires).toEqual([fire]);
+    expect(changed.board.ownFreshStart).toEqual({ id: "a", tick: 0 });
+    expect(changed.board.reshuffles).toBe(0);
+    expect(changed.board.weatherUntil).toBeGreaterThan(1000);
+
+    const refreshed = nextLeagueLoad(changed, { type: "state", state: weather.state }, 1500);
+    expect(refreshed.kind === "ready" && refreshed.board.weatherUntil).toBe(changed.board.weatherUntil);
+    const tomorrow = nextLeagueLoad(changed, { type: "state", state: { ...weather.state, day: "2026-11-15" } }, 2000);
+    expect(tomorrow.kind === "ready" && tomorrow.board.weatherUntil).toBe(0);
+    const connected = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: weather.state }, 2500);
+    expect(connected.kind === "ready" && connected.board.weatherUntil).toBe(0);
   });
 
   test("a closed league ends the load with the number of leagues left", () => {

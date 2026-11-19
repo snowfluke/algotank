@@ -2,8 +2,8 @@
 // GM's tank special ... trail for the last 3 tiles with different opacity"). Pure: ArenaBoard.tsx
 // keeps one TrailState per tank with a trail and draws its marks under the items and tanks.
 // - A step to a neighbouring square (diagonals too) puts the square it left first in the trail.
-// - A jump of more than one square (the league's reshuffle, a new day) starts the trail again,
-//   so no mark is left far from the tank.
+// - A jump of more than one square (a rebuild, a new day) starts the trail again.
+// - A tunnel starts a fresh trail even when the squares are neighbours (2026-11-19).
 // - Standing still keeps the trail; the square the tank stands on is never marked.
 
 export interface Cell {
@@ -25,8 +25,8 @@ export const TRAIL_OPACITY: readonly number[] = [0.45, 0.3, 0.15];
 
 const same = (a: Cell, b: Cell) => a.x === b.x && a.y === b.y;
 
-export function nextTrail(state: TrailState | undefined, now: Cell): TrailState {
-  if (state === undefined) return { at: now, trail: [] };
+export function nextTrail(state: TrailState | undefined, now: Cell, throughTunnel = false): TrailState {
+  if (state === undefined || throughTunnel) return { at: now, trail: [] };
   if (same(state.at, now)) return state;
   if (Math.max(Math.abs(state.at.x - now.x), Math.abs(state.at.y - now.y)) > 1) return { at: now, trail: [] };
   return { at: now, trail: [state.at, ...state.trail].filter((cell) => !same(cell, now)).slice(0, TRAIL_LENGTH) };

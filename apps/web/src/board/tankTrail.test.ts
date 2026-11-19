@@ -16,8 +16,15 @@ describe("a game master's trail", () => {
     expect(walk([[0, 0], [1, 0], [0, 0]])?.trail).toEqual([{ x: 1, y: 0 }]);
   });
 
-  test("a jump of more than one square, as at a reshuffle, starts it again", () => {
+  test("a jump of more than one square, as at a rebuild, starts it again", () => {
     expect(walk([[0, 0], [1, 0], [2, 0], [9, 9]])).toEqual({ at: { x: 9, y: 9 }, trail: [] });
+  });
+
+  test("a tunnel to a neighbouring square starts the trail at the exit", () => {
+    const exit = { x: 2, y: 0 };
+    const trail = nextTrail(walk([[0, 0], [1, 0]]), exit, true);
+    expect(trail).toEqual({ at: exit, trail: [] });
+    expect(nextTrail(trail, { x: 2, y: 1 }).trail).toEqual([exit]);
   });
 
   test("a mark points along the step", () => {

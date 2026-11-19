@@ -435,7 +435,7 @@ function Canopy({ opening }: { readonly opening: boolean }) {
 }
 
 /** The canopy spans the front and both sides (owner, 2026-11-18) and sits below the hull, like the ready ring. */
-export function TankUltimateFloor({ bot, fire, motion }: { readonly bot: PublicBot; readonly fire: UltimateFire | undefined; readonly motion: string }) {
+export function TankUltimateFloor({ bot, fire, motion }: { readonly bot: PublicBot; readonly fire: UltimateFire | undefined; readonly motion: string | undefined }) {
   const active = bot.ultimateEffect?.kind;
   const smoke = active === "smoke" || fire?.kind === "smoke";
   const umbrella = active === "bigUmbrella" || fire?.kind === "bigUmbrella";
@@ -456,7 +456,7 @@ export function TankUltimateFloor({ bot, fire, motion }: { readonly bot: PublicB
 }
 
 /** Smoke lies over the hull's edge, so it hides the tank the way it hides it from shots; gauges come after it. */
-export function TankUltimateOver({ bot, fire, motion }: { readonly bot: PublicBot; readonly fire: UltimateFire | undefined; readonly motion: string }) {
+export function TankUltimateOver({ bot, fire, motion }: { readonly bot: PublicBot; readonly fire: UltimateFire | undefined; readonly motion: string | undefined }) {
   if (bot.ultimateEffect?.kind !== "smoke" && fire?.kind !== "smoke") return null;
   const c = at(bot);
   return (

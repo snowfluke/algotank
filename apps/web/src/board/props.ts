@@ -2,7 +2,7 @@
 // replay both render through these, so the two always look the same.
 
 import type { ReactNode } from "react";
-import type { PublicSnapshot } from "@game/arena";
+import type { PublicBot, PublicSnapshot } from "@game/arena";
 import type { BotId, ThrowEvent, UltimateFire } from "@game/engine";
 import type { TankLook } from "../tank/look.ts";
 import type { CameraWindow } from "./camera.ts";
@@ -13,13 +13,23 @@ export interface TankInfo {
   readonly isBot?: boolean;
 }
 
+/** A tank using a tunnel after the moves of a monthly turn (77-monthly-league.md, 2026-11-19). */
+export type TankTunnel =
+  | { readonly kind: "through"; readonly from: PublicBot }
+  | { readonly kind: "exit"; readonly from: PublicBot; readonly look: TankLook }
+  | { readonly kind: "enter"; readonly id: BotId };
+
 export interface ArenaBoardProps {
+  /** Restarts the drawing when the board is rotated or its coordinate origin moves. */
+  readonly drawingKey?: string;
   /** The state to draw. When it changes, tanks move to their new squares over tickMs. */
   readonly snapshot: PublicSnapshot;
   /** The shots of the turn that produced this snapshot. Empty for the start state. */
   readonly throws: readonly ThrowEvent[];
   /** The ultimate fires of the same turn. Older rounds send none. */
   readonly fires?: readonly UltimateFire[];
+  /** Where tanks sank before appearing at the snapshot's squares. */
+  readonly tunnels?: readonly TankTunnel[];
   readonly names: Readonly<Record<BotId, string>>;
   /** The viewer's own tank, drawn so it stands out, or null for a spectator. */
   readonly highlightId: BotId | null;

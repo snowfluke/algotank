@@ -73,8 +73,10 @@ export interface MonthlyViewProps {
   /** The visitor's one action; null for a seated owner and while the account is not known yet. */
   readonly onJoin: (() => void) | null;
   readonly dayChange: DayChange | null;
-  /** True for a moment after a new round of today put every tank on a new square (leagueLive.ts, `reshuffles`). */
+  /** True for a moment after the round rebuilt for board growth (leagueLive.ts, `reshuffles`). */
   readonly reshuffled: boolean;
+  /** True for a few seconds after a weather state (leagueLive.ts, `weatherUntil`). */
+  readonly weatherChanged: boolean;
   onQuit(): void;
   /** A seated owner's way to new rules (flow.ts, askChangeRules). */
   onChangeRules(): void;
@@ -151,7 +153,7 @@ function DayClock({ board, fixedNow, dayChange, short }: { board: LeagueBoard | 
 /**
  * The round's arena condition on a line of its own, under the clock: beside it, a long name
  * (Lapangan luas) was cut short at 1000 px and on a phone, and a name that wraps or not at a
- * reshuffle would move the page. An empty league has no round, so no condition yet.
+ * weather change would move the page. An empty league has no round, so no condition yet.
  */
 function ConditionLine({ board, short }: { board: LeagueBoard | null; short: boolean }) {
   if (board === null || board.live.tanks.length === 0) return null;
@@ -175,8 +177,8 @@ function LastWinner({ days, today }: { days: readonly LeagueDayRecord[]; today: 
   );
 }
 
-/** The board as large as its box allows, with the midnight notice, "Reshuffled" or the empty league's invitation over it. */
-function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row, ranking }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; row: BoardRow; ranking: LeagueRankingResponse | null }) {
+/** The board as large as its box allows, with notices over it so they take no space from the board. */
+function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, weatherChanged, row, ranking }: { board: LeagueBoard; ownSeatId: string | null; onJoin: (() => void) | null; dayChange: DayChange | null; reshuffled: boolean; weatherChanged: boolean; row: BoardRow; ranking: LeagueRankingResponse | null }) {
   const m = useMessages();
   const t = m.monthly;
   const dayName = useDayName();
@@ -209,6 +211,12 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row, ranking }
         <p className="text-title font-semibold">{t.condition(m.vocabulary.roundRules[board.snapshot.ruleSetId].name)}</p>
       </div>
     );
+  } else if (weatherChanged && live.tanks.length > 0) {
+    notice = (
+      <p data-weather-changed="" role="status" className="text-center font-display text-title font-semibold">
+        {t.weatherChanged(m.vocabulary.roundRules[board.snapshot.ruleSetId].name)}
+      </p>
+    );
   } else if (live.tanks.length === 0) {
     notice = (
       <div data-league-empty="" className="flex flex-col gap-1">
@@ -223,6 +231,7 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, row, ranking }
         snapshot={board.snapshot}
         throws={board.throws}
         fires={board.fires}
+        tunnels={board.tunnels}
         names={names}
         highlightId={ownSeatId}
         tickMs={live.tickMs}
@@ -332,9 +341,10 @@ function leagueTitleOf(t: ReturnType<typeof useMessages>["monthly"], league: num
 }
 
 /** The owner's tank: today, the counted days, the turns, and the way out. */
-function OwnPane({ seat, league, ranking, now, onLeague, onQuit, actions }: {
+function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions }: {
   seat: MonthlySeat;
   league: number;
+  board: LeagueBoard | null;
   ranking: LeagueRankingResponse | null;
   now: number | undefined;
   onLeague(next: number): void;
@@ -345,6 +355,7 @@ function OwnPane({ seat, league, ranking, now, onLeague, onQuit, actions }: {
   const t = m.monthly.own;
   const [language] = useLanguage();
   const here = seat.league === league;
+  const freshStart = here && board?.ownFreshStart?.id === seat.seatId ? board.ownFreshStart : null;
   const todayRow = ranking?.today.find((row) => row.seatId === seat.seatId) ?? null;
   // K2: today's statistics card in place of the summary, so each has the pane's height.
   const [part, setPart] = useState<"summary" | "stats">("summary");
@@ -354,7 +365,7 @@ function OwnPane({ seat, league, ranking, now, onLeague, onQuit, actions }: {
   const ultimateLevel = countingLevel + 1;
   const detail = useFitDetail<HTMLElement>(
     ultimateLevel + 1,
-    `${language}|${part}|${here}|${seat.league}|${todayRow === null}|${seat.countsToday}|${seat.rank === null}`,
+    `${language}|${part}|${here}|${seat.league}|${todayRow === null}|${seat.countsToday}|${seat.rank === null}|${freshStart !== null}`,
   );
   return (
     <section ref={detail.ref} data-own-pane="" aria-label={t.heading} className={`${PANE} fit:overflow-hidden`}>
@@ -403,7 +414,12 @@ function OwnPane({ seat, league, ranking, now, onLeague, onQuit, actions }: {
             ) : null}
             <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score, seat.countedDays)}</p>
           </div>
-          {/* No live turn text here: it changed every 0.9 s, faster than a player reads (owner, 2026-11-16). The Statistik tab counts the rules instead. */}
+          {/* Keep the latest tunnel in the own feed (owner, 2026-11-19), so it can be read after the turn. */}
+          {freshStart === null ? null : (
+            <p data-own-fresh-start="" role="status" className="min-w-0 shrink-0 [overflow-wrap:anywhere]">
+              <span key={freshStart.tick}>{t.freshStart}</span>
+            </p>
+          )}
           <div className="min-h-0 flex-1" />
         </>
       )}
@@ -532,13 +548,13 @@ function PresenterLayout(props: MonthlyViewProps) {
       </div>
       {/* Flex, not a grid row: a grid's fr row in a flexed parent would size to the board's last measured pixels and never grow back after a resize. */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-[2vw]">
-        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} row={{ place: { kind: "slot", element: switchSlot }, follow }} ranking={props.ranking} />}</div>
+        <div className="flex min-h-0 min-w-0 flex-[1.9] basis-0 flex-col">{board === null ? null : <Board board={board} ownSeatId={ownSeatId} onJoin={props.onJoin} dayChange={props.dayChange} reshuffled={props.reshuffled} weatherChanged={props.weatherChanged} row={{ place: { kind: "slot", element: switchSlot }, follow }} ranking={props.ranking} />}</div>
         <section aria-label={side === "activity" ? t.tabs.activity : t.ranking.label} className={`${PANE} basis-0`}>
           <div className="shrink-0 [&_label]:px-1 min-[1100px]:[&_label]:px-3">
             <SegmentedControl legend={t.tabs.label} hideLegend size="sm" value={side} onChange={props.onSide} options={sideOptions} />
           </div>
           {side === "mine" && seat !== null ? (
-            <OwnPane seat={seat} league={league} ranking={props.ranking} now={props.now} onLeague={props.onLeague} onQuit={props.onQuit} />
+            <OwnPane seat={seat} league={league} board={board} ranking={props.ranking} now={props.now} onLeague={props.onLeague} onQuit={props.onQuit} />
           ) : side === "activity" ? (
             <ActivityList events={board?.live.league === league ? board.live.activity : []} fixedNow={props.now} />
           ) : (
@@ -600,6 +616,7 @@ function PhoneLayout(props: MonthlyViewProps) {
       <OwnPane
         seat={seat}
         league={league}
+        board={board}
         ranking={props.ranking}
         now={props.now}
         onLeague={props.onLeague}
@@ -639,6 +656,7 @@ function PhoneLayout(props: MonthlyViewProps) {
             onJoin={props.onJoin}
             dayChange={props.dayChange}
             reshuffled={props.reshuffled}
+            weatherChanged={props.weatherChanged}
             row={{ place: { kind: "row", lead: seat === null ? null : <OwnLine seat={seat} league={league} ranking={props.ranking} onLeague={props.onLeague} /> }, follow }}
             ranking={props.ranking}
           />
@@ -662,7 +680,7 @@ function PhoneLayout(props: MonthlyViewProps) {
         <LegendButton ultimates={hasUltimates(board?.live.board ?? null) || hasUltimates(board?.snapshot ?? null)} />
       </div>
       {/* One full-width line of time left and condition (owner, 2026-11-16: four lines were too many). It does not wrap,
-          so a longer condition name at a reshuffle is cut short instead of moving the page. */}
+          so a longer condition name at a weather change is cut short instead of moving the page. */}
       <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-4">
         <div className="shrink-0">
           <DayClock board={board} fixedNow={props.now} dayChange={props.dayChange} short />

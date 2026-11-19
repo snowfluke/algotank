@@ -613,12 +613,18 @@ export type PublicBot = Pick<
 
 /**
  * A snapshot as every viewer sees it. A full Snapshot can be passed where this is expected.
- * `ruleSetId` is public because a round's rules are known from its first tick; ruleSet(id)
- * from @game/engine gives the numbers.
+ * `ruleSetId` names the rules now. ruleSet(id) from @game/engine gives the numbers.
  */
 export interface PublicSnapshot
   extends Pick<Snapshot, "width" | "height" | "tick" | "ticksTotal" | "survivorsAfterRound" | "ruleSetId" | "items"> {
   readonly bots: readonly PublicBot[];
+}
+
+/** A monthly tank's destination after the turn's moves (77-monthly-league.md, 2026-11-19). */
+export interface FreshStart {
+  readonly id: PlayerId;
+  readonly x: number;
+  readonly y: number;
 }
 
 /** One tick as every viewer sees it: moves and outcomes, without the rules behind them. */
@@ -634,6 +640,8 @@ export interface PublicTick {
   readonly magnetFires?: readonly MagnetFire[];
   /** Every ultimate fire in move order, including Magnet. */
   readonly fires?: readonly UltimateFire[];
+  /** In tunnel order. The snapshot is from after the moves, before the tunnels. */
+  readonly freshStarts?: readonly FreshStart[];
 }
 
 /**

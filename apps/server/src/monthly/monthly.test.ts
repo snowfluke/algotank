@@ -8,7 +8,7 @@ import type { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { LEAGUE_ACTIVITY_LIMIT, plainTankLook, ULTIMATES_FROM, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
+import { expandTick, LEAGUE_ACTIVITY_LIMIT, plainTankLook, ULTIMATES_FROM, type LeagueStreamMessage, type MonthlyMeResponse } from "@game/arena";
 import { arenaSize, PRESETS, ruleSet, STANDARD_RULE_SET_ID, ULTIMATE_RULES } from "@game/engine";
 import { HttpError } from "../http.ts";
 import { manualScheduler, type ManualScheduler } from "../test-helpers.ts";
@@ -46,7 +46,14 @@ interface League {
  * `seatsPerLeague` is 16 unless given, so the tests of several leagues and of the month close need 17
  * tanks, not 513; `null` gives the server's MONTHLY_SEATS.
  */
-function startLeague(options: { readonly at?: number; readonly db?: Database; readonly ticks?: ManualScheduler; readonly seatsPerLeague?: number | null; readonly calendar?: LeagueCalendar } = {}): League {
+function startLeague(options: {
+  readonly at?: number;
+  readonly db?: Database;
+  readonly ticks?: ManualScheduler;
+  readonly seatsPerLeague?: number | null;
+  readonly calendar?: LeagueCalendar;
+  readonly random?: () => number;
+} = {}): League {
   const ticks = options.ticks ?? manualScheduler(options.at ?? NOV_14 + 10 * 60 * 60 * 1000);
   const db = options.db ?? memoryDatabase();
   const champions = new Champions(db);
@@ -62,7 +69,7 @@ function startLeague(options: { readonly at?: number; readonly db?: Database; re
     scheduler: ticks,
     tickMs: 900,
     // Every draw is 0: no bot, except the one a lone tank always gets (league-day.ts), with the first play style of the lineup.
-    random: () => 0,
+    random: options.random ?? (() => 0),
     ...(options.seatsPerLeague === null ? {} : { seatsPerLeague: options.seatsPerLeague ?? 16 }),
   });
   monthly.start();
@@ -178,8 +185,11 @@ describe("the day round", () => {
     expect(before.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
     for (let i = 0; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
     const after = l.monthly.live(1).board;
-    expect(after.tick).toBe(1);
-    expect(after.bots.every((bot) => bot.ultimate !== undefined)).toBe(true);
+    expect(after.tick).toBe(RESHUFFLE_TURNS + 1);
+    expect(after.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
+
+    nextDay(l);
+    expect(l.monthly.live(1).board.bots.every((bot) => bot.ultimate?.kind === "charging")).toBe(true);
   });
   test("lasts from 00:00 to 24:00 in the league's time zone: 96,000 turns of 0.9 s", () => {
     const l = startLeague({ at: NOV_14 });
@@ -190,7 +200,7 @@ describe("the day round", () => {
     expect(l.monthly.live(1).board.ticksTotal).toBe(96_000);
   });
 
-  test("0 tanks: no turn runs; 1 tank: at least one bot; a second tank keeps the bots until the next new start, which draws again", () => {
+  test("0 tanks: no turn runs; 1 tank: at least one bot; a second tank keeps the bot until its fresh start", () => {
     const l = startLeague();
     const empty = l.monthly.live(1);
     expect(empty).toMatchObject({ phase: "idle", tanks: [] });
@@ -210,8 +220,8 @@ describe("the day round", () => {
     const two = l.monthly.live(1);
     expect(two.phase).toBe("withBot");
     expect(two.tanks).toHaveLength(3);
-    // The next new start draws again; every draw is 0 here, and two tanks need no bot.
-    while (l.monthly.live(1).board.tick !== 0) l.ticks.tick();
+    // The bot draws on its turn. Every draw is 0 here, and two tanks need no bot.
+    for (let i = 0; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
     const drawn = l.monthly.live(1);
     expect(drawn.phase).toBe("withoutBot");
     expect(drawn.tanks).toHaveLength(2);
@@ -252,8 +262,11 @@ describe("the day round", () => {
     };
     expect(cells()).toBeGreaterThan(small);
     expect(cells()).toBeGreaterThanOrEqual(cellsFor(Math.ceil(100 / BOARD_GROWTH)));
-    // The next new start sizes the board for exactly the seated tanks.
+    const grown = cells();
+    // Fresh starts keep the current board, even if the rush continued after the last rebuild.
     for (let i = 0; i < RESHUFFLE_TURNS + 1; i++) l.ticks.tick();
+    expect(cells()).toBe(grown);
+    nextDay(l);
     expect(cells()).toBe(cellsFor(100));
   });
 
@@ -271,27 +284,78 @@ describe("the day round", () => {
     expect(turns[0]).toContain(me.seatId);
   });
 
-  test("every RESHUFFLE_TURNS turns the tanks start again on new squares with their points, and open pages get the new board", async () => {
+  test("fresh starts stream with the moves, and only the bot's quit sends a state", async () => {
     const l = startLeague();
     const ada = newAccount();
     const bo = newAccount();
     take(l, ada);
     take(l, bo);
-    const page = collect(l.streams.open(1, null, l.monthly.live(1)));
-    for (let i = 0; i < RESHUFFLE_TURNS - 1; i++) l.ticks.tick();
-    expect(l.monthly.live(1).board.tick).toBe(RESHUFFLE_TURNS - 1);
-    await page.take();
-    const before = [seatOf(l, ada).points, seatOf(l, bo).points];
-    // The turn that reaches the limit is played, then the round starts again.
+    const page = collect(l.streams.open(1, ada, l.monthly.live(1)));
+    // The seat's tunnel follows the first rotation turn. Capture the board at that boundary.
+    const tunnelAt = Math.ceil(RESHUFFLE_TURNS / 3);
+    for (let i = 0; i < tunnelAt; i++) l.ticks.tick();
+    const afterTunnel = l.monthly.live(1).board;
+    for (let i = tunnelAt; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
+    const { messages } = await page.take();
+    l.streams.closeAll();
+    const states = messages.filter((message) => message.type === "state");
+    expect(states.map((message) => message.change)).toEqual([undefined, "botFreshStart"]);
+    expect(states[1]?.state.tanks.every((tank) => !tank.isBot)).toBe(true);
+    const turns = messages.filter((message) => message.type === "tick");
+    expect(turns.map((message) => message.tick.tick)).toEqual(Array.from({ length: RESHUFFLE_TURNS }, (_, i) => i));
+    const fresh = turns.filter((message) => message.tick.freshStarts !== undefined);
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0]?.own?.botId).toBe(seatOf(l, ada).seatId);
+    const [start] = fresh[0]?.tick.freshStarts ?? [];
+    expect(start?.[0]).toBe(0);
+    const spawn = states[0]?.state.board;
+    const compact = fresh[0]?.tick;
+    if (spawn === undefined || compact === undefined) throw new Error("expected a board and a tunnel tick");
+    const played = expandTick(compact, spawn);
+    const [destination] = played.freshStarts ?? [];
+    const before = played.snapshot.bots.find((bot) => bot.id === destination?.id);
+    expect(destination).toBeDefined();
+    expect([destination?.x, destination?.y]).not.toEqual([before?.x, before?.y]);
+    expect(afterTunnel.bots.find((bot) => bot.id === destination?.id)).toMatchObject({
+      ...destination, score: before?.score, water: ruleSet(afterTunnel.ruleSetId).waterCapacity,
+    });
+    expect(l.monthly.live(1).board.tick).toBe(RESHUFFLE_TURNS);
+  });
+
+  test("weather and a bot's fresh start share one state at the same turn as the tick", async () => {
+    let draw = 0;
+    const l = startLeague({ random: () => draw });
+    const ada = newAccount();
+    take(l, ada);
+    const start = l.monthly.live(1);
+    const bot = start.tanks.find(({ isBot }) => isBot);
+    if (bot === undefined) throw new Error("expected a bot");
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
+    const page = collect(l.streams.open(1, ada, l.monthly.live(1)));
+    draw = 0.99;
     l.ticks.tick();
-    const after = l.monthly.live(1);
-    expect(after.board.tick).toBe(0);
-    expect(after.board.bots.every((bot) => bot.water === after.board.bots[0]?.water)).toBe(true);
-    const played = [seatOf(l, ada).points, seatOf(l, bo).points];
-    // The points are kept: only the one turn played before the new start can change them, by a few hits at most.
-    for (const [i, points] of played.entries()) expect(Math.abs(points - (before[i] ?? 0))).toBeLessThanOrEqual(3);
-    const types = (await page.take()).messages.map((message) => message.type);
-    expect(types.slice(-2)).toEqual(["tick", "state"]);
+    l.ticks.tick();
+    const { messages } = await page.take();
+    l.streams.closeAll();
+
+    expect(messages.map(({ type }) => type)).toEqual(["state", "tick", "state", "tick"]);
+    const [, played, changed, next] = messages;
+    if (played?.type !== "tick" || changed?.type !== "state" || next?.type !== "tick") throw new Error("expected a weather state between turns");
+    expect(changed.change).toBe("weather");
+    expect(changed.state.board).toMatchObject({ ...arenaSize(16, ruleSet("open-field")), tick: played.tick.tick + 1, ticksTotal: start.board.ticksTotal, ruleSetId: "open-field" });
+    expect(changed.state.tanks.filter(({ isBot }) => isBot)).toHaveLength(1);
+    expect(changed.state.tanks.some(({ id }) => id === bot.id)).toBe(false);
+    expect(next.tick.tick).toBe(changed.state.board.tick);
+  });
+
+  test("a rush of joiners marks the rebuild for the reshuffle notice", async () => {
+    const l = startLeague({ seatsPerLeague: null });
+    for (let i = 0; i < BOARD_GROWTH * 16; i++) take(l, newAccount());
+    const page = collect(l.streams.open(1, null, l.monthly.live(1)));
+    take(l, newAccount());
+    const { messages } = await page.take();
+    l.streams.closeAll();
+    expect(messages.filter((message) => message.type === "state").map((message) => message.change)).toEqual([undefined, "growth"]);
   });
 
   test("a new day respawns every seated tank with 0 points, and it counts for all of them", () => {
@@ -409,7 +473,7 @@ describe("seats", () => {
     for (const owner of owners) take(l, owner);
     expect(seatOf(l, owners[16] ?? "").league).toBe(2);
     expect(l.monthly.overview().leagues).toEqual([
-      // League 1's first tank got a bot, which stays until the next new start.
+      // League 1's first tank got a bot, which stays until its fresh start.
       { league: 1, tanks: 16, phase: "withBot" },
       { league: 2, tanks: 1, phase: "withBot" },
     ]);
@@ -809,8 +873,7 @@ describe("memory", () => {
     const early = l.monthly.holdings();
     for (let i = 0; i < 5000; i++) l.ticks.tick();
     expect(l.monthly.holdings()).toEqual(early);
-    // Every turn was played: after 5,500 turns the round counter shows the turns since the last new start (RESHUFFLE_TURNS).
-    expect(l.monthly.live(1).board.tick).toBe(5500 % RESHUFFLE_TURNS);
+    expect(l.monthly.live(1).board.tick).toBe(5500);
   });
 
   test("a turn runs no SQL: only the seat changes, the minute's checkpoint and the day's close reach the database", () => {

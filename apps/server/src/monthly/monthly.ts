@@ -62,6 +62,7 @@ import {
   type LeagueMonthRow,
   type LeagueRankingResponse,
   type LeagueRow,
+  type LeagueStateChange,
   type LeagueTodayRow,
   type MonthlyMeResponse,
   type MonthlyOverviewResponse,
@@ -140,7 +141,7 @@ export class MonthlyLeagues {
   private month: MonthState = { month: "", days: [], records: [] };
   private today: CalendarDay = { day: "", month: "", startsAt: 0, endsAt: 0 };
   private readonly days = new Map<number, LeagueDay>();
-  // Keep state broadcasts from the turn loop (reshuffles) free of activity queries.
+  // Keep state broadcasts from the turn loop free of activity queries.
   private activity = new Map<number, readonly LeagueActivityEvent[]>();
   private closing = false;
   /** Read at the start and after each admin change: the turn loop never asks the database. */
@@ -208,12 +209,11 @@ export class MonthlyLeagues {
     const computeStart = performance.now();
     for (const [league, day] of this.days) {
       try {
-        const result = day.step();
-        if (result !== null) this.options.streams.sendTick(league, result, this.seatIdsIn(league));
-        // The planned new start that ends a loop (RESHUFFLE_TURNS): the pages draw the new squares from the state.
-        if (day.reshuffleDue()) {
-          day.rebuild(this.ticksLeft());
-          this.sendState(league);
+        const turn = day.step();
+        if (turn !== null) {
+          this.options.streams.sendTick(league, turn, this.seatIdsIn(league));
+          if (turn.weatherChanged) this.sendState(league, "weather");
+          else if (turn.botsChanged) this.sendState(league, "botFreshStart");
         }
       } catch (error) {
         // A bug in the engine: this league's round starts again with the points kept, the others go on.
@@ -448,16 +448,17 @@ export class MonthlyLeagues {
     // is a pause, like "Change rules" (owner, 2026-11-17: a rejoin started over at 0 and its day did not count). The
     // checkpoint is written before the saved score goes, so a crash in between keeps the points.
     const paused = this.month.days.find((d) => d.accountId === accountId && d.day === this.today.day);
+    let grew: boolean;
     if (paused !== undefined) {
-      this.dayOf(league).seat(dayTankOf(seat), paused.points, true, this.ticksLeft());
+      grew = this.dayOf(league).seat(dayTankOf(seat), paused.points, true, this.ticksLeft());
       this.options.store.writeCheckpoint(this.checkpointOf());
       this.options.store.deleteDayScore(accountId, this.today.day);
       this.month = { ...this.month, days: this.month.days.filter((d) => d !== paused) };
     } else {
       // A tank that arrives during the day plays at once; the day does not count for it.
-      this.dayOf(league).seat(dayTankOf(seat), 0, false, this.ticksLeft());
+      grew = this.dayOf(league).seat(dayTankOf(seat), 0, false, this.ticksLeft());
     }
-    this.sendState(league);
+    this.sendState(league, grew ? "growth" : undefined);
     return this.me(accountId);
   }
 
@@ -867,7 +868,7 @@ export class MonthlyLeagues {
     return day;
   }
 
-  private sendState(league: number): void {
-    this.options.streams.sendState(league, this.live(league));
+  private sendState(league: number, change?: LeagueStateChange): void {
+    this.options.streams.sendState(league, this.live(league), change);
   }
 }

@@ -146,7 +146,7 @@ export function parseLeagueActivity(value: unknown): readonly LeagueActivityEven
   return activity;
 }
 
-/** What a viewer sees of a league now: sent on connect and after every join, quit and day change. */
+/** What a viewer sees of a league now: sent on connect and after joins, quits and changes of day or weather. */
 export interface LeagueLive {
   /** 1 is the top league. */
   readonly league: number;
@@ -159,13 +159,16 @@ export interface LeagueLive {
   /** Milliseconds between two turns. */
   readonly tickMs: number;
   readonly phase: LeagueDayPhase;
-  /** The tanks in the board's order: the indexes of every following compact tick refer to this list. */
+  /** The tanks in the board's order at this state. Fresh starts move their indexes to the end. */
   readonly tanks: readonly LeagueTank[];
   /** This month's activity in this league, newest first. */
   readonly activity: readonly LeagueActivityEvent[];
   /** The board now. With no tank it is the empty board, which keeps its size all day. */
   readonly board: PublicSnapshot;
 }
+
+/** Why the board changed. A weather state also carries any bot changes on the same turn. */
+export type LeagueStateChange = "growth" | "botFreshStart" | "weather";
 
 /**
  * Messages on GET /api/monthly/leagues/:league/events, one server-sent event each, named by `type`.
@@ -175,12 +178,13 @@ export interface LeagueLive {
  * |--------|---------|--------|----------------------------------------------------------------------|
  * | (open) | state   | open   | always the first message                                             |
  * | open   | state   | open   | a join, a quit, a rename or a new day: the tanks of later turns      |
- * | open   | tick    | open   | one turn, against the tanks of the last state                        |
+ * | open   | state   | open   | weather changed after the tick: the new rules and board, same turn    |
+ * | open   | tick    | open   | moves, then fresh starts which change the order for the next tick   |
  * | open   | closed  | (end)  | the month close left this league empty; the server ends the stream   |
  * Terminal: closed. An ended connection without `closed` is a dropped one; the browser opens it again.
  */
 export type LeagueStreamMessage =
-  | { readonly type: "state"; readonly state: LeagueLive }
+  | { readonly type: "state"; readonly state: LeagueLive; readonly change?: LeagueStateChange }
   /** One turn. `own` is the decision of the stream's account's tank, or null. */
   | { readonly type: "tick"; readonly tick: CompactTick; readonly own: Decision | null }
   /** The league closed at the month close. `leagues` is how many leagues exist now (League 1 to `leagues`). */

@@ -32,18 +32,18 @@ Owner, 2026-11-14: "monthly arena is long running arena. 1 round lasted 24h. Onc
 | Join during the day | The tank appears on a free square at the next turn and plays at once. That day is not a counted day for it. |
 | Quit during the day | The tank leaves at the next turn. When it was seated at the day's first turn, the day is a counted day with the points it had when it left, so quitting cannot erase a bad day. |
 | Board | A fixed size for 16 tanks; it does not change when tanks come and go. |
-| New start | Every 333 turns (5 minutes at 900 ms a turn) the round starts again: every tank moves to a new random square with full water and keeps its points and statistics. Added 2026-11-14 after the owner saw two or three tanks lock into one loop for most of a day; the measurement is in `apps/server/src/monthly/league-day.ts` (`RESHUFFLE_TURNS`). |
+| New start | Rolling, one tank at a time (owner, 2026-11-19: "Rework the arena shuffling to be smooth, non-interruption of the play, natural"). The round never starts again for a new start. Each tank gets a fresh start once every 333 turns (5 minutes at 900 ms a turn), on its own turn: the tanks take turns in a fixed rotation, so about one tank in every 333 / N turns (N tanks on the board; more than one per turn when N > 333). A fresh start moves the tank through a tunnel to a random free square, with full water, a new tie rank, no running step sequence, and its points and statistics kept. The other tanks play on. Before 2026-11-19 the whole round started again every 333 turns, which stopped every fight at once. The reason for a new start is unchanged: added 2026-11-14 after the owner saw two or three tanks lock into one loop for most of a day (`RESHUFFLE_TURNS` in `apps/server/src/monthly/league-day.ts`). |
 | Bot | The table below. A bot never appears in a ranking. |
-| Ties | A rule's target is settled by a tie rank that the engine draws for each tank at each join (`BotState.tieRank`), and some rules by the board's tank order; the league seats the tanks in a random order at every new round. Both change every 5 minutes. Before 2026-11-16 a tie went to the lower seat id, which a seat keeps all month: in a mixed field of 8 play styles that was worth up to about 400 points per 8,000 turns. After the change, the same seeds gave every play style the same points whichever id it held. Other arenas keep the id rule. |
+| Ties | A rule's target is settled by a tie rank that the engine draws for each tank at each join (`BotState.tieRank`), and some rules by the board's tank order; the league seats the tanks in a random order at every new round, and a fresh start draws the tank's tie rank again and puts it last in the board's order. So each tank's tie rank changes every 5 minutes. Before 2026-11-16 a tie went to the lower seat id, which a seat keeps all month: in a mixed field of 8 play styles that was worth up to about 400 points per 8,000 turns. After the change, the same seeds gave every play style the same points whichever id it held. Other arenas keep the id rule. |
 | Kept per turn | Nothing. No replay and no turn history for a day round; a viewer who opens the page gets the current state and then each turn. |
 
-Changed 2026-11-14 at the owner's request ("spawn and de-spawn bots every N minutes"): the bots are drawn again at every new start (every 5 minutes), at a new day, at a restart and at a rebuild. Each bot takes a random play style from the practice arena's bot mix (`apps/server/src/bots.ts`, `BOT_LINEUP`). A player keeps the points won from or lost to a bot.
+Changed 2026-11-14 at the owner's request ("spawn and de-spawn bots every N minutes"): the bots are drawn again at a new day, at a restart and at a rebuild. Since 2026-11-19 a bot's fresh start replaces that bot: it leaves through the tunnel and a newly drawn bot comes out of another tunnel, or no bot when the table below allows 0. Each bot takes a random play style from the practice arena's bot mix (`apps/server/src/bots.ts`, `BOT_LINEUP`). A player keeps the points won from or lost to a bot.
 
 | Seated tanks | Bots at each draw |
 |--------------|-------------------|
 | 0 | None. No turn is simulated. The league exists and its page shows the empty board. |
 | 1 | 1 to 3. A draw of 0 is raised to 1, so the tank always has an opponent. When a quit leaves one tank without a bot, one bot joins at once. |
-| 2 or more | 0 to 3. A tank that arrives does not remove the bots; they change at the next new start. |
+| 2 or more | 0 to 3. A tank that arrives does not remove the bots; each bot changes at its own fresh start. |
 
 Engine: joining and leaving happen between turns, as new functions beside `stepRound` (for example `joinRound(state, player)` and `leaveRound(state, id)`). A round that never calls them plays as before; the existing replay tests must stay identical.
 
@@ -109,3 +109,26 @@ Tests (injected clock and time zone): every row of both tables in section 2; joi
 Never `bun run build`; never port 8787; build to your own scratch folder; M1 serves on port 9004 and M2 on port 9006. One headless browser at a time. Another builder may edit the create form and arena settings at the same time (`78-arena-seats.md`, port 9005, it takes stored arena version 8): edit shared files with small targeted edits after re-reading them. Report briefly.
 
 Status 2026-11-14: the owner confirmed three choices as built: the month's rank is the average of counted day points, a tank's name is unique across all leagues, and only a tank that still has its seat at the month's end can be champion.
+
+### Fresh start on the board (2026-11-19)
+
+| Rule | Decision |
+|---|---|
+| Stream | A fresh start does not send a new board (`state`). The turn's compact tick lists the tanks that moved through a tunnel, each with its new square, after the moves of that turn. A bot that changes is a quit and a join, as today. |
+| Board | The tank does not glide across the board. In the same turn it sinks into the floor at the old square with a ring of dust, then rises at the new square with a ring of dust. The trail of a game master starts again at the new square. |
+| Reduced motion | The tank is at the new square at once, with a small ring at both squares. |
+| Feed | When the viewer's own tank takes a fresh start, the feed says so in one line: "Tank kamu masuk terowongan dan keluar di petak lain dengan air penuh." / "Your tank went through a tunnel and came out on another square with full water." |
+| Notice | The "Diacak ulang" notice remains only for a rebuild (a rush of joiners that needs a bigger board), which still starts the round again. |
+
+### Weather change (2026-11-19)
+
+Owner, 2026-11-16: "randomize the arena condition each reshuffle". The round no longer starts again, so the condition changes during the round instead (owner, 2026-11-19, chose "weather change, no restart"):
+
+| Rule | Decision |
+|---|---|
+| When | Every 333 turns (`RESHUFFLE_TURNS`), the league draws a condition from `MONTHLY_CONDITIONS`, each as likely. A draw of the condition that plays now changes nothing. A new day, a restart and a rebuild draw one as before. |
+| Tanks | They keep their squares, points, statistics, tie ranks and running step sequences. Water above the new condition's limit is cut to the limit. |
+| Lapangan luas | It needs the larger board. Into Lapangan luas, the board grows on its right and bottom edges, and the tanks keep their squares. Out of it, the board shrinks back; a tank outside the new board takes a tunnel (a fresh start), and an item outside it is removed. |
+| Stream | A change sends one `state`, which keeps the turn number, so the page does not count it as a reshuffle. |
+| Page | A notice for a few seconds: "Kondisi arena berubah menjadi {name}." / "The arena condition changed to {name}." The condition line under the clock shows the new name. |
+| Rules | A rule that reads the arena condition reads the one that plays in that turn. |

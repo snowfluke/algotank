@@ -2,7 +2,9 @@
 // The page's states as the phone (and a server render) draws them, in both languages.
 import { describe, expect, test } from "bun:test";
 import { ULTIMATES_FROM } from "@game/arena";
+import { arenaSize, ruleSet } from "@game/engine";
 import { renderToStaticMarkup } from "react-dom/server";
+import { boardAspect } from "../board/FittedBoard.tsx";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
 import type { StrategyHandle } from "../prep/useStrategySession.ts";
@@ -32,6 +34,7 @@ function props(over: Partial<MonthlyViewProps> = {}, tanks = 5): MonthlyViewProp
     onJoin: () => undefined,
     dayChange: null,
     reshuffled: false,
+    weatherChanged: false,
     onQuit: () => undefined,
     onChangeRules: () => undefined,
     onChangeLook: () => undefined,
@@ -172,6 +175,20 @@ describe("the monthly page", () => {
     expect(render(props({ tab: "mine" }, 16))).not.toContain("data-own-plays-alone");
   });
 
+  test("the own pane shows one tunnel line in each language, only for the viewer's tank", () => {
+    const live = fixtureLive(1, 5);
+    const load = fixtureLoad(live, NOW);
+    if (load.kind !== "ready") throw new Error("expected a board");
+    const withFresh = { ...load, board: { ...load.board, ownFreshStart: { id: OWN_SEAT, tick: 5 } } };
+    const input = props({ seat: fixtureSeat(1), onJoin: null, tab: "mine", load: withFresh });
+    const en = render(input);
+    const id = render(input, "id");
+    expect(en.match(/Your tank went through a tunnel and came out on another square with full water\./g)).toHaveLength(1);
+    expect(id.match(/Tank kamu masuk terowongan dan keluar di petak lain dengan air penuh\./g)).toHaveLength(1);
+    expect(render({ ...input, seat: null })).not.toContain("data-own-fresh-start");
+    expect(render({ ...input, seat: fixtureSeat(2) })).not.toContain("data-own-fresh-start");
+  });
+
   test("an owner whose tank plays in another league is told where, with the way back", () => {
     const html = render(props({ seat: fixtureSeat(2), onJoin: null, leagues: fixtureLeagues(2, 20) }, 16), "id");
     expect(html).toContain("Tank kamu main di Liga 2.");
@@ -205,8 +222,23 @@ describe("the arena condition", () => {
     expect(render(props())).toMatch(/<button[^>]*data-arena-condition="standard"[^>]*>[\s\S]*?Arena condition: Standard</);
     const id = render(props(), "id");
     expect(id).toContain(">Kondisi arena: Standar<");
-    expect(id).toMatch(/data-arena-condition-note[\s\S]*Tembakan sampai 3 petak[\s\S]*berganti setiap kali tank diacak ulang/);
+    expect(id).toMatch(/data-arena-condition-note[\s\S]*Tembakan sampai 3 petak[\s\S]*Kondisi arena diundi saat ronde dimulai dan setiap beberapa menit/);
     expect(render(props({ reshuffled: true }), "id")).toMatch(/data-reshuffled[\s\S]*>Diacak ulang<[\s\S]*>Kondisi arena: Standar</);
+  });
+
+  test("weather names the new condition in both languages and fits the board to its new size", () => {
+    const live = fixtureLive(1, 16, "open-field");
+    const { width, height } = arenaSize(16, ruleSet("open-field"));
+    const changed = props({ load: fixtureLoad(live, NOW), weatherChanged: true });
+    const en = render(changed);
+    const id = render(changed, "id");
+    expect(en).toMatch(/data-weather-changed[^>]*>The arena condition changed to Open field\.</);
+    expect(id).toMatch(/data-weather-changed[^>]*>Kondisi arena berubah menjadi Lapangan luas\.</);
+    expect(id).toMatch(/data-arena-condition="open-field"[^>]*>[\s\S]*?Kondisi arena: Lapangan luas</);
+    expect(en).toContain(`aspect-ratio:${boardAspect(width, height)}`);
+    expect(en).toContain(`viewBox="-3 -3 ${width * 10 + 6} ${height * 10 + 6}"`);
+    expect(id).not.toContain("data-reshuffled");
+    expect(render({ ...changed, weatherChanged: false })).not.toContain("data-weather-changed");
   });
 });
 
@@ -215,6 +247,18 @@ describe("a reshuffle", () => {
     expect(render(props({ reshuffled: true }))).toContain(">Reshuffled<");
     expect(render(props({ reshuffled: true }), "id")).toContain(">Diacak ulang<");
     expect(render(props())).not.toContain("data-reshuffled");
+  });
+
+  test("a fresh start reaches the SVG without showing the rebuild notice", () => {
+    const live = fixtureLive(1, 5);
+    const load = fixtureLoad(live, NOW);
+    const from = live.board.bots[0];
+    if (load.kind !== "ready" || from === undefined) throw new Error("expected a tank on the board");
+    const snapshot = { ...live.board, bots: [{ ...from, x: from.x + 1 }, ...live.board.bots.slice(1)] };
+    const html = render(props({ load: { ...load, board: { ...load.board, snapshot, tunnels: [{ kind: "through", from }] } } }), "id");
+    expect(html).toContain(`data-tunnel-from="${from.id}"`);
+    expect(html).toContain(`data-tunnel-to="${from.id}"`);
+    expect(html).not.toContain("data-reshuffled");
   });
 });
 

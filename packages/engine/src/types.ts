@@ -12,8 +12,8 @@
 //    A fallback that cannot act makes the bot throw ahead, which stands still.
 //    A throw at a bot spends water from the thrower's tank (see combat/rule-sets.ts),
 //    so a throw from a tank that holds too little water does nothing.
-// 4. One rule set per round. RoundConfig.ruleSetId picks a row of RULE_SETS, and
-//    every number that decides a throw or the arena size comes from that row.
+// 4. Each turn reads one rule set, from its snapshot. RoundConfig.ruleSetId picks the
+//    initial row of RULE_SETS. Monthly weather can change that row between turns.
 //
 // The rules of play for the eight directions are a table in directions.ts.
 
@@ -325,8 +325,8 @@ export type BotState = ItemHand & {
   /**
    * Only in an open round (joinRound): a number from the round seed, drawn at join, that settles a
    * target selector's tie in place of the id (strategy/targets.ts). A monthly seat keeps its id all
-   * month, and a fixed tie order was worth thousands of points a day (2026-11-16); the league
-   * starts a new round every few minutes, so the order changes with it. Absent in every other
+   * month, and a fixed tie order was worth thousands of points a day (2026-11-16); each tank
+   * draws a new rank at its fresh start (2026-11-19). Absent in every other
    * round, so those play exactly as before. Never sent to viewers (PublicBot).
    */
   readonly tieRank?: number;
@@ -357,7 +357,7 @@ export interface RoundConfig {
   readonly seed: number;
   readonly ticksTotal: number;
   readonly survivorsAfterRound: number | null;
-  /** The rule set of this round. createRound throws on an id that is not in RULE_SETS. */
+  /** The starting rule set. createRound throws on an id that is not in RULE_SETS. */
   readonly ruleSetId: RuleSetId;
   /** At least two players, with unique ids. */
   readonly players: readonly RoundPlayer[];

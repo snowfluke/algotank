@@ -10,8 +10,8 @@
 // viewer to their own league or League 1.
 //
 // Midnight: a state with a new day shows "the round of <day> has ended" with its winner over
-// the board for DAY_NOTICE_MS, while the new round already plays under it. A reshuffle (a new
-// round of the same day, leagueLive.ts) shows "Reshuffled" over the board for RESHUFFLE_NOTICE_MS.
+// the board for DAY_NOTICE_MS, while the new round already plays under it. Board growth
+// (leagueLive.ts) shows "Reshuffled" for RESHUFFLE_NOTICE_MS.
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { TakeSeatRequest } from "@game/arena";
@@ -116,17 +116,23 @@ export function MonthlyPage() {
     seenDay.current = { league: board.live.league, day: board.live.day };
     if (before !== null && before.league === board.live.league && before.day !== board.live.day) setDayChange({ day: before.day, until: Date.now() + DAY_NOTICE_MS });
   }, [board]);
-  // A reshuffle: the count of today's new rounds went up on the same stream.
-  const [reshuffledUntil, setReshuffledUntil] = useState(0);
-  const seenReshuffles = useRef<number | null>(null);
-  const reshuffles = board?.reshuffles ?? null;
+  // Keep a growth notice on its own board if the viewer switches leagues or the day ends.
+  const [reshuffle, setReshuffle] = useState<{ day: string; league: number; until: number } | null>(null);
+  const seenReshuffles = useRef<{ day: string; league: number; count: number } | null>(null);
+  const reshuffles = board?.reshuffles ?? 0;
+  const streamDay = board?.live.day;
+  const streamLeague = board?.live.league;
   useEffect(() => {
     const before = seenReshuffles.current;
-    seenReshuffles.current = reshuffles;
-    if (before !== null && reshuffles !== null && reshuffles > before) setReshuffledUntil(Date.now() + RESHUFFLE_NOTICE_MS);
-  }, [reshuffles]);
+    seenReshuffles.current = streamDay === undefined || streamLeague === undefined ? null : { day: streamDay, league: streamLeague, count: reshuffles };
+    if (before !== null && before.day === streamDay && before.league === streamLeague && reshuffles > before.count) {
+      setReshuffle({ day: streamDay, league: streamLeague, until: Date.now() + RESHUFFLE_NOTICE_MS });
+    }
+  }, [reshuffles, streamDay, streamLeague]);
+  const reshuffledUntil = reshuffle !== null && reshuffle.day === streamDay && reshuffle.league === streamLeague && reshuffles > 0 ? reshuffle.until : 0;
+  const weatherUntil = board?.weatherUntil ?? 0;
   // The clock of the notices only: the day's clock ticks inside MonthlyView.tsx, so a second does not render the board.
-  const now = useNowUntil(Math.max(dayChange?.until ?? 0, reshuffledUntil));
+  const now = useNowUntil(Math.max(dayChange?.until ?? 0, reshuffledUntil, weatherUntil));
   const shownDayChange: DayChange | null =
     dayChange !== null && now < dayChange.until ? { kind: "done", day: dayChange.day, winner: data.days.data?.days.find((d) => d.day === dayChange.day) ?? null } : null;
 
@@ -320,6 +326,7 @@ export function MonthlyPage() {
         onJoin={onJoin}
         dayChange={shownDayChange}
         reshuffled={now < reshuffledUntil}
+        weatherChanged={now < weatherUntil}
         onQuit={() => dispatch({ type: "askQuit" })}
         onChangeRules={() => {
           if (seat !== null) changeRules(seat.strategy);

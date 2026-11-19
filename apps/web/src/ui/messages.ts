@@ -66,7 +66,6 @@ export const en = {
     position: (item: number, total: number) => `${item} of ${total}`,
   },
   pageTitles: {
-    home: "Water tank battles",
     join: "Join with a code",
     play: "Play now",
     create: "Create arena",
@@ -152,7 +151,6 @@ export const id: typeof en = {
     position: (item, total) => `${item} dari ${total}`,
   },
   pageTitles: {
-    home: "Perang air antartank",
     join: "Gabung pakai kode",
     play: "Main sekarang",
     create: "Buat arena",

@@ -79,13 +79,15 @@ export function App() {
   // The big screen starts without music; every other page plays it when the person's switch is on.
   useMusicVenue(route.page === "screen" ? "bigScreen" : "app");
   // The sign-in page is newer than the shared title list, so its title lives with its own text.
+  // Home's tab carries the game's slogan after its name (owner, 2026-11-19); other pages put their own title first.
   const title =
-    route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : route.page === "adminPlayers" ? m.adminPlayers.pageTitle : route.page === "catalogue" ? m.catalogue.pageTitle : m.common.pageTitles[route.page];
+    route.page === "home" ? `${GAME_NAME} - ${m.home.tagline}` : route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : route.page === "adminPlayers" ? m.adminPlayers.pageTitle : route.page === "catalogue" ? m.catalogue.pageTitle : m.common.pageTitles[route.page];
   useUsageCounts(route.page);
 
+  const documentTitle = route.page === "home" ? title : `${title} - ${GAME_NAME}`;
   useEffect(() => {
-    document.title = `${title} - ${GAME_NAME}`;
-  }, [title]);
+    document.title = documentTitle;
+  }, [documentTitle]);
 
   return (
     <div className="flex min-h-dvh flex-col">

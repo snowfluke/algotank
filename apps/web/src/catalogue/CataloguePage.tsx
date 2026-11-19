@@ -19,7 +19,8 @@ import { AppShell } from "../ui/AppShell.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
 import { useLaptopLayout } from "../ui/layout.ts";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
-import { catalogueEntries, CATALOGUE_SECTIONS, placeFromSearch, searchWithPlace, type CatalogueEntry, type CatalogueSection } from "./catalogue.tsx";
+import { useMusicCondition } from "../sound/music.ts";
+import { catalogueEntries, CATALOGUE_SECTIONS, musicConditionOf, placeFromSearch, searchWithPlace, type CatalogueEntry, type CatalogueSection } from "./catalogue.tsx";
 import { ScenePlayer } from "./ScenePlayer.tsx";
 
 const YOU_LOOK = plainTankLook(3);
@@ -62,6 +63,7 @@ export function CatalogueView({
   const entry = entries.find((e) => e.key === chosen[section]) ?? entries[0];
   const sectionName = t.sections[section];
   const card = entry?.key;
+  useMusicCondition(musicConditionOf(section, card));
   useEffect(() => {
     if (card !== undefined) onPlace?.({ section, card });
     // onPlace is a new function on each render of the page; only a new place is news.

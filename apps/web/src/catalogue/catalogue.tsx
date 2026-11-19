@@ -7,7 +7,7 @@
 // - Ultimates: one description each, with a tag before release (85-ultimates.md).
 
 import type { ReactNode } from "react";
-import { ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, ULTIMATE_IDS, type ItemKind, type PresetId, type RuleSetId } from "@game/engine";
+import { isRuleSetId, ITEM_KINDS, PICKER_ORDER, RULE_SET_IDS, ULTIMATE_IDS, type ItemKind, type PresetId, type RuleSetId } from "@game/engine";
 import { ARENA_GROUNDS, groundMarksPath, marksFilled } from "../board/arenaGround.ts";
 import { ItemShape } from "../board/itemShapes.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -18,6 +18,14 @@ import { UltimateEmblem } from "./UltimateEmblem.tsx";
 
 export const CATALOGUE_SECTIONS = ["playStyles", "items", "conditions", "ultimates"] as const;
 export type CatalogueSection = (typeof CATALOGUE_SECTIONS)[number];
+
+/**
+ * The arena condition whose music plays while a card is open (owner, 2026-11-19: "when viewing different arena
+ * condition, the bgm must follow"): a condition card plays its own track, every other card the standard one.
+ */
+export function musicConditionOf(section: CatalogueSection, card: string | undefined): RuleSetId | null {
+  return section === "conditions" && card !== undefined && isRuleSetId(card) ? card : null;
+}
 
 /** The cards of a collection, by key, in order: the same keys the page draws. */
 export function catalogueKeys(section: CatalogueSection): readonly string[] {

@@ -6,7 +6,7 @@ import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
 import { paths } from "../app/route.ts";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
-import { CATALOGUE_SECTIONS, placeFromSearch, searchWithPlace, type CatalogueSection } from "./catalogue.tsx";
+import { CATALOGUE_SECTIONS, musicConditionOf, placeFromSearch, searchWithPlace, type CatalogueSection } from "./catalogue.tsx";
 import { CatalogueView } from "./CataloguePage.tsx";
 import { ULTIMATE_IDS } from "@game/engine";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
@@ -143,5 +143,15 @@ describe("the catalogue's address", () => {
 
   test("the app's link to a collection opens that collection", () => {
     expect(placeFromSearch(new URL(paths.catalogue("items"), "https://x").search)).toEqual({ section: "items", card: null });
+  });
+});
+
+describe("the catalogue's music", () => {
+  test("follows an open arena condition card, and plays the standard track for any other card", () => {
+    expect(musicConditionOf("conditions", "downpour")).toBe("downpour");
+    expect(musicConditionOf("conditions", "sharp-eyes")).toBe("sharp-eyes");
+    expect(musicConditionOf("ultimates", "dash")).toBeNull();
+    expect(musicConditionOf("items", "umbrella")).toBeNull();
+    expect(musicConditionOf("conditions", undefined)).toBeNull();
   });
 });

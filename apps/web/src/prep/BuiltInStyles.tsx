@@ -11,7 +11,7 @@
 // Only one scene moves at a time (movingStyle).
 
 import { CircleCheck } from "lucide-react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { PresetId } from "@game/engine";
 import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -38,7 +38,8 @@ export interface BuiltInStylesProps {
 }
 
 /** The drawing, the name and the sentence: the same in a tile and in a slide. */
-function CardFace({ style, chosen, look, live }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly live: boolean }) {
+/** `badge` sits at the end of the name's line: the slide puts the ultimate's chip there, so it needs no row of its own. */
+function CardFace({ style, chosen, look, live, badge }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly live: boolean; readonly badge?: ReactNode }) {
   const m = useMessages();
   const text = m.vocabulary.playStyles[style.id];
   return (
@@ -51,6 +52,7 @@ function CardFace({ style, chosen, look, live }: { readonly style: PlayStyle; re
       </span>
       <span className="flex w-full min-w-0 shrink-0 items-center gap-1.5">
         <span className="min-w-0 flex-1 truncate font-display font-semibold leading-tight">{text.name}</span>
+        {badge}
         {chosen ? <CircleCheck aria-label={m.prep.style.chosen} size={20} strokeWidth={2.5} className="shrink-0 text-water" /> : null}
       </span>
       {/* Two lines are always kept, so the cards of a row end together whatever the sentence's length. */}
@@ -67,12 +69,9 @@ function Slide({ style, chosen, look, nowMs, onChoose, actionLabel }: { readonly
       aria-label={m.vocabulary.playStyles[style.id].name}
       className={`mx-auto flex min-h-0 w-full max-w-md min-w-0 shrink flex-col gap-2 rounded-[var(--radius-card)] border-2 border-b-4 p-3 ${chosen ? "border-water bg-water-soft" : "border-line bg-panel"}`}
     >
-      <CardFace style={style} chosen={chosen} look={look} live />
-      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 fit:flex-nowrap">
-        <UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />
-        {/* The chosen style needs no button: the mark beside its name says it is the one. */}
-        {chosen ? null : <Button className="max-w-full shrink-0" data-style-choose={style.id} data-focus-key={`style:${style.id}`} onClick={onChoose}>{actionLabel}</Button>}
-      </div>
+      <CardFace style={style} chosen={chosen} look={look} live badge={<UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />} />
+      {/* The chosen style needs no button: the mark beside its name says it is the one. */}
+      {chosen ? null : <Button className="max-w-full shrink-0 self-start" data-style-choose={style.id} data-focus-key={`style:${style.id}`} onClick={onChoose}>{actionLabel}</Button>}
     </article>
   );
 }

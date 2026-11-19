@@ -18,33 +18,43 @@ import type { SoundName } from "../sound/sounds.ts";
  *
  * A player who hears every tank cannot tell which sound is theirs, so a player hears only their tank.
  */
-export function turnSounds(throws: readonly ThrowEvent[], ownId: BotId | null): SoundName[] {
+export function turnSounds(throws: readonly ThrowEvent[], ownId: BotId | null, ownItem: ItemKind | null = null): SoundName[] {
   const fired = ownId === null ? throws : throws.filter((event) => event.throwerId === ownId);
   const outcomes = new Set(fired.map((event) => event.outcome));
   const hitOwn = ownId !== null && throws.some((event) => event.outcome === "hit" && event.targetId === ownId);
+  const blockedOwn = ownId !== null && throws.some((event) => event.outcome === "blocked" && event.targetId === ownId);
   const sounds: SoundName[] = [];
   // A throw an umbrella blocked (84-items.md) is a shot whose water lands nowhere: the miss sound, never the splash.
   if (outcomes.has("hit") || outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked")) sounds.push("shot");
-  if (outcomes.has("hit") || hitOwn) sounds.push("splash");
+  // The item the viewer's tank held before the turn does its job (owner, 2026-11-19): its own sound takes the
+  // place of the splash or the miss, so a turn still makes one sound for its outcome.
+  const itemHit = ownId !== null && outcomes.has("hit") && ownItem !== null && ownItem !== "umbrella" ? ITEM_HIT_SOUND[ownItem] : null;
+  if (itemHit !== null) sounds.push(itemHit);
+  else if (blockedOwn && ownItem === "umbrella") sounds.push("useUmbrella");
+  else if (outcomes.has("hit") || hitOwn) sounds.push("splash");
   else if (outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked")) sounds.push("miss");
   if (outcomes.has("dry")) sounds.push("dry");
   return sounds;
 }
 
+const ITEM_HIT_SOUND: Readonly<Record<Exclude<ItemKind, "umbrella">, SoundName>> = {
+  bucket: "useBucket", pinwheel: "usePinwheel", mudBall: "useMudBall",
+};
+
 /**
  * The ultimate sounds of one turn (owner, 2026-11-19: "if your tank triggering a ulti or affected by others, it
- * should spawn a sound effect"). At most two, after the shot sounds:
+ * should spawn a sound effect"). At most three, after the shot sounds:
  *
  * | Viewer (`ownId`)  | Event                                                   | Sound    |
  * |-------------------|---------------------------------------------------------|----------|
- * | a tank            | its own tank fires any ultimate                         | ultimate |
+ * | a tank            | its own tank fires an ultimate                          | that ultimate's one sound |
  * | a tank            | another tank's Dash rams it                             | ram      |
  * | a tank            | another tank's Splash ring hits it                      | splash   |
  * | a tank            | a Mud bomb sticks it                                    | mud      |
  * | a tank            | a Whirlwind catches it                                  | wind     |
- * | no tank (null)    | any tank fires                                          | ultimate, once per turn |
+ * | no tank (null)    | any tank fires                                          | the first fire's sound, once per turn |
  *
- * Without a tank the viewer watches up to 512 tanks, so one cue per turn says "an ultimate went off" without noise.
+ * Without a tank the viewer watches up to 512 tanks, so one sound per turn says "an ultimate went off" without noise.
  */
 const ULTIMATE_SOUND: Readonly<Record<UltimateId, SoundName>> = {
   dash: "dash", smoke: "smoke", splash: "splashRing", fullTank: "fullTank",
@@ -54,12 +64,11 @@ const ULTIMATE_SOUND: Readonly<Record<UltimateId, SoundName>> = {
 export function ultimateSounds(fires: readonly UltimateFire[], ownId: BotId | null): SoundName[] {
   const [first] = fires;
   if (first === undefined) return [];
-  // The shared cue, then the ultimate's own sound (owner, 2026-11-19), for the first fire only.
-  if (ownId === null) return ["ultimate", ULTIMATE_SOUND[first.kind]];
+  // One sound per ultimate, the activation and the skill together (owner, 2026-11-19), for the first fire only.
+  if (ownId === null) return [ULTIMATE_SOUND[first.kind]];
   const sounds = new Set<SoundName>();
   for (const fire of fires) {
     if (fire.botId === ownId) {
-      sounds.add("ultimate");
       sounds.add(ULTIMATE_SOUND[fire.kind]);
       continue;
     }

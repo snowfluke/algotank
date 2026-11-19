@@ -101,9 +101,9 @@ describe("ultimateSounds", () => {
   const mud = (botId: string, affected: string[]): UltimateFire => ({ botId, at: { x: 0, y: 0 }, kind: "mudBomb", center: { x: 1, y: 0 }, area: [], affected, points: affected.length }) as UltimateFire;
   const wind = (botId: string, affected: string[]): UltimateFire => ({ botId, at: { x: 0, y: 0 }, kind: "whirlwind", area: [], affected, points: 0 }) as UltimateFire;
 
-  test("the viewer's own fire plays the shared cue and the ultimate's own sound", () => {
-    expect(ultimateSounds([mud("me", ["a"])], "me")).toEqual(["ultimate", "mudBomb"]);
-    expect(ultimateSounds([wind("me", [])], "me")).toEqual(["ultimate", "whirlwind"]);
+  test("the viewer's own fire plays the ultimate's one sound, activation and skill together", () => {
+    expect(ultimateSounds([mud("me", ["a"])], "me")).toEqual(["mudBomb"]);
+    expect(ultimateSounds([wind("me", [])], "me")).toEqual(["whirlwind"]);
   });
 
   test("another tank's ultimate that reaches the viewer's tank plays its own sound", () => {
@@ -116,9 +116,26 @@ describe("ultimateSounds", () => {
     expect(ultimateSounds([dash("a", "me", "miss"), mud("b", ["c"])], "me")).toEqual([]);
   });
 
-  test("a viewer without a tank hears one cue and the first fire's own sound for a turn of many fires", () => {
-    expect(ultimateSounds([mud("a", ["b"]), wind("c", ["d"]), dash("e", "f", "hit")], null)).toEqual(["ultimate", "mudBomb"]);
+  test("a viewer without a tank hears only the first fire's sound for a turn of many fires", () => {
+    expect(ultimateSounds([mud("a", ["b"]), wind("c", ["d"]), dash("e", "f", "hit")], null)).toEqual(["mudBomb"]);
     expect(ultimateSounds([], null)).toEqual([]);
+  });
+});
+
+describe("item sounds", () => {
+  const hitBy = (throwerId: string, targetId: string): ThrowEvent => ({ throwerId, outcome: "hit", targetId, distance: 1, hitChance: 90 });
+  const blockedAt = (targetId: string): ThrowEvent => ({ throwerId: "x", outcome: "blocked", targetId, distance: 1, hitChance: 90 });
+
+  test("the viewer's hit with a held item plays that item's hit in place of the splash", () => {
+    expect(turnSounds([hitBy("me", "a")], "me", "bucket")).toEqual(["shot", "useBucket"]);
+    expect(turnSounds([hitBy("me", "a")], "me", "pinwheel")).toEqual(["shot", "usePinwheel"]);
+    expect(turnSounds([hitBy("me", "a")], "me", "mudBall")).toEqual(["shot", "useMudBall"]);
+    expect(turnSounds([hitBy("me", "a")], "me", null)).toEqual(["shot", "splash"]);
+  });
+
+  test("the viewer's umbrella stopping a shot plays the umbrella, and another tank's item stays silent", () => {
+    expect(turnSounds([blockedAt("me")], "me", "umbrella")).toEqual(["useUmbrella"]);
+    expect(turnSounds([hitBy("a", "b")], "me", "bucket")).toEqual([]);
   });
 });
 

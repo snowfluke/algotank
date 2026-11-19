@@ -95,3 +95,15 @@ Before the protocol and the screens: `scripts/simulate.ts` Tables 1 and 5 pass a
 - None for replays: a stored round config carries `items`, and a config stored before items reads as `items: false` (`stored-arena.ts`), so its replay plays as it was played.
 - A browser tab opened before the release cannot read the outcomes `blocked` and `bucketHit`. An arena tab then asks the player to reload the page, and a monthly tab reconnects and starts over on each such turn. Nothing forces an old tab to reload; a version check on the stream would clear it.
 - In a crowd (a big arena seen whole) other tanks show no held item, no effect and no open umbrella; items on the floor still show.
+
+## Item sounds (2026-11-19)
+
+Owner, 2026-11-19: "throwing a picked item should have unique sounds, depending on the item as well. Picking an item also unique sounds depending the item." For the viewer's own tank only (60-no-scroll.md, "Sound only for the viewer's own tank"):
+
+| Event | Sound |
+|---|---|
+| Picks up a bucket, umbrella, pinwheel or mud ball | its own pickup sound: a clank, a click, a climbing sparkle, a squish |
+| Lands a hit with a bucket, pinwheel or mud ball | that item's hit in place of the splash: a heavier splash with a clank, a splash with a whirl, a low glop |
+| Its umbrella stops a shot | a soft "fwump" in place of the miss |
+
+The rules are `turnSounds` and `pickupSound` in `apps/web/src/board/turnSounds.ts`.

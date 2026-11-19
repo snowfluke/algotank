@@ -19,7 +19,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { memo, useEffect, useId, useMemo, useRef } from "react";
 import type { PublicBot, PublicSnapshot } from "@game/arena";
 import { ULTIMATE_RULES, canThrow, rulesAt, waterCapacityOf } from "@game/engine";
-import type { BoardItem, BotId, RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
+import type { BoardItem, BotId, ItemKind, RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { duckMusicUnder } from "../sound/music.ts";
 import { playSound } from "../sound/player.ts";
@@ -149,18 +149,22 @@ const NO_FIRES: readonly UltimateFire[] = [];
 function useBoardSounds(snapshot: PublicSnapshot, throws: readonly ThrowEvent[], fires: readonly UltimateFire[], ownId: BotId | null, paused: boolean, countdown: number | null): void {
   const tick = snapshot.tick;
   const lastTick = useRef<number | null>(null);
+  // The floor and the viewer's held item before this turn: a pickup and an item's use are read against them.
   const lastItems = useRef<readonly BoardItem[]>(snapshot.items);
+  const lastOwnItem = useRef<ItemKind | null>(null);
   useEffect(() => {
     const previous = lastTick.current;
     // A new throws array for the same turn (a parent render) must not play the turn twice.
     if (previous === tick) return;
     lastTick.current = tick;
-    const itemsBefore = lastItems.current;
-    lastItems.current = snapshot.items;
-    if (paused || !playsTurnSounds(previous, tick)) return;
     const own = ownId === null ? undefined : snapshot.bots.find((bot) => bot.id === ownId);
+    const itemsBefore = lastItems.current;
+    const ownItemBefore = lastOwnItem.current;
+    lastItems.current = snapshot.items;
+    lastOwnItem.current = own?.item ?? null;
+    if (paused || !playsTurnSounds(previous, tick)) return;
     const pickup = pickupSound(itemsBefore, snapshot.items, own);
-    for (const sound of [...turnSounds(throws, ownId), ...ultimateSounds(fires, ownId), ...(pickup === null ? [] : [pickup])]) {
+    for (const sound of [...turnSounds(throws, ownId, ownItemBefore), ...ultimateSounds(fires, ownId), ...(pickup === null ? [] : [pickup])]) {
       // The music dips under the viewer's own tank's sounds; a viewer without a tank hears every tank, so no dip there.
       if (playSound(sound) && ownId !== null) duckMusicUnder(sound);
     }

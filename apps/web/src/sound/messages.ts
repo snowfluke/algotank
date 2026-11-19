@@ -13,6 +13,14 @@ const namesEn: Record<SoundName, string> = {
   roundEnd: "Round end",
   win: "Win",
   tap: "Button tap",
+  pickBucket: "Bucket picked up",
+  pickUmbrella: "Umbrella picked up",
+  pickPinwheel: "Pinwheel picked up",
+  pickMudBall: "Mud ball picked up",
+  useBucket: "Bucket hit",
+  useUmbrella: "Umbrella block",
+  usePinwheel: "Pinwheel hit",
+  useMudBall: "Mud ball hit",
 };
 
 export const en = {
@@ -41,5 +49,13 @@ export const id: typeof en = {
     roundEnd: "Ronde selesai",
     win: "Menang",
     tap: "Ketukan tombol",
+    pickBucket: "Ember diambil",
+    pickUmbrella: "Payung diambil",
+    pickPinwheel: "Kincir diambil",
+    pickMudBall: "Bola lumpur diambil",
+    useBucket: "Tembakan ember",
+    useUmbrella: "Payung menahan",
+    usePinwheel: "Tembakan kincir",
+    useMudBall: "Tembakan bola lumpur",
   },
 };

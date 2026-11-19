@@ -15,7 +15,7 @@ import type { SoundName } from "./sounds.ts";
 export type MusicVenue = "app" | "bigScreen";
 
 /** The effects that lower the music for a moment: the player's own shot and the splash of a hit. */
-const DUCKING_SOUNDS: ReadonlySet<SoundName> = new Set<SoundName>(["shot", "splash"]);
+const DUCKING_SOUNDS: ReadonlySet<SoundName> = new Set<SoundName>(["shot", "splash", "useBucket", "usePinwheel", "useMudBall"]);
 
 async function fetchTrack(url: string): Promise<ArrayBuffer> {
   const response = await fetch(url);

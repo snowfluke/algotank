@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import type { ThrowEvent } from "@game/engine";
-import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
+import { countdownSound, pickupSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
 
 const hit: ThrowEvent = { throwerId: "a", outcome: "hit", targetId: "b", distance: 1, hitChance: 90 };
 const miss: ThrowEvent = { throwerId: "c", outcome: "miss", targetId: "d", distance: 2, hitChance: 60 };
@@ -93,5 +93,37 @@ describe("countdownSound", () => {
     expect(countdownSound(1, null)).toBe("roundStart");
     expect(countdownSound(1, 0)).toBe("roundStart");
     expect(countdownSound(null, null)).toBeNull();
+  });
+});
+
+describe("item sounds", () => {
+  const hitBy = (throwerId: string, targetId: string): ThrowEvent => ({ throwerId, outcome: "hit", targetId, distance: 1, hitChance: 90 });
+  const blockedAt = (targetId: string): ThrowEvent => ({ throwerId: "x", outcome: "blocked", targetId, distance: 1, hitChance: 90 });
+
+  test("the viewer's hit with a held item plays that item's hit in place of the splash", () => {
+    expect(turnSounds([hitBy("me", "a")], "me", "bucket")).toEqual(["shot", "useBucket"]);
+    expect(turnSounds([hitBy("me", "a")], "me", "pinwheel")).toEqual(["shot", "usePinwheel"]);
+    expect(turnSounds([hitBy("me", "a")], "me", "mudBall")).toEqual(["shot", "useMudBall"]);
+    expect(turnSounds([hitBy("me", "a")], "me", null)).toEqual(["shot", "splash"]);
+  });
+
+  test("the viewer's umbrella stopping a shot plays the umbrella, and another tank's item stays silent", () => {
+    expect(turnSounds([blockedAt("me")], "me", "umbrella")).toEqual(["useUmbrella"]);
+    expect(turnSounds([hitBy("a", "b")], "me", "bucket")).toEqual([]);
+  });
+});
+
+describe("pickupSound", () => {
+  const item = (kind: "bucket" | "umbrella" | "pinwheel" | "mudBall", x: number, y: number) => ({ kind, x, y, turnsLeft: 10 });
+
+  test("an item that lay under the viewer's tank and is gone plays that item's sound", () => {
+    expect(pickupSound([item("bucket", 2, 3)], [], { x: 2, y: 3 })).toBe("pickBucket");
+    expect(pickupSound([item("pinwheel", 2, 3), item("umbrella", 5, 5)], [item("umbrella", 5, 5)], { x: 2, y: 3 })).toBe("pickPinwheel");
+  });
+
+  test("an item taken elsewhere, an item still there, or no own tank is silent", () => {
+    expect(pickupSound([item("mudBall", 4, 4)], [], { x: 2, y: 3 })).toBeNull();
+    expect(pickupSound([item("bucket", 2, 3)], [item("bucket", 2, 3)], { x: 2, y: 3 })).toBeNull();
+    expect(pickupSound([item("bucket", 2, 3)], [], undefined)).toBeNull();
   });
 });

@@ -17,9 +17,9 @@
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { memo, useEffect, useId, useMemo, useRef } from "react";
-import type { PublicBot } from "@game/arena";
+import type { PublicBot, PublicSnapshot } from "@game/arena";
 import { canThrow, rulesOf } from "@game/engine";
-import type { BotId, RuleSetId, ThrowEvent } from "@game/engine";
+import type { BoardItem, BotId, ItemKind, RuleSetId, ThrowEvent } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { duckMusicUnder } from "../sound/music.ts";
 import { playSound } from "../sound/player.ts";
@@ -51,7 +51,7 @@ import type { ShotShape } from "./boardHelpers.ts";
 import { Crown, DryDrops, DustRing, JetShape, Puff, Splash } from "./boardShapes.tsx";
 import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import type { ArenaBoardProps } from "./props.ts";
-import { countdownSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
+import { countdownSound, pickupSound, playsTurnSounds, turnSounds } from "./turnSounds.ts";
 import { botAtPoint, nameTagSpot, useTankPeek, type BoardView } from "./tankPeek.ts";
 import { useCellPixels } from "./useCellPixels.ts";
 import { WaterGauge } from "./WaterGauge.tsx";
@@ -142,19 +142,29 @@ function useTurnAngles(bots: readonly PublicBot[]): ReadonlyMap<BotId, number> {
 }
 
 /** Plays the turn's sounds when a live board moves on by exactly one turn, and the countdown's beeps. `ownId` is the viewer's tank, whose events alone make sound. */
-function useBoardSounds(tick: number, throws: readonly ThrowEvent[], ownId: BotId | null, paused: boolean, countdown: number | null): void {
+function useBoardSounds(snapshot: PublicSnapshot, throws: readonly ThrowEvent[], ownId: BotId | null, paused: boolean, countdown: number | null): void {
+  const tick = snapshot.tick;
   const lastTick = useRef<number | null>(null);
+  // The floor and the viewer's held item before this turn: a pickup and an item's use are read against them.
+  const lastItems = useRef<readonly BoardItem[]>(snapshot.items);
+  const lastOwnItem = useRef<ItemKind | null>(null);
   useEffect(() => {
     const previous = lastTick.current;
     // A new throws array for the same turn (a parent render) must not play the turn twice.
     if (previous === tick) return;
     lastTick.current = tick;
+    const own = ownId === null ? undefined : snapshot.bots.find((bot) => bot.id === ownId);
+    const itemsBefore = lastItems.current;
+    const ownItemBefore = lastOwnItem.current;
+    lastItems.current = snapshot.items;
+    lastOwnItem.current = own?.item ?? null;
     if (paused || !playsTurnSounds(previous, tick)) return;
-    for (const sound of turnSounds(throws, ownId)) {
+    const pickup = pickupSound(itemsBefore, snapshot.items, own);
+    for (const sound of [...turnSounds(throws, ownId, ownItemBefore), ...(pickup === null ? [] : [pickup])]) {
       // The music dips under the viewer's own tank's sounds; a viewer without a tank hears every tank, so no dip there.
       if (playSound(sound) && ownId !== null) duckMusicUnder(sound);
     }
-  }, [tick, throws, ownId, paused]);
+  }, [tick, snapshot, throws, ownId, paused]);
 
   const lastCountdown = useRef<number | null>(null);
   useEffect(() => {
@@ -204,7 +214,7 @@ export const ArenaBoard = memo(function ArenaBoard({ snapshot, throws, tunnels, 
   const { ref, cellPx } = useCellPixels(spanX, spanY);
   const detail = boardDetail(cellPx);
   const counting = countdown !== null && countdown > 0;
-  useBoardSounds(tick, throws, highlightId, paused, countdown);
+  useBoardSounds(snapshot, throws, highlightId, paused, countdown);
   // A crowd: squares too small for a label (a big arena seen whole, up to 512 tanks). Every other tank is then
   // one <use> of a shared drawing in one gliding group, without a title, and only the effects that read at that
   // size play: the jets of hits and misses and the splash. The viewer's tank keeps everything.

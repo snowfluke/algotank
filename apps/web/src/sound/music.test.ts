@@ -178,7 +178,8 @@ describe("music player", () => {
     expect(h.player.getState()).toBe("failed");
     expect(h.errors).toHaveLength(1);
     expect(h.audio.sources).toHaveLength(0);
-    expect(musicLine(true, "failed", false)).toBe("musicFailed");
+    expect(musicLine(true, "failed")).toBe("musicFailed");
+    expect(musicLine(true, "playing")).toBeUndefined();
     h.player.setEnabled(false);
     h.player.setEnabled(true);
     expect(h.player.getState()).toBe("loading");

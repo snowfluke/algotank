@@ -14,14 +14,12 @@ import type { MusicState } from "./musicMachine.ts";
 import { playSound } from "./player.ts";
 import { useSoundSettings } from "./setting.ts";
 
-type MusicLine = "musicOn" | "musicLoading" | "musicFailed" | "musicOff" | "musicOffBigScreen";
-
-/** The sentence under the music switch. */
-export function musicLine(on: boolean, state: MusicState, bigScreen: boolean): MusicLine {
-  if (!on) return bigScreen ? "musicOffBigScreen" : "musicOff";
-  if (state === "failed") return "musicFailed";
-  if (state === "loading") return "musicLoading";
-  return "musicOn";
+/**
+ * The switches carry no sentence under them (owner, 2026-11-19: "no need for description on the audio
+ * settings"). Only a failed load gets one, because the switch alone cannot say the music is missing.
+ */
+export function musicLine(on: boolean, state: MusicState): "musicFailed" | undefined {
+  return on && state === "failed" ? "musicFailed" : undefined;
 }
 
 /** 8px under the button, its right edge on the button's right edge, and never closer than 8px to either side of the viewport. */
@@ -105,10 +103,9 @@ export function SoundControl() {
               </h2>
               <IconButton label={m.close} icon={<X aria-hidden size={22} />} variant="quiet" data-sound-close="" onClick={close} />
             </div>
-            <Switch label={m.music} description={m[musicLine(music.on, musicState, music.venue === "bigScreen")]} on={music.on} onChange={music.set} />
+            <Switch label={m.music} {...(musicLine(music.on, musicState) === undefined ? {} : { description: m.musicFailed })} on={music.on} onChange={music.set} />
             <Switch
               label={m.effects}
-              description={settings.effects ? m.effectsOn : m.effectsOff}
               on={settings.effects}
               onChange={(on) => {
                 setSettings({ effects: on });

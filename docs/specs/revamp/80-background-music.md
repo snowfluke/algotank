@@ -22,3 +22,7 @@ You own `tools/music/**`, `apps/web/public/music/**`, the web app's sound featur
 Never `bun run build`; never port 8787; build to your own scratch folder and serve on port 9008; one headless browser. Report briefly, with the three files for the owner to listen to as WAV or MP3 paths.
 
 Status 2026-11-14: the owner chose track A; B and C are removed.
+
+## Sound panel text (2026-11-19)
+
+Owner, 2026-11-19: "no need for description on the audio settings". The two switches show only their labels, Music and Sound effects. One sentence remains: when the music cannot load, the panel says so under the music switch, because the switch alone cannot show that the music is missing.

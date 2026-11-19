@@ -147,7 +147,8 @@ describe("the fresh start rotation", () => {
 
 describe("the arena condition", () => {
   const two = [tank(1), tank(2)].map((t) => ({ tank: t, points: 0, counts: true, stats: undefined }));
-  const conditionWith = (id: ArenaConditionId, now = 0) => {
+  // Hybrid layouts join the draw only from the ultimates release (owner, 2026-11-19), so these tests draw after it.
+  const conditionWith = (id: ArenaConditionId, now = ULTIMATES_FROM) => {
     const draw = weatherDraws();
     draw.set(id);
     const day = new LeagueDay(1, draw.random, () => now);
@@ -158,7 +159,7 @@ describe("the arena condition", () => {
   test("all six normal conditions and all four layouts share equal odds within their group", () => {
     expect(MONTHLY_CONDITIONS).toHaveLength(6);
     expect(ARENA_LAYOUT_IDS).toHaveLength(4);
-    const day = new LeagueDay(1, createRng(8237).next, () => 0, { seed: () => 10 });
+    const day = new LeagueDay(1, createRng(8237).next, () => ULTIMATES_FROM, { seed: () => 10 });
     const totals = new Map<ArenaConditionId, number>();
     day.start(two, 1000);
     for (let i = 0; i < 4000; i++) {
@@ -174,7 +175,7 @@ describe("the arena condition", () => {
 
   test("hybrid odds rise after each pair of normal draws and return to 20 percent after a hybrid", () => {
     const draw = weatherDraws();
-    const day = new LeagueDay(1, draw.random, () => 0);
+    const day = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
     for (const [streak, chance] of [20, 20, 40, 40, 60, 60, 80, 80, 100].entries()) {
       const odds = Math.min(chance / 100, 0.999);
       draw.set(chance === 100 ? "fourQuarters" : "standard", odds);
@@ -184,7 +185,7 @@ describe("the arena condition", () => {
       expect(day.normalWeatherStreak()).toBe(chance === 100 ? 0 : streak + 1);
 
       // A draw just below the threshold also checks that the real odds are not lower.
-      const probe = new LeagueDay(1, draw.random, () => 0);
+      const probe = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
       draw.set("fourQuarters", (chance - 0.1) / 100);
       probe.start(two, 1000, streak);
       expect(arenaConditionOf(probe.view(1000).board)).toBe("fourQuarters");
@@ -198,13 +199,17 @@ describe("the arena condition", () => {
     expect(day.normalWeatherStreak()).toBe(0);
   });
 
-  test("each layout can start a new round on either side of the ultimates release gate", () => {
+  test("before the ultimates release the draw gives only single conditions; from it, layouts with ultimates", () => {
+    const before = new LeagueDay(1, createRng(31).next, () => ULTIMATES_FROM - 1, { seed: () => 10 });
+    before.start(two, 1000);
+    for (let i = 0; i < 400; i++) {
+      before.rebuild(1000);
+      expect(isArenaLayoutId(arenaConditionOf(before.view(1000).board))).toBe(false);
+    }
+    expect(before.normalWeatherStreak()).toBe(0);
     for (const layout of ARENA_LAYOUT_IDS) {
-      const before = conditionWith(layout, ULTIMATES_FROM - 1);
       const after = conditionWith(layout, ULTIMATES_FROM);
-      expect(arenaConditionOf(before)).toBe(layout);
       expect(arenaConditionOf(after)).toBe(layout);
-      expect(before.bots[0]?.ultimate).toBeUndefined();
       expect(after.bots[0]?.ultimate).toMatchObject({ kind: "charging" });
     }
   });
@@ -212,7 +217,7 @@ describe("the arena condition", () => {
   test("a rebuild draws again", () => {
     const draw = weatherDraws();
     draw.set("standard");
-    const day = new LeagueDay(1, draw.random, () => 0);
+    const day = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
     day.start(two, 1000);
     expect(arenaConditionOf(day.view(1000).board)).toBe("standard");
     draw.set("hills");
@@ -223,7 +228,7 @@ describe("the arena condition", () => {
   test("draws once on each weather turn and leaves the round alone when the draw repeats", () => {
     const draw = weatherDraws();
     draw.set("standard");
-    const day = new LeagueDay(1, draw.random, () => 0);
+    const day = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
     const total = 2 * RESHUFFLE_TURNS + 1;
     day.start(two, total);
     const drawsBefore = draw.count();
@@ -250,7 +255,7 @@ describe("the arena condition", () => {
   test("weather can enter a layout and a repeat keeps its map and rain clock", () => {
     const draw = weatherDraws();
     draw.set("standard");
-    const day = new LeagueDay(1, draw.random, () => 0);
+    const day = new LeagueDay(1, draw.random, () => ULTIMATES_FROM);
     const total = 2 * RESHUFFLE_TURNS + 1;
     day.start(two, total);
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();

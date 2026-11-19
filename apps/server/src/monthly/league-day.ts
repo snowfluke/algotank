@@ -201,6 +201,9 @@ export class LeagueDay {
     const fixed = this.field.conditions;
     if (fixed !== undefined) return fixed[Math.floor(this.random() * fixed.length)] ?? STANDARD_RULE_SET_ID;
 
+    // Hybrid layouts arrive with the ultimates on 22 November (owner, 2026-11-19: "hold it for 22 nov"), so a
+    // release of main before then draws only single conditions.
+    if (!ultimatesOn(this.now())) return MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
     // The odds rise after each pair of normal draws, including repeats (87-hybrid-arenas.md, owner 2026-11-19).
     const hybridChance = Math.min(100, 20 + 20 * Math.floor(this.normalStreak / 2));
     const hybrid = this.random() * 100 < hybridChance;

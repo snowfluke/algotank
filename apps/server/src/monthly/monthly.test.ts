@@ -324,7 +324,8 @@ describe("the day round", () => {
 
   test("weather and a bot's fresh start share one state at the same turn as the tick", async () => {
     const draws = [0.99, 0];
-    const l = startLeague({ random: () => draws.shift() ?? 0 });
+    // The weather draw rolls hybrid odds only from the release (87-hybrid-arenas.md), and these draws include that roll.
+    const l = startLeague({ random: () => draws.shift() ?? 0, at: ULTIMATES_FROM });
     const ada = newAccount();
     take(l, ada);
     const start = l.monthly.live(1);
@@ -350,7 +351,7 @@ describe("the day round", () => {
 
   test("one weather state starts the rain front and the band then moves through compact ticks", async () => {
     const draws = [0.99, 0];
-    const l = startLeague({ random: () => draws.shift() ?? 0 });
+    const l = startLeague({ random: () => draws.shift() ?? 0, at: ULTIMATES_FROM });
     take(l, newAccount());
     take(l, newAccount());
     draws.push(0.99, 0);
@@ -830,7 +831,7 @@ describe("restart", () => {
     const db = memoryDatabase();
     const draws = [0.99, 0];
     const random = () => draws.shift() ?? 0;
-    const first = startLeague({ db, random });
+    const first = startLeague({ db, random, at: ULTIMATES_FROM });
     take(first, newAccount());
     take(first, newAccount());
     for (let i = 1; i < RESHUFFLE_TURNS; i++) first.ticks.tick();

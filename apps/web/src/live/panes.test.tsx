@@ -2,7 +2,7 @@
 import { plainTankLook, type TankColour } from "@game/arena";
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ArenaPhase, PublicArena, PublicPlayer, PublicSnapshot, RoundSummary } from "@game/arena";
+import type { ArenaPhase, PublicArena, PublicBot, PublicPlayer, PublicSnapshot, RoundSummary } from "@game/arena";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
 import { arenaIn, snapshotAt } from "../stream/fixtures.ts";
@@ -70,6 +70,21 @@ describe("ArenaPane", () => {
     const out = html(<ArenaPane arena={arena} stream={stream} viewerId={null} />);
     expect(out).not.toContain("sr-only");
     expect(out).toContain("data-legend-open");
+  });
+
+  test("the own row shows the player's live ultimate charge only in a round with ultimates", () => {
+    const yours: PublicBot = { ...bot("p1", 5), ultimate: { id: "dash", kind: "charging", turnsLeft: 4, turnsTotal: 8 } };
+    const other: PublicBot = { ...bot("p2", 6), ultimate: { id: "smoke", kind: "ready" } };
+    const active = { ...snapshot, bots: [yours, other] };
+    const spawn: PublicSnapshot = { ...snapshot, bots: [{ ...yours, ultimate: { id: "dash", kind: "charging", turnsLeft: 8, turnsTotal: 8 } }] };
+    const out = html(<ArenaPane arena={arena} stream={{ ...stream, snapshot: active, roundSpawn: spawn }} viewerId="p1" />);
+    expect(out).toContain('data-ultimate-link="dash"');
+    expect(out).toContain('data-ultimate-state="charging"');
+    expect(out).toContain("50% charged");
+    expect(out).not.toContain('data-ultimate-link="smoke"');
+
+    expect(html(<ArenaPane arena={arena} stream={{ ...stream, snapshot: { ...snapshot, bots: [bot("p1", 5)] } }} viewerId="p1" />))
+      .not.toContain("data-ultimate-link");
   });
 
   test("fills the box it is given", () => {

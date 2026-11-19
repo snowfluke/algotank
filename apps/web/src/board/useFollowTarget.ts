@@ -1,6 +1,6 @@
 // The tank a follow window centres on: the viewer's own tank, or for a viewer without
 // a tank the leader (camera.ts, leaderTarget), which stays while it still leads so a tie
-// does not make the window jump. Shared by the room's arena view and the monthly board.
+// does not make the window jump.
 
 import { useRef } from "react";
 import type { PublicBot } from "@game/arena";

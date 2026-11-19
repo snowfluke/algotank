@@ -57,13 +57,13 @@ export interface ArenaBoardProps {
    */
   readonly camera?: CameraWindow | null;
   /**
-   * The tank the zoomed view follows (monthly/MonthlyBoard.tsx), or null. The other tanks and their
+   * The tank the zoomed view follows (ArenaView.tsx), or null. The other tanks and their
    * gauges are drawn a little dimmer; the viewer's own tank never is (owner, 2026-11-17).
    */
   readonly focusId?: BotId | null;
   /** Tanks that leave tread marks on the last squares they left (board/tankTrail.ts): the monthly league's game masters. */
   readonly trailIds?: ReadonlySet<BotId>;
-  /** A tap on the drawing of a tank (not the square it glides to), after its name tag shows: the monthly board's zoomed view follows that tank (monthly/MonthlyBoard.tsx). */
+  /** A tap on the drawing of a tank after its name tag shows, so the zoomed view can follow it (ArenaView.tsx). */
   readonly onTankTap?: (id: BotId) => void;
   /** Drawn on the ground under the tanks, in board units (CELL per square): extra scene art. */
   readonly underlay?: ReactNode;

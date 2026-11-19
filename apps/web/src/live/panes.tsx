@@ -19,8 +19,7 @@
 // - `viewerId: PlayerId | null` is the viewer's own tank when it plays in this round
 //   (view "live"), and null for a viewer without a tank in the round (view "watching":
 //   a waiting or knocked-out player). It decides the own row, the "you" ring, which row
-//   the ranking keeps, and which shot sounds play (board/turnSounds.ts: a player hears
-//   only their own tank, a viewer without a tank hears every tank).
+//   the ranking keeps, and the board's default point of view for sound.
 // - `me: PublicPlayer` is the viewer's player from the room view (any status: playing,
 //   eliminated, waiting, winner).
 // - `notes` (optional) are sentences a public arena adds to the end of a game, such as what
@@ -123,17 +122,27 @@ export function ArenaPane({ arena, stream, viewerId, onShowAround }: ArenaPanePr
     );
   }
   const own = viewerId === null ? null : ownLive(snapshot, viewerId, arena.phase.isFinal);
+  const ultimateState = snapshot.bots.find((bot) => bot.id === viewerId)?.ultimate;
+  // The last turn can clear the charge while the round is still on screen.
+  const ultimateId = ultimateState?.id ?? stream.roundSpawn?.bots.find((bot) => bot.id === viewerId)?.ultimate?.id;
   const counting = countdown !== null && snapshot.tick === 0;
   return (
     <div className={`${PANE} gap-2`} data-arena-pane="">
       <div className="flex min-w-0 shrink-0 items-center gap-3">
         {/* data-coach: the first-round tour's steps about points and water (guide/tours.ts). */}
         <div data-coach="own-status" className="min-w-0 flex-1">
-          {own === null ? null : <OwnStatusRow own={own} beforeFirstTurn={snapshot.tick === 0} />}
+          {own === null ? null : (
+            <OwnStatusRow
+              own={own}
+              beforeFirstTurn={snapshot.tick === 0}
+              {...(ultimateId === undefined ? {} : { ultimate: { id: ultimateId, state: ultimateState } })}
+            />
+          )}
         </div>
-        <LegendButton ultimates={hasUltimates(stream.roundSpawn ?? snapshot)} {...(onShowAround === undefined ? {} : { onShowAround })} />
+        <LegendButton layout={snapshot.layout?.id} ultimates={hasUltimates(stream.roundSpawn ?? snapshot)} {...(onShowAround === undefined ? {} : { onShowAround })} />
       </div>
       <ArenaView
+        defaultChoice="follow"
         snapshot={snapshot}
         throws={stream.throws}
         fires={stream.fires}

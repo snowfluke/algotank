@@ -8,7 +8,7 @@ export function hasUltimates(snapshot: PublicSnapshot | null): boolean {
   return snapshot?.bots.some((tank) => tank.ultimate !== undefined) ?? false;
 }
 
-/** The monthly view turns fire-time squares along with the snapshot. Ids and distances stay the same. */
+/** Fire-time squares turn with the snapshot so effects land on the same tanks and tiles. */
 export function rotateFires(fires: readonly UltimateFire[], height: number): readonly UltimateFire[] {
   const turn = <T extends UltimateFire["at"]>(cell: T): T => ({ ...cell, x: height - 1 - cell.y, y: cell.x });
   return fires.map((fire) => {

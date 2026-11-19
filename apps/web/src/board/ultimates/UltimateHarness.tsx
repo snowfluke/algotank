@@ -15,7 +15,7 @@ export function UltimateHarness({ id }: { readonly id: UltimateId }) {
   return (
     <AppShell header={<AppHeader title={m.board.harness.heading} />}>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2" data-ultimate-harness={id}>
-        <div className="flex shrink-0 justify-end"><LegendButton ultimates /></div>
+        <div className="flex shrink-0 justify-end"><LegendButton layout={snapshot.layout?.id} ultimates /></div>
         <FittedBoard ratio={boardAspect(snapshot.width, snapshot.height)}>
           <ArenaBoard snapshot={snapshot} throws={throws} fires={fires ?? []} names={sceneNames()} highlightId="you" tickMs={900} paused />
         </FittedBoard>

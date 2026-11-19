@@ -14,13 +14,8 @@ export const SCREEN_RANKING_FIT: FitSize = { maxPx: 36, columnEm: 12 };
 /** Space between the board and the ranking, in px. */
 export const SCREEN_GAP_PX = 32;
 
-/**
- * Width of the board in px: as wide as the area's height allows for its shape
- * (`ratio` is width / height), but never so wide that the ranking has less than
- * one column at FIT_FULL_PX.
- */
-export function screenBoardWidth(area: Box, ratio: number): number {
+/** Space the stage can use while the ranking still has one column at FIT_FULL_PX. */
+export function screenBoardBox(area: Box): Box {
   const rankingMin = SCREEN_RANKING_FIT.columnEm * FIT_FULL_PX;
-  const byHeight = area.height * ratio;
-  return Math.max(0, Math.floor(Math.min(byHeight, area.width - SCREEN_GAP_PX - rankingMin)));
+  return { width: Math.max(0, area.width - SCREEN_GAP_PX - rankingMin), height: area.height };
 }

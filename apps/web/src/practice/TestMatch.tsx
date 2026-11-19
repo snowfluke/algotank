@@ -10,12 +10,12 @@
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { statsView, type BotId } from "@game/engine";
-import { ArenaBoard } from "../board/ArenaBoard.tsx";
+import { ArenaView } from "../board/ArenaView.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
-import { boardAspect, FittedBoard } from "../board/FittedBoard.tsx";
 import type { TankInfo } from "../board/props.ts";
 import { Scoreboard } from "../board/Scoreboard.tsx";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { Button } from "../ui/Button.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
@@ -72,6 +72,8 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
 
   const tick = state.frame === 0 ? undefined : run.ticks[state.frame - 1];
   const snapshot = tick?.snapshot ?? run.spawn;
+  const ultimates = hasUltimates(run.spawn);
+  const ultimateState = ultimates ? snapshot.bots.find((bot) => bot.id === PLAYER_ID)?.ultimate : undefined;
   // Any control the player touches ends the countdown, so the player is never fighting the clock.
   const takeControl = () => setCountdown(null);
 
@@ -122,19 +124,19 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
   return (
     <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 fit:grid-rows-[minmax(0,1fr)] @3xl:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]">
       <div className="flex min-h-0 min-w-0 flex-col gap-2">
-        <FittedBoard ratio={boardAspect(run.spawn.width, run.spawn.height)} dataAttributes={{ "data-test-board": "" }}>
-          <ArenaBoard
-            snapshot={snapshot}
-            throws={tick?.throws ?? []}
-            fires={tick?.fires ?? []}
-            names={run.names}
-            highlightId={PLAYER_ID}
-            tickMs={tickMs}
-            tanks={tanks}
-            countdown={countdown}
-            paused={!state.playing}
-          />
-        </FittedBoard>
+        <ArenaView
+          dataAttributes={{ "data-test-board": "" }}
+          switchPlace={ultimates ? { kind: "row", lead: <UltimateLink ultimate={run.strategy.ultimate} size={{ kind: "tile", state: ultimateState }} /> } : undefined}
+          snapshot={snapshot}
+          throws={tick?.throws ?? []}
+          fires={tick?.fires ?? []}
+          names={run.names}
+          highlightId={PLAYER_ID}
+          tickMs={tickMs}
+          tanks={tanks}
+          countdown={countdown}
+          paused={!state.playing}
+        />
         <SequenceNow run={run} frame={state.frame} />
         <ReplayControls
           playing={state.playing}
@@ -156,7 +158,7 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
           onSpeed={setSpeedId}
           extra={
             <>
-              <LegendButton ultimates={hasUltimates(run.spawn)} />
+              <LegendButton layout={snapshot.layout?.id} ultimates={ultimates} />
               <Button data-test-show-result="" onClick={() => setPage("result")}>
                 {p.showResult}
               </Button>

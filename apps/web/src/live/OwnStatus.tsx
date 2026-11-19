@@ -8,6 +8,8 @@
 // wraps in a phone's column, "lolos" does not), and before the first turn the sentence
 // takes the place of the numbers, which stay laid out but unseen.
 
+import type { UltimateId, UltimateState } from "@game/engine";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import type { OwnLive } from "../standings/standings.ts";
 
@@ -72,13 +74,20 @@ function Stat({ label, value, note, tone, noteTone = "muted" }: { label: string;
 }
 
 /** `beforeFirstTurn`: every tank still has 0 points, so the row asks the viewer to find their tank instead. */
-export function OwnStatusRow({ own, beforeFirstTurn }: { own: OwnLive; beforeFirstTurn: boolean }) {
+export function OwnStatusRow({ own, beforeFirstTurn, ultimate }: {
+  readonly own: OwnLive;
+  readonly beforeFirstTurn: boolean;
+  readonly ultimate?: { readonly id: UltimateId; readonly state: UltimateState | undefined };
+}) {
   const m = useMessages();
   const t = m.live.status;
   const outlook = ownOutlookShort(own, t);
   return (
     // One grid cell for both: before the first turn the sentence shows over the numbers, which keep their room.
-    <section className="grid min-w-0" aria-label={m.common.yourTank}>
+    <section
+      className={`grid min-w-0 ${ultimate === undefined ? "" : "min-[480px]:grid-cols-[minmax(0,1fr)_auto] min-[480px]:gap-x-3"}`}
+      aria-label={m.common.yourTank}
+    >
       {beforeFirstTurn ? (
         <p className="min-w-0 self-center font-semibold text-self-ink [grid-area:1/1] [overflow-wrap:anywhere]">{m.live.findYourTank}</p>
       ) : (
@@ -95,6 +104,11 @@ export function OwnStatusRow({ own, beforeFirstTurn }: { own: OwnLive; beforeFir
           noteTone={own.canShoot ? "muted" : "warning"}
         />
       </dl>
+      {ultimate === undefined ? null : (
+        <div className="mt-1 min-w-0 self-center [grid-area:2/1] min-[480px]:mt-0 min-[480px]:[grid-area:1/2]">
+          <UltimateLink ultimate={ultimate.id} size={{ kind: "tile", state: ultimate.state }} />
+        </div>
+      )}
     </section>
   );
 }

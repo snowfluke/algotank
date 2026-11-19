@@ -1,29 +1,28 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import { CULL_MARGIN, FOLLOW_CELL_PX, WALL_SQUARES, ZOOM_SQUARES, followWindow, inWindow, leaderTarget, needsFollowCamera, wholeArenaCellPx, zoomCellPx } from "./camera.ts";
+import { CULL_MARGIN, WALL_SQUARES, ZOOM_SQUARES, followWindow, inWindow, leaderTarget, wholeArenaCellPx, zoomCellPx } from "./camera.ts";
 
 // A 68 x 51 arena holds 512 tanks at the standard fill; a box of 280 x 420 px is a 10 by 15 square window.
 const big = { width: 68, height: 51 };
-const box = { width: 10 * FOLLOW_CELL_PX, height: 15 * FOLLOW_CELL_PX };
+const cellPx = 28;
+const box = { width: 10 * cellPx, height: 15 * cellPx };
 
 describe("follow camera", () => {
-  test("the window turns on where the whole arena gives a square under 22 px", () => {
+  test("whole-arena cell size accounts for the wall and an empty box", () => {
     expect(wholeArenaCellPx({ width: 390, height: 500 }, big)).toBeCloseTo(390 / 68.6);
-    expect(needsFollowCamera({ width: 390, height: 500 }, big)).toBe(true);
-    expect(needsFollowCamera({ width: 1840, height: 900 }, { width: 12, height: 9 })).toBe(false);
-    expect(needsFollowCamera({ width: 0, height: 0 }, big)).toBe(false);
+    expect(wholeArenaCellPx({ width: 0, height: 0 }, big)).toBe(0);
   });
 
   test("centres the window on the tank's square", () => {
-    const view = followWindow(box, big, 30, 20);
+    const view = followWindow(box, big, 30, 20, cellPx);
     expect(view).toEqual({ x: 30.5 - 5, y: 20.5 - 7.5, width: 10, height: 15 });
   });
 
   test("stops at each wall, so the window never shows past it", () => {
-    expect(followWindow(box, big, 0, 20).x).toBe(-WALL_SQUARES);
-    expect(followWindow(box, big, 67, 20).x).toBe(68 + WALL_SQUARES - 10);
-    expect(followWindow(box, big, 30, 0).y).toBe(-WALL_SQUARES);
-    expect(followWindow(box, big, 30, 50).y).toBe(51 + WALL_SQUARES - 15);
+    expect(followWindow(box, big, 0, 20, cellPx).x).toBe(-WALL_SQUARES);
+    expect(followWindow(box, big, 67, 20, cellPx).x).toBe(68 + WALL_SQUARES - 10);
+    expect(followWindow(box, big, 30, 0, cellPx).y).toBe(-WALL_SQUARES);
+    expect(followWindow(box, big, 30, 50, cellPx).y).toBe(51 + WALL_SQUARES - 15);
   });
 
   test("stops in each corner on both axes", () => {
@@ -34,21 +33,21 @@ describe("follow camera", () => {
       [67, 50, 68 + WALL_SQUARES - 10, 51 + WALL_SQUARES - 15],
     ] as const;
     for (const [cx, cy, x, y] of corners) {
-      const view = followWindow(box, big, cx, cy);
+      const view = followWindow(box, big, cx, cy, cellPx);
       expect([view.x, view.y]).toEqual([x, y]);
     }
   });
 
   test("an arena smaller than the window sits in its middle on that axis", () => {
     const narrow = { width: 6, height: 40 };
-    const view = followWindow(box, narrow, 5, 39);
+    const view = followWindow(box, narrow, 5, 39, cellPx);
     expect(view.x).toBe((6 - 10) / 2);
     expect(view.y).toBe(40 + WALL_SQUARES - 15);
-    expect(followWindow(box, { width: 4, height: 4 }, 0, 0)).toEqual({ x: -3, y: -5.5, width: 10, height: 15 });
+    expect(followWindow(box, { width: 4, height: 4 }, 0, 0, cellPx)).toEqual({ x: -3, y: -5.5, width: 10, height: 15 });
   });
 
   test("draws the tanks in the window and its margin only", () => {
-    const view = followWindow(box, big, 30, 20);
+    const view = followWindow(box, big, 30, 20, cellPx);
     expect(inWindow(view, 30, 20, CULL_MARGIN)).toBe(true);
     // The window spans x 25.5 to 35.5; a margin of 2 reaches square 37 and down to square 23.
     expect(inWindow(view, 37, 20, CULL_MARGIN)).toBe(true);
@@ -71,11 +70,10 @@ describe("follow camera", () => {
   });
 });
 
-describe("the monthly board's zoom", () => {
-  test("shows ZOOM_SQUARES across the short side on any box, and a larger cell than a room's window on a phone", () => {
+describe("board zoom", () => {
+  test("shows ZOOM_SQUARES across the short side on phones and laptops", () => {
     expect(zoomCellPx({ width: 358, height: 500 })).toBeCloseTo(358 / ZOOM_SQUARES);
     expect(zoomCellPx({ width: 900, height: 495 })).toBeCloseTo(55);
-    expect(zoomCellPx({ width: 358, height: 500 })).toBeGreaterThan(FOLLOW_CELL_PX);
     const view = followWindow({ width: 360, height: 540 }, { width: 23, height: 17 }, 11, 8, 40);
     expect([view.width, view.height]).toEqual([9, 13.5]);
   });

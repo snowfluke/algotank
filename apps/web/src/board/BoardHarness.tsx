@@ -270,7 +270,7 @@ function BoardScenes() {
           {board}
           <Scoreboard snapshot={snapshot} names={names} highlightId={highlightId} maxRows={8} />
         </div>
-        <LegendButton />
+        <LegendButton layout={snapshot.layout?.id} />
       </Page>
     </>
   );

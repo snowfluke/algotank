@@ -1,6 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import { ULTIMATES_FROM } from "@game/arena";
 import { DEFAULT_PRESET_ID, PRESETS } from "@game/engine";
 import { LegendDialog } from "../board/BoardLegend.tsx";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
@@ -8,6 +9,8 @@ import { createLanguageStore } from "../i18n/language.ts";
 import { en, id } from "./messages.ts";
 import { Practice } from "./Practice.tsx";
 import { ReplayControls } from "./ReplayControls.tsx";
+import { runPractice } from "./run.ts";
+import { TestMatch } from "./TestMatch.tsx";
 import { TestOptions } from "./TestOptions.tsx";
 
 const preset = PRESETS.find((candidate) => candidate.id === DEFAULT_PRESET_ID);
@@ -60,6 +63,26 @@ describe("TestOptions", () => {
     expect(html).toContain(">Dry spell<");
     expect(html).toContain("data-test-rules");
     expect(count(html, 'checked=""')).toBe(1); // the "Normal" length
+  });
+});
+
+describe("TestMatch", () => {
+  const settings = { strategy: preset.strategy, name: "Ayu", opponents: 7, mix: { kind: "eachOnce" }, ticks: 8, seed: 7, ruleSetId: "standard" } as const;
+  const render = (nowMs: number) => renderToStaticMarkup(
+    <TestMatch run={runPractice({ ...settings, nowMs })} tanks={new Map()} onRunAgain={() => {}} onOptions={() => {}} />,
+  );
+
+  test("the replay uses the shared stage and keeps its countdown", () => {
+    const out = render(ULTIMATES_FROM - 1);
+    expect(out).toMatch(/data-test-board=""[^>]*data-arena-view=""/);
+    expect(out).toContain('role="timer"');
+    expect(out).not.toContain("data-ultimate-link");
+  });
+
+  test("the replay shows the player's ultimate and charge when the match has ultimates", () => {
+    const out = render(ULTIMATES_FROM);
+    expect(out).toContain(`data-ultimate-link="${preset.strategy.ultimate}"`);
+    expect(out).toContain("0% charged");
   });
 });
 

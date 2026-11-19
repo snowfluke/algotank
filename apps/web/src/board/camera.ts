@@ -1,19 +1,9 @@
-// The follow camera of a big arena (docs/specs/revamp/63-large-arenas.md, L2 item 2).
-// When the whole arena would give a square fewer than FOLLOW_BELOW_CELL_PX on screen,
-// the arena pane shows a window around one tank at FOLLOW_CELL_PX per square,
-// clamped at the arena's wall, and a small map of the whole arena beside it.
-// Pure, so the window rules are tested without a browser. Every length here is in
-// squares; the wall is WALL_SQUARES thick on each side.
+// Geometry for the whole arena and the window around a tank. World lengths here
+// are in squares, so the camera can share the board's coordinate system.
 
 import type { PublicBot } from "@game/arena";
 import type { BotId } from "@game/engine";
 import type { Box } from "../ui/fitList.ts";
-import { MIN_LABEL_CELL_PX } from "./boardHelpers.ts";
-
-/** Below this many px per square for the whole arena, labels cannot be read, so the pane offers the follow window. */
-const FOLLOW_BELOW_CELL_PX = MIN_LABEL_CELL_PX;
-/** Size of one square in the follow window: labels and gauges read at this size (boardHelpers.ts). */
-export const FOLLOW_CELL_PX = 28;
 /** The wall around the floor, 3 board units of 10 per square. */
 export const WALL_SQUARES = 0.3;
 /**
@@ -42,12 +32,6 @@ export function wholeArenaCellPx(box: Box, arena: ArenaSize): number {
   return Math.min(box.width / (arena.width + 2 * WALL_SQUARES), box.height / (arena.height + 2 * WALL_SQUARES));
 }
 
-/** True when the whole arena would draw a square smaller than FOLLOW_BELOW_CELL_PX in this box. */
-export function needsFollowCamera(box: Box, arena: ArenaSize): boolean {
-  const px = wholeArenaCellPx(box, arena);
-  return px > 0 && px < FOLLOW_BELOW_CELL_PX;
-}
-
 /** One axis: start of a window of `size` around `centre` on an arena of `span` squares. */
 function clampAxis(centre: number, size: number, span: number): number {
   const min = -WALL_SQUARES;
@@ -58,10 +42,10 @@ function clampAxis(centre: number, size: number, span: number): number {
 }
 
 /**
- * The window of a box of `box` px at `cellPx` per square (FOLLOW_CELL_PX in a room) around the
- * centre of square (`cellX`, `cellY`), clamped so it never shows past the wall.
+ * The window of a box at `cellPx` per square around the centre of square
+ * (`cellX`, `cellY`), clamped to the arena's walls.
  */
-export function followWindow(box: Box, arena: ArenaSize, cellX: number, cellY: number, cellPx = FOLLOW_CELL_PX): CameraWindow {
+export function followWindow(box: Box, arena: ArenaSize, cellX: number, cellY: number, cellPx: number): CameraWindow {
   const width = box.width / cellPx;
   const height = box.height / cellPx;
   return {
@@ -73,9 +57,7 @@ export function followWindow(box: Box, arena: ArenaSize, cellX: number, cellY: n
 }
 
 /**
- * Squares across the short side of the monthly board's zoomed view, on any screen (owner,
- * 2026-11-17: "zoom on any camera size", closer than a room's 28 px): about 40 px a square on a
- * 390 px phone and 55 px on a 500 px tall laptop board.
+ * Squares across the short side of the zoomed view, so tank details stay readable as the pane shrinks.
  */
 export const ZOOM_SQUARES = 9;
 
@@ -100,6 +82,3 @@ export function leaderTarget(bots: readonly Pick<PublicBot, "id" | "score">[], c
   if (current !== null && bots.some((bot) => bot.id === current && bot.score === top)) return current;
   return bots.find((bot) => bot.score === top)?.id ?? null;
 }
-
-/** What the arena pane shows: the whole arena, or the window around the viewer's tank or the leader. */
-export type CameraMode = "whole" | "mine" | "leader";

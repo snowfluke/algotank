@@ -69,7 +69,7 @@ const DIM_OPACITY = 0.8;
 
 /**
  * Each trail tank's trail, moved on once per turn: a render for another reason (the camera, a poll) keeps it.
- * A board turned to the other orientation is a new board (MonthlyBoard.tsx), so its trails start again.
+ * A board turned to the other orientation is a new board (ArenaView.tsx), so its trails start again.
  */
 function useTrails(bots: readonly PublicBot[], tick: number, trailIds: ReadonlySet<BotId> | undefined, arrivals: ReadonlySet<BotId>): ReadonlyMap<BotId, TrailState> {
   const state = useRef<{ tick: number; trails: ReadonlyMap<BotId, TrailState> }>({ tick: -1, trails: new Map() });

@@ -8,8 +8,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { PublicArena, PublicSnapshot } from "@game/arena";
 import type { RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
-import { ArenaBoard } from "../board/ArenaBoard.tsx";
-import { ArenaView } from "../board/ArenaView.tsx";
+import { ArenaView, type ArenaViewProps } from "../board/ArenaView.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -20,7 +19,7 @@ import { useBoxSize } from "../ui/useBoxSize.ts";
 import { formatClock, timeLeftMs } from "./clock.ts";
 import { roundHeading } from "./roundHeading.ts";
 import { useSecondsUntil } from "./countdown.ts";
-import { SCREEN_GAP_PX, SCREEN_RANKING_FIT, screenBoardWidth } from "./scoreboardColumns.ts";
+import { SCREEN_GAP_PX, SCREEN_RANKING_FIT, screenBoardBox } from "./scoreboardColumns.ts";
 
 interface RunningPhase {
   readonly round: number;
@@ -42,9 +41,6 @@ interface LiveRoundProps {
   /** When the first turn plays, from the stream state's `firstTurnAt`. Without it no countdown shows. */
   readonly firstTurnAt?: number | null;
 }
-
-/** The board's wall adds 0.3 of a square on each side. */
-const WALL_SQUARES = 0.6;
 
 export function LiveRound({ arena, phase, snapshot, throws, fires = [], roundSpawn, layout, firstTurnAt = null }: LiveRoundProps) {
   const m = useMessages();
@@ -85,7 +81,6 @@ export function LiveRound({ arena, phase, snapshot, throws, fires = [], roundSpa
   }
 
   const ranking = liveRanking(arena, snapshot);
-  const ratio = (snapshot.width + WALL_SQUARES) / (snapshot.height + WALL_SQUARES);
   const boardProps = { snapshot, throws, fires, names, highlightId: null, tickMs, tanks, countdown: counting ? countdown : null } as const;
   // Before the first turn every tank ties at 0, so the tie note would only add noise.
   const rankingNote = phase.isFinal ? m.results.table.finalRule : ranking.tieAtCut && snapshot.tick > 0 ? m.results.table.tieAtCut : null;
@@ -94,7 +89,7 @@ export function LiveRound({ arena, phase, snapshot, throws, fires = [], roundSpa
     return (
       <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4">
         {header}
-        <ScreenArea ratio={ratio} board={<ArenaBoard {...boardProps} />} label={m.results.table.live} note={rankingNote}>
+        <ScreenArea board={boardProps} label={m.results.table.live} note={rankingNote}>
           <LiveRanking ranking={ranking} highlightId={null} fit={SCREEN_RANKING_FIT} />
         </ScreenArea>
       </div>
@@ -105,10 +100,10 @@ export function LiveRound({ arena, phase, snapshot, throws, fires = [], roundSpa
     <div className="flex min-w-0 flex-col gap-5">
       {header}
       <div className="flex min-w-0 justify-end">
-        <LegendButton ultimates={hasUltimates(roundSpawn ?? snapshot)} />
+        <LegendButton layout={snapshot.layout?.id} ultimates={hasUltimates(roundSpawn ?? snapshot)} />
       </div>
       <div className="flex min-w-0 flex-col gap-2">
-        <ArenaView {...boardProps} />
+        <ArenaView {...boardProps} defaultChoice="follow" />
       </div>
       <section className="flex min-w-0 flex-col gap-2" aria-labelledby="live-ranking-heading">
         <h2 id="live-ranking-heading" className="text-title">
@@ -121,22 +116,17 @@ export function LiveRound({ arena, phase, snapshot, throws, fires = [], roundSpa
   );
 }
 
-/** The board at the full height of the area and the ranking beside it in the width that is left. */
-function ScreenArea({ ratio, board, label, note, children }: { ratio: number; board: ReactNode; label: string; note: string | null; children: ReactNode }) {
+function ScreenArea({ board, label, note, children }: { board: ArenaViewProps; label: string; note: string | null; children: ReactNode }) {
   const { ref, box } = useBoxSize<HTMLDivElement>();
-  const boardWidth = box === null ? null : screenBoardWidth(box, ratio);
+  const boardBox = box === null ? null : screenBoardBox(box);
   return (
     <div
       ref={ref}
-      className="grid min-h-0"
-      style={{ columnGap: `${SCREEN_GAP_PX}px`, gridTemplateColumns: boardWidth === null ? "minmax(0, 1fr) minmax(0, 1fr)" : `${boardWidth}px minmax(0, 1fr)` }}
+      className="grid min-h-0 items-start"
+      style={{ columnGap: `${SCREEN_GAP_PX}px`, gridTemplateColumns: boardBox === null ? "minmax(0, 1fr) minmax(0, 1fr)" : "auto minmax(0, 1fr)" }}
     >
-      <div className="flex min-h-0 min-w-0 items-start justify-center">
-        <div className="max-h-full w-full min-w-0" style={{ aspectRatio: ratio }}>
-          {board}
-        </div>
-      </div>
-      <section className="flex min-h-0 min-w-0 flex-col gap-2" aria-label={label}>
+      <ArenaView {...board} wholeOnly fixedBox={boardBox} />
+      <section className="flex min-h-0 min-w-0 flex-col gap-2 self-stretch" aria-label={label}>
         {note === null ? null : <p className="text-caption text-muted">{note}</p>}
         <div className="min-h-0 flex-1">{children}</div>
       </section>

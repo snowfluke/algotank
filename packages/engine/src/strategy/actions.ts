@@ -113,23 +113,45 @@ function holdFacingOpenSpace(ctx: DecisionContext): Move {
   return steerTowards(ctx, best, "T");
 }
 
+/** A square deep in its area: each neighbour on the board has the same rules. Off-board neighbours are the wall. */
+function insideArea(ctx: DecisionContext, x: number, y: number, set: string): boolean {
+  if (rulesAt(ctx.snapshot, x, y).id !== set) return false;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= ctx.snapshot.width || ny >= ctx.snapshot.height) continue;
+      if (rulesAt(ctx.snapshot, nx, ny).id !== set) return false;
+    }
+  }
+  return true;
+}
+
 /**
- * The nearest square whose area has these rules: the fewest steps away, then the smaller y, then the smaller x.
- * Null when the tank already stands in such an area, or when this round has none (a round without a layout is one
- * area with the round's own rules).
+ * Where "Go to an area" drives: the nearest square deep in an area with these rules (fewest steps, then the smaller
+ * y, then the smaller x), so the tank does not stop on the edge and step back out with the next rule (owner,
+ * 2026-11-19). An area too small to have such a square counts with all its squares. Null when the tank already
+ * stands on such a square, or when this round has no area with these rules.
  */
 export function nearestAreaSquare(ctx: DecisionContext, set: string): Cell | null {
-  if (rulesAt(ctx.snapshot, ctx.self.x, ctx.self.y).id === set) return null;
-  let best: Cell | null = null;
-  let bestDistance = Infinity;
+  const deep: Cell[] = [];
+  const any: Cell[] = [];
   for (let y = 0; y < ctx.snapshot.height; y++) {
     for (let x = 0; x < ctx.snapshot.width; x++) {
       if (rulesAt(ctx.snapshot, x, y).id !== set) continue;
-      const distance = chebyshev(ctx.self, { x, y });
-      if (distance < bestDistance) {
-        best = { x, y };
-        bestDistance = distance;
-      }
+      any.push({ x, y });
+      if (insideArea(ctx, x, y, set)) deep.push({ x, y });
+    }
+  }
+  const goals = deep.length > 0 ? deep : any;
+  let best: Cell | null = null;
+  let bestDistance = Infinity;
+  for (const cell of goals) {
+    const distance = chebyshev(ctx.self, cell);
+    if (distance === 0) return null;
+    if (distance < bestDistance) {
+      best = cell;
+      bestDistance = distance;
     }
   }
   return best;
@@ -271,7 +293,7 @@ const defs = withLiteralIds<ActionDef>()([
     group: POSITION,
     label: "Go to the nearest {set} area",
     params: [conditionSetParam],
-    // Inside the area, or in a round without one, the rule is skipped so the next rule acts there (87-hybrid-arenas.md).
+    // Deep in the area, or in a round without one, the rule is skipped so the next rule acts there (87-hybrid-arenas.md).
     toMove: (ctx, params) => {
       const square = nearestAreaSquare(ctx, textValue(params, "set"));
       return square === null ? null : stepTowards(ctx, stepToward(ctx.self, square));

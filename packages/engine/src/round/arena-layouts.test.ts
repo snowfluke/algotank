@@ -180,19 +180,34 @@ describe("the rules of a square", () => {
     expect(round.snapshot.bots[0]?.y).toBeLessThan(round.snapshot.height);
   });
 
-  test("a tank goes to the nearest area with chosen rules, and the rule gives way inside it or when no area has them", () => {
+  test("a tank goes deep into the nearest area with chosen rules, and the rule gives way there or when no area has them", () => {
     const self = bot("me", 0, 0, "E");
     const hybrid = snapshotOf([self], { ...size, layout });
     const here = rulesAt(hybrid, 0, 0).id;
     const far = rulesAt(hybrid, size.width - 1, size.height - 1).id;
     expect(far).not.toBe(here);
-    const goTo = (set: string) => strategyOf([mode("main", [rule("go", [when("myWater", { compare: "atLeast", n: 0 })], act("goToArea", { set }))], act("wait"))]);
+    const deep = (x: number, y: number) => {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < size.width && ny < size.height && rulesAt(hybrid, nx, ny).id !== far) return false;
+      }
+      return rulesAt(hybrid, x, y).id === far;
+    };
     const square = nearestAreaSquare(contextFor(hybrid, self.id), far);
-    expect(square === null ? null : rulesAt(hybrid, square.x, square.y).id).toBe(far);
-    // No square of that area is closer than the one it picked.
+    if (square === null) throw new Error("the far area has a square");
+    expect(deep(square.x, square.y)).toBe(true);
+    // No deep square of that area is closer than the one it picked.
     for (let y = 0; y < size.height; y++) for (let x = 0; x < size.width; x++) {
-      if (rulesAt(hybrid, x, y).id === far) expect(Math.max(x, y)).toBeGreaterThanOrEqual(Math.max(square?.x ?? 0, square?.y ?? 0));
+      if (deep(x, y)) expect(Math.max(x, y)).toBeGreaterThanOrEqual(Math.max(square.x, square.y));
     }
+    // On the area's edge the tank still moves in, so the next rule does not step it straight back out.
+    const edge = [...Array(size.width * size.height).keys()].map((i) => ({ x: i % size.width, y: Math.floor(i / size.width) }))
+      .find(({ x, y }) => rulesAt(hybrid, x, y).id === far && !deep(x, y));
+    if (edge === undefined) throw new Error("the far area has an edge");
+    const onEdge = snapshotOf([{ ...self, ...edge }], { ...size, layout });
+    expect(nearestAreaSquare(contextFor(onEdge, self.id), far)).not.toBeNull();
+    const goTo = (set: string) => strategyOf([mode("main", [rule("go", [when("myWater", { compare: "atLeast", n: 0 })], act("goToArea", { set }))], act("wait"))]);
     expect(decide(contextFor(hybrid, self.id), goTo(far), createRng(87)).ruleId).toBe("go");
     expect(decide(contextFor(hybrid, self.id), goTo(here), createRng(87)).ruleId).toBeNull();
     const single = snapshotOf([self], { ...size, ruleSetId: "dry-spell" });

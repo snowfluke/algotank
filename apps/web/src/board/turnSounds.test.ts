@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import type { ThrowEvent, UltimateFire } from "@game/engine";
-import { countdownSound, playsTurnSounds, turnSounds, ultimateSounds } from "./turnSounds.ts";
+import { countdownSound, pickupSound, playsTurnSounds, turnSounds, ultimateSounds } from "./turnSounds.ts";
 
 const hit: ThrowEvent = { throwerId: "a", outcome: "hit", targetId: "b", distance: 1, hitChance: 90 };
 const miss: ThrowEvent = { throwerId: "c", outcome: "miss", targetId: "d", distance: 2, hitChance: 60 };
@@ -101,8 +101,9 @@ describe("ultimateSounds", () => {
   const mud = (botId: string, affected: string[]): UltimateFire => ({ botId, at: { x: 0, y: 0 }, kind: "mudBomb", center: { x: 1, y: 0 }, area: [], affected, points: affected.length }) as UltimateFire;
   const wind = (botId: string, affected: string[]): UltimateFire => ({ botId, at: { x: 0, y: 0 }, kind: "whirlwind", area: [], affected, points: 0 }) as UltimateFire;
 
-  test("the viewer's own fire plays the ultimate sound", () => {
-    expect(ultimateSounds([mud("me", ["a"])], "me")).toEqual(["ultimate"]);
+  test("the viewer's own fire plays the shared cue and the ultimate's own sound", () => {
+    expect(ultimateSounds([mud("me", ["a"])], "me")).toEqual(["ultimate", "mudBomb"]);
+    expect(ultimateSounds([wind("me", [])], "me")).toEqual(["ultimate", "whirlwind"]);
   });
 
   test("another tank's ultimate that reaches the viewer's tank plays its own sound", () => {
@@ -115,8 +116,23 @@ describe("ultimateSounds", () => {
     expect(ultimateSounds([dash("a", "me", "miss"), mud("b", ["c"])], "me")).toEqual([]);
   });
 
-  test("a viewer without a tank hears one cue for a turn of many fires", () => {
-    expect(ultimateSounds([mud("a", ["b"]), wind("c", ["d"]), dash("e", "f", "hit")], null)).toEqual(["ultimate"]);
+  test("a viewer without a tank hears one cue and the first fire's own sound for a turn of many fires", () => {
+    expect(ultimateSounds([mud("a", ["b"]), wind("c", ["d"]), dash("e", "f", "hit")], null)).toEqual(["ultimate", "mudBomb"]);
     expect(ultimateSounds([], null)).toEqual([]);
+  });
+});
+
+describe("pickupSound", () => {
+  const item = (kind: "bucket" | "umbrella" | "pinwheel" | "mudBall", x: number, y: number) => ({ kind, x, y, turnsLeft: 10 });
+
+  test("an item that lay under the viewer's tank and is gone plays that item's sound", () => {
+    expect(pickupSound([item("bucket", 2, 3)], [], { x: 2, y: 3 })).toBe("pickBucket");
+    expect(pickupSound([item("pinwheel", 2, 3), item("umbrella", 5, 5)], [item("umbrella", 5, 5)], { x: 2, y: 3 })).toBe("pickPinwheel");
+  });
+
+  test("an item taken elsewhere, an item still there, or no own tank is silent", () => {
+    expect(pickupSound([item("mudBall", 4, 4)], [], { x: 2, y: 3 })).toBeNull();
+    expect(pickupSound([item("bucket", 2, 3)], [item("bucket", 2, 3)], { x: 2, y: 3 })).toBeNull();
+    expect(pickupSound([item("bucket", 2, 3)], [], undefined)).toBeNull();
   });
 });

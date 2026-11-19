@@ -17,9 +17,9 @@
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { memo, useEffect, useId, useMemo, useRef } from "react";
-import type { PublicBot } from "@game/arena";
+import type { PublicBot, PublicSnapshot } from "@game/arena";
 import { ULTIMATE_RULES, canThrow, rulesOf } from "@game/engine";
-import type { BotId, RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
+import type { BoardItem, BotId, RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { duckMusicUnder } from "../sound/music.ts";
 import { playSound } from "../sound/player.ts";
@@ -51,7 +51,7 @@ import type { ShotShape } from "./boardHelpers.ts";
 import { Crown, DryDrops, DustRing, JetShape, Puff, Splash } from "./boardShapes.tsx";
 import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import type { ArenaBoardProps } from "./props.ts";
-import { countdownSound, playsTurnSounds, turnSounds, ultimateSounds } from "./turnSounds.ts";
+import { countdownSound, pickupSound, playsTurnSounds, turnSounds, ultimateSounds } from "./turnSounds.ts";
 import { botAtPoint, nameTagSpot, useTankPeek, type BoardView } from "./tankPeek.ts";
 import { useCellPixels } from "./useCellPixels.ts";
 import { HELD_ITEM_AT, UltimateBadges, UltimateFireDrawing, TankUltimateFloor, TankUltimateOver } from "./ultimates/UltimateEffect.tsx";
@@ -145,19 +145,25 @@ function useTurnAngles(bots: readonly PublicBot[]): ReadonlyMap<BotId, number> {
 const NO_FIRES: readonly UltimateFire[] = [];
 
 /** Plays the turn's sounds when a live board moves on by exactly one turn, and the countdown's beeps. `ownId` is the viewer's tank, whose events alone make sound. */
-function useBoardSounds(tick: number, throws: readonly ThrowEvent[], fires: readonly UltimateFire[], ownId: BotId | null, paused: boolean, countdown: number | null): void {
+function useBoardSounds(snapshot: PublicSnapshot, throws: readonly ThrowEvent[], fires: readonly UltimateFire[], ownId: BotId | null, paused: boolean, countdown: number | null): void {
+  const tick = snapshot.tick;
   const lastTick = useRef<number | null>(null);
+  const lastItems = useRef<readonly BoardItem[]>(snapshot.items);
   useEffect(() => {
     const previous = lastTick.current;
     // A new throws array for the same turn (a parent render) must not play the turn twice.
     if (previous === tick) return;
     lastTick.current = tick;
+    const itemsBefore = lastItems.current;
+    lastItems.current = snapshot.items;
     if (paused || !playsTurnSounds(previous, tick)) return;
-    for (const sound of [...turnSounds(throws, ownId), ...ultimateSounds(fires, ownId)]) {
+    const own = ownId === null ? undefined : snapshot.bots.find((bot) => bot.id === ownId);
+    const pickup = pickupSound(itemsBefore, snapshot.items, own);
+    for (const sound of [...turnSounds(throws, ownId), ...ultimateSounds(fires, ownId), ...(pickup === null ? [] : [pickup])]) {
       // The music dips under the viewer's own tank's sounds; a viewer without a tank hears every tank, so no dip there.
       if (playSound(sound) && ownId !== null) duckMusicUnder(sound);
     }
-  }, [tick, throws, fires, ownId, paused]);
+  }, [tick, snapshot, throws, fires, ownId, paused]);
 
   const lastCountdown = useRef<number | null>(null);
   useEffect(() => {
@@ -185,7 +191,7 @@ function readableSize(base: number, minPx: number, cellPx: number | null): numbe
 export const ArenaBoard = memo(function ArenaBoard({ drawingKey, ...props }: ArenaBoardProps) {
   const { snapshot, throws, fires = NO_FIRES, highlightId, paused = false, countdown = null } = props;
   // Keep the sound clock even when a new orientation or floor size restarts the drawing.
-  useBoardSounds(snapshot.tick, throws, fires, highlightId, paused, countdown);
+  useBoardSounds(snapshot, throws, fires, highlightId, paused, countdown);
   return <ArenaBoardDrawing key={drawingKey} {...props} />;
 });
 

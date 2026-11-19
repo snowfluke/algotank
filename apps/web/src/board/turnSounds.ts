@@ -1,7 +1,7 @@
 // Which sound effects a turn on the board makes. One small table, so a turn
 // with many shots stays a few sounds and the rule is tested without audio.
 
-import type { BotId, ThrowEvent, UltimateFire } from "@game/engine";
+import type { BoardItem, BotId, ItemKind, ThrowEvent, UltimateFire, UltimateId } from "@game/engine";
 import type { SoundName } from "../sound/sounds.ts";
 
 /**
@@ -46,13 +46,21 @@ export function turnSounds(throws: readonly ThrowEvent[], ownId: BotId | null): 
  *
  * Without a tank the viewer watches up to 512 tanks, so one cue per turn says "an ultimate went off" without noise.
  */
+const ULTIMATE_SOUND: Readonly<Record<UltimateId, SoundName>> = {
+  dash: "dash", smoke: "smoke", splash: "splashRing", fullTank: "fullTank",
+  mudBomb: "mudBomb", whirlwind: "whirlwind", bigUmbrella: "bigUmbrella", magnet: "magnet",
+};
+
 export function ultimateSounds(fires: readonly UltimateFire[], ownId: BotId | null): SoundName[] {
-  if (fires.length === 0) return [];
-  if (ownId === null) return ["ultimate"];
+  const [first] = fires;
+  if (first === undefined) return [];
+  // The shared cue, then the ultimate's own sound (owner, 2026-11-19), for the first fire only.
+  if (ownId === null) return ["ultimate", ULTIMATE_SOUND[first.kind]];
   const sounds = new Set<SoundName>();
   for (const fire of fires) {
     if (fire.botId === ownId) {
       sounds.add("ultimate");
+      sounds.add(ULTIMATE_SOUND[fire.kind]);
       continue;
     }
     if (fire.kind === "dash" && fire.shot.outcome === "hit" && fire.shot.targetId === ownId) sounds.add("ram");
@@ -60,7 +68,22 @@ export function ultimateSounds(fires: readonly UltimateFire[], ownId: BotId | nu
     if (fire.kind === "mudBomb" && fire.affected.includes(ownId)) sounds.add("mud");
     if (fire.kind === "whirlwind" && fire.affected.includes(ownId)) sounds.add("wind");
   }
-  return [...sounds].slice(0, 2);
+  return [...sounds].slice(0, 3);
+}
+
+const PICKUP_SOUND: Readonly<Record<ItemKind, SoundName>> = {
+  bucket: "pickBucket", umbrella: "pickUmbrella", pinwheel: "pickPinwheel", mudBall: "pickMudBall",
+};
+
+/**
+ * The viewer's own tank picks up an item (owner, 2026-11-19: "Picking an item should also has sfx uniquely to
+ * the item"). The board reads it from the floor: an item that lay on the square where the tank now stands is gone
+ * after the turn. A magnet pull takes items from other squares, so it makes no pickup sound.
+ */
+export function pickupSound(before: readonly BoardItem[], after: readonly BoardItem[], own: { readonly x: number; readonly y: number } | undefined): SoundName | null {
+  if (own === undefined) return null;
+  const taken = before.find((item) => item.x === own.x && item.y === own.y && !after.some((left) => left.x === item.x && left.y === item.y && left.kind === item.kind));
+  return taken === undefined ? null : PICKUP_SOUND[taken.kind];
 }
 
 /**

@@ -2,7 +2,13 @@
 // audio files. Each effect stays under 400 ms except `win` (about 1.2 s). Levels
 // are low: these play on phones in a room full of other phones.
 
-export const SOUND_NAMES = ["shot", "splash", "miss", "dry", "countdown", "roundStart", "roundEnd", "win", "tap", "ultimate", "ram", "mud", "wind"] as const;
+export const SOUND_NAMES = [
+  "shot", "splash", "miss", "dry", "countdown", "roundStart", "roundEnd", "win", "tap", "ultimate", "ram", "mud", "wind",
+  // One per ultimate, after the shared "ultimate" cue (owner, 2026-11-19: "not just the activation but the unique skills sfx").
+  "dash", "smoke", "splashRing", "fullTank", "mudBomb", "whirlwind", "bigUmbrella", "magnet",
+  // One per item, when the viewer's own tank picks it up (owner, 2026-11-19).
+  "pickBucket", "pickUmbrella", "pickPinwheel", "pickMudBall",
+] as const;
 export type SoundName = (typeof SOUND_NAMES)[number];
 
 interface ToneOptions {
@@ -120,6 +126,69 @@ export const SYNTHS: Record<SoundName, Synth> = {
   mud: (ctx, at) => {
     noise(ctx, { filter: "lowpass", from: 1100, to: 180, start: at, duration: 0.24, gain: 0.26 });
     tone(ctx, { type: "sine", from: 260, to: 80, start: at + 0.03, duration: 0.18, gain: 0.18 });
+  },
+  // --- Ultimates: each starts 0.2 s in, so the shared "ultimate" run plays first and this one answers it. ---
+  // Dash: a rising whoosh, then the bump.
+  dash: (ctx, at) => {
+    noise(ctx, { filter: "bandpass", from: 300, to: 3200, start: at + 0.2, duration: 0.22, gain: 0.2 });
+    tone(ctx, { type: "sine", from: 160, to: 55, start: at + 0.42, duration: 0.16, gain: 0.3 });
+  },
+  // Smoke screen: a soft "fwoomp" and a long, low hiss.
+  smoke: (ctx, at) => {
+    tone(ctx, { type: "sine", from: 220, to: 110, start: at + 0.2, duration: 0.2, gain: 0.16 });
+    noise(ctx, { filter: "lowpass", from: 1400, to: 250, start: at + 0.22, duration: 0.42, gain: 0.14 });
+  },
+  // Splash ring: a big wet burst and three drops landing around.
+  splashRing: (ctx, at) => {
+    tone(ctx, { type: "sine", from: 520, to: 130, start: at + 0.2, duration: 0.2, gain: 0.24 });
+    noise(ctx, { filter: "lowpass", from: 3800, to: 300, start: at + 0.2, duration: 0.34, gain: 0.3 });
+    [1900, 1500, 2300].forEach((frequency, i) => tone(ctx, { type: "sine", from: frequency, to: frequency * 0.6, start: at + 0.32 + i * 0.05, duration: 0.05, gain: 0.07 }));
+  },
+  // Full tank: three rising glugs and a small ding when the tank is full.
+  fullTank: (ctx, at) => {
+    [300, 360, 430].forEach((frequency, i) => tone(ctx, { type: "sine", from: frequency, to: frequency * 2, start: at + 0.2 + i * 0.08, duration: 0.07, gain: 0.18 }));
+    tone(ctx, { type: "triangle", from: 1318.5, start: at + 0.46, duration: 0.18, gain: 0.1 });
+  },
+  // Mud bomb: a whistle up in the air, then a heavy splat.
+  mudBomb: (ctx, at) => {
+    tone(ctx, { type: "sine", from: 700, to: 1300, start: at + 0.2, duration: 0.2, gain: 0.08 });
+    noise(ctx, { filter: "lowpass", from: 1000, to: 140, start: at + 0.4, duration: 0.2, gain: 0.3 });
+    tone(ctx, { type: "sine", from: 190, to: 60, start: at + 0.4, duration: 0.16, gain: 0.22 });
+  },
+  // Whirlwind: two whooshes that chase each other round.
+  whirlwind: (ctx, at) => {
+    noise(ctx, { filter: "bandpass", from: 400, to: 2400, start: at + 0.2, duration: 0.18, gain: 0.16 });
+    noise(ctx, { filter: "bandpass", from: 2400, to: 500, start: at + 0.34, duration: 0.18, gain: 0.14 });
+    noise(ctx, { filter: "bandpass", from: 500, to: 1800, start: at + 0.48, duration: 0.14, gain: 0.1 });
+  },
+  // Big umbrella: the canopy snaps open with a plucked note.
+  bigUmbrella: (ctx, at) => {
+    noise(ctx, { filter: "highpass", from: 1200, to: 4000, start: at + 0.2, duration: 0.08, gain: 0.14 });
+    tone(ctx, { type: "triangle", from: 523.25, start: at + 0.24, duration: 0.12, gain: 0.16 });
+    tone(ctx, { type: "triangle", from: 783.99, start: at + 0.31, duration: 0.2, gain: 0.14 });
+  },
+  // Magnet: a buzzing pull, then the click of the items arriving.
+  magnet: (ctx, at) => {
+    tone(ctx, { type: "square", from: 110, to: 220, start: at + 0.2, duration: 0.26, gain: 0.05 });
+    tone(ctx, { type: "sine", from: 440, to: 880, start: at + 0.2, duration: 0.26, gain: 0.07 });
+    tone(ctx, { type: "triangle", from: 1760, start: at + 0.48, duration: 0.05, gain: 0.1 });
+  },
+  // --- Items: the viewer's own tank picks one up. Short, under the shot sounds. ---
+  pickBucket: (ctx, at) => {
+    tone(ctx, { type: "triangle", from: 660, start: at, duration: 0.08, gain: 0.14 });
+    tone(ctx, { type: "triangle", from: 990, start: at + 0.06, duration: 0.12, gain: 0.12 });
+    noise(ctx, { filter: "lowpass", from: 1600, to: 400, start: at + 0.04, duration: 0.14, gain: 0.08 });
+  },
+  pickUmbrella: (ctx, at) => {
+    noise(ctx, { filter: "highpass", from: 1500, to: 4200, start: at, duration: 0.07, gain: 0.1 });
+    tone(ctx, { type: "triangle", from: 784, start: at + 0.04, duration: 0.14, gain: 0.12 });
+  },
+  pickPinwheel: (ctx, at) => {
+    [880, 1174.66, 1567.98].forEach((frequency, i) => tone(ctx, { type: "triangle", from: frequency, start: at + i * 0.05, duration: 0.07, gain: 0.1 }));
+  },
+  pickMudBall: (ctx, at) => {
+    noise(ctx, { filter: "lowpass", from: 800, to: 200, start: at, duration: 0.14, gain: 0.18 });
+    tone(ctx, { type: "sine", from: 240, to: 110, start: at, duration: 0.12, gain: 0.14 });
   },
   // A whirlwind catches the viewer's tank: a whoosh that rises and falls.
   wind: (ctx, at) => {

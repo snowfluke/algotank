@@ -202,6 +202,8 @@ export const en: VocabularyText = {
       units: { n: "percent" },
     },
     roundType: { name: "Kind of round", text: "this round is {round}", not: "this round is not {round}" },
+    myArea: { name: "My area", text: "I stand in a {set} area", not: "I stand outside a {set} area" },
+    targetArea: { name: "Target’s area", text: "the target ({target}) stands in a {set} area", not: "the target ({target}) does not stand in a {set} area" },
     ruleSet: { name: "Rules of this round", text: "this round uses the {set} rules", not: "this round does not use the {set} rules" },
     fieldTrait: {
       name: "Upgrades of the other tanks",
@@ -485,6 +487,8 @@ export const id: VocabularyText = {
     },
     timeLeft: { name: "Sisa waktu ronde", text: "sisa waktu ronde {compare} {n}", not: "sisa waktu ronde {compare} {n}", notOpposite: true, units: { n: "percent" } },
     roundType: { name: "Jenis ronde", text: "ini {round}", not: "ini bukan {round}" },
+    myArea: { name: "Areaku", text: "aku berada di area {set}", not: "aku berada di luar area {set}" },
+    targetArea: { name: "Area target", text: "target ({target}) berada di area {set}", not: "target ({target}) tidak berada di area {set}" },
     ruleSet: { name: "Aturan ronde ini", text: "ronde ini memakai aturan {set}", not: "ronde ini tidak memakai aturan {set}" },
     fieldTrait: {
       name: "Peningkatan tank lain",

@@ -4,7 +4,7 @@
 import { DIRECTIONS } from "../types.ts";
 import type { BotState, Direction, Snapshot } from "../types.ts";
 import { MAX_THROW_RANGE, throwRange } from "../combat/combat.ts";
-import { rulesOf } from "../combat/rule-sets.ts";
+import { rulesAt } from "../round/arena-layouts.ts";
 import { DIRECTION_STEP, chebyshev, directionOfSigns, eighthsBetween, rotate, turnCost } from "../directions.ts";
 import { indexOf } from "./snapshot-index.ts";
 
@@ -142,10 +142,9 @@ export function botsThatCanHit(snapshot: Snapshot, target: BotState): readonly B
   const placed = index.botById(target.id);
   const shooters: BotState[] = [];
   if (placed !== undefined) {
-    const rules = rulesOf(snapshot);
     forEachBotOnLinesFrom(snapshot, placed, MAX_THROW_RANGE, (enemy) => {
       if (enemy.id === target.id) return;
-      if (firstBotInLine(snapshot, enemy, throwRange(enemy.build, rules))?.bot.id === target.id) shooters.push(enemy);
+      if (firstBotInLine(snapshot, enemy, throwRange(enemy.build, rulesAt(snapshot, enemy.x, enemy.y)))?.bot.id === target.id) shooters.push(enemy);
     });
     shooters.sort((a, b) => index.positionOf(a.id) - index.positionOf(b.id));
   }
@@ -155,12 +154,11 @@ export function botsThatCanHit(snapshot: Snapshot, target: BotState): readonly B
 
 /** True when a throw from any enemy could reach this cell if a bot stood there. Other bots do not shield it. */
 export function isCellInLineOfFire(snapshot: Snapshot, cell: Cell, self: BotState): boolean {
-  const rules = rulesOf(snapshot);
   let inLine = false;
   forEachBotOnLinesFrom(snapshot, cell, MAX_THROW_RANGE, (enemy) => {
     if (inLine || enemy.id === self.id) return;
     const distance = lineDistance(enemy, cell);
-    inLine = distance >= 1 && distance <= throwRange(enemy.build, rules);
+    inLine = distance >= 1 && distance <= throwRange(enemy.build, rulesAt(snapshot, enemy.x, enemy.y));
   });
   return inLine;
 }

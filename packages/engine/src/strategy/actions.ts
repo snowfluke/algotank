@@ -13,7 +13,7 @@
 
 import type { ActionDef, BotState, DecisionContext, Direction, Move, ParamValues } from "../types.ts";
 import { throwRange } from "../combat/combat.ts";
-import { rulesOf } from "../combat/rule-sets.ts";
+import { rulesAt } from "../round/arena-layouts.ts";
 import { chebyshev, rotate } from "../directions.ts";
 import {
   botsThatCanHit,
@@ -137,7 +137,7 @@ const defs = withLiteralIds<ActionDef>()([
     toMove: (ctx, params) =>
       withTarget(ctx, params, (target) => {
         const { self, snapshot } = ctx;
-        const range = throwRange(self.build, rulesOf(snapshot));
+        const range = throwRange(self.build, rulesAt(snapshot, self.x, self.y));
         if (firstBotInLine(snapshot, self, range)?.bot.id === target.id) return "T";
         const shared = straightLineDirection(self, target);
         if (shared !== null && chebyshev(self, target) <= range) return steerTowards(ctx, shared, "T");

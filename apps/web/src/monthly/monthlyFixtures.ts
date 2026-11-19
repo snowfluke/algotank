@@ -3,7 +3,7 @@
 
 import { playedStats } from "../stats/statsFixtures.ts";
 import { MONTHLY_BOARD_MIN_TANKS, MONTHLY_SEATS, plainTankLook, type LeagueActivityEvent, type LeagueDayRecord, type LeagueLive, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow, type MonthMove, type PublicSnapshot, type TankLook } from "@game/arena";
-import { arenaSize, DEFAULT_PRESET_ID, PRESETS, ruleSet, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
+import { arenaSize, boardRuleSetId, createArenaLayout, createRng, isArenaLayoutId, DEFAULT_PRESET_ID, PRESETS, ruleSet, STANDARD_RULE_SET_ID, type ArenaConditionId } from "@game/engine";
 import type { OwnDecision } from "../stream/streamState.ts";
 import type { LeagueLiveLoad } from "./leagueLive.ts";
 import type { MonthlySeat } from "./MonthlyView.tsx";
@@ -21,9 +21,10 @@ export const OWN_SEAT = "seat-3";
 
 /**
  * A league of `count` tanks spread over the board; `bot` adds the bot of a league with one tank.
- * `ruleSetId` sets the board's size: "open-field" gives 23 x 17 for 27 tanks and 28 x 21 for 40.
+ * The condition sets the board's size: "open-field" gives 23 x 17 for 27 tanks and 28 x 21 for 40.
  */
-export function fixtureLive(league: number, count: number, ruleSetId: RuleSetId = STANDARD_RULE_SET_ID): LeagueLive {
+export function fixtureLive(league: number, count: number, condition: ArenaConditionId = STANDARD_RULE_SET_ID): LeagueLive {
+  const ruleSetId = boardRuleSetId(condition);
   const { width, height } = arenaSize(Math.max(MONTHLY_BOARD_MIN_TANKS, count), ruleSet(ruleSetId));
   const bot = count === 1;
   const tanks = [
@@ -53,6 +54,7 @@ export function fixtureLive(league: number, count: number, ruleSetId: RuleSetId 
       effect: null,
     })),
     items: [],
+    ...(isArenaLayoutId(condition) ? { layout: createArenaLayout(condition, { width, height }, createRng(87)) } : {}),
   };
   return { league, month: "2026-11", day: FIXTURE_DAY, dayEndsInMs: (5 * 3600 + 12 * 60 + 44) * 1000, tickMs: 900, phase: count === 0 ? "idle" : bot ? "withBot" : "withoutBot", tanks, board, activity: [] };
 }

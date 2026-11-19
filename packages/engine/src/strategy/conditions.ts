@@ -17,7 +17,8 @@ import {
   hitChancePercent,
   throwRange,
 } from "../combat/combat.ts";
-import { RULE_SETS, STANDARD_RULE_SET_ID, ruleSet, rulesOf } from "../combat/rule-sets.ts";
+import { RULE_SETS, STANDARD_RULE_SET_ID, ruleSet } from "../combat/rule-sets.ts";
+import { arenaConditionOf, rulesAt } from "../round/arena-layouts.ts";
 import { CARDINALS, chebyshev } from "../directions.ts";
 import {
   bearingOf,
@@ -85,7 +86,7 @@ function percentOfRoundLeft(ctx: DecisionContext): number {
 
 /** The chance, 0 to 100, that a throw made now hits. 0 when no bot is first in my line within my range, and 0 when my tank is too low to throw. */
 function hitChanceNow(ctx: DecisionContext): number {
-  const rules = rulesOf(ctx.snapshot);
+  const rules = rulesAt(ctx.snapshot, ctx.self.x, ctx.self.y);
   if (!canThrow(ctx.self.water, rules)) return 0;
   const hit = firstBotInLine(ctx.snapshot, ctx.self, throwRange(ctx.self.build, rules));
   return hit === null ? 0 : hitChancePercent(ctx.self.build, hit.bot.build, hit.distance, rules);
@@ -95,6 +96,15 @@ function targetWith(ctx: DecisionContext, params: ParamValues, test: (target: Bo
   const target = pickTarget(ctx, params);
   return target !== null && test(target);
 }
+
+// Open field also matches here in a single-condition round, where every square shares its rules.
+const conditionSetParam = {
+  kind: "choice",
+  key: "set",
+  label: "Rule set",
+  options: Object.values(RULE_SETS).map((rules) => ({ value: rules.id, label: rules.name })),
+  default: STANDARD_RULE_SET_ID,
+} as const;
 
 const defs = withLiteralIds<ConditionDef>()([
   // --- Other bots ---------------------------------------------------------
@@ -110,7 +120,7 @@ const defs = withLiteralIds<ConditionDef>()([
     group: BOTS,
     label: "A bot is the first in my throw line within my range",
     params: [],
-    test: (ctx) => firstBotInLine(ctx.snapshot, ctx.self, throwRange(ctx.self.build, rulesOf(ctx.snapshot))) !== null,
+    test: (ctx) => firstBotInLine(ctx.snapshot, ctx.self, throwRange(ctx.self.build, rulesAt(ctx.snapshot, ctx.self.x, ctx.self.y))) !== null,
   },
   {
     id: "hitChance",
@@ -260,6 +270,14 @@ const defs = withLiteralIds<ConditionDef>()([
     params: [targetParam(), itemParam()],
     // Lets a rule skip a tank whose umbrella would stop the throw.
     test: (ctx, params) => targetWith(ctx, params, (target) => holds(target.item, itemValue(params))),
+  },
+
+  {
+    id: "targetArea",
+    group: TARGET,
+    label: "The target ({target}) stands in a {set} area",
+    params: [targetParam(), conditionSetParam],
+    test: (ctx, params) => targetWith(ctx, params, ({ x, y }) => rulesAt(ctx.snapshot, x, y).id === textValue(params, "set")),
   },
 
   // --- About me -----------------------------------------------------------
@@ -429,17 +447,15 @@ const defs = withLiteralIds<ConditionDef>()([
     id: "ruleSet",
     group: ROUND,
     label: "This round's rules are {set}",
-    params: [
-      {
-        kind: "choice",
-        key: "set",
-        label: "Rule set",
-        options: Object.values(RULE_SETS).map((rules) => ({ value: rules.id, label: rules.name })),
-        default: STANDARD_RULE_SET_ID,
-      },
-    ],
-    // Lets a rule list prepare a mode for each set. A round draws its set before the first tick, so this fact never changes in a round.
-    test: (ctx, params) => ctx.snapshot.ruleSetId === textValue(params, "set"),
+    params: [conditionSetParam],
+    test: (ctx, params) => arenaConditionOf(ctx.snapshot) === textValue(params, "set"),
+  },
+  {
+    id: "myArea",
+    group: ROUND,
+    label: "I stand in a {set} area",
+    params: [conditionSetParam],
+    test: ({ self, snapshot }, params) => rulesAt(snapshot, self.x, self.y).id === textValue(params, "set"),
   },
   {
     id: "fieldTrait",

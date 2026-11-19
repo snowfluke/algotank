@@ -70,6 +70,7 @@ import type { Decision, StatsView, StrategyInput } from "@game/engine";
 // |                      |                      |        | not in the list                                           |
 // "Published" is terminal for that month: the copy taken at the close never changes. A tank's
 // numbers of a finished day (DayNumbers) are open to everyone; they say what it did, not its rules.
+import { RULES, STANDARD_RULE_SET_ID, areaRuleSetIds, isArenaLayoutId, type ArenaArea, type ArenaLayout } from "@game/engine";
 import type { CompactTick } from "./compact-tick.ts";
 import type { MonthRecord } from "./public-protocol.ts";
 import { parsePlayerName, parseTankLook, type PlayerId, type PublicSnapshot, type TankLook } from "./types.ts";
@@ -167,6 +168,25 @@ export interface LeagueLive {
   readonly board: PublicSnapshot;
 }
 
+/** Validates a hybrid board's area map at the stream boundary. */
+export function isLeagueLayout(value: unknown, board: Readonly<Record<string, unknown>>): value is ArenaLayout {
+  if (typeof value !== "object" || value === null || !("id" in value) || !isArenaLayoutId(value.id)) return false;
+  if (!("areas" in value) || !Array.isArray(value.areas) || board["ruleSetId"] !== STANDARD_RULE_SET_ID) return false;
+  const { width, height } = board;
+  const whole = (n: unknown): n is number => typeof n === "number" && Number.isSafeInteger(n);
+  if (!whole(width) || !whole(height) || width < RULES.minGridWidth || height < RULES.minGridHeight) return false;
+  if (value.id === "rainFront") {
+    return value.areas.length === 0 && "firstColumn" in value && whole(value.firstColumn) && value.firstColumn >= 0 && value.firstColumn < width;
+  }
+  const sets = areaRuleSetIds(value.id);
+  return value.areas.length > 0 && value.areas.every((area: unknown) => {
+    if (typeof area !== "object" || area === null) return false;
+    const { x, y, width: w, height: h, ruleSetId } = area as Partial<ArenaArea>;
+    return whole(x) && whole(y) && whole(w) && whole(h) && x >= 0 && y >= 0 && w > 0 && h > 0 &&
+      x + w <= width && y + h <= height && ruleSetId !== STANDARD_RULE_SET_ID && sets.some((set) => set === ruleSetId);
+  });
+}
+
 /** Why the board changed. A weather state also carries any bot changes on the same turn. */
 export type LeagueStateChange = "growth" | "botFreshStart" | "weather";
 
@@ -182,6 +202,7 @@ export type LeagueStateChange = "growth" | "botFreshStart" | "weather";
  * | open   | tick    | open   | moves, then fresh starts which change the order for the next tick   |
  * | open   | closed  | (end)  | the month close left this league empty; the server ends the stream   |
  * Terminal: closed. An ended connection without `closed` is a dropped one; the browser opens it again.
+ * A hybrid state carries its fixed area map. Rain front ticks carry its first column after the turn.
  */
 export type LeagueStreamMessage =
   | { readonly type: "state"; readonly state: LeagueLive; readonly change?: LeagueStateChange }

@@ -2,7 +2,7 @@
 // The page's states as the phone (and a server render) draws them, in both languages.
 import { describe, expect, test } from "bun:test";
 import { ULTIMATES_FROM } from "@game/arena";
-import { arenaSize, ruleSet } from "@game/engine";
+import { ARENA_LAYOUT_IDS, arenaSize, ruleSet } from "@game/engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { boardAspect } from "../board/FittedBoard.tsx";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
@@ -224,6 +224,29 @@ describe("the arena condition", () => {
     expect(id).toContain(">Kondisi arena: Standar<");
     expect(id).toMatch(/data-arena-condition-note[\s\S]*Tembakan sampai 3 petak[\s\S]*Kondisi arena diundi saat ronde dimulai dan setiap beberapa menit/);
     expect(render(props({ reshuffled: true }), "id")).toMatch(/data-reshuffled[\s\S]*>Diacak ulang<[\s\S]*>Kondisi arena: Standar</);
+  });
+
+  test("each hybrid board draws the named conditions and its weather notice in both languages", () => {
+    const expected = {
+      fourQuarters: { en: "Four quarters", id: "Empat penjuru", areas: ["standard", "dry-spell", "downpour", "arms-length"] },
+      eyeOfStorm: { en: "Eye of the storm", id: "Mata badai", areas: ["standard", "dry-spell", "downpour"] },
+      rainFront: { en: "Rain front", id: "Front hujan", areas: ["standard", "downpour"] },
+      hills: { en: "Hills", id: "Bukit", areas: ["standard", "sharp-eyes"] },
+    };
+    for (const layout of ARENA_LAYOUT_IDS) {
+      const story = expected[layout];
+      const live = fixtureLive(1, 5, layout);
+      const changed = props({ load: fixtureLoad(live, NOW), weatherChanged: true });
+      const english = render(changed);
+      const indonesian = render(changed, "id");
+      expect(english).toContain(`data-arena-layout="${layout}"`);
+      expect([...new Set(Array.from(english.matchAll(/data-arena-area="([^"]+)"/g), ([, area]) => area))]).toEqual(story.areas);
+      expect(english).toContain("data-area-edge");
+      expect(english).toContain(`Arena condition: ${story.en}`);
+      expect(english).toContain(`The arena condition changed to ${story.en}.`);
+      expect(indonesian).toContain(`Kondisi arena: ${story.id}`);
+      expect(indonesian).toContain(`Kondisi arena berubah menjadi ${story.id}.`);
+    }
   });
 
   test("weather names the new condition in both languages and fits the board to its new size", () => {

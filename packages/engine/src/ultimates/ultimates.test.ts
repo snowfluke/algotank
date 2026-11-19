@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
-  ACTIONS, CONDITIONS, DIRECTIONS, ITEM_RULES, PRESETS, STANDARD_RULE_SET_ID, ULTIMATE_IDS, ULTIMATE_RULES, createOpenRound, createRound,
-  joinRound, parseStrategy, replaceStrategy, runRound, statsOfRound, statsView, stepRound, ultimateReach, waterAfterTick,
+  ACTIONS, CONDITIONS, DIRECTIONS, ITEM_RULES, PRESETS, STANDARD_RULE_SET_ID, ULTIMATE_IDS, ULTIMATE_RULES, createArenaLayout,
+  createOpenRound, createRng, createRound, joinRound, parseStrategy, replaceStrategy, ruleSet, runRound, statsOfRound, statsView,
+  stepRound, ultimateReach, waterAfterTick,
 } from "../index.ts";
 import type { BoardItem, BotState, Direction, ItemKind, Move, RoundState, Snapshot, Strategy, UltimateId } from "../index.ts";
 import { rotate } from "../directions.ts";
@@ -57,6 +58,63 @@ function roundTank(round: RoundState, id: string): BotState {
   if (found === undefined) throw new Error(`no tank ${id}`);
   return found;
 }
+
+describe("ultimates on a hybrid layout", () => {
+  const size = { width: 8, height: 6 };
+  const layout = createArenaLayout("fourQuarters", size, createRng(87));
+  const board = { ...size, layout };
+  const dryCost = ruleSet("dry-spell").waterPerThrow;
+
+  test("Splash ring needs one local shot for automatic and rule-fired use, then empties the tank", () => {
+    const neighbours = [bot("west", 3, 1, "N"), bot("south", 4, 2, "S")];
+    const ruleFired = waiting("splash", mode("main", [rule("splash", [when("ultimateReady")], act("useUltimate"))], act("wait")));
+    for (const strategies of [{}, { self: ruleFired }]) {
+      const turnWith = (water: number) =>
+        stepRound(placedRound([tankWith("splash", { x: 4, y: 1, water }), ...neighbours], strategies, board));
+      expect(turnWith(dryCost - 1).fires).toEqual([]);
+      const fired = turnWith(dryCost);
+      expect(fired.fires).toMatchObject([{ kind: "splash", botId: "self" }]);
+      expect(fired.snapshot.bots[0]).toMatchObject({ water: 0, score: 4 });
+    }
+  });
+
+  test("Full tank checks local shot cost and reach but refills to the layout limit", () => {
+    const turnWith = (water: number, x: number) => stepRound(placedRound([
+      tankWith("fullTank", { x: 4, y: 0, water }), bot("target", x, 0, "N"),
+    ], {}, board));
+    expect(turnWith(dryCost, 6).fires).toEqual([]);
+    expect(turnWith(0, 7).fires).toEqual([]);
+    const fired = turnWith(dryCost - 1, 6);
+    expect(fired.fires).toMatchObject([{ kind: "fullTank", botId: "self" }]);
+    expect(fired.snapshot.bots[0]).toMatchObject({
+      water: ruleSet("downpour").waterCapacity,
+      ultimateEffect: { kind: "fullTank", freeShots: 3 },
+    });
+  });
+
+  test("Mud bomb uses its launch square for both rule reach and impact", () => {
+    const turnWith = (x: number, direction: Direction, targetX: number) => {
+      const tank = tankWith("mudBomb", { x, y: 1, direction });
+      const target = bot("target", targetX, 1, "N");
+      const round = placedRound([tank, target], {}, board);
+      return { reach: ultimateReach(round.snapshot, tank), fires: stepRound(round).fires };
+    };
+    expect(turnWith(4, "W", 1)).toEqual({ reach: 0, fires: [] });
+    expect(turnWith(2, "E", 5)).toMatchObject({ reach: 1, fires: [{ kind: "mudBomb", affected: ["target"] }] });
+  });
+
+  test("Dash ram uses the landing square's throw range after crossing an area edge", () => {
+    const ram = (x: number, direction: Direction, targetX: number) => {
+      const tank = tankWith("dash", { x, y: 1, direction });
+      const target = bot("target", targetX, 1, "N");
+      const result = resolveTick(snapshotOf([tank, target], board), [fire(tank.id, "dash"), move(target.id)],
+        [tank.id, target.id], stubRng());
+      return result.throws[0];
+    };
+    expect(ram(1, "E", 7)).toMatchObject({ outcome: "empty" });
+    expect(ram(6, "W", 0)).toMatchObject({ outcome: "hit", distance: 3, hitChance: 100 });
+  });
+});
 
 describe("ultimate triggers from the pre-turn snapshot", () => {
   const ahead = bot("ahead", 5, 3, "W");

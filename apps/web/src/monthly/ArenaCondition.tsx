@@ -5,26 +5,32 @@
 // click to show what that means", after a label over the board's corner covered tanks.
 
 import { Info } from "lucide-react";
-import type { RuleSetId } from "@game/engine";
+import type { PublicSnapshot } from "@game/arena";
+import { arenaConditionOf, isArenaLayoutId } from "@game/engine";
 import { useId } from "react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 
+export function arenaConditionText(m: ReturnType<typeof useMessages>, board: Pick<PublicSnapshot, "ruleSetId" | "layout">) {
+  const id = arenaConditionOf(board);
+  return isArenaLayoutId(id) ? m.monthly.layouts[id] : m.vocabulary.roundRules[id];
+}
+
 /** `short`: the phone's line beside the time left ("Kondisi: …"); the note names it in full either way. */
-export function ArenaCondition({ ruleSetId, short }: { readonly ruleSetId: RuleSetId; readonly short: boolean }) {
+export function ArenaCondition({ board, short }: { readonly board: Pick<PublicSnapshot, "ruleSetId" | "layout">; readonly short: boolean }) {
   const m = useMessages();
   const t = m.monthly;
-  const rules = m.vocabulary.roundRules[ruleSetId];
+  const rules = arenaConditionText(m, board);
   const id = `arena-condition-${useId().replace(/:/g, "")}`;
   return (
     <>
-      {/* -my-2 keeps the 40 px touch target from adding height under the clock. */}
+      {/* A hybrid name can wrap at 360px, so give it enough height for both lines. */}
       <button
         type="button"
         popoverTarget={id}
-        data-arena-condition={ruleSetId}
-        className="press -my-2 inline-flex min-h-10 min-w-0 max-w-full items-center gap-1.5 rounded-[var(--radius-control)] font-display font-semibold text-water"
+        data-arena-condition={arenaConditionOf(board)}
+        className={`press inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-[var(--radius-control)] text-start font-display font-semibold text-water ${board.layout === undefined ? "-my-2 min-h-10" : "min-h-11"}`}
       >
-        <span className="min-w-0 truncate">{short ? t.conditionShort(rules.name) : t.condition(rules.name)}</span>
+        <span className={board.layout === undefined ? "min-w-0 truncate" : "min-w-0 [overflow-wrap:anywhere]"}>{short ? t.conditionShort(rules.name) : t.condition(rules.name)}</span>
         <Info aria-hidden size={18} strokeWidth={2.5} className="shrink-0" />
       </button>
       <div

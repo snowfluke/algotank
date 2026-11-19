@@ -12,9 +12,9 @@
 // | any              | (none)                      | end of round       |                             |
 
 import { canThrow, throwRange } from "../combat/combat.ts";
-import { rulesOf } from "../combat/rule-sets.ts";
 import { directionOfSigns, eighthsBetween } from "../directions.ts";
 import { canTake } from "../items/items.ts";
+import { rulesAt } from "../round/arena-layouts.ts";
 import { cellAhead } from "../round/grid.ts";
 import { botsThatCanHit, firstBotInLine, isFree } from "../strategy/geometry.ts";
 import { forEachBotNear } from "../strategy/snapshot-index.ts";
@@ -63,7 +63,7 @@ const TANK_REACH: Partial<Record<UltimateId, (snapshot: Snapshot, tank: BotState
   dash: (snapshot, tank) => firstBotInLine(snapshot, tank, ULTIMATE_RULES.dash.triggerMaxDistance) === null ? 0 : 1,
   splash: (snapshot, tank) => tanksNear(snapshot, tank, ULTIMATE_RULES.splash.reach),
   mudBomb: (snapshot, tank) => {
-    const first = firstBotInLine(snapshot, tank, throwRange(tank.build, rulesOf(snapshot)));
+    const first = firstBotInLine(snapshot, tank, throwRange(tank.build, rulesAt(snapshot, tank.x, tank.y)));
     // Count the first tank and its neighbours, leaving out the thrower.
     return first === null ? 0 : tanksNear(snapshot, tank, ULTIMATE_RULES.mudBomb.reach, first.bot) + 1;
   },
@@ -88,7 +88,7 @@ export function ultimateCharged(tank: BotState, percent: number): boolean {
 const CAN_ACT: Record<UltimateId, (snapshot: Snapshot, tank: BotState) => boolean> = {
   dash: (snapshot, tank) => tank.effect?.kind !== "stuck" && isFree(snapshot, cellAhead(tank, tank.direction)),
   smoke: (_snapshot, tank) => tank.ultimateEffect?.kind !== "smoke",
-  splash: (snapshot, tank) => canThrow(tank.water, rulesOf(snapshot)),
+  splash: (snapshot, tank) => canThrow(tank.water, rulesAt(snapshot, tank.x, tank.y)),
   fullTank: () => true,
   mudBomb: (snapshot, tank) => ultimateReach(snapshot, tank) > 0,
   whirlwind: () => true,
@@ -105,7 +105,7 @@ const TRIGGERS: Record<UltimateId, (snapshot: Snapshot, tank: BotState) => boole
   smoke: (snapshot, tank) => botsThatCanHit(snapshot, tank).length >= ULTIMATE_RULES.smoke.aimedAtMe,
   splash: (snapshot, tank) => ultimateReach(snapshot, tank) >= ULTIMATE_RULES.splash.triggerTanks,
   fullTank: (snapshot, tank) => {
-    const rules = rulesOf(snapshot);
+    const rules = rulesAt(snapshot, tank.x, tank.y);
     return !canThrow(tank.water, rules) && tanksNear(snapshot, tank, throwRange(tank.build, rules)) > 0;
   },
   mudBomb: () => true,

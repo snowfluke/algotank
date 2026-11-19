@@ -26,6 +26,13 @@ export const en = {
     /** The short word on the help button from 480px wide; the button's name is `summary`. */
     button: "Help",
     ultimate: "Each tank has one ultimate. A gold glow means it is ready.",
+    areas: {
+      standard: "The sand has the usual shot range and water cost.",
+      "dry-spell": "On cracked ground, a shot uses more water and travels less far.",
+      downpour: "Among the puddles, a shot uses less water and travels less far.",
+      "arms-length": "In tall grass, a shot travels only one square without Range.",
+      "sharp-eyes": "Aim and Dodge are twice as strong for shots from a hill.",
+    },
     gauge: { term: "Water gauge", body: "The bar under each tank shows its water, and a shot needs water up to the mark." },
     hit: { term: "Hit", body: "The jet splashes a tank, and the shooter takes 1 point from it." },
     miss: { term: "Miss", body: "The jet flies past the tank and lands on the floor." },
@@ -89,6 +96,13 @@ export const id: typeof en = {
     summary: "Arti tanda di arena",
     button: "Bantuan",
     ultimate: "Tiap tank punya satu jurus pamungkas. Cahaya emas berarti jurusnya siap.",
+    areas: {
+      standard: "Di pasir, jangkauan tembakan dan air yang dipakai sama seperti biasa.",
+      "dry-spell": "Di tanah retak, tembakan lebih pendek dan memakai lebih banyak air.",
+      downpour: "Di area genangan, tembakan lebih pendek dan memakai lebih sedikit air.",
+      "arms-length": "Di rumput tinggi, tembakan hanya sampai satu petak tanpa peningkatan Jangkauan.",
+      "sharp-eyes": "Bidikan dan Hindaran dua kali lebih kuat untuk tembakan dari bukit.",
+    },
     gauge: { term: "Takaran air", body: "Batang di bawah tank menunjukkan airnya, dan tank bisa menembak kalau airnya sampai garis." },
     hit: { term: "Kena", body: "Semburan air mengenai tank lain, lalu penembak mengambil 1 poin dari tank itu." },
     miss: { term: "Meleset", body: "Semburan air melewati tank dan jatuh ke lantai." },

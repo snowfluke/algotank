@@ -2,7 +2,7 @@
 // in this turn. Smoke, Big Umbrella and Dash protect from the start of the turn.
 
 import { POINTS_PER_HIT, canThrow, hitChancePercent, throwRange, waterAfterTick } from "../combat/combat.ts";
-import { rulesOf } from "../combat/rule-sets.ts";
+import { rulesAt, waterCapacityOf } from "./arena-layouts.ts";
 import type { RoundRules } from "../combat/rule-sets.ts";
 import { DIRECTIONS } from "../types.ts";
 import type {
@@ -52,13 +52,13 @@ const SURE_HIT = 100;
 
 /** Every snapshot bot needs exactly one move and exactly one place in order. */
 export function resolveTick(
-  snapshot: Pick<Snapshot, "width" | "height" | "bots" | "ruleSetId">,
+  snapshot: Pick<Snapshot, "width" | "height" | "bots" | "ruleSetId" | "layout">,
   moves: readonly TickMove[],
   order: readonly BotId[],
   rng: Rng,
   itemTurn?: ItemTurn,
 ): TickResolution {
-  const rules = rulesOf(snapshot);
+  const capacity = waterCapacityOf(snapshot);
   const byId = new Map<BotId, TickMove>();
   for (const action of moves) {
     if (byId.has(action.botId)) throw new Error(`two moves for bot "${action.botId}"`);
@@ -114,22 +114,24 @@ export function resolveTick(
       fires.push(resolveMagnet(slot, remainingItems, remainingMagnets));
       remainingMagnets.delete(slot);
     } else if (action.ultimate !== undefined) {
-      const fire = resolveUltimate(action.ultimate, slot, snapshot, rules, occupant, rng, inflicted);
+      const fire = resolveUltimate(action.ultimate, slot, snapshot, capacity, occupant, rng, inflicted);
       if (fire !== null) {
         fires.push(fire);
         if (fire.kind === "dash") throws.push(fire.shot);
       }
     } else if (action.move === "T") {
-      throws.push(resolveThrow(slot, snapshot, rules, occupant, rng, inflicted));
+      throws.push(resolveThrow(slot, snapshot, rulesAt(snapshot, place.x, place.y), occupant, rng, inflicted));
     } else if (!stuck) {
       if (action.move === "F") drive(slot, snapshot, occupant);
       else if (action.move !== "W") place.direction = rotate(place.direction, TURN_EIGHTHS[action.move]);
     }
   }
 
+  // Refill on the square where the tank ends its move, under the arena-wide limit.
   const placements = [...slots.values()].map((slot) => {
     if (slot.waterChange !== "keep") {
-      slot.place.water = waterAfterTick(slot.place.water, slot.waterChange === "spend", rules);
+      slot.place.water = waterAfterTick(slot.place.water, slot.waterChange === "spend",
+        rulesAt(snapshot, slot.place.x, slot.place.y), capacity);
     }
     return slot.place;
   });
@@ -284,8 +286,8 @@ function resolveRam(source: Slot, size: ArenaSize, rules: RoundRules, occupant: 
 function resolveUltimate(
   kind: Exclude<UltimateId, "magnet">,
   source: Slot,
-  size: ArenaSize,
-  rules: RoundRules,
+  board: Pick<Snapshot, "width" | "height" | "ruleSetId" | "layout">,
+  capacity: number,
   occupant: Map<string, Slot>,
   rng: Rng,
   inflicted: Map<BotId, TankEffect>,
@@ -298,36 +300,36 @@ function resolveUltimate(
       if (!isDashing(source)) return null;
       const path: Cell[] = [];
       for (let step = 0; step < ULTIMATE_RULES.dash.squares; step++) {
-        const cell = drive(source, size, occupant);
+        const cell = drive(source, board, occupant);
         if (cell === null) break;
         path.push(cell);
       }
-      const shot = resolveRam(source, size, rules, occupant);
+      const shot = resolveRam(source, board, rulesAt(board, me.x, me.y), occupant);
       return { ...fire, kind, path, shot, points: shot.outcome === "hit" ? ULTIMATE_RULES.dash.points : 0 };
     }
     case "smoke":
     case "bigUmbrella":
       return { ...fire, kind };
     case "fullTank":
-      me.water = rules.waterCapacity;
+      me.water = capacity;
       me.ultimateEffect = { kind, freeShots: ULTIMATE_RULES.fullTank.freeShots };
       return { ...fire, kind };
     case "splash": {
       me.water = ULTIMATE_RULES.splash.waterAfter;
       source.waterChange = "keep";
-      return { ...fire, kind, squares: resolveSplash(source, size, occupant, rng) };
+      return { ...fire, kind, squares: resolveSplash(source, board, occupant, rng) };
     }
     case "mudBomb": {
-      const hit = firstTarget(source, size, rules, occupant);
+      const hit = firstTarget(source, board, rulesAt(board, me.x, me.y), occupant);
       if (hit === null) return { ...fire, kind, center: null, area: [], affected: [], points: 0 };
       const center = { x: hit.target.place.x, y: hit.target.place.y };
-      const area = squaresWithin(size, center, ULTIMATE_RULES.mudBomb.reach);
+      const area = squaresWithin(board, center, ULTIMATE_RULES.mudBomb.reach);
       const outcome = inflictInArea(area, occupant, source, inflicted, { kind: "stuck", turnsLeft: ULTIMATE_RULES.mudBomb.stuckTurns });
       return { ...fire, kind, center, area, ...outcome };
     }
     case "whirlwind": {
       const { reach, dizzyTurns, spinTurns, pointReach } = ULTIMATE_RULES.whirlwind;
-      const area = squaresWithin(size, at, reach);
+      const area = squaresWithin(board, at, reach);
       const outcome = inflictInArea(area, occupant, source, inflicted, { kind: "dizzy", turnsLeft: dizzyTurns, spinTurnsLeft: spinTurns }, pointReach);
       return { ...fire, kind, area, ...outcome };
     }

@@ -17,10 +17,10 @@
 // Colours are tokens in index.css (--color-arena-<ground>-*). The marks are one static path per
 // board, placed by a hash of the cell, so a board looks the same on every render and every screen.
 
-import type { RuleSetId } from "@game/engine";
+import type { AreaRuleSetId, RuleSetId } from "@game/engine";
 import { CELL } from "./boardHelpers.ts";
 
-export type GroundMark = "pebbles" | "cracks" | "tufts" | "slabs" | "crosshairs" | "none";
+export type GroundMark = "pebbles" | "cracks" | "tufts" | "slabs" | "crosshairs" | "puddles" | "grass" | "none";
 
 export interface ArenaGround {
   /** CSS colours (tokens). */
@@ -54,6 +54,15 @@ export const ARENA_GROUNDS: Readonly<Record<RuleSetId, ArenaGround>> = {
   downpour: ground("wet", "none", 1),
 };
 
+// Hybrid drawings (87-hybrid-arenas.md, owner 2026-11-19). Rooms keep their own floors.
+export const AREA_GROUNDS: Readonly<Record<AreaRuleSetId, ArenaGround>> = {
+  standard: ARENA_GROUNDS.standard,
+  "dry-spell": ARENA_GROUNDS["dry-spell"],
+  downpour: ground("rain", "puddles", 3),
+  "arms-length": ground("meadow", "grass", 2),
+  "sharp-eyes": ground("hill", "none", 1),
+};
+
 /** At most this many marks on a board: open field at 512 tanks has about 7,300 cells. */
 export const MAX_GROUND_MARKS = 600;
 
@@ -83,14 +92,16 @@ function markPath(kind: GroundMark, px: number, py: number, r: number): string {
         `M${n(px + 4.4)} ${n(py + s * 0.3 * k)}l0.9 ${n(-s * 1.6)}l0.8 ${n(-s * 0.4)}`
       );
     }
-    case "tufts": {
+    case "tufts":
+    case "grass": {
       // Three blades from three roots a little apart, leaning outward and of three lengths, so
       // they never meet in a point (blades from one root looked like a down arrow).
       const lean = r < 0.5 ? -0.3 : 0.3;
+      const height = kind === "grass" ? 1.6 : 1;
       return (
-        `M${n(px - 0.8)} ${n(py)}q${n(lean)} -1 -0.7 -1.6` +
-        `M${n(px)} ${n(py + 0.2)}q${n(lean)} -1.3 ${n(lean * 1.5)} -2.5` +
-        `M${n(px + 0.8)} ${n(py)}q${n(lean)} -0.8 0.8 -1.3`
+        `M${n(px - 0.8)} ${n(py)}q${n(lean)} -1 -0.7 ${n(-1.6 * height)}` +
+        `M${n(px)} ${n(py + 0.2)}q${n(lean)} -1.3 ${n(lean * 1.5)} ${n(-2.5 * height)}` +
+        `M${n(px + 0.8)} ${n(py)}q${n(lean)} -0.8 0.8 ${n(-1.3 * height)}`
       );
     }
     case "slabs":
@@ -99,6 +110,9 @@ function markPath(kind: GroundMark, px: number, py: number, r: number): string {
     case "crosshairs":
       // A tick on a grid crossing: px, py is the crossing.
       return `M${n(px - 1.2)} ${n(py)}h2.4M${n(px)} ${n(py - 1.2)}v2.4`;
+    case "puddles":
+      // A shallow, flat shape in the floor colour family, away from the tank's centre.
+      return `M${n(px - 1)} ${n(py)}q1.5 -1.8 3 -0.8q2.5 0.8 1.5 1.6q-2.2 1 -4.5 -0.8Z`;
     case "none":
       return "";
   }
@@ -106,20 +120,24 @@ function markPath(kind: GroundMark, px: number, py: number, r: number): string {
 
 /** Whether the marks are filled (dots) or stroked (lines). */
 export function marksFilled(kind: GroundMark): boolean {
-  return kind === "pebbles" || kind === "slabs";
+  return kind === "pebbles" || kind === "slabs" || kind === "puddles";
+}
+
+/** One sample of the floor mark where a small legend swatch has room for it. */
+export function groundMarkSample(kind: GroundMark): string {
+  return markPath(kind, kind === "cracks" ? 5 : 9, 6.5, 0.4);
 }
 
 /** The marks of a board as one path (groundMarks). */
-export function groundMarksPath(width: number, height: number, ruleSetId: RuleSetId): string {
-  return groundMarks(width, height, ruleSetId).join("");
+export function groundMarksPath(width: number, height: number, ruleSetId: RuleSetId, ground = ARENA_GROUNDS[ruleSetId]): string {
+  return groundMarks(width, height, ruleSetId, ground).join("");
 }
 
 /**
  * The marks of a board of `width` by `height` cells, one path each: the same board gives the same
  * marks, and a board never has more than MAX_GROUND_MARKS (a large board spaces them out).
  */
-export function groundMarks(width: number, height: number, ruleSetId: RuleSetId): readonly string[] {
-  const { marks, every } = ARENA_GROUNDS[ruleSetId];
+export function groundMarks(width: number, height: number, ruleSetId: RuleSetId, { marks, every } = ARENA_GROUNDS[ruleSetId]): readonly string[] {
   if (marks === "none") return [];
   const cells = width * height;
   // 0.9: the expected count stays under the cap, so the cap seldom leaves the last rows bare.

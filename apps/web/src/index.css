@@ -73,6 +73,15 @@
   --color-arena-wet-grid: #cdc6b1;
   --color-arena-wet-wall: #a59f90;
   --color-arena-wet-mark: #c4bca7;
+  --color-arena-rain-floor: #d7e5e4;
+  --color-arena-rain-grid: #bbcece;
+  --color-arena-rain-wall: #799898;
+  --color-arena-rain-mark: #a3c3c6;
+  --color-arena-hill-floor: #d8d4a5;
+  --color-arena-hill-grid: #c6c192;
+  --color-arena-hill-wall: #958d65;
+  --color-arena-hill-mark: #eee7bd;
+  --color-arena-area-edge: #81775e;
   --color-tank-outline: #1b2733;
 
   /* Tank colours (12), for the hull, the pattern and the plate. Ordered so neighbours

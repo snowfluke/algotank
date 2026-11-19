@@ -18,7 +18,7 @@
 import { History, ListOrdered, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { FIRST_PUBLISHED_RULES_MONTH, MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
-import { ArenaCondition } from "./ArenaCondition.tsx";
+import { ArenaCondition, arenaConditionText } from "./ArenaCondition.tsx";
 import { ActivityList } from "./ActivityList.tsx";
 import { TankSheet, type SheetSource, type SheetTank } from "./TankSheet.tsx";
 import { MonthlyAbout } from "./MonthlyAbout.tsx";
@@ -157,7 +157,7 @@ function DayClock({ board, fixedNow, dayChange, short }: { board: LeagueBoard | 
  */
 function ConditionLine({ board, short }: { board: LeagueBoard | null; short: boolean }) {
   if (board === null || board.live.tanks.length === 0) return null;
-  return <ArenaCondition ruleSetId={board.snapshot.ruleSetId} short={short} />;
+  return <ArenaCondition board={board.snapshot} short={short} />;
 }
 
 /** Yesterday's winner, or the newest finished day's when yesterday had no tank. */
@@ -208,13 +208,13 @@ function Board({ board, ownSeatId, onJoin, dayChange, reshuffled, weatherChanged
     notice = (
       <div data-reshuffled="" className="flex flex-col items-center gap-1 text-center">
         <p className="font-display text-display font-semibold">{t.reshuffled}</p>
-        <p className="text-title font-semibold">{t.condition(m.vocabulary.roundRules[board.snapshot.ruleSetId].name)}</p>
+        <p className="text-title font-semibold">{t.condition(arenaConditionText(m, board.snapshot).name)}</p>
       </div>
     );
   } else if (weatherChanged && live.tanks.length > 0) {
     notice = (
       <p data-weather-changed="" role="status" className="text-center font-display text-title font-semibold">
-        {t.weatherChanged(m.vocabulary.roundRules[board.snapshot.ruleSetId].name)}
+        {t.weatherChanged(arenaConditionText(m, board.snapshot).name)}
       </p>
     );
   } else if (live.tanks.length === 0) {
@@ -540,7 +540,7 @@ function PresenterLayout(props: MonthlyViewProps) {
         )}
         <MonthlyAbout />
         {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
-        <LegendButton ultimates={hasUltimates(board?.live.board ?? null) || hasUltimates(board?.snapshot ?? null)} />
+        <LegendButton layout={board?.snapshot.layout?.id} ultimates={hasUltimates(board?.live.board ?? null) || hasUltimates(board?.snapshot ?? null)} />
       </div>
       <div className="flex min-w-0 shrink-0 flex-col gap-2 empty:hidden">
         {props.move === null ? null : <MoveNotice move={props.move} onSeen={props.onMoveSeen} />}
@@ -677,10 +677,9 @@ function PhoneLayout(props: MonthlyViewProps) {
         </div>
         <MonthlyAbout />
         {/* The board legend, as beside a room's board: it lists the items and their effects (docs/items.md). */}
-        <LegendButton ultimates={hasUltimates(board?.live.board ?? null) || hasUltimates(board?.snapshot ?? null)} />
+        <LegendButton layout={board?.snapshot.layout?.id} ultimates={hasUltimates(board?.live.board ?? null) || hasUltimates(board?.snapshot ?? null)} />
       </div>
-      {/* One full-width line of time left and condition (owner, 2026-11-16: four lines were too many). It does not wrap,
-          so a longer condition name at a weather change is cut short instead of moving the page. */}
+      {/* Keep the clock on one line. A long hybrid name can wrap within its button. */}
       <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-4">
         <div className="shrink-0">
           <DayClock board={board} fixedNow={props.now} dayChange={props.dayChange} short />

@@ -53,7 +53,7 @@
 
 import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, arenaSize, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, ruleSet, STANDARD_RULE_SET_ID, stepRound, type RuleSetId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, newSeed } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS, ultimatesOn } from "@game/arena";
 import type { Clock } from "../timers.ts";
@@ -132,7 +132,8 @@ export const BOARD_GROWTH = 1.5;
  * Before the grab rules of presets.ts the same days gave item-hunter +56 and evader -40 in standard,
  * and item-hunter +126 and evader -63 in open-field.
  */
-export const MONTHLY_CONDITIONS: readonly RuleSetId[] = ["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field"];
+// Owner, 2026-11-19 (87-hybrid-arenas.md): each layout gets one place in the same draw.
+export const MONTHLY_CONDITIONS: readonly ArenaConditionId[] = ["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field", ...ARENA_LAYOUT_IDS];
 
 export function boardTanksFor(seated: number): number {
   return Math.max(MONTHLY_BOARD_MIN_TANKS, seated);
@@ -149,7 +150,7 @@ export class LeagueDay {
   private readonly seated = new Map<PlayerId, Seated>();
   private bots: LeagueBot[] = [];
   private freshStartCredit = 0;
-  private pendingWeather: RuleSetId | undefined;
+  private pendingWeather: ArenaConditionId | undefined;
   /** The tanks the round's board is sized for. */
   private boardFor = boardTanksFor(0);
 
@@ -157,6 +158,8 @@ export class LeagueDay {
     readonly league: number,
     private readonly random: Random = Math.random,
     private readonly now: Clock,
+    // The balance script pairs round seeds and holds one condition for each run.
+    private readonly field: { readonly seed: () => number; readonly conditions: readonly ArenaConditionId[] } = { seed: newSeed, conditions: MONTHLY_CONDITIONS },
   ) {}
 
   /**
@@ -189,11 +192,12 @@ export class LeagueDay {
     this.pendingWeather = undefined;
     const ruleSetId = this.drawCondition();
     // Hold the release choice for this round, even if a seat joins after the gate opens (85-ultimates.md).
-    return createOpenRound({ seed: newSeed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: ultimatesOn(this.now()) });
+    return createOpenRound({ seed: this.field.seed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: ultimatesOn(this.now()) });
   }
 
-  private drawCondition(): RuleSetId {
-    return MONTHLY_CONDITIONS[Math.floor(this.random() * MONTHLY_CONDITIONS.length)] ?? STANDARD_RULE_SET_ID;
+  private drawCondition(): ArenaConditionId {
+    const { conditions } = this.field;
+    return conditions[Math.floor(this.random() * conditions.length)] ?? STANDARD_RULE_SET_ID;
   }
 
   /** Takes a tank off the board between turns. Returns its points and whether today counted for it. */
@@ -282,10 +286,10 @@ export class LeagueDay {
     const freshStarts: FreshStart[] = [];
     if (result.snapshot.tick % RESHUFFLE_TURNS === 0) this.pendingWeather = this.drawCondition();
     const nextRules = this.weatherAfterMoves(result.snapshot, dashed);
-    const weatherChanged = nextRules !== before.ruleSetId;
+    const weatherChanged = nextRules !== arenaConditionOf(before);
     // Shrink first so no tank tunnels into a square about to disappear. Grow last so the
     // compact tick's tunnel destinations still fit the board the viewer has before the state.
-    if (weatherChanged && ruleSet(nextRules).gridFillRatio > ruleSet(before.ruleSetId).gridFillRatio) {
+    if (weatherChanged && ruleSet(boardRuleSetId(nextRules)).gridFillRatio > ruleSet(before.ruleSetId).gridFillRatio) {
       for (const { id, x, y } of changeRoundRules(round, nextRules, this.boardFor)) freshStarts.push({ id, x, y });
     }
     const displaced = freshStarts.length === 0 ? null : new Set(freshStarts.map(({ id }) => id));
@@ -304,17 +308,17 @@ export class LeagueDay {
         botsChanged = true;
       }
     }
-    if (weatherChanged && round.snapshot.ruleSetId !== nextRules) changeRoundRules(round, nextRules, this.boardFor);
+    if (weatherChanged && arenaConditionOf(round.snapshot) !== nextRules) changeRoundRules(round, nextRules, this.boardFor);
     return { ...result, freshStarts, botsChanged, weatherChanged };
   }
 
-  private weatherAfterMoves(snapshot: Snapshot, dashed: ReadonlySet<PlayerId>): RuleSetId {
+  private weatherAfterMoves(snapshot: Snapshot, dashed: ReadonlySet<PlayerId>): ArenaConditionId {
     const next = this.pendingWeather;
-    if (next === undefined) return snapshot.ruleSetId;
+    if (next === undefined) return arenaConditionOf(snapshot);
     if (dashed.size > 0) {
-      const { width, height } = arenaSize(this.boardFor, ruleSet(next));
+      const { width, height } = arenaSize(this.boardFor, ruleSet(boardRuleSetId(next)));
       // Apply the same draw on a later turn if the smaller floor would tunnel a dashing tank.
-      if (snapshot.bots.some(({ id, x, y }) => dashed.has(id) && (x >= width || y >= height))) return snapshot.ruleSetId;
+      if (snapshot.bots.some(({ id, x, y }) => dashed.has(id) && (x >= width || y >= height))) return arenaConditionOf(snapshot);
     }
     this.pendingWeather = undefined;
     return next;

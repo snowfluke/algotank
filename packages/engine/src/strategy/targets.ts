@@ -4,7 +4,7 @@
 // of an open round (BotState.tieRank), else by the lower id. Neither changes in a round, so a tie never flips.
 
 import { attributeLevel, hitChancePercent, throwRange } from "../combat/combat.ts";
-import { rulesOf } from "../combat/rule-sets.ts";
+import { rulesAt } from "../round/arena-layouts.ts";
 import type { AttributeId } from "../combat/combat.ts";
 import type { BotState, DecisionContext, ParamValues, TargetSelectorDef } from "../types.ts";
 import { chebyshev } from "../directions.ts";
@@ -59,7 +59,7 @@ const defs = withLiteralIds<TargetSelectorDef>()([
   {
     id: "inThrowLine",
     label: "the first bot in my throw line",
-    pick: (ctx) => firstBotInLine(ctx.snapshot, ctx.self, throwRange(ctx.self.build, rulesOf(ctx.snapshot)))?.bot ?? null,
+    pick: (ctx) => firstBotInLine(ctx.snapshot, ctx.self, throwRange(ctx.self.build, rulesAt(ctx.snapshot, ctx.self.x, ctx.self.y)))?.bot ?? null,
   },
   {
     id: "aimedAtMe",
@@ -124,7 +124,7 @@ const defs = withLiteralIds<TargetSelectorDef>()([
     id: "easiestHit",
     label: "the bot in my range that I am most likely to hit",
     pick: (ctx) => {
-      const rules = rulesOf(ctx.snapshot);
+      const rules = rulesAt(ctx.snapshot, ctx.self.x, ctx.self.y);
       const range = throwRange(ctx.self.build, rules);
       const chance = (bot: BotState): number =>
         hitChancePercent(ctx.self.build, bot.build, chebyshev(ctx.self, bot), rules);

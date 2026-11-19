@@ -2,10 +2,12 @@
 import { plainTankLook } from "@game/arena";
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ruleSet } from "@game/engine";
+import { createArenaLayout, createRng, ruleSet } from "@game/engine";
 import type { BotState, Snapshot, ThrowEvent } from "@game/engine";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
+import { LegendDialog } from "./BoardLegend.tsx";
+import { rotateSnapshot } from "./boardOrientation.ts";
 import { ArenaBoard } from "./ArenaBoard.tsx";
 import { botLabels } from "./botLabels.ts";
 import { Scoreboard } from "./Scoreboard.tsx";
@@ -88,9 +90,10 @@ describe("ArenaBoard", () => {
     expect(html).toContain("--tick-ms:900ms");
   });
 
-  test("renders another tank's Dash while a tunnel carries active smoke to its destination", () => {
+  test("renders the layout floor and another tank's Dash while a tunnel carries active smoke", () => {
     const from = bot(0, { ultimate: { id: "smoke", kind: "charging", turnsLeft: 36, turnsTotal: 40 }, ultimateEffect: { kind: "smoke", turnsLeft: 10 } });
-    const next = { ...snapshot, bots: [{ ...from, x: 1, y: 1 }, bot(1, { x: 1, y: 3 }), ...snapshot.bots.slice(2)] };
+    const layout = createArenaLayout("fourQuarters", snapshot, createRng(87));
+    const next = { ...snapshot, layout, bots: [{ ...from, x: 1, y: 1 }, bot(1, { x: 1, y: 3 }), ...snapshot.bots.slice(2)] };
     const html = renderToStaticMarkup(
       <ArenaBoard
         snapshot={next}
@@ -102,6 +105,7 @@ describe("ArenaBoard", () => {
         tickMs={900}
       />,
     );
+    expect(html).toContain('data-arena-layout="fourQuarters"');
     expect(html).toContain('data-tunnel-to="p0"');
     expect(html).toContain('style="transform:translate(15px, 15px)" data-ultimate-smoke="p0"');
     expect(html).toContain('data-ultimate-fire="dash" data-ultimate-source="p1"');
@@ -321,4 +325,38 @@ describe("ArenaBoard with a camera window", () => {
     // The "You" marker is drawn with the viewer's tank, which is outside this window.
     expect(count(windowed, 'data-you-marker="true"')).toBe(1);
   });
+});
+
+test("the hybrid legend shows the ultimate line and lists the layout's areas before the board symbols", () => {
+  for (const language of ["en", "id"] as const) {
+    const html = renderToStaticMarkup(
+      <I18nProvider store={createLanguageStore({ store: null, initial: language })}>
+        <LegendDialog layout="fourQuarters" ultimates onClose={() => undefined} />
+      </I18nProvider>,
+    );
+    const terms = [...html.matchAll(/data-legend-term="">([^<]+)/g)].map(([, term]) => term);
+    expect(html).toContain('data-legend-ultimate=""');
+    expect(html).toContain("section=ultimates");
+    expect(terms.slice(0, 5)).toEqual(language === "en"
+      ? ["Standard", "Dry spell", "Downpour", "Up close", "Water gauge"]
+      : ["Standar", "Musim kering", "Hujan deras", "Jarak dekat", "Takaran air"]);
+    expect(terms).not.toContain(language === "en" ? "Sharp eyes" : "Mata tajam");
+  }
+});
+
+test("an upright hybrid board rotates the floor with the tanks and shows local shot costs", () => {
+  const layout = createArenaLayout("fourQuarters", snapshot, createRng(87));
+  const board = rotateSnapshot({
+    ...snapshot,
+    layout,
+    bots: [bot(0, { x: 4, y: 2, water: 3 }), bot(1, { x: 1, y: 4, water: 2 })],
+  });
+  const html = renderToStaticMarkup(
+    <ArenaBoard snapshot={board} terrainTurned throws={[]} names={names} highlightId="p0" tickMs={900} />,
+  );
+  expect(html).toContain('data-arena-layout="fourQuarters" transform="translate(60 0) rotate(90)"');
+  expect(html).toContain('data-water="3" data-can-throw="false"');
+  expect(html).toContain('data-water="2" data-can-throw="true"');
+  expect(html).toContain("Player 0, 3 of 12 water, too little to shoot");
+  expect(html).toContain("Player 1, 2 of 12 water");
 });

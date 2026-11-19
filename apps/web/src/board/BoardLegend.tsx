@@ -7,7 +7,7 @@
 
 import { CircleHelp, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { ruleSet, STANDARD_RULE_SET_ID } from "@game/engine";
+import { areaRuleSetIds, ruleSet, STANDARD_RULE_SET_ID, type ArenaLayoutId } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { TankShape } from "../tank/TankShape.tsx";
 import { paths } from "../app/route.ts";
@@ -17,6 +17,7 @@ import { Pager } from "../ui/Pager.tsx";
 import type { Jet } from "./boardHelpers.ts";
 import { Crown, DryDrops, JetShape, Puff, Splash } from "./boardShapes.tsx";
 import { DizzyStars, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
+import { AreaGround } from "./LayoutFloor.tsx";
 import { WaterGauge } from "./WaterGauge.tsx";
 
 const STANDARD = ruleSet(STANDARD_RULE_SET_ID);
@@ -59,10 +60,21 @@ interface LegendEntry {
   readonly picture: ReactNode;
 }
 
-function useLegendEntries(): readonly LegendEntry[] {
+function useLegendEntries(layout: ArenaLayoutId | undefined): readonly LegendEntry[] {
   const m = useMessages();
   const l = m.board.legend;
+  const areas = layout === undefined ? [] : areaRuleSetIds(layout);
   return [
+    ...areas.map((set) => ({
+      key: set,
+      term: m.vocabulary.roundRules[set].name,
+      body: l.areas[set],
+      picture: (
+        <svg viewBox="0 0 20 10" className="block h-9 w-full" aria-hidden="true">
+          <AreaGround width={2} height={1} set={set} swatch />
+        </svg>
+      ),
+    })),
     {
       key: "gauge",
       term: l.gauge.term,
@@ -205,7 +217,7 @@ function useLegendEntries(): readonly LegendEntry[] {
 }
 
 /** The help button beside the board and the legend dialog it opens. `onShowAround` replays the screen's tour from the dialog. */
-export function LegendButton({ onShowAround, ultimates = false }: { readonly onShowAround?: () => void; readonly ultimates?: boolean }) {
+export function LegendButton({ onShowAround, layout, ultimates = false }: { readonly onShowAround?: () => void; readonly layout?: ArenaLayoutId | undefined; readonly ultimates?: boolean }) {
   const m = useMessages();
   const l = m.board.legend;
   const [open, setOpen] = useState(false);
@@ -224,6 +236,7 @@ export function LegendButton({ onShowAround, ultimates = false }: { readonly onS
       {open ? (
         <LegendDialog
           ultimates={ultimates}
+          layout={layout}
           onClose={() => {
             setOpen(false);
             // The dialog is gone after this render, so focus goes back to the button that opened it.
@@ -245,10 +258,10 @@ export function LegendButton({ onShowAround, ultimates = false }: { readonly onS
 }
 
 /** Exported for its test; screens use LegendButton. */
-export function LegendDialog({ onClose, onShowAround, ultimates = false }: { onClose: () => void; readonly onShowAround?: () => void; readonly ultimates?: boolean }) {
+export function LegendDialog({ onClose, onShowAround, layout, ultimates = false }: { onClose: () => void; readonly onShowAround?: () => void; readonly layout?: ArenaLayoutId | undefined; readonly ultimates?: boolean }) {
   const m = useMessages();
   const l = m.board.legend;
-  const entries = useLegendEntries();
+  const entries = useLegendEntries(layout);
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 

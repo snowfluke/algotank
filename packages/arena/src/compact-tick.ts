@@ -10,7 +10,8 @@
 // each fresh start moves a tank to the end of the order for the next turn.
 //
 // Wire field order: tick, bots, moves, throws, items, pickups, then the ultimate fields
-// (itemsWaiting, magnetFires, ultimates, fires), then freshStarts. Omit absent fields.
+// (itemsWaiting, magnetFires, ultimates, fires), then freshStarts, then rainColumn.
+// Omit absent fields.
 // Layout (all scalar values are integers):
 //   bots[i]   = [x, y, direction index, score, water, flags, hitsLanded, hitsTaken]
 //               for the tank at spawn index i. Flags bit 0: was hit this turn. Bits 1 to 3:
@@ -33,6 +34,8 @@
 //   The appended fields leave the bot rows at eight values. See ultimate-wire.ts.
 //   freshStarts[k] = [bot index, x, y], the tunnel destinations after the moves,
 //                    in order. Absent on room ticks and turns without a fresh start.
+//
+//   rainColumn: the first column of the rain front after the turn, only on that layout.
 //
 // expandTick throws an Error on a compact tick that does not fit the spawn (an
 // index out of range, a value of the wrong kind). The client treats that as a
@@ -64,6 +67,7 @@ export interface CompactTick {
   readonly ultimates?: readonly CompactUltimate[];
   readonly fires?: readonly CompactFire[];
   readonly freshStarts?: readonly (readonly [number, number, number])[];
+  readonly rainColumn?: number;
 }
 
 /** Direction index to direction. The engine's own table, clockwise from north. */
@@ -190,6 +194,7 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
     ...(ultimates.length === 0 ? {} : { ultimates }),
     ...(fires?.length ? { fires } : {}),
     ...(tick.freshStarts?.length ? { freshStarts: tick.freshStarts.map(({ id, x, y }): [number, number, number] => [idx(id), x, y]) } : {}),
+    ...(tick.snapshot.layout?.id === "rainFront" ? { rainColumn: tick.snapshot.layout.firstColumn } : {}),
   };
 }
 
@@ -339,6 +344,15 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
   }
   const freshStarts = compact.freshStarts === undefined ? undefined : expandFreshStarts(compact.freshStarts, bots, spawn);
 
+  let layout = spawn.layout;
+  if (layout?.id === "rainFront") {
+    const firstColumn = integer(compact.rainColumn, "rain column");
+    if (firstColumn < 0 || firstColumn >= spawn.width) throw new Error("rain column is outside the board");
+    if (firstColumn !== layout.firstColumn) layout = { ...layout, firstColumn };
+  } else if (compact.rainColumn !== undefined) {
+    throw new Error("rain column requires a rain front");
+  }
+
   return {
     tick: integer(compact.tick, "tick"),
     order,
@@ -355,6 +369,7 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       ruleSetId: spawn.ruleSetId,
       bots,
       items,
+      ...(layout === undefined ? {} : { layout }),
     },
     ...(magnetFires === undefined ? {} : { magnetFires }),
     ...(fires === undefined ? {} : { fires }),

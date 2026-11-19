@@ -62,6 +62,12 @@ export const en = {
   newDay: "A new round has started, and every tank starts again at 0 points.",
   /** Over the board for a moment after the board grows. */
   reshuffled: "Reshuffled",
+  layouts: {
+    fourQuarters: { name: "Four quarters", summary: "Each corner of the arena has its own condition." },
+    eyeOfStorm: { name: "Eye of the storm", summary: "Rain falls in the middle, with dry ground around it." },
+    rainFront: { name: "Rain front", summary: "A strip of rain moves across the arena." },
+    hills: { name: "Hills", summary: "When a tank shoots from a hill, Aim and Dodge are twice as strong." },
+  },
   weatherChanged: (name: string) => `The arena condition changed to ${name}.`,
   /** Over the board's corner: the round rules the league drew for this round (server league-day.ts newRound). */
   condition: (name: string) => `Arena condition: ${name}`,
@@ -220,6 +226,12 @@ export const id: typeof en = {
   dayDone: (date) => `Ronde ${date} sudah selesai.`,
   newDay: "Ronde baru sudah mulai, dan semua tank mulai lagi dari 0 poin.",
   reshuffled: "Diacak ulang",
+  layouts: {
+    fourQuarters: { name: "Empat penjuru", summary: "Setiap sudut arena punya kondisi sendiri." },
+    eyeOfStorm: { name: "Mata badai", summary: "Hujan turun di tengah arena, dikelilingi tanah kering." },
+    rainFront: { name: "Front hujan", summary: "Area hujan bergerak melintasi arena." },
+    hills: { name: "Bukit", summary: "Saat tank menembak dari bukit, Bidikan dan Hindaran dua kali lebih kuat." },
+  },
   weatherChanged: (name) => `Kondisi arena berubah menjadi ${name}.`,
   condition: (name) => `Kondisi arena: ${name}`,
   conditionShort: (name) => `Kondisi: ${name}`,

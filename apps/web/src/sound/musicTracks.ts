@@ -3,7 +3,6 @@
 // after it, so the loop points sit inside periodic audio whatever delay the decoder adds.
 
 import { STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
-import measurements from "../../../../tools/music/measurements.json";
 
 export interface MusicTrack {
   /** Under apps/web/public. The name carries a version, so a new render gets a new address. */
@@ -13,17 +12,15 @@ export interface MusicTrack {
   readonly loopEnd: number;
 }
 
-function trackOf(measured: { readonly file: string; readonly loop_start: number; readonly loop_end: number }): MusicTrack {
-  return { url: measured.file.slice("apps/web/public".length), loopStart: measured.loop_start, loopEnd: measured.loop_end };
-}
-
+// The loop points come from tools/music/measurements.json; musicTracks.test.ts checks that they still match. They are
+// copied, not imported, because the release package holds only the apps and packages, not tools/.
 export const MUSIC_TRACKS: Readonly<Record<RuleSetId, MusicTrack>> = {
-  standard: trackOf(measurements.a),
-  "dry-spell": trackOf(measurements.b),
-  downpour: trackOf(measurements.c),
-  "arms-length": trackOf(measurements.d),
-  "open-field": trackOf(measurements.e),
-  "sharp-eyes": trackOf(measurements.f),
+  standard: { url: "/music/a-mallets-v1.mp3", loopStart: 0.5, loopEnd: 102.9 },
+  "dry-spell": { url: "/music/b-dry-v1.mp3", loopStart: 0.5, loopEnd: 55.357142857142854 },
+  downpour: { url: "/music/c-rain-v1.mp3", loopStart: 0.5, loopEnd: 46.214285714285715 },
+  "arms-length": { url: "/music/d-close-v1.mp3", loopStart: 0.5, loopEnd: 38.9 },
+  "open-field": { url: "/music/e-open-v1.mp3", loopStart: 0.5, loopEnd: 55.357142857142854 },
+  "sharp-eyes": { url: "/music/f-sharp-v1.mp3", loopStart: 0.5, loopEnd: 43.166666666666664 },
 };
 
 export const DEFAULT_TRACK = MUSIC_TRACKS[STANDARD_RULE_SET_ID];

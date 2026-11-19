@@ -1,10 +1,8 @@
-// The upgrade bench as data: the 6 upgrade points are tokens that lie in a tray or sit
-// in the sockets of Range, Aim and Dodge (71-workshop-appeal.md, part B). A socket holds
-// the points one level costs, so Range has 2 double sockets and Aim and Dodge 3 single
-// ones. A tap on a socket, plus or minus becomes a new level, or a "blocked" answer that
+// The upgrade bench as data: points lie in a tray or sit in sockets. A socket holds
+// the points one level costs. A tap on a socket, plus or minus becomes a new level, or a "blocked" answer that
 // says how many points it needs, so no control looks active and does nothing.
 
-import { ATTRIBUTES, ruleSet, STANDARD_RULE_SET_ID, throwRange } from "@game/engine";
+import { ATTRIBUTES, NOTICE, ruleSet, STANDARD_RULE_SET_ID, throwRange } from "@game/engine";
 import type { AttributeId, Build, RoundRules } from "@game/engine";
 import { canSetLevel, completeBuild, levelOf, pointsLeft } from "../editor/build.ts";
 import type { NextRules } from "../rules/nextRules.ts";
@@ -99,6 +97,8 @@ export interface UpgradeEffectText {
   dodge(percent: number): string;
   readonly dodgeEmpty: string;
   readonly dodgeSecret: string;
+  readonly camouflageEmpty: string;
+  camouflage(squares: number): string;
 }
 
 /** What one upgrade does now, with the round's numbers, or without them when the rules are secret. */
@@ -113,5 +113,7 @@ export function upgradeSentence(text: UpgradeEffectText, attribute: AttributeId,
     case "dodge":
       if (level === 0) return text.dodgeEmpty;
       return numbers === null ? text.dodgeSecret : text.dodge(level * numbers.perLevel);
+    case "camouflage":
+      return level === 0 ? text.camouflageEmpty : text.camouflage(NOTICE[level] ?? NOTICE[1]);
   }
 }

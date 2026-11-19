@@ -1,11 +1,11 @@
-// The upgrade bench (71-workshop-appeal.md, part B). The 6 upgrade points are cogs: a
+// The upgrade bench (71-workshop-appeal.md, part B). The upgrade points are cogs: a
 // free cog lies in the tray on top, a placed one leaves its silhouette there and sits in
-// a socket of Range, Aim or Dodge. The tray's sentence says how many lie free, or that
+// an upgrade socket. The tray's sentence says how many lie free, or that
 // all are placed and one must come out to move it. A tap that needs more cogs than lie
 // free shakes the tray and says so. "Take all out" empties every socket and turns into
 // "Put them back" in the same place, which is its Undo.
 //
-// Layout: three cards in one row on a pane from 56rem (the group at most 60rem), one
+// Layout: four cards in one row on a pane from 56rem, one
 // card under another below that. Each card: its drawing on top, growing with the free
 // height; then the name, the sockets and minus and plus; then the sentence. On a short
 // pane the cards' sentences go first and the drawings last (ui/useFitDetail); the tray and
@@ -25,7 +25,7 @@ import { IconButton } from "../ui/IconButton.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
 import { useFitDetail } from "../ui/useFitDetail.ts";
 import { Problems } from "./RuleParts.tsx";
-import { AimDrawing, DodgeDrawing, RangeDrawing } from "./UpgradeDrawings.tsx";
+import { AimDrawing, CamouflageDrawing, DodgeDrawing, RangeDrawing } from "./UpgradeDrawings.tsx";
 import { UpgradeToken } from "./UpgradeToken.tsx";
 import { ATTRIBUTE_IDS, freePoints, socketsOf, tapMinus, tapPlus, tapSocket, upgradeNumbers, upgradeSentence, type BenchTap, type UpgradeNumbers } from "./upgrades.ts";
 
@@ -48,9 +48,9 @@ const TOKEN_MOVE_MS = 200;
 const TOKEN_PX = 24;
 /** From this pane height the sockets and cogs are drawn bigger. */
 const BIG_BENCH_MIN_PX = 640;
-/** From this pane width the three cards sit in one row. */
-const THREE_CARDS_MIN_PX = 896;
-/** From this pane width the cards are rows with the drawing at the left, until three fit side by side. */
+/** From this pane width the four cards sit in one row. */
+const COLUMNS_MIN_PX = 896;
+/** From this pane width the cards are rows with the drawing at the left, until all four fit side by side. */
 const ROWS_MIN_PX = 520;
 /** From this pane width the tray's sentence sits beside the tray and its cogs are drawn at full size. */
 const ROOMY_TOP_MIN_PX = 672;
@@ -111,7 +111,7 @@ function Tray({ free, cog }: { readonly free: number; readonly cog: "small" | "m
     // The cogs are smaller in a narrow row, so the tray and its buttons share one line on a 360 px phone.
     <span
       aria-hidden="true"
-      className={`flex shrink-0 items-center rounded-[0.9rem] border-2 border-b-4 border-line-strong bg-line py-1 ${cog === "small" ? "gap-0.5 px-1.5 [&_svg]:size-[22px]" : cog === "medium" ? "gap-1 px-2 [&_svg]:size-[30px]" : "gap-1 px-2 [&_svg]:size-[36px]"}`}
+      className={`flex shrink-0 items-center rounded-[0.9rem] border-2 border-b-4 border-line-strong bg-line py-1 ${cog === "small" ? "gap-0.5 px-1.5 [&_svg]:size-5" : cog === "medium" ? "gap-1 px-2 [&_svg]:size-[30px]" : "gap-1 px-2 [&_svg]:size-[36px]"}`}
     >
       {Array.from({ length: BUILD_BUDGET }, (_, i) => (
         <span key={i} data-tray-place={i}>
@@ -130,12 +130,14 @@ function Drawing({ attribute, level, numbers, look }: { readonly attribute: Attr
       return <AimDrawing look={look} level={level} />;
     case "dodge":
       return <DodgeDrawing look={look} level={level} />;
+    case "camouflage":
+      return <CamouflageDrawing look={look} level={level} />;
   }
 }
 
 /**
- * How the three cards are laid out (71-workshop-appeal.md, part B, and the lead's review):
- * - "columns": three cards side by side on shared rows (a subgrid), so the drawings, names, socket rows and sentences
+ * How the cards are laid out (71-workshop-appeal.md, part B):
+ * - "columns": four cards side by side on shared rows (a subgrid), so the drawings, names, socket rows and sentences
  *   each line up across the cards; the drawing fills its card's width at its own 2:1 shape;
  * - "rows": one card under another, each read from left to right: the drawing at the left at the card's height, then
  *   the name, the sockets with minus and plus, and the sentence;
@@ -147,7 +149,7 @@ export type BenchLayout = "columns" | "rows" | "stacked" | "plain";
 /** The layout for a pane width and a short-pane level (the levels of ui/useFitDetail). Pure, for the test. */
 export function benchLayout(width: number, level: number): BenchLayout {
   if (level >= DROP_DRAWINGS_LEVEL) return "plain";
-  if (width >= THREE_CARDS_MIN_PX) return "columns";
+  if (width >= COLUMNS_MIN_PX) return "columns";
   if (width >= ROWS_MIN_PX || level >= ROWS_LEVEL) return "rows";
   return "stacked";
 }
@@ -173,22 +175,23 @@ function Card(props: {
   const plus = tapPlus(build, attribute);
   const minus = tapMinus(build, attribute);
   // Without its drawing a card is one row, so its cogs are smaller and Range's double sockets fit beside the name on a 360 px phone.
-  const tokenPx = big ? 32 : layout === "plain" ? 20 : TOKEN_PX;
+  const plain = layout === "plain";
+  const tokenPx = plain ? 18 : big ? 32 : TOKEN_PX;
   const drawing = (
     <span className="absolute inset-0 flex">
       <Drawing attribute={attribute} level={level} numbers={props.numbers} look={props.look} />
     </span>
   );
   const heading = (
-    <h3 className={`min-w-0 leading-tight ${layout === "plain" ? "" : "text-lead"}`}>
+    <h3 className={`min-w-0 leading-tight ${plain ? "" : "text-lead"}`}>
       {name}
       <span className="sr-only">{`, ${u.levelOf(level, top)}`}</span>
     </h3>
   );
   // The sockets always sit in one row; minus and plus move under them when the row is too narrow.
   const controls = (
-    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="flex shrink-0 flex-nowrap items-center gap-1">
+    <span className={`flex min-w-0 flex-wrap items-center gap-y-1 ${plain ? "gap-x-1" : "gap-x-2"}`}>
+      <span className={`flex shrink-0 flex-nowrap items-center ${plain ? "" : "gap-1"}`}>
         {sockets.map((socket) => {
           const filled = socket.level <= level;
           const label = filled ? u.emptySocket(name, socket.level - 1) : u.fillSocket(name, socket.level);
@@ -215,7 +218,7 @@ function Card(props: {
           );
         })}
       </span>
-      <span className="flex shrink-0 flex-nowrap items-center gap-1">
+      <span className={`flex shrink-0 flex-nowrap items-center ${plain ? "" : "gap-1"}`}>
         <IconButton label={m.common.decrease(name)} icon={<Minus aria-hidden size={20} strokeWidth={3} />} disabled={minus.kind === "none"} data-upgrade-minus={attribute} onClick={() => props.tap(minus)} />
         {/* Plus stays active when the cogs run out: its tap shakes the tray and says why. */}
         <IconButton label={m.common.increase(name)} icon={<Plus aria-hidden size={20} strokeWidth={3} />} disabled={plus.kind === "none"} data-upgrade-plus={attribute} onClick={() => props.tap(plus)} />
@@ -234,7 +237,7 @@ function Card(props: {
   switch (layout) {
     case "columns":
       return (
-        // Four shared rows across the three cards: drawing, name, sockets, sentence.
+        // Four shared rows across the cards: drawing, name, sockets, sentence.
         <li data-upgrade={attribute} className={`${card} row-span-4 grid grid-rows-subgrid gap-y-1.5 p-2`}>
           <span className="relative block aspect-[2/1] w-full">{drawing}</span>
           {heading}
@@ -265,8 +268,8 @@ function Card(props: {
       );
     case "plain":
       return (
-        <li data-upgrade={attribute} className={`${card} flex flex-col gap-1 px-2 py-1.5`}>
-          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <li data-upgrade={attribute} className={`${card} flex flex-col gap-1 px-1.5 py-0.5`}>
+          <span className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1">
             <span className="min-w-0 flex-[1_0_auto]">{heading}</span>
             <span className="ml-auto">{controls}</span>
           </span>
@@ -281,12 +284,15 @@ function HelpStep({ rules, onBack }: { readonly rules: RoundRules | null; onBack
   const u = m.prep.upgrades;
   return (
     <StepSheet title={u.helpTitle} onBack={onBack} action={<Button onClick={onBack}>{m.prep.rules.done}</Button>}>
-      <div className="flex min-w-0 items-center gap-3">
-        <UpgradeToken look="token" size={44} />
-        <p className="min-w-0 text-lead">{u.helpTokens}</p>
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <UpgradeToken look="token" size={36} />
+          <p className="min-w-0">{u.helpTokens}</p>
+        </div>
+        <p>{u.helpCost}</p>
+        <p>{rules === null ? u.helpDistanceSecret : u.helpDistance(rules.firstDistanceWithSkill)}</p>
+        <p>{u.helpCamouflage}</p>
       </div>
-      <p>{u.helpCost}</p>
-      <p>{rules === null ? u.helpDistanceSecret : u.helpDistance(rules.firstDistanceWithSkill)}</p>
     </StepSheet>
   );
 }
@@ -331,11 +337,10 @@ export function UpgradesPane({ strategy, rules, problems, look, onChange, action
   // cards' overflow from useFitDetail, so the bench could clip a card without knowing it.
   const width = pane?.width ?? 0;
   const layout = benchLayout(width, detail.level);
-  const threeInARow = layout === "columns";
   const roomyTop = width >= ROOMY_TOP_MIN_PX;
   const wordy = width >= WORDY_TOP_MIN_PX;
-  // A tall, wide pane lets the bench grow to 72rem, so its three cards and drawings fill a laptop window.
-  const wideBench = big && threeInARow ? "max-w-[72rem]" : "max-w-[60rem]";
+  // A tall, wide pane lets the bench grow to 72rem so the drawings fill a laptop window.
+  const wideBench = big && layout === "columns" ? "max-w-[72rem]" : "max-w-[60rem]";
 
   function change(next: StrategyInput): void {
     setNote({ kind: "count" });
@@ -361,7 +366,6 @@ export function UpgradesPane({ strategy, rules, problems, look, onChange, action
     <div
       ref={rootRef}
       className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 fit:overflow-hidden"
-
     >
       {/* The tray and its buttons on one line; the sentence beside them where the row is wide, under them where it is not. */}
       <div className={`mx-auto w-full min-w-0 shrink-0 ${wideBench}`}>
@@ -419,10 +423,10 @@ export function UpgradesPane({ strategy, rules, problems, look, onChange, action
         <ul
           className={`m-0 grid min-h-0 flex-1 list-none content-start p-0 ${
             layout === "columns"
-              ? "grid-cols-3 grid-rows-[auto_auto_auto_auto] gap-x-3 gap-y-1.5"
+              ? "grid-cols-4 grid-rows-[auto_auto_auto_auto] gap-x-3 gap-y-1.5"
               : layout === "stacked"
-                ? "grid-rows-[repeat(3,minmax(auto,16rem))] gap-2"
-                : "grid-rows-[repeat(3,auto)] gap-2"
+                ? "auto-rows-[minmax(auto,16rem)] gap-2"
+                : layout === "plain" ? "gap-1" : "gap-2"
           }`}
         >
           {ATTRIBUTE_IDS.map((attribute) => (

@@ -38,8 +38,9 @@ function overlap(rules: readonly Rule[], preset: readonly Rule[]): number {
 
 /** The assignment step a strategy reaches. The SQLite dry run uses it without drawing an ultimate. */
 export function matchUltimate(strategy: UnassignedStrategy): UltimateMatch {
+  const build = { camouflage: 0, ...strategy.build };
   const exact = PRESETS.find(({ strategy: preset }) =>
-    sameData(strategy.build, preset.build) &&
+    sameData(build, preset.build) &&
     strategy.modes.length === preset.modes.length &&
     preset.modes.every((mode, index) => sameModeRules(strategy.modes[index], mode)),
   );

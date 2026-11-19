@@ -235,7 +235,8 @@ describe("new rules for a tank on the board", () => {
     joinRound(round, { id: "b", strategy: strategyAt(1) });
     for (let i = 0; i < 30; i++) stepRound(round);
     const before = round.snapshot.bots.find((b) => b.id === "a");
-    const next = strategyAt(2);
+    const changed = strategyAt(2);
+    const next = { ...changed, build: { ...changed.build, camouflage: 1 } };
     const after = replaceStrategy(round, "a", next);
     const kept = ({ x, y, direction, score, water, item, itemUses, effect, hitsLanded, hitsTaken, lastHitBy, tieRank }: NonNullable<typeof before>) => ({ x, y, direction, score, water, item, itemUses, effect, hitsLanded, hitsTaken, lastHitBy, tieRank });
     expect(kept(after)).toEqual(kept(before as NonNullable<typeof before>));
@@ -245,6 +246,7 @@ describe("new rules for a tank on the board", () => {
     expect(round.snapshot.bots.find((b) => b.id === "a")).toEqual(after);
     expect(roundHoldings(round)).toEqual({ tanks: 2, strategies: 2, tieBreaks: 2, sequences: roundHoldings(round).sequences });
     expect(() => stepRound(round)).not.toThrow();
+    expect(Object.hasOwn(replaceStrategy(round, "a", changed).build, "camouflage")).toBe(false);
     expect(() => replaceStrategy(round, "nobody", next)).toThrow();
   });
 });

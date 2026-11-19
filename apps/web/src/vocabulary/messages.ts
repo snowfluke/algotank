@@ -319,6 +319,7 @@ export const en: VocabularyText = {
     reach: { name: "Range" },
     aim: { name: "Aim" },
     dodge: { name: "Dodge" },
+    camouflage: { name: "Camouflage" },
   },
   playStyles: {
     evader: { name: "Evader", summary: "Dodges, grabs items, then shoots a careless tank." },
@@ -605,6 +606,7 @@ export const id: VocabularyText = {
     reach: { name: "Jangkauan" },
     aim: { name: "Bidikan" },
     dodge: { name: "Hindaran" },
+    camouflage: { name: "Kamuflase" },
   },
   playStyles: {
     evader: { name: "Pengelak", summary: "Mengelak, memungut item, lalu menembak tank lengah." },

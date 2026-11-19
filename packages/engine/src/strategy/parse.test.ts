@@ -72,6 +72,13 @@ describe("parseStrategy accepts", () => {
     const result = parseStrategy(strategyWith({}, { name: "  Main  " }));
     expect(result.ok && result.strategy.modes[0]?.name).toBe("Main");
   });
+
+  test("a saved build without Camouflage has level zero", () => {
+    const result = parseStrategy(strategyWith());
+    expect(result.ok && result.strategy.build["camouflage"]).toBe(0);
+    const atBudget = parseStrategy(strategyWith({ build: { reach: 0, aim: 3, dodge: 3, camouflage: 1 } }));
+    expect(atBudget.ok && atBudget.strategy.build["camouflage"]).toBe(1);
+  });
 });
 
 describe("parseStrategy rejects, with a message", () => {
@@ -117,8 +124,8 @@ describe("parseStrategy rejects, with a message", () => {
   });
 
   test("a build over budget", () => {
-    const errors = errorsOf(strategyWith({ build: { reach: 2, aim: 3, dodge: 1 } }));
-    expect(errors.join("\n")).toContain("the build costs 8 points and the budget is 6");
+    const errors = errorsOf(strategyWith({ build: { reach: 0, aim: 3, dodge: 3, camouflage: 2 } }));
+    expect(errors.join("\n")).toContain("the build costs 8 points and the budget is 7");
   });
 
   test("a build with a missing attribute, an extra attribute or a level out of range", () => {
@@ -128,6 +135,11 @@ describe("parseStrategy rejects, with a message", () => {
     expect(errorsOf(strategyWith({ build: { reach: 3, aim: 0, dodge: 0 } })).join("\n")).toContain("Reach must be a whole number from 0 to 2");
     expect(errorsOf(strategyWith({ build: { reach: 1.5, aim: 0, dodge: 0 } })).join("\n")).toContain("Reach must be a whole number");
     expect(errorsOf(strategyWith({ build: null })).join("\n")).toContain("the build must give a level");
+  });
+
+  test.each([-1, 3, 1.5, undefined, null])("a present Camouflage level must be a whole number from 0 to 2 (%p)", (camouflage) => {
+    expect(errorsOf(strategyWith({ build: { reach: 0, aim: 0, dodge: 0, camouflage } })).join("\n"))
+      .toContain("Camouflage must be a whole number from 0 to 2");
   });
 
   test("a switchToMode to a missing mode", () => {
@@ -293,7 +305,7 @@ const CASES: Record<StrategyIssueCode, { readonly input: unknown; readonly path:
   buildMissing: { input: strategyWith({ build: null }), path: ["build"], params: {} },
   unknownAttribute: { input: strategyWith({ build: { reach: 0, aim: 0, dodge: 0, speed: 1 } }), path: ["build", "speed"], params: { key: "speed" } },
   levelOutOfRange: { input: strategyWith({ build: { reach: 3, aim: 0, dodge: 0 } }), path: ["build", "reach"], params: { attribute: "reach", max: 2 } },
-  overBudget: { input: strategyWith({ build: { reach: 2, aim: 3, dodge: 1 } }), path: ["build"], params: { cost: 8, budget: 6 } },
+  overBudget: { input: strategyWith({ build: { reach: 2, aim: 3, dodge: 1 } }), path: ["build"], params: { cost: 8, budget: 7 } },
 };
 
 test("useUltimate cannot be a step of a sequence", () => {

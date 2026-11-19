@@ -508,7 +508,7 @@ function parseBuild(raw: unknown, problems: Problems): Build | null {
   const build: Record<string, number> = {};
   let valid = true;
   for (const attribute of Object.values(ATTRIBUTES)) {
-    const level = field(raw, attribute.id);
+    const level = attribute.id === "camouflage" && !Object.hasOwn(raw, attribute.id) ? 0 : field(raw, attribute.id);
     const highest = attribute.levels.length - 1;
     if (!isWholeNumber(level) || level < 0 || level > highest) {
       problems.add(

@@ -14,7 +14,7 @@ import { RULE_SETS } from "./rule-sets.ts";
 import type { RoundRules } from "./rule-sets.ts";
 
 /** Points a player spends across the attributes below. */
-export const BUILD_BUDGET = 6;
+export const BUILD_BUDGET = 7;
 
 /** Points the target loses and the thrower gains for one hit. */
 export const POINTS_PER_HIT = 1;
@@ -43,6 +43,15 @@ const SKILL_LEVELS = [
   { cost: 3, label: "3" },
 ] as const;
 
+const CAMOUFLAGE_LEVELS = [
+  { cost: 0, label: "0" },
+  { cost: 1, label: "1" },
+  { cost: 2, label: "2" },
+] as const;
+
+// Owner's decision (2026-11-19): how far point-hunting rules notice a tank at each Camouflage level.
+export const NOTICE = [Number.POSITIVE_INFINITY, 8, 5] as const;
+
 export const ATTRIBUTES = {
   reach: {
     id: "reach",
@@ -61,6 +70,12 @@ export const ATTRIBUTES = {
     label: "Dodge",
     effect: "Each level takes points off the hit chance of throws at you. The round's rules set how many points and from how far.",
     levels: SKILL_LEVELS,
+  },
+  camouflage: {
+    id: "camouflage",
+    label: "Camouflage",
+    effect: `Tanks that hunt by points notice your tank only from ${NOTICE[1]} squares at level 1 and ${NOTICE[2]} squares at level 2.`,
+    levels: CAMOUFLAGE_LEVELS,
   },
 } as const satisfies Record<string, AttributeDef>;
 
@@ -82,6 +97,7 @@ export const MAX_WATER_CAPACITY = Math.max(...ALL_RULE_SETS.map((rules) => rules
 /** The level a build holds in one attribute. */
 export function attributeLevel(build: Build, id: AttributeId): number {
   const value = build[id];
+  if (id === "camouflage" && value === undefined && !Object.hasOwn(build, id)) return 0;
   if (value === undefined) throw new Error(`build has no level for attribute "${id}"`);
   return value;
 }

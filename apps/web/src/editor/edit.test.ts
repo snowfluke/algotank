@@ -249,7 +249,7 @@ describe("modes", () => {
 describe("build", () => {
   test("a level that passes the budget is refused", () => {
     const start = DEFAULT_STRATEGY;
-    expect(pointsLeft(start.build)).toBe(0);
+    expect(pointsLeft(start.build)).toBe(1);
     const reach = levelOf(start.build, "reach");
     expect(canSetLevel(start.build, "reach", reach + 1)).toBe(false);
     expect(setBuildLevel(start, "reach", reach + 1)).toBe(start);

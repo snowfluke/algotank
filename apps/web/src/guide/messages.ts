@@ -6,6 +6,8 @@
 // `where` is the pill shown while the step's target is not on the screen: where to go.
 // tours.test.ts counts the words and checks the reading time of the timed tours.
 
+import { BUILD_BUDGET } from "@game/engine";
+
 export interface StepText {
   readonly text: string;
   readonly where: string;
@@ -33,7 +35,7 @@ const stepTexts = {
     where: "Tap a rule to open it.",
   },
   workshopUpgrades: {
-    text: "Your tank has 6 upgrade points, and each upgrade has sockets to put them in.",
+    text: `Your tank has ${BUILD_BUDGET} upgrade points, and each upgrade has sockets to put them in.`,
     where: "Open the Upgrades tab.",
   },
   workshopRun: {
@@ -168,7 +170,7 @@ export const id: typeof en = {
       where: "Ketuk satu aturan untuk membukanya.",
     },
     workshopUpgrades: {
-      text: "Tank kamu punya 6 poin peningkatan, dan tiap peningkatan punya lubang untuk memasangnya.",
+      text: `Tank kamu punya ${BUILD_BUDGET} poin peningkatan, dan tiap peningkatan punya lubang untuk memasangnya.`,
       where: "Buka tab Peningkatan.",
     },
     workshopRun: {

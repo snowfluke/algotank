@@ -28,6 +28,7 @@ export {
   BUILD_BUDGET,
   MAX_THROW_RANGE,
   MAX_WATER_CAPACITY,
+  NOTICE,
   POINTS_PER_HIT,
   canThrow,
   waterAfterTick,

@@ -2,8 +2,8 @@
 // language. The rule card reads the finished sentence; the rule editor reads the
 // same parts and puts a control where a parameter goes, so both always agree.
 
-import { ACTION_IDS, ACTIONS, CONDITION_IDS, CONDITIONS, TARGET_IDS, isRuleSetId, isSequence, ultimateCatchesTanks } from "@game/engine";
-import type { ActionId, ActionRef, ConditionId, ConditionRef, Mode, ParamSpec, ParamValues, Rule, RuleAction, UltimateId } from "@game/engine";
+import { ACTION_IDS, ACTIONS, ATTRIBUTES, CONDITION_IDS, CONDITIONS, TARGET_IDS, isRuleSetId, isSequence, ultimateCatchesTanks } from "@game/engine";
+import type { ActionId, ActionRef, AttributeId, ConditionId, ConditionRef, Mode, ParamSpec, ParamValues, Rule, RuleAction, UltimateId } from "@game/engine";
 import { ACTION_GROUPS, CHOICE_OPTIONS, CONDITION_GROUPS, PLAY_STYLE_MODES, isOneOf, type ActionGroupId, type ChoiceKey, type ConditionGroupId } from "./ids.ts";
 import type { PhraseText, UnitText, VocabularyText } from "./messages.ts";
 import { stepKindOf, type StepKind } from "./steps.ts";
@@ -68,7 +68,7 @@ export function actionParts(v: VocabularyText, actionId: string): SentencePart[]
 }
 
 function choiceText(v: VocabularyText, key: string, value: string): string | null {
-  if (key === "attribute") return value === "reach" || value === "aim" || value === "dodge" ? v.attributes[value].name : null;
+  if (key === "attribute") return Object.hasOwn(ATTRIBUTES, value) ? v.attributes[value as AttributeId].name : null;
   if (key === "set") return isRuleSetId(value) ? v.roundRules[value].name : null;
   if (!Object.hasOwn(CHOICE_OPTIONS, key)) return null;
   const choiceKey = key as ChoiceKey;

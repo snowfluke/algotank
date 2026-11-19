@@ -28,7 +28,7 @@ import { ACCOUNT_STRATEGY_LIMITS, cleanStrategyName, type AccountStrategiesRespo
 import { assignUltimate, hasStrategyBody, isUltimateId, parseStrategy } from "@game/engine";
 import type { StrategyInput } from "@game/engine";
 import type { ApiResult } from "../api/client.ts";
-import { sameData } from "../editor/compare.ts";
+import { sameStrategy } from "../editor/compare.ts";
 import type { KeyValueStore } from "../session/storage.ts";
 import type { Clock } from "../ui/timer.ts";
 import { emptyMemory, mergePlan, type MyPlayStyle, type SyncMemory } from "./merge.ts";
@@ -184,7 +184,7 @@ export class PlayStyleLibrary {
   save(id: string, input: StrategyInput): StrategyInput | undefined {
     const style = this.get(id);
     if (style === undefined) return undefined;
-    if (sameData(style.strategy, input)) return style.strategy;
+    if (sameStrategy(style.strategy, input)) return style.strategy;
     this.replace({ ...style, strategy: input, updatedAt: this.nextTime(style) });
     return input;
   }

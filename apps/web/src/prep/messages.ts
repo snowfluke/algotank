@@ -2,7 +2,7 @@
 // screen where a player prepares a tank. The words for conditions, actions and
 // play styles are in vocabulary/messages.ts.
 
-import type { RoundRules, StrategyIssueCode, StrategyIssueParams } from "@game/engine";
+import { NOTICE, type RoundRules, type StrategyIssueCode, type StrategyIssueParams } from "@game/engine";
 import type { TraitId } from "./playStyles.ts";
 import type { UpgradeEffectText } from "./upgrades.ts";
 
@@ -73,6 +73,7 @@ export interface PrepText {
     readonly helpCost: string;
     helpDistance(squares: number): string;
     readonly helpDistanceSecret: string;
+    readonly helpCamouflage: string;
   };
   readonly rules: {
     readonly intro: string;
@@ -255,13 +256,16 @@ export const en: PrepText = {
       dodge: (percent) => `Shots at you hit ${percent}% less often.`,
       dodgeEmpty: "Dodge is still empty, so shots at you hit as usual.",
       dodgeSecret: "Shots at you hit less often.",
+      camouflageEmpty: "Camouflage is still empty, so tanks that hunt by points find your tank anywhere.",
+      camouflage: (squares: number) => `Tanks that hunt by points find your tank only within ${squares} squares.`,
     },
     help: "How upgrade points work",
     helpTitle: "Upgrade points",
     helpTokens: "Tap an empty socket to put points in, and tap a full one to take them out.",
-    helpCost: "One level of Range takes 2 points, and one level of Aim or Dodge takes 1 point.",
+    helpCost: "One level of Range takes 2 points. Aim, Dodge and Camouflage take 1 point per level.",
     helpDistance: (squares) => `Aim and Dodge count only when the two tanks are ${squares} or more squares apart.`,
     helpDistanceSecret: "Aim and Dodge count from a distance that the round rules set.",
+    helpCamouflage: `Camouflage: rules that pick by points find your tank only within ${NOTICE[1]} squares at level 1, or ${NOTICE[2]} at level 2.`,
   },
   rules: {
     intro: "Each turn, your tank starts again at rule 1 and does the first rule that fits.",
@@ -489,13 +493,16 @@ export const id: PrepText = {
       dodge: (percent) => `Tembakan ke arahmu kena ${percent}% lebih jarang.`,
       dodgeEmpty: "Hindaran masih kosong, jadi tembakan ke arahmu kena seperti biasa.",
       dodgeSecret: "Tembakan ke arahmu lebih jarang kena.",
+      camouflageEmpty: "Kamuflase masih kosong, jadi tank pemburu poin bisa menemukan tankmu di mana saja.",
+      camouflage: (squares) => `Tank pemburu poin hanya bisa menemukan tankmu dalam jarak ${squares} petak.`,
     },
     help: "Cara kerja poin peningkatan",
     helpTitle: "Poin peningkatan",
     helpTokens: "Ketuk lubang yang kosong untuk memasang poin, dan ketuk yang terisi untuk melepasnya.",
-    helpCost: "Satu level Jangkauan butuh 2 poin, dan satu level Bidikan atau Hindaran butuh 1 poin.",
+    helpCost: "Satu level Jangkauan butuh 2 poin. Bidikan, Hindaran, dan Kamuflase butuh 1 poin per level.",
     helpDistance: (squares) => `Bidikan dan Hindaran baru berlaku kalau kedua tank berjarak ${squares} petak atau lebih.`,
     helpDistanceSecret: "Bidikan dan Hindaran berlaku mulai jarak yang ditentukan aturan ronde.",
+    helpCamouflage: `Kamuflase: aturan yang memilih menurut poin hanya menemukan tankmu dalam ${NOTICE[1]} petak di level 1, atau ${NOTICE[2]} petak di level 2.`,
   },
   rules: {
     intro: "Di setiap giliran, tank kamu mulai lagi dari aturan 1 dan menjalankan aturan pertama yang cocok.",

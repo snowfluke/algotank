@@ -637,6 +637,32 @@ describe("target selectors", () => {
     expect(pick("highestScore", leading)).toBe("second");
   });
 
+  test.each([
+    ["highestScore", 9],
+    ["nearestWithMorePoints", 9],
+    ["nearestWithFewerPoints", 1],
+    ["cutRival", 9],
+  ] as const)("%s respects Camouflage at Chebyshev distances 8 and 5", (selector, score) => {
+    const self = bot("me", 0, 0, "SE", { score: 5 });
+    const choose = (distance: number, camouflage: number, target: string = selector) => {
+      const rival = bot("rival", distance, distance, "NW", { score });
+      const bots = [self, { ...rival, build: { ...rival.build, camouflage } }];
+      return pick(target, bots, { width: 20, height: 20, survivorsAfterRound: null });
+    };
+    expect(choose(19, 0)).toBe("rival");
+    expect(choose(8, 1)).toBe("rival");
+    expect(choose(9, 1)).toBeNull();
+    expect(choose(5, 2)).toBe("rival");
+    expect(choose(6, 2)).toBeNull();
+    expect(choose(9, 2, "farthest")).toBe("rival");
+  });
+
+  test("the most points goes to a visible runner-up when the leader is beyond notice", () => {
+    const leader = bot("leader", 10, 10, "N", { score: 9 });
+    const bots = [me, { ...leader, build: { ...leader.build, camouflage: 2 } }, bot("second", 3, 3, "E", { score: 6 })];
+    expect(pick("highestScore", bots, { width: 12, height: 12 })).toBe("second");
+  });
+
   test("the first bot in my throw line, within my range", () => {
     const bots = [me, bot("far", 7, 3, "N"), bot("near", 5, 3, "N"), bot("side", 4, 4, "N")];
     expect(pick("inThrowLine", bots)).toBe("near");

@@ -21,14 +21,10 @@ const NONE: Build = { reach: 0, aim: 0, dodge: 0 };
 
 /** Every build the attributes allow, spent or not. */
 function allBuilds(): Build[] {
-  const builds: Build[] = [];
-  const [reach, aim, dodge] = [ATTRIBUTES.reach, ATTRIBUTES.aim, ATTRIBUTES.dodge];
-  for (let r = 0; r < reach.levels.length; r++) {
-    for (let a = 0; a < aim.levels.length; a++) {
-      for (let d = 0; d < dodge.levels.length; d++) builds.push({ reach: r, aim: a, dodge: d });
-    }
-  }
-  return builds;
+  return Object.values(ATTRIBUTES).reduce<Build[]>(
+    (builds, attribute) => builds.flatMap((build) => attribute.levels.map((_, level) => ({ ...build, [attribute.id]: level }))),
+    [{}],
+  );
 }
 
 /** The longest throw any build can make under one set. */
@@ -37,8 +33,8 @@ function longestThrow(rules: RoundRules): number {
 }
 
 describe("build", () => {
-  test("the attributes are reach, aim and dodge", () => {
-    expect(Object.keys(ATTRIBUTES)).toEqual(["reach", "aim", "dodge"]);
+  test("the attributes are reach, aim, dodge and camouflage", () => {
+    expect(Object.keys(ATTRIBUTES)).toEqual(["reach", "aim", "dodge", "camouflage"]);
   });
 
   test("some builds spend the whole budget, and none is cheaper than nothing", () => {

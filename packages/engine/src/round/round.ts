@@ -136,6 +136,13 @@ export function createRound(config: RoundConfig): RoundState {
   return new RoundRuntime(config, spawn, rng, strategies, tieBreaks);
 }
 
+/** Omit level-zero Camouflage so old snapshots, replays and messages keep the same bytes. */
+function buildOnBoard(build: Build): Build {
+  if (build["camouflage"] !== 0) return build;
+  const { camouflage: _camouflage, ...rest } = build;
+  return rest;
+}
+
 /** A tank as it spawns: full water, nothing happened to it yet. `score` is 0 except for a tank that resumes its day (joinRound). */
 function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string, build: Build, score: number, water: number, ultimate: UltimateId | undefined): BotState {
   // The key order is the order of every stored snapshot; keep it.
@@ -150,7 +157,7 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
     ticksSinceHit: null,
     lastMove: null,
     modeId,
-    build,
+    build: buildOnBoard(build),
     ticksInMode: 0,
     hitsLanded: 0,
     hitsTaken: 0,
@@ -317,7 +324,7 @@ export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy
     ...old,
     modeId: firstMode.id,
     ticksInMode: 0,
-    build: strategy.build,
+    build: buildOnBoard(strategy.build),
     ...(old.ultimate !== undefined && old.ultimate.id !== strategy.ultimate
       ? { ultimate: firstUltimateCharge(strategy.ultimate), ultimateEffect: null }
       : {}),

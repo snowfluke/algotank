@@ -104,6 +104,7 @@ export function SoundControl() {
               <IconButton label={m.close} icon={<X aria-hidden size={22} />} variant="quiet" data-sound-close="" onClick={close} />
             </div>
             <Switch label={m.music} {...(musicLine(music.on, musicState) === undefined ? {} : { description: m.musicFailed })} on={music.on} onChange={music.set} />
+            <VolumeSlider label={m.musicVolume} value={settings.musicVolume} disabled={!music.on} onChange={(musicVolume) => setSettings({ musicVolume })} />
             <Switch
               label={m.effects}
               on={settings.effects}
@@ -113,9 +114,42 @@ export function SoundControl() {
                 if (on) playSound("tap");
               }}
             />
+            {/* Letting go of the effects slider plays a tap at the new level, so the person hears where it is. */}
+            <VolumeSlider label={m.effectsVolume} value={settings.effectsVolume} disabled={!settings.effects} onChange={(effectsVolume) => setSettings({ effectsVolume })} onRelease={() => playSound("tap")} />
           </div>
         ) : null}
       </dialog>
     </>
+  );
+}
+
+/**
+ * One level, 0 to 100 percent, under its switch (owner, 2026-11-19: "a slider for player to choose their liking on
+ * sound level"). The switch above names it, so the slider shows no words of its own; its accessible name says which
+ * level it is. A native range input, so keys, touch and screen readers work without extra code.
+ */
+function VolumeSlider({ label, value, disabled, onChange, onRelease }: {
+  readonly label: string;
+  readonly value: number;
+  readonly disabled: boolean;
+  onChange(volume: number): void;
+  onRelease?: () => void;
+}) {
+  const percent = Math.round(value * 100);
+  return (
+    <input
+      type="range"
+      min={0}
+      max={100}
+      step={5}
+      value={percent}
+      aria-label={label}
+      aria-valuetext={`${percent}%`}
+      disabled={disabled}
+      data-volume-slider=""
+      onChange={(event) => onChange(Number(event.currentTarget.value) / 100)}
+      {...(onRelease === undefined ? {} : { onPointerUp: onRelease, onKeyUp: onRelease })}
+      className="mb-1 h-11 w-full min-w-0 cursor-pointer accent-[var(--color-water,#1667c0)] disabled:cursor-not-allowed disabled:opacity-50"
+    />
   );
 }

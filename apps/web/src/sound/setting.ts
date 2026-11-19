@@ -1,4 +1,4 @@
-// The two sound switches, music and effects. Default: both on. The browser remembers them
+// The two sound switches, music and effects, each with its own level. Default: both on, at full level. The browser remembers them
 // under the key the single sound switch used before (`algotank:sound`), now as JSON.
 // Versions before the music wrote "on" or "off"; "off" turns both off, because a person
 // who muted the game did not ask for music to start.
@@ -10,9 +10,17 @@ import { browserStore, type KeyValueStore } from "../session/storage.ts";
 export interface SoundSettings {
   readonly music: boolean;
   readonly effects: boolean;
+  /** 0 to 1, the person's own level for each (owner, 2026-11-19: "a slider for player to choose their liking on sound level"). */
+  readonly musicVolume: number;
+  readonly effectsVolume: number;
 }
 
-const DEFAULT_SOUND_SETTINGS: SoundSettings = { music: true, effects: true };
+const DEFAULT_SOUND_SETTINGS: SoundSettings = { music: true, effects: true, musicVolume: 1, effectsVolume: 1 };
+
+/** A stored level: a number from 0 to 1, or the default. */
+function volumeOf(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
+}
 
 export interface SoundSettingsStore {
   get(): SoundSettings;
@@ -23,7 +31,7 @@ export interface SoundSettingsStore {
 /** Reads the stored value. Anything that is not a known shape gives the defaults, because the store is outside the app's control. */
 export function parseSoundSettings(stored: string | null): SoundSettings {
   if (stored === null || stored === "on") return DEFAULT_SOUND_SETTINGS;
-  if (stored === "off") return { music: false, effects: false };
+  if (stored === "off") return { ...DEFAULT_SOUND_SETTINGS, music: false, effects: false };
   let value: unknown;
   try {
     value = JSON.parse(stored);
@@ -35,6 +43,8 @@ export function parseSoundSettings(stored: string | null): SoundSettings {
   return {
     music: typeof record.music === "boolean" ? record.music : DEFAULT_SOUND_SETTINGS.music,
     effects: typeof record.effects === "boolean" ? record.effects : DEFAULT_SOUND_SETTINGS.effects,
+    musicVolume: volumeOf(record.musicVolume, DEFAULT_SOUND_SETTINGS.musicVolume),
+    effectsVolume: volumeOf(record.effectsVolume, DEFAULT_SOUND_SETTINGS.effectsVolume),
   };
 }
 
@@ -45,7 +55,7 @@ export function createSoundSettings(store: KeyValueStore | null): SoundSettingsS
     get: () => settings,
     set(next) {
       const merged = { ...settings, ...next };
-      if (merged.music === settings.music && merged.effects === settings.effects) return;
+      if (merged.music === settings.music && merged.effects === settings.effects && merged.musicVolume === settings.musicVolume && merged.effectsVolume === settings.effectsVolume) return;
       settings = merged;
       writePreference(store, PREFERENCE_KEYS.sound, JSON.stringify(settings));
       for (const listener of listeners) listener();

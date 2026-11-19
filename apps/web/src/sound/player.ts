@@ -87,7 +87,7 @@ export const playSound: (name: SoundName) => boolean = createSoundPlayer({
   synth: (ctx, name) => {
     // Each sound goes through its own level, so one table balances them all.
     const level = ctx.createGain();
-    level.gain.value = SOUND_LEVELS[name];
+    level.gain.value = SOUND_LEVELS[name] * soundSettings.get().effectsVolume;
     level.connect(ctx.destination);
     SYNTHS[name](level, ctx.currentTime);
   },

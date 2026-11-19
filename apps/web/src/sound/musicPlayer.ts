@@ -38,10 +38,13 @@ export interface MusicPlayer {
   setVisible(visible: boolean): void;
   /** Lowers the music for DUCK_MS under one of the player's own effect sounds. */
   duck(): void;
+  /** The person's level, 0 to 1, on top of MUSIC_GAIN. */
+  setVolume(volume: number): void;
 }
 
 interface Graph {
   readonly ctx: MusicContext;
+  readonly level: GainNode;
   readonly duck: GainNode;
 }
 
@@ -58,6 +61,7 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
   const buffers = new Map<string, AudioBuffer>();
   const downloads = new Map<string, Promise<AudioBuffer | undefined>>();
   let startRequest = 0;
+  let volume = 1;
   let graph: Graph | null = null;
   let voice: Voice | null = null;
   /** Seconds into the loop where the music stopped, so turning it on again continues the tune. */
@@ -136,11 +140,11 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
   function ensureGraph(ctx: MusicContext): Graph {
     if (graph !== null && graph.ctx === ctx) return graph;
     const level = ctx.createGain();
-    level.gain.value = MUSIC_GAIN;
+    level.gain.value = MUSIC_GAIN * volume;
     level.connect(ctx.destination);
     const duck = ctx.createGain();
     duck.connect(level);
-    graph = { ctx, duck };
+    graph = { ctx, level, duck };
     return graph;
   }
 
@@ -241,6 +245,12 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
     },
     duck() {
       send({ type: "duck" });
+    },
+    setVolume(next) {
+      volume = next;
+      if (graph === null) return;
+      // A short glide, so dragging the slider does not click.
+      graph.level.gain.setTargetAtTime(MUSIC_GAIN * volume, graph.ctx.currentTime, 0.03);
     },
   };
 }

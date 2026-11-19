@@ -77,28 +77,37 @@ describe("sound settings", () => {
   test("default to music and effects on, and remember each switch", () => {
     const { data, store } = memoryStore();
     const settings = createSoundSettings(store);
-    expect(settings.get()).toEqual({ music: true, effects: true });
+    expect(settings.get()).toEqual({ music: true, effects: true, musicVolume: 1, effectsVolume: 1 });
     settings.set({ music: false });
-    expect(createSoundSettings(store).get()).toEqual({ music: false, effects: true });
+    expect(createSoundSettings(store).get()).toEqual({ music: false, effects: true, musicVolume: 1, effectsVolume: 1 });
     settings.set({ effects: false });
-    expect(JSON.parse(data[PREFERENCE_KEYS.sound] ?? "")).toEqual({ music: false, effects: false });
+    expect(JSON.parse(data[PREFERENCE_KEYS.sound] ?? "")).toEqual({ music: false, effects: false, musicVolume: 1, effectsVolume: 1 });
   });
 
   test("read the single switch of earlier versions: off turns both off, on keeps both on", () => {
-    expect(createSoundSettings(memoryStore({ [PREFERENCE_KEYS.sound]: "off" }).store).get()).toEqual({ music: false, effects: false });
-    expect(createSoundSettings(memoryStore({ [PREFERENCE_KEYS.sound]: "on" }).store).get()).toEqual({ music: true, effects: true });
+    expect(createSoundSettings(memoryStore({ [PREFERENCE_KEYS.sound]: "off" }).store).get()).toEqual({ music: false, effects: false, musicVolume: 1, effectsVolume: 1 });
+    expect(createSoundSettings(memoryStore({ [PREFERENCE_KEYS.sound]: "on" }).store).get()).toEqual({ music: true, effects: true, musicVolume: 1, effectsVolume: 1 });
   });
 
   test("write the new shape after a change to a migrated value", () => {
     const { data, store } = memoryStore({ [PREFERENCE_KEYS.sound]: "off" });
     createSoundSettings(store).set({ effects: true });
-    expect(JSON.parse(data[PREFERENCE_KEYS.sound] ?? "")).toEqual({ music: false, effects: true });
+    expect(JSON.parse(data[PREFERENCE_KEYS.sound] ?? "")).toEqual({ music: false, effects: true, musicVolume: 1, effectsVolume: 1 });
   });
 
   test("fall back to the defaults for a value they cannot read, field by field", () => {
-    expect(parseSoundSettings("{broken")).toEqual({ music: true, effects: true });
-    expect(parseSoundSettings("42")).toEqual({ music: true, effects: true });
-    expect(parseSoundSettings('{"music":false,"effects":"yes"}')).toEqual({ music: false, effects: true });
+    expect(parseSoundSettings("{broken")).toEqual({ music: true, effects: true, musicVolume: 1, effectsVolume: 1 });
+    expect(parseSoundSettings("42")).toEqual({ music: true, effects: true, musicVolume: 1, effectsVolume: 1 });
+    expect(parseSoundSettings('{"music":false,"effects":"yes"}')).toEqual({ music: false, effects: true, musicVolume: 1, effectsVolume: 1 });
+  });
+
+  test("remember each level from 0 to 1, and read a missing or broken level as full", () => {
+    const { data, store } = memoryStore();
+    createSoundSettings(store).set({ musicVolume: 0.4, effectsVolume: 0.7 });
+    expect(createSoundSettings(store).get()).toEqual({ music: true, effects: true, musicVolume: 0.4, effectsVolume: 0.7 });
+    expect(JSON.parse(data[PREFERENCE_KEYS.sound] ?? "")).toMatchObject({ musicVolume: 0.4, effectsVolume: 0.7 });
+    expect(parseSoundSettings('{"music":true,"effects":true,"musicVolume":3,"effectsVolume":"loud"}')).toMatchObject({ musicVolume: 1, effectsVolume: 1 });
+    expect(parseSoundSettings('{"music":true,"effects":true,"musicVolume":-1}').musicVolume).toBe(0);
   });
 
   test("tell listeners about a change, and not about a repeat of the same value", () => {

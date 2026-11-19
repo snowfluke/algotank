@@ -42,6 +42,9 @@ export const en = {
   close: "Close",
   music: "Music",
   effects: "Sound effects",
+  /** Accessible names of the two level sliders under the switches. */
+  musicVolume: "Music volume",
+  effectsVolume: "Sound effects volume",
   musicFailed: "The music could not load, so the game plays without it.",
   names: namesEn,
 };
@@ -51,6 +54,8 @@ export const id: typeof en = {
   close: "Tutup",
   music: "Musik",
   effects: "Efek suara",
+  musicVolume: "Volume musik",
+  effectsVolume: "Volume efek suara",
   musicFailed: "Musiknya gagal dimuat, jadi permainan tetap jalan tanpa musik.",
   names: {
     shot: "Tembakan",

@@ -41,10 +41,11 @@ export function musicTrackOf(condition: ArenaConditionId): MusicTrack {
 }
 
 /**
- * The music's gain. The files measure about -20.5 LUFS, so -13 dB gives about -33.5 LUFS: under the game's sounds,
- * which carry the battle (owner, 2026-11-19: "lower the bgm"; it was -9.5 dB).
+ * The music's gain at full volume (the person's slider scales it). The files measure about -20.5 LUFS, so -11 dB
+ * gives about -31.5 LUFS: under the game's sounds, which carry the battle. Owner, 2026-11-19: "lower the bgm" took it
+ * from -9.5 dB to -13 dB, then "increase a bit the bgm default" to -11 dB.
  */
-export const MUSIC_GAIN = 10 ** (-13 / 20);
+export const MUSIC_GAIN = 10 ** (-11 / 20);
 /** The further drop under the player's own shot and hit sounds. */
 export const DUCK_GAIN = 10 ** (-6 / 20);
 export const DUCK_MS = 1000;

@@ -45,7 +45,9 @@ battleground after all". Version 2 of every track keeps its key, chords and tune
 (every beat in Jarak dekat), a clap on 2 and 4 with a fill every 8 bars, eighth-note hi-hats that turn to sixteenths
 in the second half, and an eighth-note bass. The tempo rose from 70-100 BPM to 120-140 BPM, the low-pass opened from
 3-5 kHz to 7-9 kHz so the hats come through, and the reverb shortened. The player's music gain fell from -9.5 dB to
--13 dB (`MUSIC_GAIN`), so the music sits about 33.5 LUFS, under the effects.
+-13 dB, then rose a little to -11 dB ("increase a bit the bgm default"; `MUSIC_GAIN`), so the music sits about
+-31.5 LUFS, under the effects. The sound panel has a slider under each switch, 0 to 100 percent, which scales the
+music's gain and each effect's level (`musicVolume`, `effectsVolume` in sound/setting.ts).
 
 The monthly league follows the condition in its live snapshot, including a weather change within a round (spec 77). The room's live board, the presenter and the big screen follow the current round's snapshot. The practice board follows the test run's condition. Pages without a current condition play Standard.
 

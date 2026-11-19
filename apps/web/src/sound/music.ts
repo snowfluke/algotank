@@ -45,6 +45,7 @@ function musicWanted(): boolean {
 }
 
 function sync(): void {
+  player.setVolume(soundSettings.get().musicVolume);
   player.setEnabled(musicWanted());
   for (const listener of venueListeners) listener();
 }

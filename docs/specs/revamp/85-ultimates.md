@@ -16,7 +16,7 @@ Each play style has one default. The Charger, which only the bots and the script
 | Full tank / Tangki penuh / `fullTank` | Backstabber | The water fills to the top, and the next 3 shots at a tank use no water. | The water is below one shot, and a tank is within the tank's throw range. |
 | Mud bomb / Bom lumpur / `mudBomb` | Ambusher | A mud ball lands on the first tank in the throw line. That tank and every other tank within 1 square of it are stuck for 5 turns, and each of them gives 1 point to the thrower. The thrower is never stuck by its own bomb. | A tank is in the throw line. |
 | Whirlwind / Angin puyuh / `whirlwind` | Picker | Every other tank within 2 squares spins round to the right for 4 turns (no rule checked). Each tank within 1 square gives 1 point to the whirlwind tank. | At least 2 other tanks are within 2 squares. |
-| Big umbrella / Payung besar / `bigUmbrella` | Dry hunter | A big umbrella blocks the next 4 shots that come from the front, the left or the right, however long that takes. Only a shot from behind gets through. | At least 1 tank aims at this tank. No big umbrella is active. |
+| Big umbrella / Payung besar / `bigUmbrella` | Dry hunter | A big umbrella blocks the next 3 shots (4 before 2026-11-19) that come from the front, the left or the right, however long that takes. Only a shot from behind gets through. | At least 1 tank aims at this tank. No big umbrella is active. |
 | Magnet / Magnet / `magnet` | Item hunter | The 3 nearest items within 4 squares slide to the tank. If the hand still has room after that, 1 new bucket lands in it. The tank holds up to 3 items and uses them in the order they came. | The tank holds fewer than 3 items. |
 
 A trigger reads only the snapshot from before the turn and draws no random number. All numbers are in `packages/engine/src/ultimates/ultimates.ts` (`ULTIMATE_RULES`), the one place to tune them.
@@ -231,3 +231,16 @@ Owner, 2026-11-18: "it's okay to be unbalanced for the ultimate skills, but with
 - The big umbrella saves more than the item umbrella. The owner sees its number next to the smoke screen's ("not far beyond smoke screen", 2026-11-18).
 
 A gate that fails is reported to the owner with the numbers, and the numbers in `ULTIMATE_RULES` change. The design of an ultimate does not change.
+
+## Monthly field, 2026-11-19
+
+The 8-tank finals above do not show the monthly arena: 28 tanks or more, open rounds, items, bots and fresh starts. A simulation of that field (7 designed presets × 4 tanks, `LeagueDay`, 4 days of 96,000 turns, ultimates on) gave these points per tank per day against the field mean:
+
+| Big umbrella blocks | Field mean | Dry hunter | Leader |
+|---|---|---|---|
+| 4 | 236 | +854 | Dry hunter |
+| 3 | 223 | −73 | Item hunter, +584 |
+| 2 | 164 | −274 | Item hunter, +491 |
+
+Owner, 2026-11-19, chose 3 blocks.
+

@@ -451,7 +451,7 @@ describe("Big Umbrella", () => {
         const result = resolveTick(snapshotOf([withItem, shooter]), [fire("self", "bigUmbrella"), move("shooter", "T")],
           ["shooter", "self"], stubRng({ chance: [true] }));
         expect(result.throws[0]?.outcome).toBe(covered[eighth] || item !== null ? "blocked" : "hit");
-        expect(placement(result, "self").ultimateEffect).toEqual({ kind: "bigUmbrella", blocksLeft: covered[eighth] ? 3 : 4 });
+        expect(placement(result, "self").ultimateEffect).toEqual({ kind: "bigUmbrella", blocksLeft: covered[eighth] ? 2 : 3 });
         expect(placement(result, "self").itemUses).toBe(item === null ? 0 : covered[eighth] ? 2 : 1);
       }
     }
@@ -552,7 +552,7 @@ describe("Splash Ring", () => {
       expect(event.squares.filter((square) => square.outcome !== "empty").map(({ targetId, outcome }) => [targetId, outcome]))
         .toEqual([["front", "blocked"], ["dash", "dodged"], ["side", "blocked"]]);
       expect(placement(result, "self")).toMatchObject({ score: 0, water: 0, item, itemUses: ITEM_RULES.uses[item] });
-      expect(placement(result, "front")).toMatchObject({ ultimateEffect: { kind: "bigUmbrella", blocksLeft: 3 }, itemUses: 2 });
+      expect(placement(result, "front")).toMatchObject({ ultimateEffect: { kind: "bigUmbrella", blocksLeft: 2 }, itemUses: 2 });
       expect(placement(result, "side").itemUses).toBe(1);
       expect(result.inflicted.size).toBe(0);
     }
@@ -703,7 +703,7 @@ describe("Mud Bomb and Whirlwind", () => {
       expect(result.fires[0]).toMatchObject({ kind: "whirlwind", points: 2, affected: ["umbrella", "smoke", "outer"] });
       expect(result.placements.map(({ score }) => score)).toEqual([2, -1, -1, 0, 0]);
       expect(result.inflicted.has("dash")).toBe(false);
-      expect(placement(result, "umbrella").ultimateEffect).toEqual({ kind: "bigUmbrella", blocksLeft: 4 });
+      expect(placement(result, "umbrella").ultimateEffect).toEqual({ kind: "bigUmbrella", blocksLeft: 3 });
       expect(placement(result, "smoke").itemUses).toBe(ITEM_RULES.uses.umbrella);
       expect(placement(result, "self")).toMatchObject({ item, itemUses: ITEM_RULES.uses[item] });
     }
@@ -719,7 +719,7 @@ describe("Mud Bomb and Whirlwind", () => {
       expect(result.inflicted.get("target")).toEqual({ kind: "stuck", turnsLeft: 5 });
       expect(placement(result, "self")).toMatchObject({ item, itemUses: ITEM_RULES.uses[item] });
       expect(placement(result, "target")).toMatchObject({ score: -1, item, itemUses: ITEM_RULES.uses[item],
-        ultimateEffect: { kind: "bigUmbrella", blocksLeft: 4 } });
+        ultimateEffect: { kind: "bigUmbrella", blocksLeft: 3 } });
     }
   });
 

@@ -39,7 +39,7 @@ export const en = {
     fullTank: { name: "Full tank", body: "The water fills to the top, and the next 3 shots use no water." },
     mudBomb: { name: "Mud bomb", body: "Your tank sticks the first tank in line and every other tank within 1 square of it for 5 turns. Each stuck tank gives 1 point." },
     whirlwind: { name: "Whirlwind", body: "Other tanks within 2 squares turn right for 4 turns and skip their rules. Each tank within 1 square gives 1 point." },
-    bigUmbrella: { name: "Big umbrella", body: "The umbrella stops the next 4 shots from ahead or from either side." },
+    bigUmbrella: { name: "Big umbrella", body: "The umbrella stops the next 3 shots from ahead or from either side." },
     magnet: { name: "Magnet", body: "Magnet needs room for one more item. It pulls the nearest items within 4 squares into the empty slots. A new bucket drops in if there is still room. The tank uses items in the order they arrive." },
   } satisfies Record<UltimateId, UltimateText>,
   /** The links to this page. */
@@ -73,7 +73,7 @@ export const id: typeof en = {
     fullTank: { name: "Tangki penuh", body: "Air terisi penuh, dan 3 tembakan berikutnya tidak memakai air." },
     mudBomb: { name: "Bom lumpur", body: "Bom menjebak tank pertama di garis tembak beserta tank lain dalam jarak 1 petak darinya selama 5 giliran. Tiap tank yang terjebak memberi 1 poin." },
     whirlwind: { name: "Angin puyuh", body: "Tank lain dalam jarak 2 petak berputar ke kanan selama 4 giliran tanpa memeriksa aturan. Tiap tank dalam jarak 1 petak memberi 1 poin." },
-    bigUmbrella: { name: "Payung besar", body: "Payung menahan 4 tembakan berikutnya dari depan atau dari samping." },
+    bigUmbrella: { name: "Payung besar", body: "Payung menahan 3 tembakan berikutnya dari depan atau dari samping." },
     magnet: { name: "Magnet", body: "Magnet perlu tempat untuk satu item lagi. Magnet mengisi tempat yang kosong dengan item terdekat dalam jarak 4 petak. Kalau masih ada tempat, ember baru jatuh ke tank. Tank memakai item sesuai urutan datangnya." },
   },
   open: "Buka katalog",

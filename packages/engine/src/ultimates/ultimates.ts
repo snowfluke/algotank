@@ -40,7 +40,9 @@ export const ULTIMATE_RULES = {
   mudBomb: { stuckTurns: 5, reach: 1 },
   // Owner, 2026-11-18 (85-ultimates.md): every dizzy turn from Whirlwind spins.
   whirlwind: { reach: 2, pointReach: 1, dizzyTurns: 4, spinTurns: 4, triggerTanks: 2 },
-  bigUmbrella: { blocks: 4, blockedEighths: [0, 1, 2, 6, 7] as readonly number[], aimedAtMe: 1 },
+  // Owner, 2026-11-19: 3 blocks, not 4. With 4 the Dry hunter led the simulated monthly field by +854 points a
+  // tank a day (mean 236, 4 days); with 3 it was at -73 (85-ultimates.md, Measured).
+  bigUmbrella: { blocks: 3, blockedEighths: [0, 1, 2, 6, 7] as readonly number[], aimedAtMe: 1 },
   // Owner, 2026-11-18 (85-ultimates.md): a ready Magnet can always get an item if it has room.
   magnet: { reach: 4, handSize: 3, newItem: "bucket" },
 } as const;

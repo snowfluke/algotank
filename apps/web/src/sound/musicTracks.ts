@@ -15,12 +15,12 @@ export interface MusicTrack {
 // The loop points come from tools/music/measurements.json; musicTracks.test.ts checks that they still match. They are
 // copied, not imported, because the release package holds only the apps and packages, not tools/.
 export const MUSIC_TRACKS: Readonly<Record<RuleSetId, MusicTrack>> = {
-  standard: { url: "/music/a-mallets-v1.mp3", loopStart: 0.5, loopEnd: 102.9 },
-  "dry-spell": { url: "/music/b-dry-v1.mp3", loopStart: 0.5, loopEnd: 55.357142857142854 },
-  downpour: { url: "/music/c-rain-v1.mp3", loopStart: 0.5, loopEnd: 46.214285714285715 },
-  "arms-length": { url: "/music/d-close-v1.mp3", loopStart: 0.5, loopEnd: 38.9 },
-  "open-field": { url: "/music/e-open-v1.mp3", loopStart: 0.5, loopEnd: 55.357142857142854 },
-  "sharp-eyes": { url: "/music/f-sharp-v1.mp3", loopStart: 0.5, loopEnd: 43.166666666666664 },
+  standard: { url: "/music/a-mallets-v2.mp3", loopStart: 0.5, loopEnd: 61.45238095238095 },
+  "dry-spell": { url: "/music/b-dry-v2.mp3", loopStart: 0.5, loopEnd: 32.5 },
+  downpour: { url: "/music/c-rain-v2.mp3", loopStart: 0.5, loopEnd: 30.976190476190474 },
+  "arms-length": { url: "/music/d-close-v2.mp3", loopStart: 0.5, loopEnd: 27.928571428571427 },
+  "open-field": { url: "/music/e-open-v2.mp3", loopStart: 0.5, loopEnd: 32.5 },
+  "sharp-eyes": { url: "/music/f-sharp-v2.mp3", loopStart: 0.5, loopEnd: 28.944444444444443 },
 };
 
 export const DEFAULT_TRACK = MUSIC_TRACKS[STANDARD_RULE_SET_ID];
@@ -41,10 +41,10 @@ export function musicTrackOf(condition: ArenaConditionId): MusicTrack {
 }
 
 /**
- * The music's gain. The file measures about -20.5 LUFS, so -9.5 dB gives about -30 LUFS, where the
- * game's shot sound stays 18 dB or more above the music in its own band (900 to 3200 Hz).
+ * The music's gain. The files measure about -20.5 LUFS, so -13 dB gives about -33.5 LUFS: under the game's sounds,
+ * which carry the battle (owner, 2026-11-19: "lower the bgm"; it was -9.5 dB).
  */
-export const MUSIC_GAIN = 10 ** (-9.5 / 20);
+export const MUSIC_GAIN = 10 ** (-13 / 20);
 /** The further drop under the player's own shot and hit sounds. */
 export const DUCK_GAIN = 10 ** (-6 / 20);
 export const DUCK_MS = 1000;

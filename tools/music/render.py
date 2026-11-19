@@ -150,6 +150,81 @@ def rain_bed(loop: Loop, rng: np.random.Generator, gain: float) -> None:
         loop.add(0, rng.standard_normal(loop.n) * 0.25, gain, pan=side)
 
 
+# --- Drums and a driving bass (owner, 2026-11-19: "slightly energetic and not sleepy, it is a battleground") ---------
+
+
+def one_pole(x: np.ndarray, a: float) -> np.ndarray:
+    """A one-pole low-pass: `a` near 1 keeps more highs."""
+    out = np.empty_like(x)
+    acc = 0.0
+    for i, v in enumerate(x):
+        acc = a * v + (1 - a) * acc
+        out[i] = acc
+    return out
+
+
+def kick(dur: float = 0.32) -> np.ndarray:
+    """A round kick: a sine that falls from about 150 Hz to 48 Hz, with its 2nd harmonic so phones hear it."""
+    t = times(dur)
+    f = 48 + 100 * np.exp(-t / 0.035)
+    phase = 2 * np.pi * np.cumsum(f) / SR
+    s = np.sin(phase) + 0.3 * np.sin(2 * phase) * np.exp(-t / 0.05)
+    return s * envelope(dur, 0.010, 0.11, 0.08)
+
+
+def clap(rng: np.random.Generator, dur: float = 0.2) -> np.ndarray:
+    """A hand clap: three quick bursts of band-limited noise, then a short tail."""
+    t = times(dur)
+    noise = rng.standard_normal(len(t))
+    band = one_pole(noise, 0.55) - one_pole(noise, 0.08)
+    bursts = sum(np.exp(-np.maximum(t - d, 0) / 0.006) * (t >= d) for d in (0.0, 0.011, 0.022))
+    tail = np.exp(-np.maximum(t - 0.03, 0) / 0.06) * (t >= 0.03)
+    return band * (0.6 * bursts + tail) * envelope(dur, 0.010, None, 0.05)
+
+
+def hat(rng: np.random.Generator, dur: float = 0.06) -> np.ndarray:
+    """A closed hi-hat: high noise (the noise minus its low part) with a fast decay."""
+    noise = rng.standard_normal(int(dur * SR))
+    return (noise - one_pole(noise, 0.35)) * envelope(dur, 0.010, dur / 4, dur / 3)
+
+
+@dataclass(frozen=True)
+class Groove:
+    kick: float
+    clap: float
+    hat: float
+    four_on_floor: bool = False
+
+
+def groove(loop: Loop, rng: np.random.Generator, g: Groove) -> None:
+    """The beat under every track: kick on 1 and 3 (or every beat), a clap on 2 and 4, eighth-note hats with the
+    off-beats louder, sixteenths in the second half, and a clap fill on the last beat of every 8 bars."""
+    for b in range(loop.bars):
+        t0 = b * loop.bar
+        kicks = (0, 1, 2, 3) if g.four_on_floor else ((0, 2, 2.5) if b % 2 else (0, 1.5, 2))
+        for at in kicks:
+            loop.add(t0 + at * loop.beat, kick(), g.kick)
+        for at in (1, 3):
+            loop.add(t0 + at * loop.beat, clap(rng), g.clap, pan=0.05)
+        step = 0.25 if b >= loop.bars // 2 else 0.5
+        for k in range(int(4 / step)):
+            at = k * step
+            accent = 1.0 if at % 1 == 0.5 else (0.55 if at % 1 == 0 else 0.4)
+            loop.add(t0 + at * loop.beat, hat(rng), g.hat * accent, pan=0.25)
+        if b % 8 == 7:
+            for at in (3.25, 3.5, 3.75):
+                loop.add(t0 + at * loop.beat, clap(rng, 0.12), g.clap * 0.6, pan=-0.05)
+
+
+def drive_bass(loop: Loop, roots: list[str], gain: float) -> None:
+    """Eighth-note bass on the chord's root, the octave on the off-beat of beats 2 and 4, one chord a bar."""
+    for b in range(loop.bars):
+        f = hz(roots[b % len(roots)])
+        for k in range(8):
+            octave = 2 if k in (3, 7) else 1
+            loop.add(b * loop.bar + k * 0.5 * loop.beat, bass(f * octave, loop.beat * 0.42), gain * (1.0 if k % 2 == 0 else 0.75))
+
+
 # --- Whole-loop processing -------------------------------------------------------------------
 
 
@@ -188,7 +263,7 @@ def finish(loop: Loop, lowpass_hz: float, reverb_seconds: float, wet: float, see
 
 
 def track_a() -> Loop:
-    loop = Loop(bpm=75, bars=32)
+    loop = Loop(bpm=126, bars=32)
     rng = np.random.default_rng(11)
     beat, bar = loop.beat, loop.bar
     # Eight bars, one chord a bar. Pad voicings move by a step at most, so the harmony glides.
@@ -243,6 +318,8 @@ def track_a() -> Loop:
             for at, note in section["motif"][b % 8]:
                 f = hz(note) / (2 if octave_lower else 1)
                 loop.add(t0 + at * beat, kalimba(f), 0.13 if not octave_lower else 0.15, pan=0.1)
+    drive_bass(loop, [c[0] for c in chords], 0.13)
+    groove(loop, rng, Groove(kick=0.5, clap=0.09, hat=0.05))
     return loop
 
 
@@ -270,8 +347,8 @@ def melody(loop: Loop, phrase: list, voice: Callable[[float], np.ndarray], gain:
 
 
 def track_b() -> Loop:
-    """Musim kering: sunny and dry. D mixolydian, 70 BPM, light shaker, little reverb (dry air)."""
-    loop = Loop(bpm=70, bars=16)
+    """Musim kering: sunny and dry. D mixolydian, 120 BPM, shaker and claps, little reverb (dry air)."""
+    loop = Loop(bpm=120, bars=16)
     rng = np.random.default_rng(12)
     chords = [
         ("D2", ["D3", "F#3", "A3", "C4"], ["A4", "D5"]),  # D7 colour, mixolydian
@@ -279,7 +356,7 @@ def track_b() -> Loop:
         ("G2", ["D3", "G3", "B3", "D4"], ["B4", "D5"]),  # G
         ("D2", ["D3", "F#3", "A3", "D4"], ["A4", "F#5"]),  # D
     ]
-    chord_loop(loop, rng, chords, 0.07, 0.15)
+    chord_loop(loop, rng, chords, 0.07, 0.0)
     for b in range(loop.bars):
         for j, at in enumerate((0.0, 1.0, 1.5, 2.5, 3.0)):
             loop.add(b * loop.bar + at * loop.beat, shaker(0.09, rng), 0.05 if j % 2 == 0 else 0.03, pan=0.3)
@@ -293,12 +370,14 @@ def track_b() -> Loop:
         [(1, "A4")],
     ]
     melody(loop, phrase, kalimba, 0.12, 4, 12)
+    drive_bass(loop, [c[0] for c in chords], 0.12)
+    groove(loop, rng, Groove(kick=0.5, clap=0.11, hat=0.045))
     return loop
 
 
 def track_c() -> Loop:
-    """Hujan deras: a rainy day. Bb major, 84 BPM, soft pads, a rain hiss and drops on the kalimba."""
-    loop = Loop(bpm=84, bars=16)
+    """Hujan deras: a storm. Bb major, 126 BPM, pads, a rain hiss, drops on the kalimba and a driving beat."""
+    loop = Loop(bpm=126, bars=16)
     rng = np.random.default_rng(13)
     chords = [
         ("Bb2", ["F3", "A3", "D4", "F4"], ["D5", "F5"]),  # Bbmaj7
@@ -306,7 +385,7 @@ def track_c() -> Loop:
         ("Eb3", ["G3", "Bb3", "D4", "G4"], ["Bb4", "G5"]),  # Ebmaj7
         ("F2", ["F3", "A3", "C4", "Eb4"], ["C5", "F5"]),  # F7
     ]
-    chord_loop(loop, rng, chords, 0.08, 0.12, pan_width=0.45)
+    chord_loop(loop, rng, chords, 0.08, 0.0, pan_width=0.45)
     rain_bed(loop, rng, 0.022)
     drops = ["D6", "F6", "G6", "Bb5", "C6", "F5"]
     for b in range(loop.bars):
@@ -320,12 +399,14 @@ def track_c() -> Loop:
         [(1, "C5")],
     ]
     melody(loop, phrase, kalimba, 0.11, 8, 16, pan=-0.1)
+    drive_bass(loop, [c[0] for c in chords], 0.12)
+    groove(loop, rng, Groove(kick=0.5, clap=0.08, hat=0.04))
     return loop
 
 
 def track_d() -> Loop:
-    """Jarak dekat: close and bouncy. C major, 100 BPM, a staccato marimba ostinato and call-and-response."""
-    loop = Loop(bpm=100, bars=16)
+    """Jarak dekat: close and bouncy. C major, 140 BPM, a staccato marimba ostinato, call-and-response, four on the floor."""
+    loop = Loop(bpm=140, bars=16)
     rng = np.random.default_rng(14)
     chords = [
         ("C3", ["E3", "G3", "C4", "E4"], ["C5", "E5", "G5"]),
@@ -344,12 +425,13 @@ def track_d() -> Loop:
     answer = [[], [(2, "C5"), (2.5, "E5"), (3, "G5")], [], [(2, "B4"), (2.5, "D5"), (3, "G5")]]
     melody(loop, call, kalimba, 0.12, 4, 16, pan=-0.15)
     melody(loop, answer, kalimba, 0.1, 8, 16, pan=0.15)
+    groove(loop, rng, Groove(kick=0.5, clap=0.1, hat=0.05, four_on_floor=True))
     return loop
 
 
 def track_e() -> Loop:
-    """Lapangan luas: wide open. G major, 70 BPM, long wide pads, a slow tune and much more room."""
-    loop = Loop(bpm=70, bars=16)
+    """Lapangan luas: wide open. G major, 120 BPM, wide pads, a soaring tune, room, and a steady beat."""
+    loop = Loop(bpm=120, bars=16)
     rng = np.random.default_rng(15)
     chords = [
         ("G2", ["D3", "G3", "B3", "D4"], ["B4", "D5"]),
@@ -357,7 +439,7 @@ def track_e() -> Loop:
         ("C3", ["E3", "G3", "C4", "D4"], ["E5", "G5"]),  # Cadd9
         ("D3", ["F#3", "A3", "C4", "D4"], ["A4", "D5"]),  # D7
     ]
-    chord_loop(loop, rng, chords, 0.09, 0.14, pan_width=0.7)
+    chord_loop(loop, rng, chords, 0.09, 0.0, pan_width=0.7)
     phrase = [
         [(0, "D5"), (2, "B4")],
         [(0, "G5"), (3, "E5")],
@@ -367,12 +449,14 @@ def track_e() -> Loop:
     melody(loop, phrase, kalimba, 0.13, 4, 16, pan=0.0)
     for b in range(loop.bars):
         loop.add(b * loop.bar + 3 * loop.beat, marimba(hz(chords[b % 4][2][1])), 0.05, pan=0.6)
+    drive_bass(loop, [c[0] for c in chords], 0.11)
+    groove(loop, rng, Groove(kick=0.45, clap=0.08, hat=0.04))
     return loop
 
 
 def track_f() -> Loop:
-    """Mata tajam: focused. E dorian (Em7 to A7), 90 BPM, a steady marimba arpeggio and a pulse in the bass."""
-    loop = Loop(bpm=90, bars=16)
+    """Mata tajam: focused. E dorian (Em7 to A7), 135 BPM, a steady marimba arpeggio, a pulse in the bass and a tight beat."""
+    loop = Loop(bpm=135, bars=16)
     rng = np.random.default_rng(16)
     chords = [
         ("E2", ["D3", "G3", "B3", "E4"], ["E5", "G5", "B5"]),  # Em7
@@ -394,6 +478,7 @@ def track_f() -> Loop:
         [(1, "D5"), (2.5, "B4")],
     ]
     melody(loop, phrase, kalimba, 0.11, 8, 16)
+    groove(loop, rng, Groove(kick=0.5, clap=0.09, hat=0.05))
     return loop
 
 
@@ -413,15 +498,16 @@ class Track:
     wet: float
 
 
-# The letter seeds the reverb and names the file, so a re-render gives the same audio. Track A is the
-# standard condition's and stays as it was.
+# The letter seeds the reverb and names the file, so a re-render gives the same audio. Version 2 (owner,
+# 2026-11-19: "rework all the bgm to be slightly energetic and not sleepy"): 120 to 140 BPM, drums and an
+# eighth-note bass, a brighter low-pass so the hats come through, and less reverb.
 TRACKS = [
-    Track("a", "a-mallets-v1.mp3", "Soft mallets with a warm pad", "F major", 75, track_a, 4200, 2.4, 0.32),
-    Track("b", "b-dry-v1.mp3", "Musim kering: sunny and dry", "D mixolydian", 70, track_b, 5000, 1.4, 0.18),
-    Track("c", "c-rain-v1.mp3", "Hujan deras: a rainy day", "Bb major", 84, track_c, 3000, 3.0, 0.4),
-    Track("d", "d-close-v1.mp3", "Jarak dekat: close and bouncy", "C major", 100, track_d, 5000, 1.8, 0.24),
-    Track("e", "e-open-v1.mp3", "Lapangan luas: wide open", "G major", 70, track_e, 4200, 3.4, 0.44),
-    Track("f", "f-sharp-v1.mp3", "Mata tajam: focused", "E dorian", 90, track_f, 4600, 2.0, 0.28),
+    Track("a", "a-mallets-v2.mp3", "Mallets with a warm pad over a beat", "F major", 126, track_a, 8000, 1.6, 0.2),
+    Track("b", "b-dry-v2.mp3", "Musim kering: sunny and dry", "D mixolydian", 120, track_b, 9000, 1.0, 0.12),
+    Track("c", "c-rain-v2.mp3", "Hujan deras: a storm", "Bb major", 126, track_c, 7000, 2.0, 0.25),
+    Track("d", "d-close-v2.mp3", "Jarak dekat: close and bouncy", "C major", 140, track_d, 9000, 1.2, 0.15),
+    Track("e", "e-open-v2.mp3", "Lapangan luas: wide open", "G major", 120, track_e, 8000, 2.2, 0.28),
+    Track("f", "f-sharp-v2.mp3", "Mata tajam: focused", "E dorian", 135, track_f, 8500, 1.4, 0.18),
 ]
 
 

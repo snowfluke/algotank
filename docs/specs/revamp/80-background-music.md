@@ -33,12 +33,19 @@ Owner, 2026-11-19: "Changing season or arena condition also changes the bgm."
 
 | Arena condition | Track | Title | Key | BPM |
 |---|---|---|---|---:|
-| `standard` | `a-mallets-v1.mp3` | Soft mallets with a warm pad | F major | 75 |
-| `dry-spell` | `b-dry-v1.mp3` | Musim kering: sunny and dry | D mixolydian | 70 |
-| `downpour` | `c-rain-v1.mp3` | Hujan deras: a rainy day | Bb major | 84 |
-| `arms-length` | `d-close-v1.mp3` | Jarak dekat: close and bouncy | C major | 100 |
-| `open-field` | `e-open-v1.mp3` | Lapangan luas: wide open | G major | 70 |
-| `sharp-eyes` | `f-sharp-v1.mp3` | Mata tajam: focused | E dorian | 90 |
+| `standard` | `a-mallets-v2.mp3` | Mallets with a warm pad over a beat | F major | 126 |
+| `dry-spell` | `b-dry-v2.mp3` | Musim kering: sunny and dry | D mixolydian | 120 |
+| `downpour` | `c-rain-v2.mp3` | Hujan deras: a storm | Bb major | 126 |
+| `arms-length` | `d-close-v2.mp3` | Jarak dekat: close and bouncy | C major | 140 |
+| `open-field` | `e-open-v2.mp3` | Lapangan luas: wide open | G major | 120 |
+| `sharp-eyes` | `f-sharp-v2.mp3` | Mata tajam: focused | E dorian | 135 |
+
+Owner, 2026-11-19: "Lower the bgm" and "rework all the bgm to be slightly energetic and not sleepy, it is a
+battleground after all". Version 2 of every track keeps its key, chords and tunes, and adds a beat: a kick on 1 and 3
+(every beat in Jarak dekat), a clap on 2 and 4 with a fill every 8 bars, eighth-note hi-hats that turn to sixteenths
+in the second half, and an eighth-note bass. The tempo rose from 70-100 BPM to 120-140 BPM, the low-pass opened from
+3-5 kHz to 7-9 kHz so the hats come through, and the reverb shortened. The player's music gain fell from -9.5 dB to
+-13 dB (`MUSIC_GAIN`), so the music sits about 33.5 LUFS, under the effects.
 
 The monthly league follows the condition in its live snapshot, including a weather change within a round (spec 77). The room's live board, the presenter and the big screen follow the current round's snapshot. The practice board follows the test run's condition. Pages without a current condition play Standard.
 

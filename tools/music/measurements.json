@@ -1,181 +1,181 @@
 {
   "a": {
-    "file": "apps/web/public/music/a-mallets-v1.mp3",
-    "title": "Soft mallets with a warm pad",
+    "file": "apps/web/public/music/a-mallets-v2.mp3",
+    "title": "Mallets with a warm pad over a beat",
     "key": "F major",
-    "bpm": 75,
+    "bpm": 126,
     "bars": 32,
-    "loop_seconds": 102.4,
+    "loop_seconds": 60.95238095238095,
     "loop_start": 0.5,
-    "loop_end": 102.9,
-    "file_seconds": 103.4,
-    "bytes": 1241696,
-    "integrated_lufs": -20.5,
-    "true_peak_dbtp": -7.8,
-    "share_above_6khz_percent": 0.0,
+    "loop_end": 61.45238095238095,
+    "file_seconds": 61.952,
+    "bytes": 744220,
+    "integrated_lufs": -20.4,
+    "true_peak_dbtp": -5.8,
+    "share_above_6khz_percent": 0.08635,
     "seam": {
-      "max_difference_db_re_rms_over_0.8s": -36.8,
-      "value_at_start": 0.04024,
-      "value_after_end": 0.04021,
-      "slope_at_start": 0.002015,
-      "slope_after_end": 0.002016,
+      "max_difference_db_re_rms_over_0.8s": -9.4,
+      "value_at_start": 0.05116,
+      "value_after_end": 0.05004,
+      "slope_at_start": -0.000941,
+      "slope_after_end": -0.001549,
       "rms_db_50ms_before_start_vs_end": [
-        -28.06,
-        -28.06
+        -26.67,
+        -26.85
       ],
       "rms_db_50ms_after_start_vs_end": [
-        -25.72,
-        -25.72
+        -16.29,
+        -16.35
       ]
     }
   },
   "b": {
-    "file": "apps/web/public/music/b-dry-v1.mp3",
+    "file": "apps/web/public/music/b-dry-v2.mp3",
     "title": "Musim kering: sunny and dry",
     "key": "D mixolydian",
-    "bpm": 70,
+    "bpm": 120,
     "bars": 16,
-    "loop_seconds": 54.857142857142854,
+    "loop_seconds": 32.0,
     "loop_start": 0.5,
-    "loop_end": 55.357142857142854,
-    "file_seconds": 55.857,
-    "bytes": 671182,
-    "integrated_lufs": -20.4,
-    "true_peak_dbtp": -7.5,
-    "share_above_6khz_percent": 0.00685,
+    "loop_end": 32.5,
+    "file_seconds": 33.0,
+    "bytes": 396896,
+    "integrated_lufs": -20.5,
+    "true_peak_dbtp": -4.9,
+    "share_above_6khz_percent": 0.20846,
     "seam": {
-      "max_difference_db_re_rms_over_0.8s": -17.2,
-      "value_at_start": 0.06266,
-      "value_after_end": 0.06107,
-      "slope_at_start": 0.003594,
-      "slope_after_end": 0.003189,
+      "max_difference_db_re_rms_over_0.8s": -9.1,
+      "value_at_start": 0.05045,
+      "value_after_end": 0.05132,
+      "slope_at_start": 0.003552,
+      "slope_after_end": 0.000511,
       "rms_db_50ms_before_start_vs_end": [
-        -24.78,
-        -24.79
+        -34.61,
+        -34.6
       ],
       "rms_db_50ms_after_start_vs_end": [
-        -20.49,
-        -20.48
+        -15.28,
+        -15.28
       ]
     }
   },
   "c": {
-    "file": "apps/web/public/music/c-rain-v1.mp3",
-    "title": "Hujan deras: a rainy day",
+    "file": "apps/web/public/music/c-rain-v2.mp3",
+    "title": "Hujan deras: a storm",
     "key": "Bb major",
-    "bpm": 84,
+    "bpm": 126,
     "bars": 16,
-    "loop_seconds": 45.714285714285715,
+    "loop_seconds": 30.476190476190474,
     "loop_start": 0.5,
-    "loop_end": 46.214285714285715,
-    "file_seconds": 46.714,
-    "bytes": 561467,
+    "loop_end": 30.976190476190474,
+    "file_seconds": 31.476,
+    "bytes": 378401,
     "integrated_lufs": -20.4,
-    "true_peak_dbtp": -9.0,
-    "share_above_6khz_percent": 0.00258,
+    "true_peak_dbtp": -6.2,
+    "share_above_6khz_percent": 0.09423,
     "seam": {
-      "max_difference_db_re_rms_over_0.8s": -12.2,
-      "value_at_start": 0.04294,
-      "value_after_end": 0.04491,
-      "slope_at_start": 0.003087,
-      "slope_after_end": 0.003251,
+      "max_difference_db_re_rms_over_0.8s": -9.0,
+      "value_at_start": -0.00158,
+      "value_after_end": -0.00216,
+      "slope_at_start": 0.001399,
+      "slope_after_end": 0.001426,
       "rms_db_50ms_before_start_vs_end": [
-        -26.5,
-        -26.57
+        -25.35,
+        -25.3
       ],
       "rms_db_50ms_after_start_vs_end": [
-        -23.55,
-        -23.58
+        -15.73,
+        -15.79
       ]
     }
   },
   "d": {
-    "file": "apps/web/public/music/d-close-v1.mp3",
+    "file": "apps/web/public/music/d-close-v2.mp3",
     "title": "Jarak dekat: close and bouncy",
     "key": "C major",
-    "bpm": 100,
+    "bpm": 140,
     "bars": 16,
-    "loop_seconds": 38.4,
+    "loop_seconds": 27.428571428571427,
     "loop_start": 0.5,
-    "loop_end": 38.9,
-    "file_seconds": 39.4,
-    "bytes": 473696,
-    "integrated_lufs": -20.4,
-    "true_peak_dbtp": -8.5,
-    "share_above_6khz_percent": 0.0,
+    "loop_end": 27.928571428571427,
+    "file_seconds": 28.429,
+    "bytes": 342039,
+    "integrated_lufs": -20.5,
+    "true_peak_dbtp": -6.5,
+    "share_above_6khz_percent": 0.13121,
     "seam": {
-      "max_difference_db_re_rms_over_0.8s": -32.0,
-      "value_at_start": 0.04065,
-      "value_after_end": 0.04019,
-      "slope_at_start": -0.004819,
-      "slope_after_end": -0.004755,
+      "max_difference_db_re_rms_over_0.8s": -7.6,
+      "value_at_start": -0.02869,
+      "value_after_end": -0.02869,
+      "slope_at_start": 0.000736,
+      "slope_after_end": 0.000736,
       "rms_db_50ms_before_start_vs_end": [
-        -26.92,
-        -26.92
+        -28.18,
+        -28.14
       ],
       "rms_db_50ms_after_start_vs_end": [
-        -20.28,
-        -20.28
+        -15.54,
+        -15.54
       ]
     }
   },
   "e": {
-    "file": "apps/web/public/music/e-open-v1.mp3",
+    "file": "apps/web/public/music/e-open-v2.mp3",
     "title": "Lapangan luas: wide open",
     "key": "G major",
-    "bpm": 70,
+    "bpm": 120,
     "bars": 16,
-    "loop_seconds": 54.857142857142854,
+    "loop_seconds": 32.0,
     "loop_start": 0.5,
-    "loop_end": 55.357142857142854,
-    "file_seconds": 55.857,
-    "bytes": 671182,
+    "loop_end": 32.5,
+    "file_seconds": 33.0,
+    "bytes": 396896,
     "integrated_lufs": -20.4,
-    "true_peak_dbtp": -7.0,
-    "share_above_6khz_percent": 0.0,
+    "true_peak_dbtp": -6.1,
+    "share_above_6khz_percent": 0.07425,
     "seam": {
-      "max_difference_db_re_rms_over_0.8s": -37.1,
-      "value_at_start": -0.05934,
-      "value_after_end": -0.05957,
-      "slope_at_start": -0.000839,
-      "slope_after_end": -0.000796,
+      "max_difference_db_re_rms_over_0.8s": -10.8,
+      "value_at_start": 0.09088,
+      "value_after_end": 0.09088,
+      "slope_at_start": 0.001964,
+      "slope_after_end": 0.001964,
       "rms_db_50ms_before_start_vs_end": [
-        -26.14,
-        -26.14
+        -24.45,
+        -24.45
       ],
       "rms_db_50ms_after_start_vs_end": [
-        -24.22,
-        -24.22
+        -17.63,
+        -17.63
       ]
     }
   },
   "f": {
-    "file": "apps/web/public/music/f-sharp-v1.mp3",
+    "file": "apps/web/public/music/f-sharp-v2.mp3",
     "title": "Mata tajam: focused",
     "key": "E dorian",
-    "bpm": 90,
+    "bpm": 135,
     "bars": 16,
-    "loop_seconds": 42.666666666666664,
+    "loop_seconds": 28.444444444444443,
     "loop_start": 0.5,
-    "loop_end": 43.166666666666664,
-    "file_seconds": 43.667,
-    "bytes": 524791,
-    "integrated_lufs": -20.5,
-    "true_peak_dbtp": -8.0,
-    "share_above_6khz_percent": 0.0,
+    "loop_end": 28.944444444444443,
+    "file_seconds": 29.444,
+    "bytes": 354264,
+    "integrated_lufs": -20.4,
+    "true_peak_dbtp": -5.5,
+    "share_above_6khz_percent": 0.14117,
     "seam": {
-      "max_difference_db_re_rms_over_0.8s": -39.1,
-      "value_at_start": 0.02571,
-      "value_after_end": 0.02585,
-      "slope_at_start": 0.001529,
-      "slope_after_end": 0.00154,
+      "max_difference_db_re_rms_over_0.8s": -6.9,
+      "value_at_start": 0.02506,
+      "value_after_end": 0.02403,
+      "slope_at_start": -3.4e-05,
+      "slope_after_end": 0.000731,
       "rms_db_50ms_before_start_vs_end": [
-        -24.99,
-        -24.99
+        -26.52,
+        -26.54
       ],
       "rms_db_50ms_after_start_vs_end": [
-        -19.83,
-        -19.83
+        -13.74,
+        -13.61
       ]
     }
   }

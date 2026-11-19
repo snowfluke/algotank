@@ -29,6 +29,10 @@ import { useFitDetail } from "../ui/useFitDetail.ts";
 import { EntryCard, type EntryDetail } from "./EntryCard.tsx";
 import { CatalogueArt, JoinArt, PlayNowArt, PresenterArenaArt, PrivateArenaArt, WorkshopArt } from "./EntryArt.tsx";
 import { HomeScene } from "./HomeScene.tsx";
+import { useReturnRoom } from "./returnRoom.ts";
+import { ArrowRight } from "lucide-react";
+import { arenaDisplayName } from "../publicplay/arenaName.ts";
+import { LinkButton } from "../ui/Button.tsx";
 
 /** Level 0 shows every sentence; level 1 leaves out the sentences of the rows; level 2 those of the main tiles too; level 3 is the compact form. */
 const DETAIL_LEVELS = 5;
@@ -53,6 +57,7 @@ export function HomePage() {
   // The monthly arena's live line; nothing until the server answered, because the entry works without it.
   const status = usePublicStatus();
   const monthlyLive = status.kind === "ready" ? monthlyLiveLine(status.status.monthly.tanks, compact, m) : null;
+  const returnRoom = useReturnRoom();
   return (
     <>
     {/* The cue for a first-time visitor: a device that never finished a game and never closed it. */}
@@ -72,6 +77,13 @@ export function HomePage() {
               {GAME_NAME}
             </h1>
             <p className="max-w-[40ch] text-body text-muted laptop:text-lead">{home.tagline}</p>
+            {returnRoom === null ? null : (
+              <div data-home-return="" className="mt-2">
+                <LinkButton href={paths.player(returnRoom.id)} variant="primary" icon={<ArrowRight aria-hidden size={20} strokeWidth={2.5} />}>
+                  {home.backToRoom(arenaDisplayName(returnRoom.settings, m.publicplay.names))}
+                </LinkButton>
+              </div>
+            )}
           </div>
           {/* The first-visit cue's place on a laptop (guide/tours.ts): under the sentence, so it hides no way in. Empty, it takes no room. */}
           <div data-coach-dock="top" data-coach-dock-when="laptop" className="max-w-[24rem] shrink-0 empty:hidden" />

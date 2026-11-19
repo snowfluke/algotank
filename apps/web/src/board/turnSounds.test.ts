@@ -47,12 +47,12 @@ describe("turnSounds for a player with a tank in the round (room page, test matc
     expect(turnSounds(all, "z")).toEqual([]);
   });
 
-  test("the own tank landing a hit is a shot and a splash", () => {
-    expect(turnSounds(all, "a")).toEqual(["shot", "splash"]);
+  test("the own tank landing a hit is a shot and the score sound", () => {
+    expect(turnSounds(all, "a")).toEqual(["shot", "score"]);
   });
 
-  test("the own tank being hit is a splash without a shot, because it did not shoot", () => {
-    expect(turnSounds(all, "b")).toEqual(["splash"]);
+  test("the own tank being hit is the hurt sound without a shot, because it did not shoot", () => {
+    expect(turnSounds(all, "b")).toEqual(["hurt"]);
   });
 
   test("the own tank missing, or shooting into nothing, is a shot and the miss sound", () => {
@@ -69,9 +69,14 @@ describe("turnSounds for a player with a tank in the round (room page, test matc
     expect(turnSounds(all, "g")).toEqual([]);
   });
 
-  test("the own tank missing while it is hit is a shot and a splash", () => {
+  test("the own tank missing while it is hit is a shot and the hurt sound", () => {
     const shotAndHit: ThrowEvent = { throwerId: "b", outcome: "miss", targetId: "x", distance: 3, hitChance: 40 };
-    expect(turnSounds([hit, shotAndHit], "b")).toEqual(["shot", "splash"]);
+    expect(turnSounds([hit, shotAndHit], "b")).toEqual(["shot", "hurt"]);
+  });
+
+  test("the own tank landing a hit while it is hit hears both", () => {
+    const back: ThrowEvent = { ...hit, throwerId: "b", targetId: "a" };
+    expect(turnSounds([hit, back], "a")).toEqual(["shot", "score", "hurt"]);
   });
 });
 
@@ -130,7 +135,7 @@ describe("item sounds", () => {
     expect(turnSounds([hitBy("me", "a")], "me", "bucket")).toEqual(["shot", "useBucket"]);
     expect(turnSounds([hitBy("me", "a")], "me", "pinwheel")).toEqual(["shot", "usePinwheel"]);
     expect(turnSounds([hitBy("me", "a")], "me", "mudBall")).toEqual(["shot", "useMudBall"]);
-    expect(turnSounds([hitBy("me", "a")], "me", null)).toEqual(["shot", "splash"]);
+    expect(turnSounds([hitBy("me", "a")], "me", null)).toEqual(["shot", "score"]);
   });
 
   test("the viewer's umbrella stopping a shot plays the umbrella, and another tank's item stays silent", () => {

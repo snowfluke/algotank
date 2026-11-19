@@ -32,10 +32,15 @@ export function turnSounds(throws: readonly ThrowEvent[], ownId: BotId | null, o
   // The item the viewer's tank held before the turn does its job (owner, 2026-11-19): its own sound takes the
   // place of the splash or the miss, so a turn still makes one sound for its outcome.
   const itemHit = ownId !== null && outcomes.has("hit") && ownItem !== null && ownItem !== "umbrella" ? ITEM_HIT_SOUND[ownItem] : null;
+  // With a tank in view, its own hit and the hit on it each have a sound (owner, 2026-11-19): "score" when its shot
+  // lands, "hurt" when it is hit. A viewer with no tank in view hears the plain splash.
+  const landed = ownId !== null && (outcomes.has("hit") || (deflectHit && throws.some((event) => event.outcome === "deflected" && event.deflection === "hit" && event.targetId === ownId)));
   if (itemHit !== null) sounds.push(itemHit);
   else if (blockedOwn && ownItem === "umbrella") sounds.push("useUmbrella");
-  else if (outcomes.has("hit") || hitOwn || deflectHit) sounds.push("splash");
-  else if (outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked") || outcomes.has("deflected")) sounds.push("miss");
+  else if (ownId === null && (outcomes.has("hit") || deflectHit)) sounds.push("splash");
+  else if (landed) sounds.push("score");
+  else if (!hitOwn && !deflectHit && (outcomes.has("miss") || outcomes.has("empty") || outcomes.has("blocked") || outcomes.has("deflected"))) sounds.push("miss");
+  if (hitOwn || (ownId !== null && throws.some((event) => event.outcome === "deflected" && event.deflection === "hit" && event.deflectedTo === ownId))) sounds.push("hurt");
   if (outcomes.has("dry")) sounds.push("dry");
   return sounds;
 }

@@ -3,6 +3,8 @@
 
 export const en = {
   tagline: "Build the best algorithm to drive your tank and win the battle!",
+  /** `arena` is the room's name, or its kind's name for a public arena. */
+  backToRoom: (arena: string) => `Back to ${arena}`,
   sceneLabel: "Your tank hits a red tank on a sandy arena, dashes at it with its ultimate, and then rain changes the arena.",
   choicesHeading: "Ways to play",
   playNow: {
@@ -48,6 +50,7 @@ export const en = {
 
 export const id: typeof en = {
   tagline: "Buat algoritma terbaik untuk menggerakkan tankmu dan menangkan pertempuran!",
+  backToRoom: (arena) => `Kembali ke ${arena}`,
   sceneLabel: "Tank kamu menembak tank merah di arena berpasir, menabraknya dengan jurus pamungkas, lalu hujan mengubah arena.",
   choicesHeading: "Cara bermain",
   playNow: {

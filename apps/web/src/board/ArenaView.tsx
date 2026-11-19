@@ -7,11 +7,9 @@ import { useFitLayout } from "../ui/layout.ts";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { useBoxSize } from "../ui/useBoxSize.ts";
 import { ArenaBoard } from "./ArenaBoard.tsx";
-import { tankLooks } from "./boardHelpers.ts";
 import { bestOrientation, rotateBot, rotateSnapshot } from "./boardOrientation.ts";
 import { followWindow, WALL_SQUARES, wholeArenaCellPx, ZOOM_SQUARES, zoomCellPx } from "./camera.ts";
 import { boardAspect, fittedSize } from "./FittedBoard.tsx";
-import { OverviewMap, overviewWidth } from "./OverviewMap.tsx";
 import type { ArenaBoardProps } from "./props.ts";
 import { rotateFires } from "./ultimates/boardUltimates.ts";
 import { useFollowTarget } from "./useFollowTarget.ts";
@@ -32,7 +30,6 @@ export interface ArenaViewProps extends Omit<ArenaBoardProps, "camera" | "drawin
   readonly followSwitch?: FollowSwitch;
   readonly defaultChoice?: Choice;
   readonly wholeLabel?: string;
-  readonly showOverview?: boolean;
   readonly wholeOnly?: boolean;
   /** A layout that divides space between the board and other panes can supply the board's available box. */
   readonly fixedBox?: Box | null;
@@ -75,7 +72,7 @@ export function ArenaCameraSwitch({ choice, onChoice, ownTank, followedName, who
 }
 
 export function ArenaView({
-  switchPlace, followSwitch, defaultChoice = "whole", wholeLabel, showOverview = true, wholeOnly = false,
+  switchPlace, followSwitch, defaultChoice = "whole", wholeLabel, wholeOnly = false,
   fixedBox, stageOverlay, dataAttributes, ...props
 }: ArenaViewProps) {
   const fitLayout = useFitLayout();
@@ -129,8 +126,6 @@ export function ArenaView({
         : { aspectRatio: `${ratio}`, width: fit ? "100%" : `min(100%, calc(80dvh * ${ratio}))` };
   // A quarter turn uses the bottom edge as its origin. If that edge moves, old positions no longer describe the same squares.
   const boardKey = turned ? `${orientation}-${snapshot.height}` : orientation;
-  const showMap = showOverview && camera !== null;
-  const looks = useMemo(() => showMap ? tankLooks(shown.bots, tanks) : undefined, [shown.bots, showMap, tanks]);
 
   const cameraSwitch = offered ? (
     <ArenaCameraSwitch
@@ -176,11 +171,6 @@ export function ArenaView({
             focusId={target?.id ?? null}
             {...(zoomed ? { onTankTap } : {})}
           />
-          {camera === null || box === null || looks === undefined ? null : (
-            <div className="pointer-events-none absolute right-2 bottom-2">
-              <OverviewMap arena={arena} bots={shown.bots} looks={looks} highlightId={highlightId} view={camera} width={overviewWidth(box.width)} />
-            </div>
-          )}
         </div>
         {stageOverlay}
       </div>

@@ -27,14 +27,14 @@ describe("ArenaView", () => {
     expect(html).not.toContain("data-camera-switch");
   });
 
-  test("the overview locates the window on the rotated arena", () => {
+  test("the zoomed window turns upright with the arena, with no corner map (owner, 2026-11-19)", () => {
     const snapshot = { ...engineRound(2, 8).spawn, width: 15, height: 11 };
     const out = renderToStaticMarkup(
       <ArenaView {...props} snapshot={snapshot} fixedBox={{ width: 300, height: 450 }} highlightId="p1" defaultChoice="follow" />,
     );
     expect(out).toContain('data-orientation="upright"');
     expect(out).toContain('data-camera="mine"');
-    expect(out).toContain('data-overview-map=""');
+    expect(out).not.toContain("data-overview-map");
   });
 });
 

@@ -73,6 +73,15 @@ export function parsePlayerSession(raw: string | null): PlayerSession | null {
   return { playerId, playerToken };
 }
 
+/**
+ * The room this browser was last seated in, so Home can offer the way back (owner, 2026-11-19: "the home should
+ * display a quick button to get back to see the arena").
+ */
+const LAST_ROOM_KEY = "algotank:last-room";
+export const saveLastRoom = (store: KeyValueStore | null, arenaId: ArenaId): boolean => write(store, LAST_ROOM_KEY, arenaId);
+export const readLastRoom = (store: KeyValueStore | null): ArenaId | null => read(store, LAST_ROOM_KEY);
+export const clearLastRoom = (store: KeyValueStore | null): void => remove(store, LAST_ROOM_KEY);
+
 export const readPlayerSession = (store: KeyValueStore | null, arenaId: ArenaId): PlayerSession | null =>
   parsePlayerSession(read(store, playerSessionKey(arenaId)));
 export const savePlayerSession = (store: KeyValueStore | null, arenaId: ArenaId, session: PlayerSession): boolean =>

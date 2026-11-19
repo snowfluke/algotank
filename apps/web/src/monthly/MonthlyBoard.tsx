@@ -20,7 +20,6 @@ export function MonthlyBoard({ overlay, row, ...board }: MonthlyBoardProps) {
       switchPlace={row.place}
       followSwitch={row.follow}
       wholeLabel={m.monthly.wholeArena}
-      showOverview={false}
       dataAttributes={{ "data-monthly-board": "" }}
       stageOverlay={overlay}
     />

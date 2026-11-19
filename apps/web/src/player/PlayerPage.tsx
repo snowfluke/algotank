@@ -61,6 +61,7 @@ import {
   clearPlayerSession,
   clearStrategyDraft,
   readPlayerSession,
+  saveLastRoom,
   saveNewSeat,
   type PlayerSession,
 } from "../session/storage.ts";
@@ -182,6 +183,9 @@ function lobbyTipOf(strategy: StrategyHandle, stats: OwnStats | null, t: ReturnT
 export function JoinedRoom({ view, session, stream, chatFeed, strategy, isOwner, arenaName, autoSeconds, nextGameSeconds, firstResult, notices, onLeft }: RoomProps) {
   const m = useMessages();
   const { arena, me } = view;
+  useEffect(() => {
+    saveLastRoom(browserStore(), arena.id);
+  }, [arena.id]);
   // The player's statistics card after a round, once their own stream sent this game's (K2).
   const ownStats = stream.ownStats !== null && stream.ownStats.game === arena.game ? stream.ownStats : null;
   const layout = roomLayout(view, isOwner, ownStats !== null);

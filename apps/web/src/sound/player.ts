@@ -4,7 +4,7 @@
 // eight hits makes one splash and not eight.
 
 import { soundSettings } from "./setting.ts";
-import { SYNTHS, type SoundName } from "./sounds.ts";
+import { SOUND_LEVELS, SYNTHS, type SoundName } from "./sounds.ts";
 
 export const REPEAT_WINDOW_MS = 60;
 
@@ -84,5 +84,11 @@ export const playSound: (name: SoundName) => boolean = createSoundPlayer({
   isMuted: () => !soundSettings.get().effects,
   hasGesture: browserHasGesture,
   now: () => performance.now(),
-  synth: (ctx, name) => SYNTHS[name](ctx, ctx.currentTime),
+  synth: (ctx, name) => {
+    // Each sound goes through its own level, so one table balances them all.
+    const level = ctx.createGain();
+    level.gain.value = SOUND_LEVELS[name];
+    level.connect(ctx.destination);
+    SYNTHS[name](level, ctx.currentTime);
+  },
 });

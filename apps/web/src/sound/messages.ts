@@ -6,6 +6,8 @@ import type { SoundName } from "./sounds.ts";
 const namesEn: Record<SoundName, string> = {
   shot: "Shot",
   splash: "Splash",
+  score: "Your shot hits",
+  hurt: "Your tank is hit",
   miss: "Miss",
   dry: "Dry shot",
   countdown: "Countdown beep",
@@ -53,6 +55,8 @@ export const id: typeof en = {
   names: {
     shot: "Tembakan",
     splash: "Cipratan kena",
+    score: "Tembakanmu kena",
+    hurt: "Tankmu kena tembak",
     miss: "Meleset",
     dry: "Air kurang",
     countdown: "Bunyi hitung mundur",

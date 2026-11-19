@@ -40,6 +40,12 @@ pack() {
   local out="$1"
   local root
   root="$(cd "$(dirname "$0")/.." && pwd)"
+  # The archive is the folder as it is on disk, so an uncommitted change would ship too: a local test setting
+  # (such as an early ULTIMATES_FROM for local play) must never reach players. Pack only a committed folder.
+  if [[ -n "$(git -C "$root" status --porcelain 2>/dev/null)" ]]; then
+    git -C "$root" status --short >&2
+    fail "The folder has uncommitted changes (above). Commit or stash them, then pack again."
+  fi
   step "Packing ${RELEASE_FILES[*]} from $root into $out"
   # COPYFILE_DISABLE stops macOS tar from adding ._ metadata files, and --no-xattrs stops it from
   # adding extended attributes, which GNU tar on the server reports as "unknown extended header" lines.

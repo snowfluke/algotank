@@ -610,10 +610,10 @@ export type PublicBot = Pick<
 
 /**
  * A snapshot as every viewer sees it. A full Snapshot can be passed where this is expected.
- * `ruleSetId` names the rules now. ruleSet(id) from @game/engine gives the numbers.
+ * `layout` maps the areas of a hybrid monthly board. Every other board has one `ruleSetId`.
  */
 export interface PublicSnapshot
-  extends Pick<Snapshot, "width" | "height" | "tick" | "ticksTotal" | "survivorsAfterRound" | "ruleSetId" | "items"> {
+  extends Pick<Snapshot, "width" | "height" | "tick" | "ticksTotal" | "survivorsAfterRound" | "ruleSetId" | "items" | "layout"> {
   readonly bots: readonly PublicBot[];
 }
 

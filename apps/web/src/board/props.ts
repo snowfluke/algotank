@@ -22,6 +22,8 @@ export type TankTunnel =
 export interface ArenaBoardProps {
   /** The state to draw. When it changes, tanks move to their new squares over tickMs. */
   readonly snapshot: PublicSnapshot;
+  /** The tanks and items have turned clockwise for the view. Hybrid areas still use game coordinates. */
+  readonly terrainTurned?: boolean;
   /** The shots of the turn that produced this snapshot. Empty for the start state. */
   readonly throws: readonly ThrowEvent[];
   /** Where tanks sank before appearing at the snapshot's squares. */

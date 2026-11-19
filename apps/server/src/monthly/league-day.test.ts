@@ -1,10 +1,11 @@
 // The bot draw of a league's day round (league-day.ts, "Bot rule"), through its public methods.
 import { describe, expect, test } from "bun:test";
 import { plainTankLook } from "@game/arena";
-import { parseStrategy, PRESETS, RULE_SET_IDS, ruleSet, type RuleSetId } from "@game/engine";
+import { ARENA_LAYOUT_IDS, arenaConditionOf, parseStrategy, PRESETS, ruleSet, type ArenaConditionId } from "@game/engine";
 import { LeagueDay, MONTHLY_CONDITIONS, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
+const drawFor = (id: ArenaConditionId) => (MONTHLY_CONDITIONS.indexOf(id) + 0.5) / MONTHLY_CONDITIONS.length;
 const botsOf = (day: LeagueDay) => day.view(1000).tanks.filter((t) => t.isBot);
 const waiter = parseStrategy({ modes: [{ id: "main", name: "Wait", rules: [], fallback: { action: "wait", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
 
@@ -104,21 +105,20 @@ describe("the arena condition", () => {
     return day.view(1000).board;
   };
 
-  test("each new round draws Standard, Sharp eyes, Dry spell, Arm's length or Open field, each one as likely", () => {
-    const drawn = MONTHLY_CONDITIONS.map((_, i) => conditionWith((i + 0.5) / MONTHLY_CONDITIONS.length).ruleSetId);
-    expect(drawn).toEqual(["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field"]);
-    expect(MONTHLY_CONDITIONS.every((id) => RULE_SET_IDS.includes(id))).toBe(true);
-    expect(conditionWith(0.99).ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
+  test("each single condition and layout takes one equal slot in the monthly draw", () => {
+    const drawn = MONTHLY_CONDITIONS.map((id) => arenaConditionOf(conditionWith(drawFor(id))));
+    expect(drawn).toEqual(["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field", ...ARENA_LAYOUT_IDS]);
+    expect(arenaConditionOf(conditionWith(0.99))).toBe("hills");
   });
 
   test("a rebuild draws again", () => {
     let draw = 0.01;
     const day = new LeagueDay(1, () => draw);
     day.start(two, 1000);
-    expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[0] as RuleSetId);
+    expect(arenaConditionOf(day.view(1000).board)).toBe("standard");
     draw = 0.99;
     day.rebuild(1000);
-    expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
+    expect(arenaConditionOf(day.view(1000).board)).toBe("hills");
   });
 
   test("draws once on each weather turn and leaves the round alone when the draw repeats", () => {
@@ -137,7 +137,7 @@ describe("the arena condition", () => {
     expect(draws).toBe(1);
     expect(day.view(total).board).toMatchObject({ tick: RESHUFFLE_TURNS, ticksTotal: total, ruleSetId: "standard" });
 
-    draw = 0.5;
+    draw = drawFor("dry-spell");
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
     const turn = day.step();
     expect(turn?.weatherChanged).toBe(true);
@@ -148,6 +148,21 @@ describe("the arena condition", () => {
     expect(scores(board.bots)).toEqual(scores(turn?.snapshot.bots ?? []));
     expect(day.statsOf("seat-1").turns).toBe(2 * RESHUFFLE_TURNS);
   });
+
+  test("weather can enter a layout and a repeat keeps its map and rain clock", () => {
+    let draw = 0;
+    const day = new LeagueDay(1, () => draw);
+    const total = 2 * RESHUFFLE_TURNS + 1;
+    day.start(two, total);
+    draw = drawFor("rainFront");
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    expect(day.step()?.weatherChanged).toBe(true);
+    expect(day.view(total).board.layout).toEqual({ id: "rainFront", areas: [], firstColumn: 0 });
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    expect(day.step()?.weatherChanged).toBe(false);
+    expect(day.view(total).board.layout).toEqual({ id: "rainFront", areas: [], firstColumn: 11 });
+  });
+
 });
 
 describe("new rules for a seated tank", () => {

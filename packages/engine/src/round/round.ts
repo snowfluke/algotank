@@ -16,6 +16,7 @@
 //   joinRound:   one spawn cell (int) among the free cells, one direction (int), one
 //                tie-break number (next). leaveRound draws nothing.
 //   freshStartRound: one free cell (int), then one tie rank (next).
+//   Hills: shuffle the hill candidates when the layout starts, before seating or tunnels.
 //   changeRoundRules: freshStartRound's draws for each tank outside a smaller board, in board order.
 //
 // An open round (createOpenRound) is a round of the monthly league
@@ -47,11 +48,12 @@ import type {
   ThrowEvent,
   TickResult,
 } from "../types.ts";
-import { ruleSet, type RuleSetId } from "../combat/rule-sets.ts";
+import { ruleSet } from "../combat/rule-sets.ts";
 import { ageItems, countDown, newEffect, pickUp, spawnItems, spinDecision, spinsThisTurn } from "../items/items.ts";
 import { decide } from "../strategy/decide.ts";
 import { continueSequence, runningAfter, type RunningSequence } from "../strategy/sequence.ts";
 import { allCells, arenaSize, cellKey, isInside, type Cell } from "./grid.ts";
+import { advanceLayout, arenaConditionOf, boardRuleSetId, createArenaLayout, isArenaLayoutId, rulesAt, waterCapacityOf, type ArenaConditionId } from "./arena-layouts.ts";
 import { createRng } from "./rng.ts";
 import { resolveTick } from "./resolve.ts";
 import type { Placement } from "./resolve.ts";
@@ -65,6 +67,7 @@ class RoundRuntime implements RoundState {
   snapshot: Snapshot;
   /** The bots in the middle of a sequence (strategy/sequence.ts). Round state, so a replay of the config is identical. */
   readonly sequences = new Map<BotId, RunningSequence>();
+  layoutStartedAt = 0;
 
   constructor(
     readonly config: RoundConfig,
@@ -161,7 +164,8 @@ export interface OpenRoundConfig {
   readonly seed: number;
   /** The turns planned for the round; the "time left" condition reads it. */
   readonly ticksTotal: number;
-  readonly ruleSetId: RuleSetId;
+  /** The single condition or hybrid layout the round starts with. */
+  readonly ruleSetId: ArenaConditionId;
   /** The board is sized for this many tanks (arenaSize) and keeps that size when tanks come and go. */
   readonly boardFor: number;
   /** As RoundConfig.items. */
@@ -176,11 +180,16 @@ export function createOpenRound(config: OpenRoundConfig): RoundState {
   if (!Number.isSafeInteger(config.ticksTotal) || config.ticksTotal < 1) {
     throw new Error(`ticksTotal must be a positive integer, got ${config.ticksTotal}`);
   }
-  const rules = ruleSet(config.ruleSetId);
-  const { width, height } = arenaSize(config.boardFor, rules);
-  const roundConfig: RoundConfig = { seed: config.seed, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, players: [], items: config.items };
-  const spawn: Snapshot = { width, height, tick: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId: config.ruleSetId, bots: [], items: [] };
-  return new RoundRuntime(roundConfig, spawn, createRng(config.seed), new Map(), new Map());
+  const condition = config.ruleSetId;
+  const ruleSetId = boardRuleSetId(condition);
+  const size = arenaSize(config.boardFor, ruleSet(ruleSetId));
+  const rng = createRng(config.seed);
+  const roundConfig: RoundConfig = { seed: config.seed, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, players: [], items: config.items };
+  const spawn: Snapshot = {
+    ...size, tick: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, bots: [], items: [],
+    ...(isArenaLayoutId(condition) ? { layout: createArenaLayout(condition, size, rng) } : {}),
+  };
+  return new RoundRuntime(roundConfig, spawn, rng, new Map(), new Map());
 }
 
 /**
@@ -193,13 +202,13 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   if (!Number.isSafeInteger(score)) throw new Error(`score must be a whole number, got ${score}`);
   const before = round.snapshot;
   if (before.bots.some((bot) => bot.id === player.id)) throw new Error(`player "${player.id}" is already in the round`);
-  const cell = drawFreeCell(round, player.id);
+  const cell = drawFreeCell(round, player.id, before.tick === 0 && before.layout?.id === "fourQuarters");
   const direction = DIRECTIONS[round.rng.int(DIRECTIONS.length)];
   const firstMode = player.strategy.modes[0];
   if (direction === undefined || firstMode === undefined) throw new Error(`could not place player "${player.id}"`);
   // The tie-break number also settles target ties in this round (BotState.tieRank), so a join draws nothing more.
   const tieRank = round.rng.next();
-  const bot: BotState = { ...spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, ruleSet(before.ruleSetId).waterCapacity), tieRank };
+  const bot: BotState = { ...spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, waterCapacityOf(before)), tieRank };
   round.tieBreaks.set(player.id, tieRank);
   round.strategies.set(player.id, player.strategy);
   round.snapshot = { ...before, bots: [...before.bots, bot] };
@@ -207,12 +216,23 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
 }
 
 /** Tanks appear on empty squares, so they cannot take an item without driving there. */
-function drawFreeCell(round: RoundRuntime, id: BotId): Cell {
+function drawFreeCell(round: RoundRuntime, id: BotId, spread = false): Cell {
   const board = round.snapshot;
   const taken = new Set([...board.bots, ...board.items].map(cellKey));
   const free = allCells(board).filter((cell) => !taken.has(cellKey(cell)));
   if (free.length === 0) throw new Error(`no free square is left for player "${id}"`);
-  return free[round.rng.int(free.length)] as Cell;
+  if (!spread) return free[round.rng.int(free.length)] as Cell;
+  // New rounds fill the least populated quarters first (87-hybrid-arenas.md).
+  // Each quarter has distinct rules, so the spawn and the floor share its edges.
+  const population = new Map<string, number>();
+  for (const bot of board.bots) {
+    const quarter = rulesAt(board, bot.x, bot.y).id;
+    population.set(quarter, (population.get(quarter) ?? 0) + 1);
+  }
+  const counts = free.map(({ x, y }) => population.get(rulesAt(board, x, y).id) ?? 0);
+  const least = Math.min(...counts);
+  const candidates = free.filter((_, index) => counts[index] === least);
+  return candidates[round.rng.int(candidates.length)] as Cell;
 }
 
 /** Takes a tank off the board between two turns, with its running sequence. Throws when the id is not on the board. */
@@ -237,7 +257,7 @@ export function freshStartRound(state: RoundState, id: BotId): BotState {
   if (old === undefined) throw new Error(`player "${id}" is not in the round`);
   const cell = drawFreeCell(round, id);
   const tieRank = round.rng.next();
-  const bot = { ...old, ...cell, water: ruleSet(before.ruleSetId).waterCapacity, tieRank };
+  const bot = { ...old, ...cell, water: waterCapacityOf(before), tieRank };
   round.tieBreaks.set(id, tieRank);
   round.sequences.delete(id);
   round.snapshot = { ...before, bots: [...before.bots.filter((b) => b.id !== id), bot] };
@@ -249,20 +269,25 @@ export function freshStartRound(state: RoundState, id: BotId): BotState {
  * tanks and items stay on their squares as the right and bottom edges move. Only tanks on
  * removed squares need a fresh start. Returns those tanks in tunnel order.
  */
-export function changeRoundRules(state: RoundState, ruleSetId: RuleSetId, boardFor: number): readonly BotState[] {
+export function changeRoundRules(state: RoundState, condition: ArenaConditionId, boardFor: number): readonly BotState[] {
   const round = runtimeOf(state);
   const before = round.snapshot;
-  if (ruleSetId === before.ruleSetId) return [];
-  const rules = ruleSet(ruleSetId);
-  const size = arenaSize(boardFor, rules);
+  if (condition === arenaConditionOf(before)) return [];
+  const ruleSetId = boardRuleSetId(condition);
+  const size = arenaSize(boardFor, ruleSet(ruleSetId));
   const shrinks = size.width < before.width || size.height < before.height;
   const outside = shrinks ? before.bots.filter((bot) => !isInside(size, bot)) : [];
   const items = shrinks ? before.items.filter((item) => isInside(size, item)) : before.items;
   if (shrinks && before.bots.length + items.length > size.width * size.height) {
     throw new Error("the smaller board has too few free squares");
   }
-  const bots = before.bots.map((bot) => bot.water <= rules.waterCapacity ? bot : { ...bot, water: rules.waterCapacity });
-  round.snapshot = { ...before, ...size, ruleSetId, bots, items };
+  const { layout: oldLayout, ...rest } = before;
+  const layout = isArenaLayoutId(condition) ? createArenaLayout(condition, size, round.rng) : undefined;
+  const changed = { ...rest, ...size, ruleSetId, items, ...(layout === undefined ? {} : { layout }) };
+  const capacity = waterCapacityOf(changed);
+  const bots = before.bots.map((bot) => bot.water <= capacity ? bot : { ...bot, water: capacity });
+  round.layoutStartedAt = before.tick;
+  round.snapshot = { ...changed, bots };
   return outside.map(({ id }) => freshStartRound(round, id));
 }
 
@@ -333,6 +358,7 @@ export function stepRound(state: RoundState): TickResult {
     // Pickups come after the throws, so a backfire replaces an effect a hit gave on the same turn.
     bots: before.bots.map((bot, i) => nextBotState(bot, carriers[i], decisions[i], hits, backfires.get(bot.id) ?? inflicted.get(bot.id) ?? null)),
     items: [...aged, ...spawned],
+    ...(before.layout === undefined ? {} : { layout: advanceLayout(before.layout, before.width, before.tick + 1 - round.layoutStartedAt) }),
   };
   round.snapshot = next;
 

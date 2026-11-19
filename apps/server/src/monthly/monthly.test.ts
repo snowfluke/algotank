@@ -17,7 +17,7 @@ import { Champions } from "./champions.ts";
 import { openDatabase } from "../db/open.ts";
 import { insertAccount, memoryDatabase } from "../db/testing.ts";
 import { LeagueStore } from "./league-store.ts";
-import { BOARD_GROWTH, RESHUFFLE_TURNS } from "./league-day.ts";
+import { BOARD_GROWTH, MONTHLY_CONDITIONS, RESHUFFLE_TURNS } from "./league-day.ts";
 import { MonthlyLeagues } from "./monthly.ts";
 import { LeagueStreams } from "./streams.ts";
 
@@ -255,7 +255,7 @@ describe("the day round", () => {
     if (bot === undefined) throw new Error("expected a bot");
     for (let i = 1; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
     const page = collect(l.streams.open(1, ada, l.monthly.live(1)));
-    draw = 0.99;
+    draw = (MONTHLY_CONDITIONS.indexOf("open-field") + 0.5) / MONTHLY_CONDITIONS.length;
     l.ticks.tick();
     l.ticks.tick();
     const { messages } = await page.take();
@@ -269,6 +269,29 @@ describe("the day round", () => {
     expect(changed.state.tanks.filter(({ isBot }) => isBot)).toHaveLength(1);
     expect(changed.state.tanks.some(({ id }) => id === bot.id)).toBe(false);
     expect(next.tick.tick).toBe(changed.state.board.tick);
+  });
+
+  test("one weather state starts the rain front and the band then moves through compact ticks", async () => {
+    let draw = 0;
+    const l = startLeague({ random: () => draw });
+    take(l, newAccount());
+    take(l, newAccount());
+    nextDay(l);
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) l.ticks.tick();
+    const page = collect(l.streams.open(1, null, l.monthly.live(1)));
+    draw = (MONTHLY_CONDITIONS.indexOf("rainFront") + 0.5) / MONTHLY_CONDITIONS.length;
+    for (let i = 0; i <= 30; i++) l.ticks.tick();
+    const { messages } = await page.take();
+    l.streams.closeAll();
+
+    const states = messages.filter((message) => message.type === "state");
+    expect(states.map(({ change }) => change)).toEqual([undefined, "weather"]);
+    expect(states[0]?.state.board).not.toHaveProperty("layout");
+    expect(states[1]?.state.board.layout).toEqual({ id: "rainFront", areas: [], firstColumn: 0 });
+    const turns = messages.filter((message) => message.type === "tick");
+    expect(turns[0]?.tick).not.toHaveProperty("rainColumn");
+    expect(turns.slice(1, 30).map(({ tick }) => tick.rainColumn)).toEqual(Array(29).fill(0));
+    expect(turns[30]?.tick.rainColumn).toBe(1);
   });
 
   test("a rush of joiners marks the rebuild for the reshuffle notice", async () => {

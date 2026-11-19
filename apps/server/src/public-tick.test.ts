@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, runRound, ruleSet } from "@game/engine";
+import { createOpenRound, DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, runRound, ruleSet } from "@game/engine";
 import { toPublicSnapshot, toPublicTick } from "./public-tick.ts";
 
 // Sorted, so the test names the allow-list and not an order. The mode of a bot stays out.
@@ -45,4 +45,10 @@ test("the public water is the engine water, and a bot starts with the full tank 
   expect(toPublicSnapshot(spawn).bots.every((bot) => bot.water === capacity)).toBe(true);
   const last = ticks[ticks.length - 1]!;
   expect(toPublicTick(last).snapshot.bots.map((b) => b.water)).toEqual(last.snapshot.bots.map((b) => b.water));
+});
+
+test("a single-condition state keeps the original board bytes", () => {
+  const round = createOpenRound({ seed: 87, ruleSetId: "dry-spell", boardFor: 1, ticksTotal: 40, items: true });
+  const bytes = '{"width":8,"height":6,"tick":0,"ticksTotal":40,"survivorsAfterRound":null,"ruleSetId":"dry-spell","bots":[],"items":[]}';
+  expect(JSON.stringify(toPublicSnapshot(round.snapshot))).toBe(bytes);
 });

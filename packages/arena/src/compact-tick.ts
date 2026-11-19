@@ -26,6 +26,8 @@
 //   freshStarts[k] = [bot index, x, y], the tunnel destinations after the moves,
 //                    in order. Absent on room ticks and turns without a fresh start.
 //
+//   rainColumn: the first column of the rain front after the turn, only on that layout.
+//
 // expandTick throws an Error on a compact tick that does not fit the spawn (an
 // index out of range, a value of the wrong kind). The client treats that as a
 // protocol error.
@@ -47,6 +49,7 @@ export interface CompactTick {
   /** [bot index, item index]: the items taken on the turn. */
   readonly pickups: readonly (readonly number[])[];
   readonly freshStarts?: readonly (readonly [number, number, number])[];
+  readonly rainColumn?: number;
 }
 
 /** Direction index to direction. The engine's own table, clockwise from north. */
@@ -151,6 +154,7 @@ export function compactTick(tick: PublicTick, order: readonly PlayerId[]): Compa
     }),
     items: tick.snapshot.items.map((item) => [indexIn(COMPACT_ITEMS, item.kind, "item"), item.x, item.y, item.turnsLeft]),
     pickups: tick.pickups.map((p) => [idx(p.botId), indexIn(COMPACT_ITEMS, p.item, "item")]),
+    ...(tick.snapshot.layout?.id === "rainFront" ? { rainColumn: tick.snapshot.layout.firstColumn } : {}),
     ...(tick.freshStarts?.length ? { freshStarts: tick.freshStarts.map(({ id, x, y }): [number, number, number] => [idx(id), x, y]) } : {}),
   };
 }
@@ -253,6 +257,15 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
   });
   const freshStarts = compact.freshStarts === undefined ? undefined : expandFreshStarts(compact.freshStarts, bots, spawn);
 
+  let layout = spawn.layout;
+  if (layout?.id === "rainFront") {
+    const firstColumn = integer(compact.rainColumn, "rain column");
+    if (firstColumn < 0 || firstColumn >= spawn.width) throw new Error("rain column is outside the board");
+    if (firstColumn !== layout.firstColumn) layout = { ...layout, firstColumn };
+  } else if (compact.rainColumn !== undefined) {
+    throw new Error("rain column requires a rain front");
+  }
+
   return {
     tick: integer(compact.tick, "tick"),
     order,
@@ -269,6 +282,7 @@ export function expandTick(compact: CompactTick, spawn: PublicSnapshot): PublicT
       ruleSetId: spawn.ruleSetId,
       bots,
       items,
+      ...(layout === undefined ? {} : { layout }),
     },
     ...(freshStarts?.length ? { freshStarts } : {}),
   };

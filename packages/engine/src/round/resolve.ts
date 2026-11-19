@@ -3,7 +3,7 @@
 // input, so it runs without a strategy.
 
 import { POINTS_PER_HIT, canThrow, hitChancePercent, throwRange, waterAfterTick } from "../combat/combat.ts";
-import { rulesOf } from "../combat/rule-sets.ts";
+import { rulesAt, waterCapacityOf } from "./arena-layouts.ts";
 import type { RoundRules } from "../combat/rule-sets.ts";
 import type { BotId, BotState, Build, Move, Rng, Snapshot, TankEffectKind, ThrowEvent } from "../types.ts";
 import { ITEM_RULES, actsOnOwnHit, effectOfHit, holderBlocks, useOnce } from "../items/items.ts";
@@ -46,17 +46,16 @@ interface Slot {
  *
  * The rng is used only to roll a throw that has a target and enough water, one
  * draw per such throw. A throw at a bot from a tank that holds less than
- * the round's waterPerThrow is "dry": it draws nothing and moves no points.
- * The snapshot's ruleSetId decides the numbers.
+ * the thrower's square's waterPerThrow is "dry": it draws nothing and moves no points.
  */
 export function resolveTick(
-  snapshot: Pick<Snapshot, "width" | "height" | "bots" | "ruleSetId">,
+  snapshot: Pick<Snapshot, "width" | "height" | "bots" | "ruleSetId" | "layout">,
   moves: readonly TickMove[],
   order: readonly BotId[],
   rng: Rng,
 ): TickResolution {
   const size: ArenaSize = snapshot;
-  const rules = rulesOf(snapshot);
+  const capacity = waterCapacityOf(snapshot);
   const bots = snapshot.bots;
 
   const moveOf = new Map<BotId, Move>();
@@ -105,7 +104,7 @@ export function resolveTick(
         occupant.set(cellKey(me), botId);
       }
     } else if (slot.move === "T") {
-      throws.push(resolveThrow(slot, size, rules, slots, occupant, rng, inflicted));
+      throws.push(resolveThrow(slot, size, rulesAt(snapshot, me.x, me.y), slots, occupant, rng, inflicted));
     } else if (slot.move === "W") {
       // Waiting changes nothing; the refill below still counts it as a turn without a throw.
     } else {
@@ -113,8 +112,10 @@ export function resolveTick(
     }
   }
 
-  // Refill after all moves, so the water a throw checks is the water from before this tick.
-  for (const slot of slots.values()) slot.place.water = waterAfterTick(slot.place.water, slot.spent, rules);
+  // Refill on the square where the tank ends its move, under the one arena-wide limit.
+  for (const { place, spent } of slots.values()) {
+    place.water = waterAfterTick(place.water, spent, rulesAt(snapshot, place.x, place.y), capacity);
+  }
 
   return { placements: bots.map((bot) => ({ ...(slots.get(bot.id) as Slot).place })), throws, inflicted };
 }

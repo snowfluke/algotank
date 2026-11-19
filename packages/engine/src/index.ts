@@ -13,6 +13,11 @@ export { createRound, stepRound, runRound, standings } from "./round/round.ts";
 // An open round of the monthly league: tanks join and leave between turns.
 export { changeRoundRules, createOpenRound, freshStartRound, joinRound, leaveRound, replaceStrategy } from "./round/round.ts";
 export type { OpenRoundConfig } from "./round/round.ts";
+export {
+  ARENA_LAYOUT_IDS, arenaConditionOf, areaRuleSetIds, areasOf, boardRuleSetId,
+  createArenaLayout, isArenaLayoutId, rulesAt, waterCapacityOf,
+} from "./round/arena-layouts.ts";
+export type { ArenaArea, ArenaConditionId, ArenaLayout, ArenaLayoutId, AreaRuleSetId } from "./round/arena-layouts.ts";
 export { RULES } from "./round/rules.ts";
 
 // combat/ owns every number that decides a throw. The numbers that change from

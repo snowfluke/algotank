@@ -16,7 +16,7 @@
 // activity list; `quit` = 1 opens the quit question.
 
 import { LEAGUE_ACTIVITY_LIMIT } from "@game/arena";
-import { RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
+import { ARENA_LAYOUT_IDS, RULE_SET_IDS, STANDARD_RULE_SET_ID, type ArenaConditionId } from "@game/engine";
 import { useMemo, useState } from "react";
 import { AppHeader } from "../ui/AppHeader.tsx";
 import { AppShell } from "../ui/AppShell.tsx";
@@ -66,7 +66,7 @@ export function MonthlyHarness() {
   // Memoised: a seat holds the statistics of 300 simulated turns, and the page gets one seat per read, not one per render.
   const seat = useMemo(() => (which === "ranked" ? fixtureRankedSeat(league) : seated ? fixtureSeat(which === "other" ? 2 : league) : null), [which, league, seated]);
   // rules=<id>: the round's arena condition, so the audit can show the longest name (open-field).
-  const rules = param<RuleSetId>("rules", RULE_SET_IDS, which === "weather" ? "open-field" : STANDARD_RULE_SET_ID);
+  const rules = param<ArenaConditionId>("rules", [...RULE_SET_IDS, ...ARENA_LAYOUT_IDS], which === "weather" ? "open-field" : STANDARD_RULE_SET_ID);
   const tanks = tanksParam(TANKS[which]);
   const field = param("field", ["standard", "open"], "standard");
   // field=open draws the larger open-field board; rules=<id> only names another condition over the same board.

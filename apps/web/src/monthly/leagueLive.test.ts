@@ -34,6 +34,23 @@ describe("a league's live state", () => {
     ]);
   });
 
+  test("rain weather starts a notice and the next tick moves the band without resetting it", () => {
+    const ready = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: live }, 0);
+    const rain = { id: "rainFront", areas: [], firstColumn: 0 } as const;
+    const state = { ...live, board: { ...board, layout: rain } };
+    const read = (value: unknown) => parseLeagueMessage(JSON.stringify(value));
+    const message = read({ type: "state", state, change: "weather" });
+    if (message === null) throw new Error("expected a rain front state");
+    const raining = nextLeagueLoad(ready, message, 5);
+    const moved = nextLeagueLoad(raining, { type: "tick", tick: { ...tick, rainColumn: 1, freshStarts: [[0, 4, 2]] }, own: null }, 10);
+    if (moved.kind !== "ready") throw new Error("expected a board");
+    expect(moved.board.snapshot.layout).toEqual({ ...rain, firstColumn: 1 });
+    expect(moved.board.weatherUntil).toBe(4005);
+    expect(moved.board.snapshot.bots.at(-1)?.water).toBe(12);
+    expect(read({ type: "state", state: { ...state, board: { ...board, layout: { ...rain, firstColumn: board.width } } } })).toBeNull();
+    expect(() => nextLeagueLoad(ready, { type: "tick", tick: { ...tick, rainColumn: 1 }, own: null }, 10)).toThrow();
+  });
+
   test("a turn for other tanks than the last state throws, so the page connects again", () => {
     const one = nextLeagueLoad({ kind: "connecting" }, { type: "state", state: { ...live, tanks: live.tanks.slice(0, 1), board: { ...board, bots: board.bots.slice(0, 1) } } }, 0);
     expect(() => nextLeagueLoad(one, { type: "tick", tick, own: null }, 0)).toThrow();

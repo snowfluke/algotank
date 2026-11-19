@@ -237,3 +237,12 @@ describe("sample sentences", () => {
     expect(modeName(id, { id: "rest", name: "Tidur" })).toBe("Tidur");
   });
 });
+
+test("area conditions show the chosen condition and target in both languages", () => {
+  const self = { condition: "myArea", params: { set: "dry-spell" }, negate: false };
+  const target = { condition: "targetArea", params: { target: "nearest", set: "downpour" }, negate: false };
+  expect(conditionText(en, self)).toBe("I stand in a Dry spell area");
+  expect(conditionText(id, self)).toBe("aku berada di area Musim kering");
+  expect(conditionText(en, target)).toBe("the target (the nearest tank) stands in a Downpour area");
+  expect(conditionText(id, target)).toBe("target (tank terdekat) berada di area Hujan deras");
+});

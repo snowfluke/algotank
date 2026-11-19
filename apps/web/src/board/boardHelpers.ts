@@ -271,12 +271,12 @@ export interface GaugeShape {
 }
 
 /** The tank maximum and the cost of a throw come from the round's rules: both differ between rule sets. */
-export function gaugeShape(water: number, trackWidth: number, rules: RoundRules): GaugeShape {
-  const share = Math.min(1, Math.max(0, water / rules.waterCapacity));
+export function gaugeShape(water: number, trackWidth: number, rules: RoundRules, capacity = rules.waterCapacity): GaugeShape {
+  const share = Math.min(1, Math.max(0, water / capacity));
   return {
     trackWidth,
     fillWidth: trackWidth * share,
-    tickAt: (trackWidth * rules.waterPerThrow) / rules.waterCapacity,
+    tickAt: (trackWidth * rules.waterPerThrow) / capacity,
     canThrow: canThrow(water, rules),
   };
 }

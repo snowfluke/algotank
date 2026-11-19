@@ -20,9 +20,9 @@ export const BUILD_BUDGET = 6;
 export const POINTS_PER_HIT = 1;
 
 /** The water a tank holds after a tick. `spent` is true when the bot's throw at a bot used water. */
-export function waterAfterTick(water: number, spent: boolean, rules: RoundRules): number {
+export function waterAfterTick(water: number, spent: boolean, rules: RoundRules, capacity = rules.waterCapacity): number {
   if (spent) return water - rules.waterPerThrow;
-  return Math.min(rules.waterCapacity, water + rules.waterRefillPerTick);
+  return Math.min(capacity, water + rules.waterRefillPerTick);
 }
 
 /** True when a tank holds enough water for a throw at a bot. The round, the conditions and the screens all ask this function. */

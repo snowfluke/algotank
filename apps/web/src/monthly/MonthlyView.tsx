@@ -25,6 +25,7 @@ import { MonthlyAbout } from "./MonthlyAbout.tsx";
 import { LegendButton } from "../board/BoardLegend.tsx";
 import type { TankInfo } from "../board/props.ts";
 import { useFormat, useLanguage, useMessages } from "../i18n/I18nProvider.tsx";
+import { useMusicCondition } from "../sound/music.ts";
 import { SCREEN_SCALE_STYLE } from "../screen/screenScale.ts";
 import { PagedRanking } from "../standings/StandingsTable.tsx";
 import { tankLetters } from "../tank/look.ts";
@@ -457,6 +458,8 @@ export function MonthlyView(props: MonthlyViewProps) {
   const fit = useFitLayout();
   // Today's points follow the board turn by turn (monthlyParts.ts, withLivePoints); the layouts read only this ranking.
   const board = boardOf(props.load);
+  // A weather state can change the condition in the same turn (spec 77, 2026-11-19).
+  useMusicCondition(board?.snapshot.ruleSetId ?? null);
   const ranking = useMemo(
     () => withLivePoints(props.ranking, board === null ? null : { league: board.live.league, day: board.live.day, snapshot: board.snapshot }),
     [props.ranking, board],

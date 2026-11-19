@@ -31,11 +31,12 @@ import { RoomFrame, type FramePane } from "../room/RoomFrame.tsx";
 import { paneShown, shownTab } from "../room/roomFrame.ts";
 import { SettingsButton, SettingsSheet } from "../room/SettingsSheet.tsx";
 import { StatusLine } from "../room/StatusLine.tsx";
+import { useMusicCondition } from "../sound/music.ts";
 import { HistoryPane } from "../results/HistoryPane.tsx";
 import { ResultLink, resultIdOf } from "../results/ResultLink.tsx";
 import { RuleSetLine } from "../rules/RuleSetLine.tsx";
 import { InvitePane } from "../share/InvitePane.tsx";
-import type { ArenaStreamState } from "../stream/streamState.ts";
+import { snapshotFor, type ArenaStreamState } from "../stream/streamState.ts";
 import { useArenaStream } from "../stream/useArenaStream.ts";
 import { TankBadge } from "../tank/TankBadge.tsx";
 import { AppHeader } from "../ui/AppHeader.tsx";
@@ -117,6 +118,8 @@ function HostRoom({ arena, stream, chatFeed, name }: { readonly arena: PublicAre
   const tab = shownTab(layout, choice) ?? "invite";
   const [settingsOpen, setSettingsOpen] = useState(false);
   const phaseKind = arena.phase.kind;
+  const snapshot = arena.phase.kind === "running" ? snapshotFor(stream, arena.phase.round) : null;
+  useMusicCondition(snapshot?.ruleSetId ?? null);
   useEffect(() => setSettingsOpen(false), [phaseKind]);
   const clock = roundClock(arena, stream);
   // A scheduled start (spec 75): the server's `auto` anchors it, so the clock does not trust this device's time.

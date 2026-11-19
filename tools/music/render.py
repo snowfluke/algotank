@@ -131,6 +131,25 @@ def pad_voice(f: float, dur: float, rng: np.random.Generator, attack: float = 1.
     return s * envelope(dur, attack, None, release) / 2
 
 
+def shaker(dur: float, rng: np.random.Generator, bright: float = 0.6) -> np.ndarray:
+    """A soft shaker tick: a short burst of noise, smoothed so the track's low-pass keeps it gentle."""
+    t = times(dur)
+    noise = rng.standard_normal(len(t))
+    # A one-pole smoothing: `bright` near 1 keeps more highs.
+    smooth = np.empty_like(noise)
+    acc = 0.0
+    for i, x in enumerate(noise):
+        acc = bright * x + (1 - bright) * acc
+        smooth[i] = acc
+    return smooth * envelope(dur, 0.010, dur / 4, dur / 2)
+
+
+def rain_bed(loop: Loop, rng: np.random.Generator, gain: float) -> None:
+    """A steady hiss of rain under the whole loop; the track's low-pass turns white noise into soft rain."""
+    for side in (-0.6, 0.6):
+        loop.add(0, rng.standard_normal(loop.n) * 0.25, gain, pan=side)
+
+
 # --- Whole-loop processing -------------------------------------------------------------------
 
 
@@ -227,6 +246,157 @@ def track_a() -> Loop:
     return loop
 
 
+# --- One track per arena condition (owner, 2026-11-19: "Changing season or arena condition also changes the bgm") ---
+# Same instruments as track A, so the game keeps one sound; each condition gets its own key, tempo and texture.
+# 16 bars each, so a file stays under about 0.7 MB.
+
+
+def chord_loop(loop: Loop, rng: np.random.Generator, chords: list, pad_gain: float, bass_gain: float, pan_width: float = 0.35) -> None:
+    """Pads and bass, one chord a bar; voicings move by a step at most so the harmony glides."""
+    for b in range(loop.bars):
+        root, voicing, _ = chords[b % len(chords)]
+        t0 = b * loop.bar
+        pans = (-pan_width, pan_width, -pan_width / 2, pan_width / 2)
+        for i, note in enumerate(voicing):
+            loop.add(t0, pad_voice(hz(note), loop.bar + 1.6, rng), pad_gain, pan=pans[i % 4])
+        if bass_gain > 0:
+            loop.add(t0, bass(hz(root), loop.bar * 0.95), bass_gain)
+
+
+def melody(loop: Loop, phrase: list, voice: Callable[[float], np.ndarray], gain: float, bars_from: int, bars_to: int, pan: float = 0.1, shift: float = 1.0) -> None:
+    for b in range(bars_from, bars_to):
+        for at, note in phrase[b % len(phrase)]:
+            loop.add(b * loop.bar + at * loop.beat, voice(hz(note) * shift), gain, pan=pan)
+
+
+def track_b() -> Loop:
+    """Musim kering: sunny and dry. D mixolydian, 70 BPM, light shaker, little reverb (dry air)."""
+    loop = Loop(bpm=70, bars=16)
+    rng = np.random.default_rng(12)
+    chords = [
+        ("D2", ["D3", "F#3", "A3", "C4"], ["A4", "D5"]),  # D7 colour, mixolydian
+        ("C3", ["E3", "G3", "C4", "D4"], ["G4", "C5"]),  # Cadd9
+        ("G2", ["D3", "G3", "B3", "D4"], ["B4", "D5"]),  # G
+        ("D2", ["D3", "F#3", "A3", "D4"], ["A4", "F#5"]),  # D
+    ]
+    chord_loop(loop, rng, chords, 0.07, 0.15)
+    for b in range(loop.bars):
+        for j, at in enumerate((0.0, 1.0, 1.5, 2.5, 3.0)):
+            loop.add(b * loop.bar + at * loop.beat, shaker(0.09, rng), 0.05 if j % 2 == 0 else 0.03, pan=0.3)
+        tones = chords[b % 4][2]
+        loop.add(b * loop.bar, marimba(hz(tones[0])), 0.08, pan=-0.3)
+        loop.add(b * loop.bar + 2 * loop.beat, marimba(hz(tones[1])), 0.06, pan=0.3)
+    phrase = [
+        [(0, "F#5"), (1, "E5"), (2, "D5")],
+        [(0.5, "C5"), (2, "E5")],
+        [(0, "D5"), (1.5, "B4"), (2.5, "A4")],
+        [(1, "A4")],
+    ]
+    melody(loop, phrase, kalimba, 0.12, 4, 12)
+    return loop
+
+
+def track_c() -> Loop:
+    """Hujan deras: a rainy day. Bb major, 84 BPM, soft pads, a rain hiss and drops on the kalimba."""
+    loop = Loop(bpm=84, bars=16)
+    rng = np.random.default_rng(13)
+    chords = [
+        ("Bb2", ["F3", "A3", "D4", "F4"], ["D5", "F5"]),  # Bbmaj7
+        ("G2", ["F3", "Bb3", "D4", "F4"], ["Bb4", "D5"]),  # Gm7
+        ("Eb3", ["G3", "Bb3", "D4", "G4"], ["Bb4", "G5"]),  # Ebmaj7
+        ("F2", ["F3", "A3", "C4", "Eb4"], ["C5", "F5"]),  # F7
+    ]
+    chord_loop(loop, rng, chords, 0.08, 0.12, pan_width=0.45)
+    rain_bed(loop, rng, 0.022)
+    drops = ["D6", "F6", "G6", "Bb5", "C6", "F5"]
+    for b in range(loop.bars):
+        for _ in range(3):
+            at = float(rng.integers(0, 8)) / 2
+            loop.add(b * loop.bar + at * loop.beat, kalimba(hz(drops[int(rng.integers(0, len(drops)))]), 1.2), 0.05, pan=float(rng.uniform(-0.6, 0.6)))
+    phrase = [
+        [(0, "F5"), (1.5, "D5")],
+        [(0, "Bb4"), (2, "D5")],
+        [(0, "G5"), (1, "F5"), (2.5, "D5")],
+        [(1, "C5")],
+    ]
+    melody(loop, phrase, kalimba, 0.11, 8, 16, pan=-0.1)
+    return loop
+
+
+def track_d() -> Loop:
+    """Jarak dekat: close and bouncy. C major, 100 BPM, a staccato marimba ostinato and call-and-response."""
+    loop = Loop(bpm=100, bars=16)
+    rng = np.random.default_rng(14)
+    chords = [
+        ("C3", ["E3", "G3", "C4", "E4"], ["C5", "E5", "G5"]),
+        ("A2", ["E3", "A3", "C4", "E4"], ["A4", "C5", "E5"]),
+        ("F2", ["F3", "A3", "C4", "F4"], ["A4", "C5", "F5"]),
+        ("G2", ["D3", "G3", "B3", "D4"], ["G4", "B4", "D5"]),
+    ]
+    chord_loop(loop, rng, chords, 0.05, 0.0)
+    for b in range(loop.bars):
+        root, _, tones = chords[b % 4]
+        for beat_at in (0, 2):
+            loop.add(b * loop.bar + beat_at * loop.beat, bass(hz(root), loop.beat * 0.9), 0.22)
+        for k in range(8):
+            loop.add(b * loop.bar + k * 0.5 * loop.beat, marimba(hz(tones[k % 3]), 0.5), 0.07 if k % 2 == 0 else 0.045, pan=(-0.35 if k % 2 == 0 else 0.35))
+    call = [[(0, "G5"), (0.5, "E5"), (1, "C5")], [], [(0, "A5"), (0.5, "F5"), (1, "C5")], []]
+    answer = [[], [(2, "C5"), (2.5, "E5"), (3, "G5")], [], [(2, "B4"), (2.5, "D5"), (3, "G5")]]
+    melody(loop, call, kalimba, 0.12, 4, 16, pan=-0.15)
+    melody(loop, answer, kalimba, 0.1, 8, 16, pan=0.15)
+    return loop
+
+
+def track_e() -> Loop:
+    """Lapangan luas: wide open. G major, 70 BPM, long wide pads, a slow tune and much more room."""
+    loop = Loop(bpm=70, bars=16)
+    rng = np.random.default_rng(15)
+    chords = [
+        ("G2", ["D3", "G3", "B3", "D4"], ["B4", "D5"]),
+        ("E2", ["E3", "G3", "B3", "D4"], ["G4", "B4"]),  # Em7
+        ("C3", ["E3", "G3", "C4", "D4"], ["E5", "G5"]),  # Cadd9
+        ("D3", ["F#3", "A3", "C4", "D4"], ["A4", "D5"]),  # D7
+    ]
+    chord_loop(loop, rng, chords, 0.09, 0.14, pan_width=0.7)
+    phrase = [
+        [(0, "D5"), (2, "B4")],
+        [(0, "G5"), (3, "E5")],
+        [(0, "E5"), (1, "D5"), (2, "C5")],
+        [(0.5, "A4")],
+    ]
+    melody(loop, phrase, kalimba, 0.13, 4, 16, pan=0.0)
+    for b in range(loop.bars):
+        loop.add(b * loop.bar + 3 * loop.beat, marimba(hz(chords[b % 4][2][1])), 0.05, pan=0.6)
+    return loop
+
+
+def track_f() -> Loop:
+    """Mata tajam: focused. E dorian (Em7 to A7), 90 BPM, a steady marimba arpeggio and a pulse in the bass."""
+    loop = Loop(bpm=90, bars=16)
+    rng = np.random.default_rng(16)
+    chords = [
+        ("E2", ["D3", "G3", "B3", "E4"], ["E5", "G5", "B5"]),  # Em7
+        ("A2", ["C#3", "G3", "B3", "E4"], ["E5", "A5", "C#6"]),  # A9
+        ("E2", ["D3", "G3", "B3", "E4"], ["E5", "G5", "B5"]),
+        ("D2", ["D3", "F#3", "A3", "E4"], ["D5", "F#5", "A5"]),  # Dadd9
+    ]
+    chord_loop(loop, rng, chords, 0.05, 0.0)
+    for b in range(loop.bars):
+        root, _, tones = chords[b % 4]
+        for k in range(4):
+            loop.add(b * loop.bar + k * loop.beat, bass(hz(root), loop.beat * 0.6), 0.16 if k % 2 == 0 else 0.1)
+        for k in range(8):
+            loop.add(b * loop.bar + k * 0.5 * loop.beat, marimba(hz(tones[(k * 2) % 3]) / 2, 0.45), 0.06, pan=(-0.3 if k < 4 else 0.3))
+    phrase = [
+        [(0, "B4"), (1.5, "D5")],
+        [(0.5, "C#5"), (2, "E5")],
+        [(0, "G5"), (1, "F#5"), (2, "E5")],
+        [(1, "D5"), (2.5, "B4")],
+    ]
+    melody(loop, phrase, kalimba, 0.11, 8, 16)
+    return loop
+
+
 # --- Rendering, encoding and measuring ------------------------------------------------------
 
 
@@ -243,8 +413,16 @@ class Track:
     wet: float
 
 
-# The letter stays "a": it seeds the reverb and names the file, so a re-render gives the same audio.
-TRACK = Track("a", "a-mallets-v1.mp3", "Soft mallets with a warm pad", "F major", 75, track_a, 4200, 2.4, 0.32)
+# The letter seeds the reverb and names the file, so a re-render gives the same audio. Track A is the
+# standard condition's and stays as it was.
+TRACKS = [
+    Track("a", "a-mallets-v1.mp3", "Soft mallets with a warm pad", "F major", 75, track_a, 4200, 2.4, 0.32),
+    Track("b", "b-dry-v1.mp3", "Musim kering: sunny and dry", "D mixolydian", 70, track_b, 5000, 1.4, 0.18),
+    Track("c", "c-rain-v1.mp3", "Hujan deras: a rainy day", "Bb major", 84, track_c, 3000, 3.0, 0.4),
+    Track("d", "d-close-v1.mp3", "Jarak dekat: close and bouncy", "C major", 100, track_d, 5000, 1.8, 0.24),
+    Track("e", "e-open-v1.mp3", "Lapangan luas: wide open", "G major", 70, track_e, 4200, 3.4, 0.44),
+    Track("f", "f-sharp-v1.mp3", "Mata tajam: focused", "E dorian", 90, track_f, 4600, 2.0, 0.28),
+]
 
 
 def ffmpeg(*args: str) -> str:
@@ -343,10 +521,14 @@ def main() -> None:
     root = Path(sys.argv[1]).resolve()
     out_dir = root / "apps/web/public/music"
     out_dir.mkdir(parents=True, exist_ok=True)
+    only = set(sys.argv[2:])
     with tempfile.TemporaryDirectory() as tmp:
-        report = {TRACK.letter: render(TRACK, out_dir, Path(tmp))}
+        report = {track.letter: render(track, out_dir, Path(tmp)) for track in TRACKS if not only or track.letter in only}
     print(json.dumps(report, indent=2))
-    (root / "tools/music/measurements.json").write_text(json.dumps(report, indent=2) + "\n")
+    path = root / "tools/music/measurements.json"
+    # A render of some tracks keeps the measurements of the others.
+    kept = json.loads(path.read_text()) if path.exists() else {}
+    path.write_text(json.dumps({**kept, **report}, indent=2) + "\n")
 
 
 if __name__ == "__main__":

@@ -1,17 +1,19 @@
 /// <reference types="bun" />
-// The loop points are copied by hand from the renderer's measurements, so a re-render
-// that changes one file and not the other would make the music jump at its seam.
 import { describe, expect, test } from "bun:test";
+import { RULE_SET_IDS, STANDARD_RULE_SET_ID } from "@game/engine";
 import measurements from "../../../../tools/music/measurements.json";
-import { CHOSEN_TRACK } from "./musicTracks.ts";
+import { DEFAULT_TRACK, MUSIC_TRACKS } from "./musicTracks.ts";
 
-const MEASURED: { readonly file: string; readonly loop_start: number; readonly loop_end: number } = measurements.a;
-
-describe("the music track", () => {
-  test("matches the measured file and loop points", () => {
-    expect(Object.keys(measurements)).toEqual(["a"]);
-    expect(`apps/web/public${CHOSEN_TRACK.url}`).toBe(MEASURED.file);
-    expect(CHOSEN_TRACK.loopStart).toBeCloseTo(MEASURED.loop_start, 3);
-    expect(CHOSEN_TRACK.loopEnd).toBeCloseTo(MEASURED.loop_end, 3);
+describe("the arena condition tracks", () => {
+  test("every rule set has its own measured track, with Standard as the default", () => {
+    expect(Object.keys(MUSIC_TRACKS).sort()).toEqual([...RULE_SET_IDS].sort());
+    expect(DEFAULT_TRACK).toBe(MUSIC_TRACKS[STANDARD_RULE_SET_ID]);
+    const paths = RULE_SET_IDS.map((id) => `apps/web/public${MUSIC_TRACKS[id].url}`);
+    expect(paths.sort()).toEqual(Object.values(measurements).map(({ file }) => file).sort());
+    for (const track of Object.values(MUSIC_TRACKS)) {
+      const measured = Object.values(measurements).find(({ file }) => file === `apps/web/public${track.url}`);
+      if (measured === undefined) throw new Error(`Missing loop measurements for ${track.url}`);
+      expect([track.loopStart, track.loopEnd]).toEqual([measured.loop_start, measured.loop_end]);
+    }
   });
 });

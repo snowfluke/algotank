@@ -1,12 +1,13 @@
-// The page's background music: one player for the whole visit, so changing pages never restarts
-// the tune. Music is on where the person's "Music" switch says so, except on the big screen,
+// The page's background music: one player for the whole visit, so pages sharing a condition
+// share one tune. Music is on where the person's "Music" switch says so, except on the big screen,
 // which starts silent and plays only when the presenter turns music on there (that choice is
 // not remembered, so every event starts quiet).
 
 import { useEffect, useSyncExternalStore } from "react";
+import { STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
 import type { MusicState } from "./musicMachine.ts";
 import { createMusicPlayer, type MusicPlayer } from "./musicPlayer.ts";
-import { CHOSEN_TRACK } from "./musicTracks.ts";
+import { DEFAULT_TRACK, MUSIC_TRACKS } from "./musicTracks.ts";
 import { browserContext, browserHasGesture } from "./player.ts";
 import { soundSettings } from "./setting.ts";
 import type { SoundName } from "./sounds.ts";
@@ -23,7 +24,7 @@ async function fetchTrack(url: string): Promise<ArrayBuffer> {
 }
 
 const player: MusicPlayer = createMusicPlayer({
-  track: CHOSEN_TRACK,
+  track: DEFAULT_TRACK,
   getContext: browserContext,
   fetchTrack,
   hasGesture: browserHasGesture,
@@ -32,7 +33,7 @@ const player: MusicPlayer = createMusicPlayer({
     const id = setTimeout(run, ms);
     return () => clearTimeout(id);
   },
-  onError: (error) => console.error("The background music could not load, so the game plays without it.", error),
+  onError: (error, track) => console.error(`The background music file ${track.url} could not load.`, error),
 });
 
 let venue: MusicVenue = "app";
@@ -65,6 +66,15 @@ export function useMusicVenue(next: MusicVenue): void {
     venue = next;
     sync();
   }, [next]);
+}
+
+/** One arena view sets the condition it shows (spec 80, owner, 2026-11-19). */
+export function useMusicCondition(ruleSetId: RuleSetId | null): void {
+  useEffect(() => {
+    player.setTrack(MUSIC_TRACKS[ruleSetId ?? STANDARD_RULE_SET_ID]);
+  }, [ruleSetId]);
+  // Reset on leaving the view. A weather change goes straight to the next track.
+  useEffect(() => () => player.setTrack(DEFAULT_TRACK), []);
 }
 
 function subscribeVenue(listener: () => void): () => void {

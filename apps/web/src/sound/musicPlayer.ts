@@ -2,9 +2,9 @@
 // Audio API. The browser parts come in as `MusicPlayerDeps`, so the tests drive it with a fake
 // audio context, a fake download and a manual timer.
 //
-// The graph: source (looping between the track's loop points) -> fade -> duck -> level -> speakers.
-// Each job has its own gain node, so a fade and a duck never overwrite each other's ramps. Fades
-// are scheduled on the audio clock, because a hidden tab slows its timers down.
+// Each looping source has its own fade, and all sources feed one duck -> level -> speakers.
+// A fade and a duck never overwrite each other's ramps. Fades use the audio clock because a
+// hidden tab slows its timers down.
 
 import { isAudible, transition, type MusicEvent, type MusicState } from "./musicMachine.ts";
 import { DUCK_GAIN, DUCK_MS, FADE_SECONDS, MUSIC_GAIN, type MusicTrack } from "./musicTracks.ts";
@@ -22,8 +22,8 @@ export interface MusicPlayerDeps {
   isVisible(): boolean;
   /** Runs `run` after `ms` milliseconds and returns a function that cancels it. */
   later(run: () => void, ms: number): () => void;
-  /** Reports a failed download or decode; the state says "failed" as well. */
-  onError(error: unknown): void;
+  /** Reports a failed track load, even when another track can still play. */
+  onError(error: unknown, track: MusicTrack): void;
 }
 
 export interface MusicPlayer {
@@ -31,6 +31,8 @@ export interface MusicPlayer {
   subscribe(onChange: () => void): () => void;
   /** Music on or off for this page: the person's switch, or the big screen's own switch. */
   setEnabled(on: boolean): void;
+  /** The track wanted by the current arena condition. */
+  setTrack(track: MusicTrack): void;
   /** A tap or a key press anywhere on the page. */
   gesture(): void;
   setVisible(visible: boolean): void;
@@ -46,16 +48,16 @@ interface Graph {
 interface Voice {
   readonly source: AudioBufferSourceNode;
   readonly fade: GainNode;
-  /** Audio-clock time at which the loop's position was 0. */
-  readonly origin: number;
+  readonly startedAt: number;
 }
 
 export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
-  const { track } = deps;
-  const loopLength = track.loopEnd - track.loopStart;
   let state: MusicState = "off";
-  let buffer: AudioBuffer | null = null;
-  let downloading = false;
+  let wanted = deps.track;
+  let current = deps.track;
+  const buffers = new Map<string, AudioBuffer>();
+  const downloads = new Map<string, Promise<AudioBuffer | undefined>>();
+  let startRequest = 0;
   let graph: Graph | null = null;
   let voice: Voice | null = null;
   /** Seconds into the loop where the music stopped, so turning it on again continues the tune. */
@@ -63,43 +65,72 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
   let cancelDuck: (() => void) | null = null;
   const listeners = new Set<() => void>();
 
-  function send(event: MusicEvent): void {
+  function send(event: MusicEvent, track: MusicTrack = wanted): void {
     const next = transition(state, event);
     if (next === null) return;
     const previous = state;
     state = next;
-    if (next === "loading") load();
-    if (isAudible(next) && !isAudible(previous)) startVoice();
+    if (next === "loading") void loadForStart();
+    if (isAudible(next) && !isAudible(previous)) startVoice(track);
     if (!isAudible(next) && isAudible(previous)) stopVoice();
     if (next === "ducked") duckDown();
     if (previous === "ducked" && next !== "ducked") duckUp();
     for (const listener of listeners) listener();
   }
 
-  function load(): void {
-    if (downloading) return; // a download from before a quick off and on is still running; its result arrives as "loaded"
+  function loadBuffer(ctx: MusicContext, track: MusicTrack): Promise<AudioBuffer | undefined> {
+    const { url } = track;
+    const buffered = buffers.get(url);
+    if (buffered !== undefined) return Promise.resolve(buffered);
+    const pending = downloads.get(url);
+    if (pending !== undefined) return pending;
+    const download = deps.fetchTrack(url)
+      .then((bytes) => ctx.decodeAudioData(bytes))
+      .then((decoded) => {
+        buffers.set(url, decoded);
+        return decoded;
+      })
+      .catch((error: unknown) => {
+        deps.onError(error, track);
+        return undefined;
+      })
+      .finally(() => downloads.delete(url));
+    downloads.set(url, download);
+    return download;
+  }
+
+  async function loadForStart(): Promise<void> {
+    const request = ++startRequest;
     const ctx = deps.getContext();
     if (ctx === null) {
-      deps.onError(new Error("This browser has no Web Audio API, so the music cannot play."));
+      deps.onError(new Error("This browser has no Web Audio API, so the music cannot play."), wanted);
       send({ type: "loadFailed" });
       return;
     }
-    downloading = true;
-    deps
-      .fetchTrack(track.url)
-      .then((bytes) => ctx.decodeAudioData(bytes))
-      .then(
-        (decoded) => {
-          downloading = false;
-          buffer = decoded;
-          send({ type: "loaded", visible: deps.isVisible() });
-        },
-        (error: unknown) => {
-          downloading = false;
-          deps.onError(error);
-          send({ type: "loadFailed" });
-        },
-      );
+    // A condition can change while a file is loading. Cache that result and start only the
+    // latest condition's track, or resume the previous track (standard on the first start).
+    const stillLoading = () => state === "loading" && request === startRequest;
+    while (stillLoading()) {
+      const requested = wanted;
+      let track = requested;
+      let decoded = await loadBuffer(ctx, track);
+      if (!stillLoading()) return;
+      if (wanted !== requested) continue;
+      if (decoded === undefined && track !== current) {
+        track = current;
+        decoded = await loadBuffer(ctx, track);
+        if (!stillLoading()) return;
+        if (wanted !== requested) continue;
+      }
+      send(decoded === undefined ? { type: "loadFailed" } : { type: "loaded", visible: deps.isVisible() }, track);
+      return;
+    }
+  }
+
+  async function crossfade(track: MusicTrack): Promise<void> {
+    if (graph === null || track === current) return;
+    const decoded = await loadBuffer(graph.ctx, track);
+    if (decoded !== undefined && wanted === track && current !== track && isAudible(state)) startVoice(track);
   }
 
   function ensureGraph(ctx: MusicContext): Graph {
@@ -113,12 +144,18 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
     return graph;
   }
 
-  function startVoice(): void {
+  function startVoice(track: MusicTrack): void {
+    const buffer = buffers.get(track.url);
     const ctx = deps.getContext();
-    if (ctx === null || buffer === null) return; // unreachable: "playing" follows a decode in this context
+    if (ctx === null || buffer === undefined) return; // "playing" follows a decode in this context
+    const now = ctx.currentTime;
+    stopVoice(now);
+    if (track !== current) {
+      current = track;
+      position = 0;
+    }
     if (ctx.state === "suspended") void ctx.resume();
     const { duck } = ensureGraph(ctx);
-    const now = ctx.currentTime;
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
@@ -129,19 +166,26 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
     fade.gain.linearRampToValueAtTime(1, now + FADE_SECONDS);
     source.connect(fade);
     fade.connect(duck);
+    source.onended = () => {
+      source.disconnect();
+      fade.disconnect();
+    };
     source.start(now, track.loopStart + position);
-    voice = { source, fade, origin: now - position };
+    voice = { source, fade, startedAt: now };
   }
 
-  function stopVoice(): void {
-    if (voice === null || graph === null) return;
-    const now = graph.ctx.currentTime;
-    const { source, fade, origin } = voice;
+  function stopVoice(now = graph?.ctx.currentTime): void {
+    if (voice === null || now === undefined) return;
+    const { source, fade, startedAt } = voice;
+    const elapsed = now - startedAt;
+    const end = now + FADE_SECONDS;
+    // A second switch can arrive mid-fade. Start from the gain on the audio clock
+    // so the retiring sources and the new source together stay at or below full gain.
     fade.gain.cancelScheduledValues(now);
-    fade.gain.setValueAtTime(fade.gain.value, now);
-    fade.gain.linearRampToValueAtTime(0, now + FADE_SECONDS);
-    source.stop(now + FADE_SECONDS + 0.05);
-    position = (((now - origin) % loopLength) + loopLength) % loopLength;
+    fade.gain.setValueAtTime(Math.min(1, elapsed / FADE_SECONDS), now);
+    fade.gain.linearRampToValueAtTime(0, end);
+    source.stop(end + 0.05);
+    position = (position + elapsed) % (current.loopEnd - current.loopStart);
     voice = null;
   }
 
@@ -177,18 +221,23 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
         send({ type: "disable" });
         return;
       }
-      send({ type: "enable", gestured: deps.hasGesture(), visible: deps.isVisible(), buffered: buffer !== null });
+      send({ type: "enable", gestured: deps.hasGesture(), visible: deps.isVisible(), buffered: buffers.has(wanted.url) });
+    },
+    setTrack(track) {
+      if (wanted === track) return;
+      wanted = track;
+      if (isAudible(state)) void crossfade(track);
     },
     gesture() {
       if (state === "off") return;
-      send({ type: "gesture", visible: deps.isVisible(), buffered: buffer !== null });
+      send({ type: "gesture", visible: deps.isVisible(), buffered: buffers.has(wanted.url) });
       if (state === "failed") return;
       // A context made before the gesture starts suspended, and iOS may need more than one gesture to resume it.
       const ctx = deps.getContext();
       if (ctx !== null && ctx.state === "suspended") void ctx.resume();
     },
     setVisible(visible) {
-      send(visible ? { type: "show" } : { type: "hide" });
+      send(visible ? { type: "show", buffered: buffers.has(wanted.url) } : { type: "hide" });
     },
     duck() {
       send({ type: "duck" });

@@ -3,7 +3,7 @@
 
 export const en = {
   tagline: "Build the best algorithm to drive your tank and win the battle!",
-  sceneLabel: "Toy tanks roll onto a sandy arena, and your tank shoots a jet of water at a red tank.",
+  sceneLabel: "Your tank hits a red tank on a sandy arena, dashes at it with its ultimate, and then rain changes the arena.",
   choicesHeading: "Ways to play",
   playNow: {
     title: "Play now",
@@ -48,7 +48,7 @@ export const en = {
 
 export const id: typeof en = {
   tagline: "Buat algoritma terbaik untuk menggerakkan tankmu dan menangkan pertempuran!",
-  sceneLabel: "Tank-tank mainan masuk ke arena berpasir, lalu tank kamu menyemprotkan air ke tank merah.",
+  sceneLabel: "Tank kamu menembak tank merah di arena berpasir, menabraknya dengan jurus pamungkas, lalu hujan mengubah arena.",
   choicesHeading: "Cara bermain",
   playNow: {
     title: "Main sekarang",

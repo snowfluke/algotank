@@ -12,14 +12,15 @@
 //    A fallback that cannot act makes the bot throw ahead, which stands still.
 //    A throw at a bot spends water from the thrower's tank (see combat/rule-sets.ts),
 //    so a throw from a tank that holds too little water does nothing.
-// 4. Each turn reads one rule set, from its snapshot. RoundConfig.ruleSetId picks the
-//    initial row of RULE_SETS. Monthly weather can change that row between turns.
+// 4. Each turn reads arena rules from its snapshot. Monthly weather can change
+//    the condition between turns, and a layout can give different squares different rules.
 //
 // The rules of play for the eight directions are a table in directions.ts.
 
 import type { UltimateId } from "./ultimates/ultimates.ts";
 import type { RuleSetId } from "./combat/rule-sets.ts";
 import type { Cell } from "./round/grid.ts";
+import type { ArenaLayout } from "./round/arena-layouts.ts";
 
 /** The eight facings, clockwise from north. Each is 45 degrees from the next. directions.ts holds the geometry. */
 export const DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
@@ -309,9 +310,9 @@ export type BotState = ItemHand & {
    */
   readonly ticksSinceLandedHit: number | null;
   /**
-   * Water in the tank, 0 to the round's waterCapacity, full at spawn. A throw at
-   * a bot spends the round's waterPerThrow, and a tick without such a throw adds
-   * waterRefillPerTick (see RoundRules). Every condition, selector and screen counts in this unit.
+   * Water in the tank, full at spawn and capped at the arena's limit. A throw at a bot
+   * spends waterPerThrow from the thrower's square. A tank that spent none adds
+   * waterRefillPerTick from the square where it ends the turn (see RoundRules).
    */
   readonly water: number;
   /** Uses left of the acting item (ITEM_RULES.uses); 0 when the hand is empty. Not sent to the pages. */
@@ -340,8 +341,10 @@ export interface Snapshot {
   readonly ticksTotal: number;
   /** How many bots survive this round's cut, or null in a grand final. */
   readonly survivorsAfterRound: number | null;
-  /** The rule set this round plays under. ruleSet(id) gives its numbers. */
+  /** The rule set of a single condition, or Standard for a layout. */
   readonly ruleSetId: RuleSetId;
+  /** Only on hybrid monthly boards. */
+  readonly layout?: ArenaLayout;
   readonly bots: readonly BotState[];
   /** Items on the board. Always empty in a round with items off. */
   readonly items: readonly BoardItem[];
@@ -419,7 +422,8 @@ export interface ShotProtection {
   readonly pointsSaved: number;
 }
 
-/** Empty, dry and dodged throws draw no roll. A dodged throw still costs a shot. */
+/** Empty, dry and dodged throws draw no roll.
+ * A dry tank lacks the water for a shot on its square. A dodged throw still costs a shot. */
 export type ThrowEvent =
   | { readonly throwerId: BotId; readonly outcome: "empty" }
   | {

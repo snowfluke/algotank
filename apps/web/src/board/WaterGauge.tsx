@@ -16,14 +16,15 @@ const EDGE_GAP = 0.2;
 interface WaterGaugeProps {
   readonly water: number;
   readonly rules: RoundRules;
+  readonly capacity?: number;
   /** True when squares are too small for labels. */
   readonly small: boolean;
 }
 
 /** Drawn around the centre of the tank's square. */
-export function WaterGauge({ water, rules, small }: WaterGaugeProps) {
+export function WaterGauge({ water, rules, capacity, small }: WaterGaugeProps) {
   const height = small ? SMALL_GAUGE_HEIGHT : GAUGE_HEIGHT;
-  const shape = gaugeShape(water, GAUGE_WIDTH, rules);
+  const shape = gaugeShape(water, GAUGE_WIDTH, rules, capacity);
   const top = CELL / 2 - EDGE_GAP - LINE_OVERHANG - height;
   const left = -GAUGE_WIDTH / 2;
   const radius = height / 2;

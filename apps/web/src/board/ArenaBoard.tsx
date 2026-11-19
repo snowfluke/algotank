@@ -18,7 +18,7 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { memo, useEffect, useId, useMemo, useRef } from "react";
 import type { PublicBot } from "@game/arena";
-import { ULTIMATE_RULES, canThrow, rulesOf } from "@game/engine";
+import { ULTIMATE_RULES, canThrow, rulesAt, waterCapacityOf } from "@game/engine";
 import type { BotId, RuleSetId, ThrowEvent, UltimateFire } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { duckMusicUnder } from "../sound/music.ts";
@@ -48,6 +48,7 @@ import {
   youMarkerBelow,
 } from "./boardHelpers.ts";
 import type { ShotShape } from "./boardHelpers.ts";
+import { LayoutFloor } from "./LayoutFloor.tsx";
 import { Crown, DryDrops, DustRing, JetShape, Puff, Splash } from "./boardShapes.tsx";
 import { DizzyStars, HeldBadge, ItemShape, MudPuddle, MudSplats, OpenUmbrella } from "./itemShapes.tsx";
 import type { ArenaBoardProps } from "./props.ts";
@@ -189,13 +190,15 @@ export const ArenaBoard = memo(function ArenaBoard({ drawingKey, ...props }: Are
   return <ArenaBoardDrawing key={drawingKey} {...props} />;
 });
 
-function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap, underlay, overlay }: ArenaBoardProps) {
+function ArenaBoardDrawing({ snapshot, terrainTurned = false, throws, fires, tunnels, names, highlightId, tickMs, tanks, countdown = null, paused = false, camera = null, focusId = null, trailIds, onTankTap, underlay, overlay }: ArenaBoardProps) {
   // The zoomed view's other tanks, a little dimmer than the followed tank and the viewer's own (props.ts, focusId).
   const dimmed = (id: BotId) => focusId !== null && id !== focusId && id !== highlightId;
   const m = useMessages();
-  // The water a tank holds and the cost of a shot differ between rule sets, so the board reads the set of the snapshot.
-  const rules = rulesOf(snapshot);
-  const { width, height, bots, tick } = snapshot;
+  const { width, height, bots, tick, layout, ruleSetId } = snapshot;
+  const gameWidth = terrainTurned ? height : width;
+  const gameHeight = terrainTurned ? width : height;
+  const terrain = { ...snapshot, width: gameWidth, height: gameHeight };
+  const capacity = waterCapacityOf(terrain);
   const angles = useTurnAngles(bots);
   const arrivals = new Set<BotId>();
   const departures = new Map<BotId, { tank: PublicBot; look?: TankLook }>();
@@ -364,7 +367,8 @@ function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightI
             }),
           } as CSSProperties}
         >
-        <Floor width={width} height={height} ruleSetId={snapshot.ruleSetId} />
+        <Floor width={width} height={height} ruleSetId={ruleSetId} hybrid={layout !== undefined} />
+        {layout === undefined ? null : <LayoutFloor layout={layout} width={gameWidth} height={gameHeight} turned={terrainTurned} />}
         {underlay}
         {ultimateArt ? (
           // Effects stop at the board's edge: a whirlwind or magnet beside the wall must not paint over the frame.
@@ -476,6 +480,7 @@ function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightI
         ) : null}
 
         {drawOrder.map((bot) => {
+          const rules = terrainTurned ? rulesAt(terrain, bot.y, gameHeight - 1 - bot.x) : rulesAt(terrain, bot.x, bot.y);
           const isSelf = bot.id === highlightId;
           const fire = firesById.get(bot.id);
           const pulled = fire?.kind === "magnet" ? fire.items.length : 0;
@@ -526,7 +531,7 @@ function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightI
               opacity={dimmed(bot.id) ? DIM_OPACITY : undefined}
               style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}
             >
-              <title>{m.board.tankTitle(displayName(names, bot.id), bot.water, rules.waterCapacity, canThrow(bot.water, rules))}</title>
+              <title>{m.board.tankTitle(displayName(names, bot.id), bot.water, capacity, canThrow(bot.water, rules))}</title>
               <g key={riseKey} className={riseClass}>
                 {/* The plate lies on the square and does not turn with the tank. */}
                 {look.plate === null ? null : (
@@ -595,6 +600,7 @@ function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightI
 
         {/* Gauges and the crown come after every effect, so nothing covers them. On squares too small to read a gauge, only the viewer's tank keeps one. */}
         {drawOrder.map((bot) => {
+          const rules = terrainTurned ? rulesAt(terrain, bot.y, gameHeight - 1 - bot.x) : rulesAt(terrain, bot.x, bot.y);
           const gauge = detail.gauges || bot.id === highlightId;
           if (!gauge && bot.id !== leader) return null;
           const centre = cellCenter(bot.x, bot.y);
@@ -602,7 +608,7 @@ function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightI
           return (
             <g key={bot.id} className={tankMotion(bot.id)} opacity={dimmed(bot.id) ? DIM_OPACITY : undefined} style={{ transform: `translate(${centre.x}px, ${centre.y}px)` }}>
               <g key={arriving ? `rise-${tick}` : "rest"} className={arriving ? "ab-anim ab-tunnel-rise" : undefined}>
-                {gauge ? <WaterGauge water={bot.water} rules={rules} small={!detail.labels} /> : null}
+                {gauge ? <WaterGauge water={bot.water} rules={rules} capacity={capacity} small={!detail.labels} /> : null}
                 {bot.id === leader ? (
                   <g transform={`translate(0 ${-CELL / 2 + 0.6})`} data-leader="true">
                     <title>{m.board.leaderTitle(displayName(names, bot.id))}</title>
@@ -659,14 +665,14 @@ function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightI
 }
 
 /** The ground of the round's condition (arenaGround.ts). Memoised: its marks change only with the board's size or condition. */
-const Floor = memo(function Floor({ width, height, ruleSetId }: { width: number; height: number; ruleSetId: RuleSetId }) {
+const Floor = memo(function Floor({ width, height, ruleSetId, hybrid }: { width: number; height: number; ruleSetId: RuleSetId; hybrid: boolean }) {
   const w = width * CELL;
   const h = height * CELL;
   const ground = ARENA_GROUNDS[ruleSetId];
   const marks = useMemo(() => groundMarksPath(width, height, ruleSetId), [width, height, ruleSetId]);
   const filled = marksFilled(ground.marks);
   return (
-    <g data-ground={ground.marks}>
+    <g data-ground={ground.marks} data-arena-area={hybrid ? ruleSetId : undefined}>
       {/* The wall: a darker rim around the floor, so the arena reads as a closed place. */}
       <rect x={-WALL} y={-WALL} width={w + 2 * WALL} height={h + 2 * WALL} rx={WALL + 2} style={{ fill: ground.wall }} />
       <rect width={w} height={h} rx={2} style={{ fill: ground.floor }} />

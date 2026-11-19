@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PRESETS, RULE_SET_IDS, runRound, type Snapshot, type TickResult } from "@game/engine";
+import { ARENA_LAYOUT_IDS, createOpenRound, joinRound, PRESETS, RULE_SET_IDS, runRound, stepRound, type Snapshot, type TickResult } from "@game/engine";
 import { COMPACT_OUTCOMES, compactTick, expandTick, type CompactTick } from "./compact-tick.ts";
 import type { PublicSnapshot, PublicTick } from "./types.ts";
 
@@ -28,6 +28,7 @@ function publicSnapshot(s: Snapshot): PublicSnapshot {
       effect: b.effect,
     })),
     items: s.items,
+    ...(s.layout === undefined ? {} : { layout: s.layout }),
   };
 }
 
@@ -68,7 +69,7 @@ describe("compactTick and expandTick", () => {
     expect(expandTick(JSON.parse(wire) as CompactTick, board)).toEqual(fresh);
   });
 
-  test("ultimate state, fires and fresh starts round-trip together in the appended field order", () => {
+  test("ultimate state, fires and fresh starts round-trip with and without the rain column in wire order", () => {
     const { spawn, ticks } = playRound("standard", 7);
     const turn = ticks[0]!;
     const [magnet, fullTank, ...others] = turn.snapshot.bots;
@@ -90,10 +91,38 @@ describe("compactTick and expandTick", () => {
       fires: turn.order.indexOf(magnet.id) < turn.order.indexOf(fullTank.id) ? [magnetFire, refill] : [refill, magnetFire],
       freshStarts: [freshStart],
     };
-    const wire = JSON.parse(JSON.stringify(compactTick(combined, spawn.bots.map(({ id }) => id)))) as CompactTick;
-    expect(Object.keys(wire)).toEqual(["tick", "bots", "moves", "throws", "items", "pickups", "itemsWaiting", "magnetFires", "ultimates", "fires", "freshStarts"]);
+    const botOrder = spawn.bots.map(({ id }) => id);
+    const keys = ["tick", "bots", "moves", "throws", "items", "pickups", "itemsWaiting", "magnetFires", "ultimates", "fires", "freshStarts"];
+    const wire = JSON.parse(JSON.stringify(compactTick(combined, botOrder))) as CompactTick;
+    expect(Object.keys(wire)).toEqual(keys);
     expect(expandTick(wire, spawn)).toEqual(combined);
+
+    const layout = { id: "rainFront", areas: [], firstColumn: 0 } as const;
+    const rainSpawn = { ...spawn, layout };
+    const rainTurn = { ...combined, snapshot: { ...combined.snapshot, layout: { ...layout, firstColumn: 1 } } };
+    const rainWire = JSON.parse(JSON.stringify(compactTick(rainTurn, botOrder))) as CompactTick;
+    expect(Object.keys(rainWire)).toEqual([...keys, "rainColumn"]);
+    expect(rainWire.rainColumn).toBe(1);
+    expect(expandTick(rainWire, rainSpawn)).toEqual(rainTurn);
   });
+
+  for (const layout of ARENA_LAYOUT_IDS) {
+    test(`the ${layout} map comes from state and only rain sends its first column in ticks`, () => {
+      const round = createOpenRound({ seed: 87, ticksTotal: 241, ruleSetId: layout, boardFor: 1, items: false, ultimates: false });
+      joinRound(round, { id: "a", strategy: PRESETS[0]!.strategy });
+      joinRound(round, { id: "b", strategy: PRESETS[1]!.strategy });
+      let board = JSON.parse(JSON.stringify(publicSnapshot(round.snapshot))) as PublicSnapshot;
+      while (!round.isOver) {
+        const tick = publicTick(stepRound(round));
+        const wire = JSON.parse(JSON.stringify(compactTick(tick, board.bots.map(({ id }) => id)))) as CompactTick;
+        const terrain = tick.snapshot.layout;
+        expect(wire.rainColumn).toBe(terrain?.id === "rainFront" ? terrain.firstColumn : undefined);
+        expect(wire).not.toHaveProperty("layout");
+        expect(expandTick(wire, board)).toEqual(tick);
+        board = tick.snapshot;
+      }
+    });
+  }
 
   for (const ruleSetId of RULE_SET_IDS) {
     test(`a real round under "${ruleSetId}" survives the round trip, every outcome included`, () => {

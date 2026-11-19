@@ -170,7 +170,7 @@ export function MonthlyBoard({ snapshot, throws, fires, tunnels, names, highligh
       >
         <div className="relative min-w-0" style={boardStyle}>
           {/* A new orientation starts a new board: tanks would otherwise glide across it and spin a quarter. */}
-          <ArenaBoard drawingKey={boardKey} snapshot={shown} throws={throws} fires={shownFires} tunnels={shownTunnels} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} trailIds={trailIds} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
+          <ArenaBoard drawingKey={boardKey} snapshot={shown} terrainTurned={orientation === "upright"} throws={throws} fires={shownFires} tunnels={shownTunnels} names={names} highlightId={highlightId} tickMs={tickMs} tanks={tanks} camera={camera} trailIds={trailIds} focusId={zoomed ? (target?.id ?? null) : null} {...(zoomed ? { onTankTap } : {})} />
         </div>
         {/* Over the board's whole area, not only the board: a small board on a short phone cut the midnight notice. */}
         {overlay}

@@ -1,10 +1,11 @@
 // The bot draw of a league's day round (league-day.ts, "Bot rule"), through its public methods.
 import { describe, expect, test } from "bun:test";
 import { plainTankLook, ULTIMATES_FROM } from "@game/arena";
-import { arenaSize, parseStrategy, PRESETS, RULE_SET_IDS, ruleSet, type RuleSetId, type Strategy, type UltimateId } from "@game/engine";
+import { ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, parseStrategy, PRESETS, ruleSet, type ArenaConditionId, type Strategy, type UltimateId } from "@game/engine";
 import { LeagueDay, MONTHLY_CONDITIONS, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
+const drawFor = (id: ArenaConditionId) => (MONTHLY_CONDITIONS.indexOf(id) + 0.5) / MONTHLY_CONDITIONS.length;
 const botsOf = (day: LeagueDay) => day.view(1000).tanks.filter((t) => t.isBot);
 const waiter = parseStrategy({ ultimate: "fullTank", modes: [{ id: "main", name: "Wait", rules: [], fallback: { action: "wait", params: {} } }], build: { reach: 0, aim: 0, dodge: 0 } });
 
@@ -132,27 +133,37 @@ describe("the fresh start rotation", () => {
 
 describe("the arena condition", () => {
   const two = [tank(1), tank(2)].map((t) => ({ tank: t, points: 0, counts: true, stats: undefined }));
-  const conditionWith = (draw: number) => {
-    const day = new LeagueDay(1, () => draw, () => 0);
+  const conditionWith = (draw: number, now = 0) => {
+    const day = new LeagueDay(1, () => draw, () => now);
     day.start(two, 1000);
     return day.view(1000).board;
   };
 
-  test("each new round draws Standard, Sharp eyes, Dry spell, Arm's length or Open field, each one as likely", () => {
-    const drawn = MONTHLY_CONDITIONS.map((_, i) => conditionWith((i + 0.5) / MONTHLY_CONDITIONS.length).ruleSetId);
-    expect(drawn).toEqual(["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field"]);
-    expect(MONTHLY_CONDITIONS.every((id) => RULE_SET_IDS.includes(id))).toBe(true);
-    expect(conditionWith(0.99).ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
+  test("each single condition and layout takes one equal slot in the monthly draw", () => {
+    const drawn = MONTHLY_CONDITIONS.map((id) => arenaConditionOf(conditionWith(drawFor(id))));
+    expect(drawn).toEqual(["standard", "sharp-eyes", "dry-spell", "arms-length", "open-field", ...ARENA_LAYOUT_IDS]);
+    expect(arenaConditionOf(conditionWith(0.99))).toBe("hills");
+  });
+
+  test("each layout can start a new round on either side of the ultimates release gate", () => {
+    for (const layout of ARENA_LAYOUT_IDS) {
+      const before = conditionWith(drawFor(layout), ULTIMATES_FROM - 1);
+      const after = conditionWith(drawFor(layout), ULTIMATES_FROM);
+      expect(arenaConditionOf(before)).toBe(layout);
+      expect(arenaConditionOf(after)).toBe(layout);
+      expect(before.bots[0]?.ultimate).toBeUndefined();
+      expect(after.bots[0]?.ultimate).toMatchObject({ kind: "charging" });
+    }
   });
 
   test("a rebuild draws again", () => {
     let draw = 0.01;
     const day = new LeagueDay(1, () => draw, () => 0);
     day.start(two, 1000);
-    expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[0] as RuleSetId);
+    expect(arenaConditionOf(day.view(1000).board)).toBe("standard");
     draw = 0.99;
     day.rebuild(1000);
-    expect(day.view(1000).board.ruleSetId).toBe(MONTHLY_CONDITIONS[MONTHLY_CONDITIONS.length - 1] as RuleSetId);
+    expect(arenaConditionOf(day.view(1000).board)).toBe("hills");
   });
 
   test("draws once on each weather turn and leaves the round alone when the draw repeats", () => {
@@ -171,7 +182,7 @@ describe("the arena condition", () => {
     expect(draws).toBe(1);
     expect(day.view(total).board).toMatchObject({ tick: RESHUFFLE_TURNS, ticksTotal: total, ruleSetId: "standard" });
 
-    draw = 0.5;
+    draw = drawFor("dry-spell");
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
     const turn = day.step();
     expect(turn?.weatherChanged).toBe(true);
@@ -181,6 +192,20 @@ describe("the arena condition", () => {
     const scores = (bots: typeof board.bots) => Object.fromEntries(bots.map(({ id, score }) => [id, score]));
     expect(scores(board.bots)).toEqual(scores(turn?.snapshot.bots ?? []));
     expect(day.statsOf("seat-1").turns).toBe(2 * RESHUFFLE_TURNS);
+  });
+
+  test("weather can enter a layout and a repeat keeps its map and rain clock", () => {
+    let draw = 0;
+    const day = new LeagueDay(1, () => draw, () => 0);
+    const total = 2 * RESHUFFLE_TURNS + 1;
+    day.start(two, total);
+    draw = drawFor("rainFront");
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    expect(day.step()?.weatherChanged).toBe(true);
+    expect(day.view(total).board.layout).toEqual({ id: "rainFront", areas: [], firstColumn: 0 });
+    for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+    expect(day.step()?.weatherChanged).toBe(false);
+    expect(day.view(total).board.layout).toEqual({ id: "rainFront", areas: [], firstColumn: 11 });
   });
 });
 
@@ -214,7 +239,7 @@ describe("ultimates in a running league", () => {
     const day = new LeagueDay(1, () => draw, () => ULTIMATES_FROM);
     day.start(seats, total);
     for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
-    draw = 0.5;
+    draw = drawFor("dry-spell");
 
     const turn = day.step();
     expect(turn?.weatherChanged).toBe(true);
@@ -229,12 +254,38 @@ describe("ultimates in a running league", () => {
     }
   });
 
-  for (const shrink of [false, true]) {
-    test(`Dash defers ${shrink ? "a tunnel caused by shrinking weather" : "a scheduled tunnel"}`, () => {
+  test("weather enters and leaves Rain front with ultimates on and preserves each tank's charge and effect", () => {
+    let draw = drawFor("standard");
+    const day = new LeagueDay(1, () => draw, () => ULTIMATES_FROM);
+    day.start(seats, total);
+    for (const [condition, previous] of [["rainFront", "standard"], ["standard", "rainFront"]] as const) {
+      draw = drawFor(condition);
+      for (let i = 1; i < RESHUFFLE_TURNS; i++) day.step();
+      const turn = day.step()!;
+      expect(turn.weatherChanged).toBe(true);
+      expect(arenaConditionOf(turn.snapshot)).toBe(previous);
+      const board = day.view(total).board;
+      expect(arenaConditionOf(board)).toBe(condition);
+      for (const before of turn.snapshot.bots) {
+        expect(before.ultimate).toMatchObject({ id: "fullTank", kind: "charging" });
+        expect(before.ultimateEffect).toEqual({ kind: "fullTank", freeShots: 3 });
+        expect(board.bots.find(({ id }) => id === before.id)).toMatchObject({
+          ultimate: before.ultimate, ultimateEffect: before.ultimateEffect,
+        });
+      }
+      expect(board.bots).toHaveLength(seats.length);
+    }
+  });
+
+  for (const [condition, tunnel] of [
+    [null, "a scheduled tunnel"], ["standard", "a tunnel caused by shrinking weather"], ["rainFront", "a tunnel caused by shrinking into Rain front"],
+  ] as const) {
+    const shrink = condition !== null;
+    test(`Dash defers ${tunnel}`, () => {
       let draw = 0;
       let first = true;
       const day = new LeagueDay(1, () => {
-        const result = first && shrink ? 0.99 : draw;
+        const result = first && shrink ? drawFor("open-field") : draw;
         first = false;
         return result;
       }, () => ULTIMATES_FROM);
@@ -253,6 +304,7 @@ describe("ultimates in a running league", () => {
           : { ...bot, x: 0, y: 1 }) },
       });
 
+      if (condition !== null) draw = drawFor(condition);
       const dash = day.step();
       expect(dash?.fires).toContainEqual(expect.objectContaining({ botId: id, kind: "dash" }));
       expect(dash?.freshStarts.some((fresh) => fresh.id === id)).toBe(false);
@@ -264,7 +316,7 @@ describe("ultimates in a running league", () => {
       expect(tunnel?.freshStarts).toContainEqual(expect.objectContaining({ id }));
       expect(tunnel?.weatherChanged).toBe(shrink);
       const after = day.view(total).board;
-      expect(after.ruleSetId).toBe("standard");
+      expect(arenaConditionOf(after)).toBe(condition ?? "standard");
       expect(after.bots.find((bot) => bot.id === id)?.ultimate).toEqual(tunnel?.snapshot.bots.find((bot) => bot.id === id)?.ultimate);
     });
   }

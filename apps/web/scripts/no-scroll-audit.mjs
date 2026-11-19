@@ -1147,6 +1147,11 @@ STATES.push(
   // The longest arena condition name (Lapangan luas, Open field), beside the clock and in its note.
   monthlyKit("condition-long", "case=seated&rules=open-field"),
   monthlyKit("condition-note", "case=seated&rules=open-field", { steps: [{ wait: "[data-monthly-page]" }, { click: "[data-arena-condition]" }, { wait: "[data-arena-condition-note]:popover-open" }] }),
+  ...["fourQuarters", "eyeOfStorm", "rainFront", "hills"].map((layout) =>
+    monthlyKit(layout, `case=seated&rules=${layout}`, { perSize: true, steps: [{ wait: `[data-arena-layout="${layout}"]` }] }),
+  ),
+  monthlyKit("hybrid-weather", "case=weather&rules=eyeOfStorm", { perSize: true, steps: [{ wait: "[data-weather-changed]" }] }),
+  monthlyKit("hybrid-legend", "case=seated&rules=fourQuarters", { perSize: true, steps: [{ wait: "[data-arena-layout]" }, { click: "[data-legend-open]" }, { wait: "dialog[data-legend-dialog][open]" }] }),
   monthlyKit("closing", "case=closing"),
   monthlyKit("failed", "case=failed"),
   monthlyKit("quit", "case=seated&tab=mine&side=mine&quit=1", { steps: [{ wait: "dialog[data-dialog=monthly-quit][open]" }] }),

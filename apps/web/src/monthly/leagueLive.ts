@@ -18,8 +18,8 @@
 // | failed       | Try again                     | connecting   |                                            |
 // Terminal: closed (the page moves to a league that exists, which is a new stream).
 
-import { expandTick, parseLeagueActivity, type LeagueLive, type LeagueStreamMessage, type PlayerId, type PublicSnapshot } from "@game/arena";
-import { rulesOf, type ThrowEvent, type UltimateFire } from "@game/engine";
+import { expandTick, isLeagueLayout, parseLeagueActivity, type LeagueLive, type LeagueStreamMessage, type PlayerId, type PublicSnapshot } from "@game/arena";
+import { arenaConditionOf, waterCapacityOf, type ThrowEvent, type UltimateFire } from "@game/engine";
 import type { TankTunnel } from "../board/props.ts";
 import { isCompactTick, isDecision, isSnapshot } from "../stream/parseStreamMessage.ts";
 import { OWN_DECISIONS_KEPT, type OwnDecision } from "../stream/streamState.ts";
@@ -65,7 +65,9 @@ export function parseLeagueMessage(data: string): LeagueStreamMessage | null {
     return null;
   }
   if (!isRecord(raw)) return null;
-  if (raw["type"] === "state" && isRecord(raw["state"]) && Array.isArray(raw["state"]["tanks"]) && isSnapshot(raw["state"]["board"])) {
+  if (raw["type"] === "state" && isRecord(raw["state"]) && Array.isArray(raw["state"]["tanks"]) && isRecord(raw["state"]["board"]) && isSnapshot(raw["state"]["board"])) {
+    const board = raw["state"]["board"];
+    if (board["layout"] !== undefined && !isLeagueLayout(board["layout"], board)) return null;
     const activity = parseLeagueActivity(raw["state"]["activity"]);
     if (activity === null) return null;
     const state = raw["state"] as unknown as LeagueLive;
@@ -99,7 +101,7 @@ export function nextLeagueLoad(load: LeagueLiveLoad, message: LeagueStreamMessag
       }
     }
     const keepEvents = sameTurn && (tunnels.length > 0 || message.change === "weather");
-    const sameCondition = same && load.board.snapshot.ruleSetId === state.board.ruleSetId;
+    const sameCondition = same && arenaConditionOf(load.board.snapshot) === arenaConditionOf(state.board);
     const weatherUntil = sameTurn && message.change === "weather" && !sameCondition
       ? now + WEATHER_NOTICE_MS
       : sameCondition && message.change !== "growth" && state.board.tick >= load.board.snapshot.tick
@@ -129,7 +131,7 @@ export function nextLeagueLoad(load: LeagueLiveLoad, message: LeagueStreamMessag
   let ownFreshStart = load.board.ownFreshStart;
   if (tick.freshStarts !== undefined) {
     const bots = new Map(snapshot.bots.map((bot) => [bot.id, bot]));
-    const water = rulesOf(snapshot).waterCapacity;
+    const water = waterCapacityOf(snapshot);
     for (const { id, x, y } of tick.freshStarts) {
       const from = bots.get(id);
       if (from === undefined) throw new Error(`No tank "${id}" for a fresh start`);

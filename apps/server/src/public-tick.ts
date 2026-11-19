@@ -36,6 +36,7 @@ export function toPublicSnapshot(snapshot: Snapshot): PublicSnapshot {
     ruleSetId: snapshot.ruleSetId,
     bots: snapshot.bots.map(toPublicBot),
     items: snapshot.items,
+    ...(snapshot.layout === undefined ? {} : { layout: snapshot.layout }),
   };
 }
 

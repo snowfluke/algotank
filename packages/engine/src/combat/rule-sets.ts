@@ -1,5 +1,5 @@
-// The rule sets. A round plays under exactly one set, and a set is one row of
-// numbers: the water tank, the throw range, the hit chance, how much Aim and
+// A rule set supplies the numbers for one single-condition round or one
+// area of a hybrid monthly round: the water tank, the throw range, the hit chance, how much Aim and
 // Dodge count, and how crowded the arena is. Add a row here and every package
 // that reads RULE_SETS (the arena draw, the editor, the simulation) picks it up.
 //
@@ -163,7 +163,7 @@ export function isRuleSetId(value: unknown): value is RuleSetId {
   return typeof value === "string" && Object.hasOwn(RULE_SETS, value);
 }
 
-/** The rules a snapshot plays under. */
+/** The rules of a single-condition snapshot. For a square in any arena, use rulesAt. */
 export function rulesOf(snapshot: { readonly ruleSetId: string }): RoundRules {
   return ruleSet(snapshot.ruleSetId);
 }

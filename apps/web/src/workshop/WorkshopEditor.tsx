@@ -222,13 +222,12 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
             <ChecklistLine compact onOpen={() => setChecklistOpen(true)} />
           </div>
           {stepOpen ? null : (
-            <div data-workshop-ultimate="" className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3">
+            <div data-workshop-ultimate="" className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
               <UltimateLink ultimate={draft.ultimate} nowMs={nowMs} />
               <IconButton
                 label={w.changeUltimate}
                 text={w.changeUltimate}
                 icon={<Pencil aria-hidden size={18} />}
-                variant="quiet"
                 data-focus-key="workshop-change-ultimate"
                 onClick={() => setUltimateChoice(draft.ultimate)}
               />

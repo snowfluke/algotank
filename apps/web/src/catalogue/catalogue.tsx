@@ -14,7 +14,7 @@ import { useMessages } from "../i18n/I18nProvider.tsx";
 import { PlayStyleScene } from "../prep/PlayStyleScene.tsx";
 import { plainTankLook } from "../tank/look.ts";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
-import { UltimateIcon } from "./UltimateIcon.tsx";
+import { UltimateEmblem } from "./UltimateEmblem.tsx";
 
 export const CATALOGUE_SECTIONS = ["playStyles", "items", "conditions", "ultimates"] as const;
 export type CatalogueSection = (typeof CATALOGUE_SECTIONS)[number];
@@ -152,7 +152,7 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
         body: m.catalogue.ultimates[id].body,
         extra: `${m.catalogue.defaultFor(v.playStyles[ULTIMATE_DEFAULT_STYLE[id]].name)} ${m.catalogue.firing}${released ? "" : ` ${m.catalogue.ultimatesNote}`}`,
         soon: !released,
-        icon: <span className="flex size-9 items-center justify-center rounded-[0.5rem] bg-guide-soft text-guide-ink"><UltimateIcon ultimate={id} size={26} /></span>,
+        icon: <UltimateEmblem ultimate={id} size={40} />,
         preview: { kind: "board", scene: ULTIMATE_SCENES[id] },
       }));
   }

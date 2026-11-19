@@ -358,6 +358,7 @@ function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions 
   const [language] = useLanguage();
   const here = seat.league === league;
   const freshStart = here && board?.ownFreshStart?.id === seat.seatId ? board.ownFreshStart : null;
+  const ownUltimate = here ? board?.snapshot.bots.find((bot) => bot.id === seat.seatId)?.ultimate : undefined;
   const todayRow = ranking?.today.find((row) => row.seatId === seat.seatId) ?? null;
   // K2: today's statistics card in place of the summary, so each has the pane's height.
   const [part, setPart] = useState<"summary" | "stats">("summary");
@@ -397,7 +398,7 @@ function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions 
       ) : (
         <>
           <div className="flex min-w-0 shrink-0 flex-col gap-1">
-            {detail.level < ultimateLevel ? <UltimateLink ultimate={seat.strategy.ultimate} nowMs={now} /> : null}
+            {detail.level < ultimateLevel ? <UltimateLink ultimate={seat.strategy.ultimate} nowMs={now} state={ownUltimate} /> : null}
             {here ? null : (
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 <p className="min-w-0 font-semibold">{t.otherLeague(seat.league)}</p>

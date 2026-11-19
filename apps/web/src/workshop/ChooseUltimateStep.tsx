@@ -2,7 +2,7 @@ import { ultimatesOn } from "@game/arena";
 import { ULTIMATE_IDS, type UltimateId } from "@game/engine";
 import { Check } from "lucide-react";
 import { useId } from "react";
-import { UltimateIcon } from "../catalogue/UltimateIcon.tsx";
+import { UltimateEmblem } from "../catalogue/UltimateEmblem.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { Button } from "../ui/Button.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
@@ -41,7 +41,7 @@ export function ChooseUltimateStep({ ultimate, problem, nowMs = Date.now(), onCh
             const nameId = `${group}-${id}`;
             const bodyId = `${nameId}-body`;
             return (
-              <label key={id} className={`relative flex min-h-11 min-w-0 cursor-pointer items-start gap-2 rounded-[var(--radius-control)] border-2 px-3 py-2 focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-water ${ultimate === id ? "border-water bg-water-soft" : "border-line bg-panel"}`}>
+              <label key={id} className={`ultimate-choice press relative flex min-h-11 min-w-0 cursor-pointer items-center gap-3 rounded-[var(--radius-card)] border-2 border-b-4 px-2 py-2 focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-water ${ultimate === id ? "border-guide-deep bg-guide-soft" : "border-line bg-panel"}`}>
                 <input
                   type="radio"
                   name={group}
@@ -52,12 +52,12 @@ export function ChooseUltimateStep({ ultimate, problem, nowMs = Date.now(), onCh
                   onChange={() => onChoose(id)}
                   className="sr-only"
                 />
-                <span className="mt-0.5 shrink-0 text-water"><UltimateIcon ultimate={id} size={21} /></span>
+                <UltimateEmblem ultimate={id} size={56} />
                 <span className="flex min-w-0 flex-1 flex-col [overflow-wrap:anywhere]">
-                  <span id={nameId} className="font-display font-semibold">{text.name}</span>
+                  <span id={nameId} className="font-display text-lead font-semibold">{text.name}</span>
                   <span id={bodyId} className="text-caption text-muted">{text.body}</span>
                 </span>
-                {ultimate === id ? <Check aria-hidden size={20} strokeWidth={2.5} className="shrink-0 text-water" /> : null}
+                {ultimate === id ? <Check aria-hidden size={22} strokeWidth={3} className="shrink-0 self-start text-guide-ink" /> : null}
               </label>
             );
           })}

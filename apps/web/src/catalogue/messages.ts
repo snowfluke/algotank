@@ -24,6 +24,11 @@ export const en = {
   listLabel: (section: string) => `${section} to choose from`,
   /** The tag shown until ultimates release (85-ultimates.md). */
   soon: "Coming soon",
+  /** Above an ultimate's name on its badge. */
+  ultimateLabel: "Ultimate",
+  /** The badge on a live tank: the gold rim fills with the charge; these say the same in words. */
+  ultimateReady: "Ready!",
+  ultimateCharge: (percent: number) => `${percent}% charged`,
   ultimatesNote: "Ultimates are not in the game yet, so their scenes show the plan.",
   /** `style` is a play style's name. */
   defaultFor: (style: string) => `${style} starts with this ultimate. Any play style may pick it.`,
@@ -63,6 +68,9 @@ export const id: typeof en = {
   short: { playStyles: "Gaya", items: "Item", conditions: "Arena", ultimates: "Jurus" },
   listLabel: (section) => `Pilihan ${section.toLowerCase()}`,
   soon: "Segera hadir",
+  ultimateLabel: "Jurus pamungkas",
+  ultimateReady: "Siap!",
+  ultimateCharge: (percent) => `Terisi ${percent}%`,
   ultimatesNote: "Jurus pamungkas belum ada di permainan, jadi adegannya menunjukkan rencananya.",
   defaultFor: (style) => `${style} memulai dengan jurus ini. Semua gaya main boleh memilihnya.`,
   firing: "Jurusmu aktif sendiri, kecuali kalau ada aturan yang memakainya.",

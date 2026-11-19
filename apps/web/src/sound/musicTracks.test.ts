@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { RULE_SET_IDS, STANDARD_RULE_SET_ID } from "@game/engine";
 import measurements from "../../../../tools/music/measurements.json";
-import { DEFAULT_TRACK, MUSIC_TRACKS } from "./musicTracks.ts";
+import { DEFAULT_TRACK, MUSIC_TRACKS, musicTrackOf } from "./musicTracks.ts";
 
 describe("the arena condition tracks", () => {
   test("every rule set has its own measured track, with Standard as the default", () => {
@@ -16,4 +16,12 @@ describe("the arena condition tracks", () => {
       expect([track.loopStart, track.loopEnd]).toEqual([measured.loop_start, measured.loop_end]);
     }
   });
+});
+
+test("each hybrid layout plays the track of the condition that gives it its character", () => {
+  expect(musicTrackOf("eyeOfStorm")).toBe(MUSIC_TRACKS.downpour);
+  expect(musicTrackOf("rainFront")).toBe(MUSIC_TRACKS.downpour);
+  expect(musicTrackOf("hills")).toBe(MUSIC_TRACKS["sharp-eyes"]);
+  expect(musicTrackOf("fourQuarters")).toBe(MUSIC_TRACKS.standard);
+  expect(musicTrackOf("dry-spell")).toBe(MUSIC_TRACKS["dry-spell"]);
 });

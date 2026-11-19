@@ -18,6 +18,7 @@
 import { History, ListOrdered, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { FIRST_PUBLISHED_RULES_MONTH, MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
+import { arenaConditionOf } from "@game/engine";
 import { ArenaCondition, arenaConditionText } from "./ArenaCondition.tsx";
 import { ActivityList } from "./ActivityList.tsx";
 import { TankSheet, type SheetSource, type SheetTank } from "./TankSheet.tsx";
@@ -466,7 +467,7 @@ export function MonthlyView(props: MonthlyViewProps) {
   // Today's points follow the board turn by turn (monthlyParts.ts, withLivePoints); the layouts read only this ranking.
   const board = boardOf(props.load);
   // A weather state can change the condition in the same turn (spec 77, 2026-11-19).
-  useMusicCondition(board?.snapshot.ruleSetId ?? null);
+  useMusicCondition(board === null ? null : arenaConditionOf(board.snapshot));
   const ranking = useMemo(
     () => withLivePoints(props.ranking, board === null ? null : { league: board.live.league, day: board.live.day, snapshot: board.snapshot }),
     [props.ranking, board],

@@ -61,3 +61,5 @@ Each value below is points per tank per day. The field mean was 0.0 in all runs 
 | Standar | 1 | +4.0 | +21.0 | −67.5 | −1.3 | +11.8 | +12.8 | +19.3 |
 
 Four quarters and Rain front have presets more than 40 points from the field mean, the yardstick used for single conditions in `league-day.ts`. The one Standar day also crossed that mark.
+
+Music (2026-11-19): a layout plays the track of the condition that gives it its character: Mata badai and Front hujan play the Hujan deras track, Bukit plays the Mata tajam track, and Empat penjuru plays the Standar track (`musicTrackOf` in apps/web/src/sound/musicTracks.ts).

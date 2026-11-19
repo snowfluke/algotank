@@ -4,10 +4,10 @@
 // not remembered, so every event starts quiet).
 
 import { useEffect, useSyncExternalStore } from "react";
-import { STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
+import type { ArenaConditionId } from "@game/engine";
 import type { MusicState } from "./musicMachine.ts";
 import { createMusicPlayer, type MusicPlayer } from "./musicPlayer.ts";
-import { DEFAULT_TRACK, MUSIC_TRACKS } from "./musicTracks.ts";
+import { DEFAULT_TRACK, musicTrackOf } from "./musicTracks.ts";
 import { browserContext, browserHasGesture } from "./player.ts";
 import { soundSettings } from "./setting.ts";
 import type { SoundName } from "./sounds.ts";
@@ -69,10 +69,10 @@ export function useMusicVenue(next: MusicVenue): void {
 }
 
 /** One arena view sets the condition it shows (spec 80, owner, 2026-11-19). */
-export function useMusicCondition(ruleSetId: RuleSetId | null): void {
+export function useMusicCondition(condition: ArenaConditionId | null): void {
   useEffect(() => {
-    player.setTrack(MUSIC_TRACKS[ruleSetId ?? STANDARD_RULE_SET_ID]);
-  }, [ruleSetId]);
+    player.setTrack(condition === null ? DEFAULT_TRACK : musicTrackOf(condition));
+  }, [condition]);
   // Reset on leaving the view. A weather change goes straight to the next track.
   useEffect(() => () => player.setTrack(DEFAULT_TRACK), []);
 }

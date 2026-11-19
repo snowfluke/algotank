@@ -2,7 +2,7 @@
 // The file holds the loop with half a second of its own end before it and of its own start
 // after it, so the loop points sit inside periodic audio whatever delay the decoder adds.
 
-import { STANDARD_RULE_SET_ID, type RuleSetId } from "@game/engine";
+import { STANDARD_RULE_SET_ID, type ArenaConditionId, type ArenaLayoutId, type RuleSetId } from "@game/engine";
 
 export interface MusicTrack {
   /** Under apps/web/public. The name carries a version, so a new render gets a new address. */
@@ -24,6 +24,21 @@ export const MUSIC_TRACKS: Readonly<Record<RuleSetId, MusicTrack>> = {
 };
 
 export const DEFAULT_TRACK = MUSIC_TRACKS[STANDARD_RULE_SET_ID];
+
+/**
+ * A hybrid layout (87-hybrid-arenas.md) plays the track of the condition that gives it its character: rain in
+ * the eye of the storm and the rain front, Mata tajam on the hills, and Standar for four even quarters.
+ */
+const LAYOUT_TRACK: Readonly<Record<ArenaLayoutId, RuleSetId>> = {
+  fourQuarters: STANDARD_RULE_SET_ID,
+  eyeOfStorm: "downpour",
+  rainFront: "downpour",
+  hills: "sharp-eyes",
+};
+
+export function musicTrackOf(condition: ArenaConditionId): MusicTrack {
+  return condition in LAYOUT_TRACK ? MUSIC_TRACKS[LAYOUT_TRACK[condition as ArenaLayoutId]] : MUSIC_TRACKS[condition as RuleSetId];
+}
 
 /**
  * The music's gain. The file measures about -20.5 LUFS, so -9.5 dB gives about -30 LUFS, where the

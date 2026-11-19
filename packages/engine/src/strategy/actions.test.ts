@@ -8,6 +8,7 @@ import { TARGET_SELECTORS } from "./vocabulary.ts";
 import { DIRECTION_STEP } from "../directions.ts";
 import { botsThatCanHit, isFree } from "./geometry.ts";
 import { decide } from "./decide.ts";
+import { nearestAreaSquare } from "./actions.ts";
 import { act, bot, contextFor, mode, rule, snapshotOf, strategyOf, stubRng, when, withPlacement } from "./test-helpers.ts";
 
 /** The move of an action that is expected to act. */
@@ -69,6 +70,7 @@ describe("every action returns a legal move that never walks into a wall or off 
                       ? TARGET_SELECTORS[target]?.pick(ctx) === null
                       : (actionId === "stepOutOfLine" && botsThatCanHit(snapshot, me).length === 0) ||
                         (actionId === "goToItem" && snapshot.items.length === 0) ||
+                        (actionId === "goToArea" && nearestAreaSquare(ctx, String(params["set"])) === null) ||
                         (actionId === "useUltimate" && me.ultimate === undefined);
                     expect(nothingToAct, where).toBe(true);
                     continue;

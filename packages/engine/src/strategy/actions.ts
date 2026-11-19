@@ -31,6 +31,7 @@ import type { Cell } from "./geometry.ts";
 import { goForward, steerTowards, stepTowards } from "./movement.ts";
 import { tableOf, withLiteralIds, targetParam, textValue } from "./define.ts";
 import { pickTarget } from "./targets.ts";
+import { conditionSetParam } from "./conditions.ts";
 import { forEachBotNear } from "./snapshot-index.ts";
 import { canTake, nearestItem } from "../items/items.ts";
 import { useUltimate } from "../ultimates/ultimates.ts";
@@ -110,6 +111,28 @@ function holdFacingOpenSpace(ctx: DecisionContext): Move {
   }
   if (best === null) throw new Error("a bot has eight directions");
   return steerTowards(ctx, best, "T");
+}
+
+/**
+ * The nearest square whose area has these rules: the fewest steps away, then the smaller y, then the smaller x.
+ * Null when the tank already stands in such an area, or when this round has none (a round without a layout is one
+ * area with the round's own rules).
+ */
+export function nearestAreaSquare(ctx: DecisionContext, set: string): Cell | null {
+  if (rulesAt(ctx.snapshot, ctx.self.x, ctx.self.y).id === set) return null;
+  let best: Cell | null = null;
+  let bestDistance = Infinity;
+  for (let y = 0; y < ctx.snapshot.height; y++) {
+    for (let x = 0; x < ctx.snapshot.width; x++) {
+      if (rulesAt(ctx.snapshot, x, y).id !== set) continue;
+      const distance = chebyshev(ctx.self, { x, y });
+      if (distance < bestDistance) {
+        best = { x, y };
+        bestDistance = distance;
+      }
+    }
+  }
+  return best;
 }
 
 function movePlace(ctx: DecisionContext, place: Cell): Move {
@@ -242,6 +265,17 @@ const defs = withLiteralIds<ActionDef>()([
     // On the place the bot faces its most open direction and throws, so it holds the place.
     toMove: (ctx, params) =>
       movePlace(ctx, textValue(params, "place") === "corner" ? nearestCorner(ctx) : arenaCentre(ctx)),
+  },
+  {
+    id: "goToArea",
+    group: POSITION,
+    label: "Go to the nearest {set} area",
+    params: [conditionSetParam],
+    // Inside the area, or in a round without one, the rule is skipped so the next rule acts there (87-hybrid-arenas.md).
+    toMove: (ctx, params) => {
+      const square = nearestAreaSquare(ctx, textValue(params, "set"));
+      return square === null ? null : stepTowards(ctx, stepToward(ctx.self, square));
+    },
   },
   {
     id: "goForward",

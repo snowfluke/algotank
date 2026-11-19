@@ -105,8 +105,8 @@ describe.each(LANGUAGES)("sentences in %s", (_language, v) => {
 
   test("the pickers list every condition and action once, under a group name; \"wait\" is offered only as a step", () => {
     expect<readonly string[]>(conditionGroups(v, "splash", true).flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual([...CONDITION_IDS].sort());
-    expect<readonly string[]>(actionGroups(v).flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual(ACTION_IDS.filter((id) => id !== "wait").sort());
-    for (const group of [...conditionGroups(v, "splash", true), ...actionGroups(v)]) expectReadable(group.name, v, "group");
+    expect<readonly string[]>(actionGroups(v, true).flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual(ACTION_IDS.filter((id) => id !== "wait").sort());
+    for (const group of [...conditionGroups(v, "splash", true), ...actionGroups(v, true)]) expectReadable(group.name, v, "group");
   });
 
   test("before the hybrid arenas arrive the picker leaves out the two area conditions", () => {
@@ -125,8 +125,11 @@ describe.each(LANGUAGES)("sentences in %s", (_language, v) => {
           ? ["ultimateReady", "ultimateCharged", "ultimateCatches"] : ["ultimateReady", "ultimateCharged"],
       );
     }
-    expect(actionGroups(v).find(({ name }) => name === v.actionGroups.ultimate)?.items.map(({ id }) => id)).toEqual(["useUltimate"]);
-    expect(actionGroups(v, true).flatMap(({ items }) => items).some(({ id }) => id === "useUltimate")).toBe(false);
+    expect(actionGroups(v, true).find(({ name }) => name === v.actionGroups.ultimate)?.items.map(({ id }) => id)).toEqual(["useUltimate"]);
+    expect(actionGroups(v, true, true).flatMap(({ items }) => items).some(({ id }) => id === "useUltimate")).toBe(false);
+    // "Go to an area" names hybrid layouts, so the picker offers it only once they arrive on 22 November.
+    expect(actionGroups(v, false).flatMap(({ items }) => items).some(({ id }) => id === "goToArea")).toBe(false);
+    expect(actionGroups(v, true).flatMap(({ items }) => items).some(({ id }) => id === "goToArea")).toBe(true);
   });
 
   test("a negated condition names the same parameters as the plain one, so the editor and the sentence agree", () => {

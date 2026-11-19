@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { RULE_SETS, type RuleSetId } from "../combat/rule-sets.ts";
+import { nearestAreaSquare } from "../strategy/actions.ts";
 import { decide } from "../strategy/decide.ts";
 import { act, bot, contextFor, mode, rule, snapshotOf, strategyOf, stubRng, when } from "../strategy/test-helpers.ts";
 import { CONDITIONS } from "../strategy/vocabulary.ts";
@@ -177,6 +178,25 @@ describe("the rules of a square", () => {
     expect(rulesAt(round, 11, 8)).toBe(RULE_SETS["arms-length"]);
     expect(round.snapshot.bots[0]?.x).toBeLessThan(round.snapshot.width);
     expect(round.snapshot.bots[0]?.y).toBeLessThan(round.snapshot.height);
+  });
+
+  test("a tank goes to the nearest area with chosen rules, and the rule gives way inside it or when no area has them", () => {
+    const self = bot("me", 0, 0, "E");
+    const hybrid = snapshotOf([self], { ...size, layout });
+    const here = rulesAt(hybrid, 0, 0).id;
+    const far = rulesAt(hybrid, size.width - 1, size.height - 1).id;
+    expect(far).not.toBe(here);
+    const goTo = (set: string) => strategyOf([mode("main", [rule("go", [when("myWater", { compare: "atLeast", n: 0 })], act("goToArea", { set }))], act("wait"))]);
+    const square = nearestAreaSquare(contextFor(hybrid, self.id), far);
+    expect(square === null ? null : rulesAt(hybrid, square.x, square.y).id).toBe(far);
+    // No square of that area is closer than the one it picked.
+    for (let y = 0; y < size.height; y++) for (let x = 0; x < size.width; x++) {
+      if (rulesAt(hybrid, x, y).id === far) expect(Math.max(x, y)).toBeGreaterThanOrEqual(Math.max(square?.x ?? 0, square?.y ?? 0));
+    }
+    expect(decide(contextFor(hybrid, self.id), goTo(far), createRng(87)).ruleId).toBe("go");
+    expect(decide(contextFor(hybrid, self.id), goTo(here), createRng(87)).ruleId).toBeNull();
+    const single = snapshotOf([self], { ...size, ruleSetId: "dry-spell" });
+    expect(decide(contextFor(single, self.id), goTo("downpour"), createRng(87)).ruleId).toBeNull();
   });
 
   test("rules can read my square and the selected target's square in both round forms", () => {

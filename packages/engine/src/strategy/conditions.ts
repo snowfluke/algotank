@@ -98,7 +98,7 @@ function targetWith(ctx: DecisionContext, params: ParamValues, test: (target: Bo
 }
 
 // Open field also matches here in a single-condition round, where every square shares its rules.
-const conditionSetParam = {
+export const conditionSetParam = {
   kind: "choice",
   key: "set",
   label: "Rule set",

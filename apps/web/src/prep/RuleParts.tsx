@@ -50,7 +50,7 @@ export function ActionEditor({ action, fallback, onChange }: { readonly action: 
   const parts = actionParts(m.vocabulary, action.action);
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <VocabularyPicker label={m.prep.rules.action} hook="action" groups={actionGroups(m.vocabulary, fallback)} value={action.action} onPick={(id) => onChange(actionOf(id, action))} />
+      <VocabularyPicker label={m.prep.rules.action} hook="action" groups={actionGroups(m.vocabulary, ultimatesOn(Date.now()), fallback)} value={action.action} onPick={(id) => onChange(actionOf(id, action))} />
       {parts === null || ACTIONS[action.action]?.params.length === 0 ? null : (
         <PhraseEditor parts={parts} values={action.params} context={m.prep.rules.action} onChange={(params) => onChange({ ...action, params })} />
       )}

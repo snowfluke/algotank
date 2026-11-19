@@ -81,3 +81,13 @@ Four quarters and Rain front have presets more than 40 points from the field mea
 Music (2026-11-19): a layout plays the track of the condition that gives it its character: Mata badai and Front hujan play the Hujan deras track, Bukit plays the Mata tajam track, and Empat penjuru plays the Standar track (`musicTrackOf` in apps/web/src/sound/musicTracks.ts).
 
 Release (owner, 2026-11-19: "hold it for 22 nov"): the layouts join the monthly draw only from `ULTIMATES_FROM` (2026-11-22 00:00 Asia/Jakarta), the same gate as the ultimates. Before it, the draw gives only single conditions, so main can be released before that date without hybrid arenas.
+
+## Going to an area
+
+Owner, 2026-11-19, from a player question ("go to the area that condition is downpour"): the action "Go to an area"
+("Pergi ke suatu area") drives the tank toward the nearest square whose area has the chosen rules: the fewest steps
+away, then the smaller y, then the smaller x. Inside such an area, or in a round that has none, the action cannot act,
+so the rule is skipped and the next rule runs, as "Go get an item" does when no item is near. A rule such as "When I
+stand outside a downpour area, go to the nearest downpour area" therefore leads the tank in, and the rules below it act
+once it is there. The pickers offer it from 22 November, with the area conditions. The engine code is `goToArea` and
+`nearestAreaSquare` in `packages/engine/src/strategy/actions.ts`.

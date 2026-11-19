@@ -274,10 +274,12 @@ function groupIdOf<G extends string>(groups: Readonly<Record<G, string>>, engine
 }
 
 /**
- * The area conditions name hybrid layouts, which arrive with the ultimates on 22 November (owner, 2026-11-19:
- * "hold it for 22 nov"), so the picker offers them only from then. A saved rule that has one still shows.
+ * The area conditions and "Go to an area" name hybrid layouts, which arrive with the ultimates on 22 November
+ * (owner, 2026-11-19: "hold it for 22 nov"), so the pickers offer them only from then. A saved rule that has one
+ * still shows.
  */
 const AREA_CONDITIONS: ReadonlySet<ConditionId> = new Set<ConditionId>(["myArea", "targetArea"]);
+const AREA_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>(["goToArea"]);
 
 /** The conditions under their group headings, in the engine's order. */
 export function conditionGroups(v: VocabularyText, ultimate: UltimateId, hybridOn: boolean): PickGroup<ConditionId>[] {
@@ -300,10 +302,11 @@ export function conditionGroups(v: VocabularyText, ultimate: UltimateId, hybridO
  */
 const STEP_ONLY_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>(["wait"]);
 
-export function actionGroups(v: VocabularyText, fallback = false): PickGroup<ActionId>[] {
+export function actionGroups(v: VocabularyText, hybridOn: boolean, fallback = false): PickGroup<ActionId>[] {
   const groups = new Map<ActionGroupId, { id: ActionId; name: string }[]>();
   for (const id of ACTION_IDS) {
     if (STEP_ONLY_ACTIONS.has(id)) continue;
+    if (!hybridOn && AREA_ACTIONS.has(id)) continue;
     const def = ACTIONS[id];
     if (def === undefined || (fallback && def.ruleOnly)) continue;
     const group = groupIdOf(ACTION_GROUPS, def.group);

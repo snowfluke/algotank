@@ -493,7 +493,7 @@ function ArenaBoardDrawing({ snapshot, throws, fires, tunnels, names, highlightI
           const stuck = bot.effect?.kind === "stuck";
           if (crowd && !isSelf) {
             // The same transform as the nested groups below in one list, so one transition moves and turns the tank.
-            const badges = bot.ultimateEffect?.kind === "bigUmbrella" || bot.itemsWaiting !== undefined;
+            const badges = bot.ultimateEffect?.kind === "bigUmbrella" || bot.ultimateEffect?.kind === "fullTank" || bot.itemsWaiting !== undefined;
             return [
               <g
                 // Its own key: the full drawing below keeps the turn on an inner group, and the browser glided between

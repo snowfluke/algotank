@@ -440,17 +440,32 @@ export function TankUltimateFloor({ bot, fire, motion }: { readonly bot: PublicB
   const smoke = active === "smoke" || fire?.kind === "smoke";
   const umbrella = active === "bigUmbrella" || fire?.kind === "bigUmbrella";
   const ready = bot.ultimate?.kind === "ready";
-  if (!smoke && !umbrella && !ready) return null;
+  const fullTank = bot.ultimateEffect?.kind === "fullTank" && bot.ultimateEffect.freeShots > 0;
+  if (!smoke && !umbrella && !ready && !fullTank) return null;
   const c = at(bot);
   return (
     <g className={motion} style={{ transform: `translate(${c.x}px, ${c.y}px)` }} data-ultimate-tank={bot.id}>
       {ready ? <ReadyAura /> : null}
+      {fullTank ? <FullTankRing /> : null}
       {smoke ? <SmokeShade /> : null}
       {umbrella ? (
         <g data-ultimate-active="bigUmbrella" transform={`rotate(${directionDegreesFromNorth(bot.direction)})`}>
           <Canopy opening={fire?.kind === "bigUmbrella"} />
         </g>
       ) : null}
+    </g>
+  );
+}
+
+/**
+ * Full tank while free shots are left (owner, 2026-11-19: "couldn't tell because it looks like regular"): a ring of
+ * water under the tank, in the tank's own square like the ready ring, with the drop badge counting the free shots.
+ */
+function FullTankRing() {
+  return (
+    <g data-ultimate-active="fullTank">
+      <circle r={4.9} opacity={0.22} style={{ fill: WATER }} />
+      <circle className="ue-a ue-ready" r={4.9} fill="none" strokeWidth={0.8} strokeDasharray="0.1 1.6" strokeLinecap="round" style={{ stroke: WATER }} />
     </g>
   );
 }
@@ -477,6 +492,15 @@ export function UltimateBadges({ bot, pulled }: { readonly bot: PublicBot; reado
           <circle r={1.9} strokeWidth={0.35} style={{ fill: "var(--color-panel)", stroke: "var(--color-tank-5-dark)" }} />
           <text y={1} textAnchor="middle" fontSize={2.9} fontWeight={700} style={{ fill: "var(--color-ink)", fontFamily: "var(--font-display)" }}>
             {bot.ultimateEffect.blocksLeft}
+          </text>
+        </g>
+      ) : null}
+      {bot.ultimateEffect?.kind === "fullTank" && bot.ultimateEffect.freeShots > 0 ? (
+        <g transform="translate(3.5 -3.6)" data-ultimate-free-shots={bot.ultimateEffect.freeShots}>
+          {/* A drop, point up: the shots it counts cost no water. */}
+          <path d="M0 -2.6C1.2 -1 2 0 2 1A2 2 0 0 1 -2 1C-2 0 -1.2 -1 0 -2.6Z" strokeWidth={0.35} style={{ fill: WATER, stroke: "var(--color-water-deep)" }} />
+          <text y={2} textAnchor="middle" fontSize={2.6} fontWeight={700} style={{ fill: "var(--color-water-ink)", fontFamily: "var(--font-display)" }}>
+            {bot.ultimateEffect.freeShots}
           </text>
         </g>
       ) : null}

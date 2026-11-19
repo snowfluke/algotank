@@ -15,10 +15,11 @@ const MARKS: Readonly<Record<UltimateId, readonly string[]>> = {
   dash: ['data-ultimate-path=""', 'data-ultimate-ram="hit"', 'data-ultimate-target="a"', 'data-throw="miss"', '>+2</text>'],
   smoke: ['data-ultimate-active="smoke"'],
   splash: ['data-ultimate-splash="hit"'],
-  fullTank: ['data-ultimate-refill=""'],
+  fullTank: ['data-ultimate-refill=""', 'data-ultimate-active="fullTank"', 'data-ultimate-free-shots="3"'],
   mudBomb: ['data-ultimate-lob=""', 'data-ultimate-area="mudBomb"', 'data-ultimate-caught="a"', 'data-effect="stuck"', '>+3</text>'],
   whirlwind: ['data-ultimate-wind=""', 'data-ultimate-area="whirlwind"', 'data-ultimate-caught="c"', 'data-effect="dizzy"', '>+1</text>'],
-  bigUmbrella: ['data-ultimate-active="bigUmbrella"', 'data-ultimate-blocks="3"', 'data-throw="blocked"', 'data-throw="hit"'],
+  // The catalogue opens the umbrella on a turn of its own; the blocked shot comes a turn later (scenes.ts).
+  bigUmbrella: ['data-ultimate-active="bigUmbrella"', 'data-ultimate-blocks="3"'],
   magnet: ['data-ultimate-pull="umbrella"', 'data-ultimate-pull="pinwheel"', 'data-ultimate-drop="bucket"', 'data-held="umbrella"', 'data-ultimate-stack=""', 'data-waiting-item="pinwheel"', 'data-waiting-item="bucket"'],
 };
 
@@ -76,8 +77,8 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
     expect(html).not.toContain('data-ultimate-tank="you"');
   });
 
-  test("smoke and the umbrella stay after the fire and disappear when their active state ends", () => {
-    for (const id of ["smoke", "bigUmbrella"] as const) {
+  test("smoke, the umbrella and a full tank stay after the fire and disappear when their active state ends", () => {
+    for (const id of ["smoke", "bigUmbrella", "fullTank"] as const) {
       const { snapshot } = ultimateTickFixture(id);
       expect(renderBoard({ snapshot, throws: [] })).toContain(`data-ultimate-active="${id}"`);
       const ended = { ...snapshot, bots: snapshot.bots.map((bot) => ({ ...bot, ultimateEffect: null })) };

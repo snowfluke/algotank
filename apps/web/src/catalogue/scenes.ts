@@ -269,16 +269,17 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     },
     { tanks: { you: { x: 3, y: 1, dir: "E", score: 2 }, a: { x: 4, y: 1, dir: "W", score: -2, water: 7 } } },
   ], 1, "dash"),
+  // The smoke comes up on a turn of its own, and the shots meet it after (owner, 2026-11-19: "active first then the hit").
   smoke: scene("standard", 5, 3, [
     { tanks: { you: { x: 3, y: 1, dir: "W" }, a: { x: 0, y: 1, dir: "E" } } },
     {
-      tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 14 } }, a: { x: 0, y: 1, dir: "E", water: 6 } },
-      shots: [["a", "you", "miss"]],
+      tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 15 } }, a: { x: 0, y: 1, dir: "E" } },
       fire: { botId: "you", kind: "smoke", at: { x: 3, y: 1 } },
     },
+    { tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 14 } }, a: { x: 0, y: 1, dir: "E", water: 6 } }, shots: [["a", "you", "miss"]] },
     { tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 13 } }, a: { x: 0, y: 1, dir: "E", water: 3 } }, shots: [["a", "you", "miss"]] },
     { tanks: { you: { x: 3, y: 1, dir: "W", score: -1, active: { kind: "smoke", turnsLeft: 12 } }, a: { x: 0, y: 1, dir: "E", score: 1, water: 0 } }, shots: [["a", "you", "hit"]] },
-  ], 1, "smoke"),
+  ], 2, "smoke"),
   splash: scene("standard", 3, 3, [
     { tanks: { you: { x: 1, y: 1, dir: "N" }, ...RING_TANKS } },
     {
@@ -293,8 +294,9 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
       tanks: { you: { x: 0, y: 1, dir: "E", water: 9, active: { kind: "fullTank", freeShots: 3 } }, a: { x: 2, y: 1, dir: "W" } },
       fire: { botId: "you", kind: "fullTank", at: { x: 0, y: 1 } },
     },
-    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]] },
-    { tanks: { you: { x: 0, y: 1, dir: "E", score: 2, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -2 } }, shots: [["you", "a", "hit"]] },
+    // The drop badge counts the free shots down (owner, 2026-11-19: an active full tank must look different).
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 9, active: { kind: "fullTank", freeShots: 2 } }, a: { x: 2, y: 1, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]] },
+    { tanks: { you: { x: 0, y: 1, dir: "E", score: 2, water: 9, active: { kind: "fullTank", freeShots: 1 } }, a: { x: 2, y: 1, dir: "W", score: -2 } }, shots: [["you", "a", "hit"]] },
     { tanks: { you: { x: 0, y: 1, dir: "E", score: 3, water: 9 }, a: { x: 2, y: 1, dir: "W", score: -3 } }, shots: [["you", "a", "hit"]] },
   ], 1, "fullTank"),
   mudBomb: scene("standard", 5, 3, [
@@ -314,16 +316,20 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: windAfter(3, "N", "S", "W") },
     { tanks: windAfter(4, "E", "W", "N") },
   ], 1, "whirlwind"),
-  // A shot from the tank's side uses a block. The shot from behind still lands.
+  // The umbrella opens on a turn of its own (owner, 2026-11-19: "active first then the hit"). Then a shot from
+  // the tank's side uses a block, and the shot from behind still lands.
   bigUmbrella: scene("standard", 5, 3, [
     { tanks: { you: { x: 2, y: 1, dir: "W" }, a: { x: 2, y: 0, dir: "S" }, b: { x: 4, y: 1, dir: "W" } } },
     {
-      tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: 3 } }, a: { x: 2, y: 0, dir: "S", water: 6 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 6 } },
-      shots: [["a", "you", "blocked"], ["b", "you", "hit"]],
+      tanks: { you: { x: 2, y: 1, dir: "W", active: { kind: "bigUmbrella", blocksLeft: ULTIMATE_RULES.bigUmbrella.blocks } }, a: { x: 2, y: 0, dir: "S" }, b: { x: 4, y: 1, dir: "W" } },
       fire: { botId: "you", kind: "bigUmbrella", at: { x: 2, y: 1 } },
     },
-    { tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: 3 } }, a: { x: 2, y: 0, dir: "S", water: 7 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 7 } } },
-  ], 1, "bigUmbrella"),
+    {
+      tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: ULTIMATE_RULES.bigUmbrella.blocks - 1 } }, a: { x: 2, y: 0, dir: "S", water: 6 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 6 } },
+      shots: [["a", "you", "blocked"], ["b", "you", "hit"]],
+    },
+    { tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: ULTIMATE_RULES.bigUmbrella.blocks - 1 } }, a: { x: 2, y: 0, dir: "S", water: 7 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 7 } } },
+  ], 2, "bigUmbrella"),
   magnet: scene("standard", 7, 3, [
     { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: MAGNET_PULLS.map(({ kind, from }) => ({ kind, ...from })) },
     {

@@ -161,9 +161,10 @@ describe("the day round", () => {
     expect(tank().ultimate).toEqual(progress);
   });
 
-  test("the Jakarta midnight that opens ultimates gives the new day's tanks a fresh charge", () => {
+  test("the Jakarta midnight that opens ultimates gives the new day's tanks a fresh charge", async () => {
     const l = startLeague({ at: ULTIMATES_FROM - 1 });
-    take(l, newAccount());
+    const viewer = newAccount();
+    take(l, viewer);
     expect(l.monthly.live(1)).toMatchObject({ day: "2026-11-21", dayEndsInMs: 1 });
     expect(l.monthly.live(1).board.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
     nextDay(l);
@@ -171,6 +172,13 @@ describe("the day round", () => {
     expect(live).toMatchObject({ day: "2026-11-22", board: { tick: 0 } });
     expect(live.board.bots).toHaveLength(2);
     expect(live.board.bots.every((bot) => bot.ultimate?.kind === "charging" && bot.ultimate.turnsLeft === ULTIMATE_RULES.firstReadyTurn && bot.ultimate.turnsTotal === ULTIMATE_RULES.firstReadyTurn)).toBe(true);
+    // The stream after midnight carries the ultimates too, so the page draws the charge with no release on the day.
+    const page = collect(l.streams.open(1, viewer, l.monthly.live(1)));
+    l.ticks.tick();
+    const { messages } = await page.take();
+    l.streams.closeAll();
+    const tick = messages.find((message) => message.type === "tick");
+    expect(tick?.type === "tick" ? tick.tick.ultimates?.length : 0).toBe(2);
   });
 
   test("a league whose day spans the gate keeps its round off through ticks and joins until the next round", () => {

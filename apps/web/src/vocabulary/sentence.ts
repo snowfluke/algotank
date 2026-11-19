@@ -273,11 +273,18 @@ function groupIdOf<G extends string>(groups: Readonly<Record<G, string>>, engine
   return found;
 }
 
+/**
+ * The area conditions name hybrid layouts, which arrive with the ultimates on 22 November (owner, 2026-11-19:
+ * "hold it for 22 nov"), so the picker offers them only from then. A saved rule that has one still shows.
+ */
+const AREA_CONDITIONS: ReadonlySet<ConditionId> = new Set<ConditionId>(["myArea", "targetArea"]);
+
 /** The conditions under their group headings, in the engine's order. */
-export function conditionGroups(v: VocabularyText, ultimate: UltimateId): PickGroup<ConditionId>[] {
+export function conditionGroups(v: VocabularyText, ultimate: UltimateId, hybridOn: boolean): PickGroup<ConditionId>[] {
   const groups = new Map<ConditionGroupId, { id: ConditionId; name: string }[]>();
   for (const id of CONDITION_IDS) {
     if (id === "ultimateCatches" && !ultimateCatchesTanks(ultimate)) continue;
+    if (!hybridOn && AREA_CONDITIONS.has(id)) continue;
     const def = CONDITIONS[id];
     if (def === undefined) continue;
     const group = groupIdOf(CONDITION_GROUPS, def.group);

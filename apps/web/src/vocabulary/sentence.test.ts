@@ -104,14 +104,21 @@ describe.each(LANGUAGES)("sentences in %s", (_language, v) => {
   });
 
   test("the pickers list every condition and action once, under a group name; \"wait\" is offered only as a step", () => {
-    expect<readonly string[]>(conditionGroups(v, "splash").flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual([...CONDITION_IDS].sort());
+    expect<readonly string[]>(conditionGroups(v, "splash", true).flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual([...CONDITION_IDS].sort());
     expect<readonly string[]>(actionGroups(v).flatMap((group) => group.items.map((item) => item.id)).sort()).toEqual(ACTION_IDS.filter((id) => id !== "wait").sort());
-    for (const group of [...conditionGroups(v, "splash"), ...actionGroups(v)]) expectReadable(group.name, v, "group");
+    for (const group of [...conditionGroups(v, "splash", true), ...actionGroups(v)]) expectReadable(group.name, v, "group");
+  });
+
+  test("before the hybrid arenas arrive the picker leaves out the two area conditions", () => {
+    const ids = conditionGroups(v, "splash", false).flatMap((group) => group.items.map((item) => item.id));
+    expect(ids).not.toContain("myArea");
+    expect(ids).not.toContain("targetArea");
+    expect(ids).toHaveLength(CONDITION_IDS.length - 2);
   });
 
   test("ultimate picks follow the current style and only rules offer the action", () => {
     for (const ultimate of ULTIMATE_IDS) {
-      const group = conditionGroups(v, ultimate).find(({ name }) => name === v.conditionGroups.ultimate);
+      const group = conditionGroups(v, ultimate, true).find(({ name }) => name === v.conditionGroups.ultimate);
       const ids = group?.items.map(({ id }) => id);
       expect(ids).toEqual(
         ["dash", "splash", "mudBomb", "whirlwind"].includes(ultimate)

@@ -4,6 +4,7 @@
 
 import { CircleAlert } from "lucide-react";
 import { ACTIONS } from "@game/engine";
+import { ultimatesOn } from "@game/arena";
 import type { ActionRef, ConditionRef, UltimateId } from "@game/engine";
 import { actionOf, conditionOf } from "../editor/edit.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -63,7 +64,7 @@ export function ConditionEditor({ condition, label, ultimate, onChange }: { read
   const parts = conditionParts(m.vocabulary, condition.condition);
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <VocabularyPicker label={label} hook="condition" groups={conditionGroups(m.vocabulary, ultimate)} value={condition.condition} onPick={(id) => onChange(conditionOf(id, condition))} />
+      <VocabularyPicker label={label} hook="condition" groups={conditionGroups(m.vocabulary, ultimate, ultimatesOn(Date.now()))} value={condition.condition} onPick={(id) => onChange(conditionOf(id, condition))} />
       {parts === null ? null : <PhraseEditor parts={parts} values={condition.params} context={label} onChange={(params) => onChange({ ...condition, params })} />}
     </div>
   );

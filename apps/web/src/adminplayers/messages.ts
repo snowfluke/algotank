@@ -8,7 +8,8 @@ export const en = {
   intro: (count: string, day: string) => `The monthly arena has ${count} tanks on ${day}, and each row shows the email of the tank's owner.`,
   listLabel: "Tanks in the monthly arena",
   columns: { tank: "Tank", place: "Place", email: "Email address", verified: "Email", created: "Account made" },
-  place: (league: number, rank: number | null) => (rank === null ? `League ${league}, not ranked yet` : `League ${league}, place ${rank}`),
+  /** `rank` is null only for a game master's tank, which takes no place. */
+  place: (league: number, rank: number | null) => (rank === null ? `League ${league}, no place (game master)` : `League ${league}, place ${rank}`),
   /** The game master takes no place (server monthly/game-masters.ts). */
   placeGm: (league: number) => `League ${league}, game master`,
   gmOn: "Make GM",
@@ -46,7 +47,7 @@ export const id: typeof en = {
   intro: (count, day) => `Arena bulanan punya ${count} tank pada ${day}, dan tiap baris menunjukkan email pemilik tank itu.`,
   listLabel: "Tank di arena bulanan",
   columns: { tank: "Tank", place: "Peringkat", email: "Alamat email", verified: "Email", created: "Akun dibuat" },
-  place: (league, rank) => (rank === null ? `Liga ${league}, belum masuk peringkat` : `Liga ${league}, peringkat ${rank}`),
+  place: (league, rank) => (rank === null ? `Liga ${league}, tanpa peringkat (GM)` : `Liga ${league}, peringkat ${rank}`),
   placeGm: (league) => `Liga ${league}, GM`,
   gmOn: "Jadikan GM",
   gmOff: "Hapus GM",

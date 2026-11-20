@@ -82,14 +82,12 @@ export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string, g
 }
 
 /**
- * This month's ranking: the ranked tanks, then a line, then the tanks with fewer than
- * MONTHLY_RANKED_DAYS counted days, which have no place yet (77-monthly-league.md, section 3).
+ * This month's ranking: every tank has a place (77-monthly-league.md, section 3), and the game master's row, which
+ * takes none, comes last. Since 2026-11-20 there is no "not ranked yet" line.
  */
-export function monthItems(rows: readonly LeagueMonthRow[], notRankedLabel: string, gm: GmBadge): RankingItem[] {
+export function monthItems(rows: readonly LeagueMonthRow[], gm: GmBadge): RankingItem[] {
   const items: RankingItem[] = [];
-  rows.forEach((row, i) => {
-    // The game master's row comes last and is never "not ranked yet": it takes no place at all.
-    if (!row.gm && row.rank === null && (i === 0 || rows[i - 1]?.rank !== null)) items.push({ kind: "cut", label: notRankedLabel });
+  rows.forEach((row) => {
     items.push({ kind: "row", row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.score, verdict: null, ...(row.gm ? { badge: gm } : {}) } });
   });
   return items;

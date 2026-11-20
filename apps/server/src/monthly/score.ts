@@ -12,8 +12,10 @@
 //   `bestDays` is two thirds of the days the league plays in the month, rounded up (bestDaysOf).
 // - While a day plays, it counts as a day rated against its leader so far (live scoring, owner
 //   2026-11-20: "can the monthly also a live scoring?"); the day close makes it final.
-// - Ranking: tanks with MONTHLY_RANKED_DAYS (1) or more counted days first, by month rating; then
-//   the others, with no rank ("not ranked yet"). Ties: more counted days, then the earlier seat.
+// - Ranking: every tank has a place, by month rating; ties go to more counted days (today included
+//   while it plays), then the earlier seat. Since 2026-11-20 there is no "not ranked yet" (owner: "anyone
+//   just joined can be in the ranking system?"): a tank without a day has a rating of 0, so it is last
+//   without a rule of its own. The month's champion still needs a counted day (monthly.ts, closeMonthOf).
 // Example: 14 days in the month give bestDays = ceil(14 * 2 / 3) = 10. A tank with ratings of 100,
 // 50 and 99.5 has a month rating of 249.5 until it has more than 10 counted days.
 //
@@ -24,8 +26,6 @@
 // lets a tank miss or lose a third of the days (a late start, a bad day of new rules) and still
 // win, but a tank cannot win the month with a few days. The trade-off: a tank that joins after
 // the first third of the month can no longer catch a leader that wins every day.
-
-import { MONTHLY_RANKED_DAYS } from "@game/arena";
 
 /** One counted day of a tank. */
 export interface CountedDay {
@@ -47,8 +47,7 @@ export interface MonthEntry<Id> {
 
 export interface MonthPlace<Id> {
   readonly id: Id;
-  /** null: fewer than MONTHLY_RANKED_DAYS counted days. */
-  readonly rank: number | null;
+  readonly rank: number;
   /** The month rating. */
   readonly score: number;
   /** The closed counted days; today is in the rating, not in this count. */
@@ -74,13 +73,12 @@ export function monthlyScore(days: readonly CountedDay[], bestDays: number): num
   return oneDecimal(best.reduce((total, rating) => total + rating, 0));
 }
 
-/** Ranked tanks first, then the others; inside each: higher month rating, more counted days, the earlier seat. */
+/** Every tank in order: higher month rating, more counted days (today included while it plays), the earlier seat. */
 export function rankMonth<Id>(entries: readonly MonthEntry<Id>[], bestDays: number): MonthPlace<Id>[] {
   const scored = entries.map((entry) => {
     const all = entry.today === null ? entry.days : [...entry.days, entry.today];
-    return { entry, played: all.length, score: monthlyScore(all, bestDays), ranked: all.length >= MONTHLY_RANKED_DAYS };
+    return { entry, played: all.length, score: monthlyScore(all, bestDays) };
   });
-  scored.sort((a, b) => Number(b.ranked) - Number(a.ranked) || b.score - a.score || b.played - a.played || a.entry.seatOrder - b.entry.seatOrder);
-  let rank = 0;
-  return scored.map(({ entry, score, ranked }) => ({ id: entry.id, rank: ranked ? ++rank : null, score, countedDays: entry.days.length }));
+  scored.sort((a, b) => b.score - a.score || b.played - a.played || a.entry.seatOrder - b.entry.seatOrder);
+  return scored.map(({ entry, score }, index) => ({ id: entry.id, rank: index + 1, score, countedDays: entry.days.length }));
 }

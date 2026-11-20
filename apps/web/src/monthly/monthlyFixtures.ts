@@ -106,9 +106,9 @@ export function fixtureRanking(live: LeagueLive): LeagueRankingResponse {
   const today: LeagueTodayRow[] = players.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, points: 20 - i, counts: true, seated: true, livePoints: true, gm: false }));
   // A tank that quit today keeps its row, last here, with its points at the quit.
   if (today.length > 0) today.push({ rank: today.length + 1, seatId: "seat-left", name: "Rangga", look: fixtureLook(5), points: 0, counts: true, seated: false, livePoints: false, gm: false });
-  const thisMonth: LeagueMonthRow[] = players.map((tank, i) => ({ rank: i < players.length - 3 ? i + 1 : null, seatId: tank.id, name: tank.name, look: tank.look, score: Math.round((18.4 - i) * 10) / 10, countedDays: i < players.length - 3 ? 9 : 4, gm: false }));
+  const thisMonth: LeagueMonthRow[] = players.map((tank, i) => ({ rank: i + 1, seatId: tank.id, name: tank.name, look: tank.look, score: Math.round((18.4 - i) * 10) / 10, countedDays: i < players.length - 3 ? 9 : 4, gm: false }));
   // The game master's tank, as the server sends it: last by its points today (a five-digit negative score, the
-  // widest), and last this month without a place.
+  // widest), and last this month without a place: every other tank has one.
   const gm = seated.find((tank) => tank.id === gmId);
   if (gm !== undefined) {
     today.push({ rank: 0, seatId: gm.id, name: gm.name, look: gm.look, points: -12345, counts: true, seated: true, livePoints: false, gm: true });
@@ -124,7 +124,7 @@ export function fixtureDays(league: number): LeagueDayRecord[] {
 export function fixtureSeat(league: number): MonthlySeat {
   const preset = PRESETS.find((p) => p.id === DEFAULT_PRESET_ID) ?? PRESETS[0];
   if (preset === undefined) throw new Error("The engine has no play style.");
-  return { seatId: OWN_SEAT, league, name: "Citra", look: fixtureLook(2), points: 18, countsToday: true, countedDays: 5, score: 16.2, rank: null, strategy: preset.strategy, stats: playedStats(preset.strategy, 300) };
+  return { seatId: OWN_SEAT, league, name: "Citra", look: fixtureLook(2), points: 18, countsToday: true, countedDays: 5, score: 16.2, rank: 4, strategy: preset.strategy, stats: playedStats(preset.strategy, 300) };
 }
 
 export const FIXTURE_MOVE: MonthMove = { month: "2026-10", from: 2, to: 1, kind: "up" };

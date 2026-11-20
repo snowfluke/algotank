@@ -49,11 +49,6 @@ export const en = {
   left: "Left",
   todayEmpty: "No tank plays in this league today yet.",
   monthEmpty: "No tank plays in this league this month yet.",
-  /** The line before the tanks with fewer counted days than a place needs. */
-  /** The cut line above the tanks without a place: one short line, because the line truncates. The reason is in the info list. */
-  notRanked: (days: number) => (days === 1 ? "Not ranked yet" : `Fewer than ${days} days, not ranked yet`),
-  /** "Go to" the not-ranked line on its page. */
-  toNotRanked: "Not ranked yet",
   yesterdayWinner: (name: string, score: number) => `${name} won yesterday's round with ${points(score)}.`,
   /** `date` is "12 November 2026". */
   dayWinner: (date: string, name: string, score: number) => `${name} won the round of ${date} with ${points(score)}.`,
@@ -119,9 +114,6 @@ export const en = {
     notCounted: "Today does not count yet, because your tank joined after the round started.",
     /** People thought they had to keep the page open; the tank plays without it. */
     playsAlone: "Your tank plays every round by itself, so you can close this page and come back any time.",
-    /** Counted days so far against the days a place needs, such as "5 of 7". */
-    daysNeeded: (days: number, need: number) =>
-      need === 1 ? "Your tank gets a place on its first day played from midnight." : `Your tank has ${days} of the ${need} days it needs for a place.`,
     /** One sentence for the place and the counted days, so the own pane keeps room for the turn feed. */
     monthPlace: (place: number, score: number) => `Your tank is in place ${place} this month with a rating of ${score}.`,
     otherLeague: (league: number) => `Your tank plays in League ${league}.`,
@@ -221,8 +213,6 @@ export const id: typeof en = {
   left: "Keluar",
   todayEmpty: "Belum ada tank yang main di liga ini hari ini.",
   monthEmpty: "Belum ada tank yang main di liga ini bulan ini.",
-  notRanked: (days) => (days === 1 ? "Belum masuk peringkat" : `Kurang dari ${days} hari, belum masuk peringkat`),
-  toNotRanked: "Belum masuk peringkat",
   yesterdayWinner: (name, score) => `${name} juara ronde kemarin dengan ${score} poin.`,
   dayWinner: (date, name, score) => `${name} juara ronde ${date} dengan ${score} poin.`,
   dayDone: (date) => `Ronde ${date} sudah selesai.`,
@@ -268,10 +258,6 @@ export const id: typeof en = {
     nextArena: (clock) => `Arena berikutnya diundi dalam ${clock}.`,
     notCounted: "Hari ini belum dihitung karena tank kamu masuk setelah ronde dimulai.",
     playsAlone: "Tank kamu main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
-    daysNeeded: (days, need) =>
-      need === 1
-        ? "Tank kamu masuk peringkat pada hari pertama yang ia mainkan sejak tengah malam."
-        : `Tank kamu sudah main ${days} dari ${need} hari yang dibutuhkan untuk masuk peringkat.`,
     monthPlace: (place, score) => `Tank kamu di peringkat ${place} bulan ini dengan nilai ${score}.`,
     otherLeague: (league) => `Tank kamu main di Liga ${league}.`,
     show: (league) => `Lihat Liga ${league}`,

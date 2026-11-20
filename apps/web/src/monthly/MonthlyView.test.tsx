@@ -122,12 +122,12 @@ describe("the monthly page", () => {
     expect(ranking).toMatch(new RegExp(`aria-current="true"[^>]*data-player-id="${OWN_SEAT}"`));
     expect(ranking).not.toContain("data-monthly-join");
     const mine = render(props({ seat, onJoin: null, tab: "mine" }, 16), "id");
-    expect(mine).toContain("Tank kamu masuk peringkat pada hari pertama yang ia mainkan sejak tengah malam.");
+    expect(mine).toContain("Tank kamu di peringkat 4 bulan ini dengan nilai 16.2.");
     expect(mine).toContain("Hari ini masuk hitungan nilai bulananmu.");
     // The own pane counts down to the next arena draw (monthlyParts.test.ts checks the arithmetic).
     expect(mine).toMatch(/Arena berikutnya diundi dalam \d\d:\d\d\./);
     expect(mine).toContain("Keluar dari arena bulanan");
-    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank gets a place on its first day played from midnight.");
+    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank is in place 4 this month with a rating of 16.2.");
   });
 
   test("Your tank shows the seat's own ultimate even when its rules match a different play style", () => {
@@ -197,9 +197,9 @@ describe("the monthly page", () => {
     expect(html).toContain("Lihat Liga 2");
   });
 
-  test("this month's ranking lists the tanks without a place after a line", () => {
+  test("this month's ranking gives every tank a place, with no \"not ranked yet\" line", () => {
     const html = render(props({ tab: "ranking", side: "month" }, 16));
-    expect(html).toContain("Not ranked yet");
+    expect(html).not.toContain("Not ranked yet");
   });
 
   test("the month close's notice, the finished day at midnight, and yesterday's winner", () => {

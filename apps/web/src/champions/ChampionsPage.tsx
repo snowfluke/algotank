@@ -8,7 +8,7 @@
 
 import { ArrowLeft, CalendarDays, ListOrdered, Trophy } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { MONTHLY_RANKED_DAYS, type LeagueMonthRow, type MonthRecord, type TournamentWinner } from "@game/arena";
+import { type LeagueMonthRow, type MonthRecord, type TournamentWinner } from "@game/arena";
 import { describeError } from "../api/errorSentences.ts";
 import { goBack } from "../app/navigation.ts";
 import { useAccount } from "../auth/accountStore.ts";
@@ -56,7 +56,7 @@ function MonthPane({ month, rows, ownSeatId }: { readonly month: string; readonl
       {rows.length === 0 ? (
         <p className="text-lead">{t.monthEmpty}</p>
       ) : (
-        <PagedRanking label={heading} items={monthItems(rows, m.monthly.notRanked(MONTHLY_RANKED_DAYS), m.monthly.gm)} highlightId={ownSeatId} jumpLabel={m.monthly.toNotRanked} />
+        <PagedRanking label={heading} items={monthItems(rows, m.monthly.gm)} highlightId={ownSeatId} jumpLabel={null} />
       )}
     </section>
   );

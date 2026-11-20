@@ -13,7 +13,7 @@ const response: AdminPlayersResponse = {
   day: "2026-11-16",
   players: [
     { seatId: "s-ada", league: 1, rank: 1, name: "Ada", score: 120.5, countedDays: 2, gm: false, account: { email: "ada@example.org", emailVerified: true, createdAt: "2026-11-02T03:00:00.000Z" } },
-    { seatId: "s-bobo", league: 1, rank: null, name: "Bobo", score: 0, countedDays: 0, gm: false, account: { email: "bo@example.org", emailVerified: false, createdAt: "2026-11-16T03:00:00.000Z" } },
+    { seatId: "s-bobo", league: 1, rank: 2, name: "Bobo", score: 0, countedDays: 0, gm: false, account: { email: "bo@example.org", emailVerified: false, createdAt: "2026-11-16T03:00:00.000Z" } },
     { seatId: "s-cyan", league: 1, rank: 2, name: "Cyan", score: 80, countedDays: 1, gm: false, account: null },
   ],
 };
@@ -51,7 +51,7 @@ describe("the admin's list of monthly players", () => {
     expect(html).toContain("The monthly arena has 3 tanks on 16 November 2026");
     expect(html).toContain("ada@example.org");
     expect(html).toContain("League 1, place 1");
-    expect(html).toContain("League 1, not ranked yet");
+    expect(html).toContain("League 1, place 2");
     expect(html).toContain("Not verified");
     expect(html).toContain("No account");
     expect(render({ kind: "ready", data: response }, "id")).toContain("Belum terverifikasi");

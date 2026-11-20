@@ -351,11 +351,12 @@ export class MonthlyLeagues {
     // The month is over, so its league days are the closed ones only.
     const rankings = Array.from({ length: this.seats.leagues }, (_, i) => this.monthRanking(i + 1, month, CLOSED_MONTH));
     if (month.month >= FIRST_PUBLISHED_RULES_MONTH) this.publishRules(month.month, rankings);
-    const leagueOne = (rankings[0] ?? []).filter((place) => place.rank !== null);
+    // A tank needs a counted day to be champion or in the stored top 10, so a month nobody played records no champion.
+    const leagueOne = (rankings[0] ?? []).filter((place) => place.countedDays > 0);
     const rowOf = (place: MonthPlace<AccountId>): LeagueRow => {
       const seat = this.seatOfAccount(place.id);
       const wins = month.records.filter((r) => r.top[0]?.accountId === place.id).length;
-      return { rank: place.rank ?? 0, name: seat.name, look: seat.look, score: place.score, games: place.countedDays, wins };
+      return { rank: place.rank, name: seat.name, look: seat.look, score: place.score, games: place.countedDays, wins };
     };
     const champion = leagueOne[0];
     const record: MonthRecord | null = champion === undefined ? null : { month: month.month, champion: rowOf(champion), top: leagueOne.slice(0, RECORD_TOP).map(rowOf) };

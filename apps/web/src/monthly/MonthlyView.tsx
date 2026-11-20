@@ -17,7 +17,7 @@
 
 import { History, ListOrdered, Swords, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import { FIRST_PUBLISHED_RULES_MONTH, MONTHLY_RANKED_DAYS, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
+import { FIRST_PUBLISHED_RULES_MONTH, type LeagueDayRecord, type LeagueRankingResponse, type MonthlyMeResponse, type MonthMove } from "@game/arena";
 import { arenaConditionOf } from "@game/engine";
 import { ArenaCondition, arenaConditionText } from "./ArenaCondition.tsx";
 import { ActivityList } from "./ActivityList.tsx";
@@ -304,7 +304,7 @@ function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; rankin
   const gameMasters = useMemo(() => new Set((ranking?.today ?? []).filter((row) => row.gm).map((row) => row.seatId)), [ranking]);
   const items = useMemo(() => {
     if (ranking === null) return null;
-    const built = part === "today" ? todayItems(ranking.today, t.left, t.gm) : monthItems(ranking.thisMonth, t.notRanked(MONTHLY_RANKED_DAYS), t.gm);
+    const built = part === "today" ? todayItems(ranking.today, t.left, t.gm) : monthItems(ranking.thisMonth, t.gm);
     return gameMastersFirst(built, gameMasters);
   }, [ranking, part, t, gameMasters]);
   // A row opens its tank's sheet (TankSheet.tsx). Not a tank that left today: its seat is gone, so it has no sheet.
@@ -323,7 +323,7 @@ function Ranking({ part, ranking, ownSeatId }: { part: "today" | "month"; rankin
         label={label}
         items={items}
         highlightId={ownSeatId}
-        jumpLabel={part === "month" ? t.toNotRanked : null}
+        jumpLabel={null}
         open={{
           label: (name, id) => (gameMasters.has(id) ? t.sheet.openRules(name) : t.sheet.open(name)),
           cue: (id) => (gameMasters.has(id) ? t.sheet.rulesCue : null),
@@ -419,8 +419,8 @@ function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions 
                 {t.playsAlone}
               </p>
             ) : null}
-            {/* A game master's tank never takes a place, so it gets neither line. */}
-            {todayRow?.gm === true ? null : <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score)}</p>}
+            {/* A game master's tank never takes a place (its rank is null), so it gets no place line. */}
+            {seat.rank === null ? null : <p>{t.monthPlace(seat.rank, seat.score)}</p>}
           </div>
           {/* Keep the latest tunnel in the own feed (owner, 2026-11-19), so it can be read after the turn. */}
           {freshStart === null ? null : (

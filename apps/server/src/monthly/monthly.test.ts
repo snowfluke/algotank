@@ -497,11 +497,11 @@ describe("the day round", () => {
     expect(l.monthly.daysOf(1).days.map((d) => d.day)).toEqual(["2026-11-15", "2026-11-14"]);
     const month = l.monthly.ranking(1).thisMonth;
     expect(month.map((row) => row.countedDays).sort()).toEqual([0, 1, 1]);
-    // One counted day is enough for a place (MONTHLY_RANKED_DAYS), so only the tank that came later has none.
-    expect(month.map((row) => [row.countedDays, row.rank === null])).toEqual([
-      [1, false],
-      [1, false],
-      [0, true],
+    // Every tank has a place; the tank that came later has no day yet, so it is last.
+    expect(month.map((row) => [row.countedDays, row.rank])).toEqual([
+      [1, 1],
+      [1, 2],
+      [0, 3],
     ]);
   });
 });
@@ -607,7 +607,7 @@ describe("the month close", () => {
     expect(l.monthly.me(ada).move).toEqual({ month: "2026-11", from: 1, to: 1, kind: "stayed" });
   });
 
-  test("a month without a tank of 7 counted days records no champion", () => {
+  test("a month in which no tank has a counted day records no champion, although the tank has a place", () => {
     const l = startLeague({ at: Date.parse("2026-11-29T20:00:00Z") });
     take(l, newAccount());
     nextDay(l);

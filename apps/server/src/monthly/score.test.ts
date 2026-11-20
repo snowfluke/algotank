@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { MONTHLY_RANKED_DAYS } from "@game/arena";
 import { bestDaysOf, dayRating, monthlyScore, rankMonth, type CountedDay } from "./score.ts";
 
 /** Counted days whose winner had 1000 points, so 900 points rate 90. */
@@ -84,8 +83,7 @@ describe("rankMonth", () => {
     ]);
   });
 
-  test("a tank without a counted day comes after the ranked ones and has no rank; one counted day is enough (MONTHLY_RANKED_DAYS)", () => {
-    expect(MONTHLY_RANKED_DAYS).toBe(1);
+  test("every tank has a place, and a tank without a day has a rating of 0, so it comes last", () => {
     const ranked = rankMonth(
       [
         { id: "none", days: [], today: null, seatOrder: 1 },
@@ -97,7 +95,7 @@ describe("rankMonth", () => {
     expect(ranked).toEqual([
       { id: "many", rank: 1, score: 7, countedDays: 7 },
       { id: "one", rank: 2, score: 0, countedDays: 1 },
-      { id: "none", rank: null, score: 0, countedDays: 0 },
+      { id: "none", rank: 3, score: 0, countedDays: 0 },
     ]);
   });
 
@@ -118,19 +116,17 @@ describe("rankMonth", () => {
     ]);
   });
 
-  test("not-ranked tanks are ordered by the same rule: with no counted day they tie, so the earlier seat goes first", () => {
+  test("tanks without a day tie at 0, so the earlier seat goes first", () => {
     const ranked = rankMonth(
       [
         { id: "b", days: [], today: null, seatOrder: 2 },
         { id: "a", days: [], today: null, seatOrder: 1 },
-        { id: "ranked", days: days(-9), today: null, seatOrder: 3 },
       ],
       best,
     );
     expect(ranked.map((r) => [r.id, r.rank])).toEqual([
-      ["ranked", 1],
-      ["a", null],
-      ["b", null],
+      ["a", 1],
+      ["b", 2],
     ]);
   });
 });

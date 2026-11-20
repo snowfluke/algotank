@@ -115,10 +115,9 @@ export const en = {
     playsAlone: "Your tank plays every round by itself, so you can close this page and come back any time.",
     /** Counted days so far against the days a place needs, such as "5 of 7". */
     daysNeeded: (days: number, need: number) =>
-      need === 1 ? "Your tank gets a place after its first full day, from midnight to midnight." : `Your tank has ${days} of the ${need} days it needs for a place.`,
+      need === 1 ? "Your tank gets a place on its first day played from midnight." : `Your tank has ${days} of the ${need} days it needs for a place.`,
     /** One sentence for the place and the counted days, so the own pane keeps room for the turn feed. */
-    monthPlace: (place: number, score: number, days: number) =>
-      `Your tank is in place ${place} this month with ${points(score)} from ${days === 1 ? "1 counted day" : `${days} counted days`}.`,
+    monthPlace: (place: number, score: number) => `Your tank is in place ${place} this month with a rating of ${score}.`,
     otherLeague: (league: number) => `Your tank plays in League ${league}.`,
     show: (league: number) => `Show League ${league}`,
   },
@@ -153,9 +152,6 @@ export const en = {
     reshuffle: "Every few minutes, each tank takes its turn through a tunnel and keeps its points.",
     /** Names the board legend's button (board/messages.ts, legend.button), which lists the items. */
     items: "Items appear on the board, and Help says what each one does.",
-    /** `days` is MONTHLY_RANKED_DAYS. The monthly points rule comes from publicplay/messages.ts. */
-    rankedDays: (days: number) =>
-      days === 1 ? "A tank gets a place in the month's ranking after one full day." : `A tank needs ${days} counted days for a place in the month's ranking.`,
     /** The champion and the name rule are left out: the dialog must fit a 360 x 640 phone, and the champions page and the join step say them. */
     leagues: "When the month ends, the lower half of each league changes places with the upper half of the league below.",
   },
@@ -265,9 +261,9 @@ export const id: typeof en = {
     playsAlone: "Tank kamu main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
     daysNeeded: (days, need) =>
       need === 1
-        ? "Tank kamu masuk peringkat setelah main sehari penuh, dari tengah malam sampai tengah malam."
+        ? "Tank kamu masuk peringkat pada hari pertama yang ia mainkan sejak tengah malam."
         : `Tank kamu sudah main ${days} dari ${need} hari yang dibutuhkan untuk masuk peringkat.`,
-    monthPlace: (place, score, days) => `Tank kamu di peringkat ${place} bulan ini dengan ${score} poin dari ${days} hari yang dihitung.`,
+    monthPlace: (place, score) => `Tank kamu di peringkat ${place} bulan ini dengan nilai ${score}.`,
     otherLeague: (league) => `Tank kamu main di Liga ${league}.`,
     show: (league) => `Lihat Liga ${league}`,
   },
@@ -296,7 +292,6 @@ export const id: typeof en = {
     playsAlone: "Tank kamu main setiap hari sampai kamu keluar dari arena, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
     reshuffle: "Setiap beberapa menit, tiap tank bergiliran masuk terowongan dan tetap membawa poinnya.",
     items: "Item muncul di arena, dan tombol Bantuan menjelaskan gunanya.",
-    rankedDays: (days) => (days === 1 ? "Tank masuk peringkat bulan ini setelah main sehari penuh." : `Tank butuh ${days} hari yang dihitung untuk masuk peringkat bulan ini.`),
     leagues: "Di akhir bulan, separuh bawah tiap liga bertukar tempat dengan separuh atas liga di bawahnya.",
   },
   move: {

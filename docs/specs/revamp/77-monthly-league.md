@@ -53,13 +53,16 @@ Restart (every release restarts the process): the server writes a checkpoint per
 
 - Day score of a tank: its points at the day's end, or at its quit.
 - Counted day: the tank was seated at the day's first turn (see section 2).
-- Monthly score: the average of the tank's counted day scores of the month, to one decimal.
-- Ranking in a league: tanks with `MONTHLY_RANKED_DAYS` or more counted days first, by monthly score; then tanks with fewer, by monthly score, marked as not ranked yet. Ties: more counted days, then the earlier seat. The minimum was 7 and is 1 since 2026-11-16 (owner: "make it fair so that people who joined between 17-30 still has chance"): one day is 96,000 turns, and five simulated days of one field gave each play style's day points a spread (sd) of 76 to 367 against gaps of hundreds to thousands between styles. Close rivals can swap places on one day's luck, and a tank's days are played against the field of those days.
+- Day rating (since 2026-11-20): 100 times the day score over the points of that day's winner in the tank's league, to one decimal; 0 for a day score of 0 or less. When the winner has 0 points or fewer, the tanks level with the winner get 100 and the others 0.
+- Monthly score ("nilai bulanan", the month rating; since 2026-11-20): the sum of the tank's best `bestDays` day ratings, to one decimal. `bestDays` is two thirds of the days the league plays in the month, rounded up: 10 of the 14 league days of November 2026, 20 of a 30-day month. A league that opens during the month counts from its first day.
+- Live (since 2026-11-20, owner: "can the monthly also a live scoring?"): while a day plays, it is in the month rating as a day rated against today's leader so far, for each tank that today counts for; the day close makes it final. Until a tank has more than 0 points today, today is left out. "Counted days" stays the number of closed counted days.
+- Why the change (owner, 2026-11-20: "this is not fair right. I want fairer monthly system"): with the average of raw points, a tank that joined 2 days before the month's end won when its 2 days scored above the leader's average. On 17 to 19 November the day's winner had 1536, 1213 and 1248 points, so a day with many points counted more than a day with few, and 1 day weighed as much as 14. The rating makes every day worth the same, and the best two thirds let a tank miss or lose a third of the days and still win. The trade-off: a tank that joins after the first third of the month cannot catch a leader that wins every day.
+- Ranking in a league: tanks with `MONTHLY_RANKED_DAYS` or more counted days (today included while it plays) first, by monthly score; then tanks with fewer, by monthly score, marked as not ranked yet. Ties: more counted days, then the earlier seat. The minimum was 7 and is 1 since 2026-11-16 (owner: "make it fair so that people who joined between 17-30 still has chance"): one day is 96,000 turns, and five simulated days of one field gave each play style's day points a spread (sd) of 76 to 367 against gaps of hundreds to thousands between styles. Close rivals can swap places on one day's luck, and a tank's days are played against the field of those days.
 - The month's champion is rank 1 of League 1 when it has `MONTHLY_RANKED_DAYS` or more counted days; the champion and League 1's top 10 are stored for good (the existing champions store and `/champions`). A month without such a tank records no champion.
 - Each finished day also keeps its winner and top 3 per league for the month ("Juara hari ini").
 - One sentence explains it to a player: "Skor bulananmu adalah rata-rata poin dari hari-hari yang tank kamu ikuti sejak awal hari."
 
-The owner may still choose "average place" over "average points"; that must be an edit in this one function.
+The owner may still choose another rule (average place, another share of best days); that must be an edit in `apps/server/src/monthly/score.ts` only.
 
 ## 4. Month close: promotion and demotion (one pure function with table tests)
 
@@ -108,7 +111,7 @@ Tests (injected clock and time zone): every row of both tables in section 2; joi
 
 Never `bun run build`; never port 8787; build to your own scratch folder; M1 serves on port 9004 and M2 on port 9006. One headless browser at a time. Another builder may edit the create form and arena settings at the same time (`78-arena-seats.md`, port 9005, it takes stored arena version 8): edit shared files with small targeted edits after re-reading them. Report briefly.
 
-Status 2026-11-14: the owner confirmed three choices as built: the month's rank is the average of counted day points, a tank's name is unique across all leagues, and only a tank that still has its seat at the month's end can be champion.
+Status 2026-11-14: the owner confirmed three choices as built: the month's rank is the average of counted day points (replaced on 2026-11-20 by the month rating of section 3), a tank's name is unique across all leagues, and only a tank that still has its seat at the month's end can be champion.
 
 ### Fresh start on the board (2026-11-19)
 

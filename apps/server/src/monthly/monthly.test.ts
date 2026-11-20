@@ -3,6 +3,7 @@
 
 import { Disclosure } from "./disclosure.ts";
 import { GameMasters } from "./game-masters.ts";
+import { dayRating } from "./score.ts";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -430,7 +431,29 @@ describe("the day round", () => {
     // The day's score is the tank's points at the day's end, the turns before and after the pause together.
     const after = seatOf(l, ada);
     expect(after.countedDays).toBe(1);
-    expect(after.score).toBe(final);
+    expect(after.score).toBe(dayRating({ points: final, winnerPoints: days[0]?.top[0]?.points ?? Number.NaN }));
+  });
+
+  test("the month rating moves with today's points, rated against today's leader so far (live scoring)", () => {
+    const l = startLeague();
+    const ada = newAccount();
+    const bo = newAccount();
+    const charger = { strategy: PRESETS.find((preset) => preset.id === "charger")!.strategy };
+    take(l, ada, charger);
+    take(l, bo, charger);
+    nextDay(l);
+    // At the day's first turn nobody has scored, so today adds nothing yet.
+    expect(seatOf(l, ada).score).toBe(0);
+    for (let i = 0; i < 3000 && Math.max(seatOf(l, ada).points, seatOf(l, bo).points) <= 0; i++) l.ticks.tick();
+    const today = l.monthly.ranking(1).today;
+    const leader = Math.max(...today.map((row) => row.points));
+    for (const owner of [ada, bo]) {
+      const seat = seatOf(l, owner);
+      expect(seat.countedDays).toBe(0);
+      expect(seat.score).toBe(dayRating({ points: seat.points, winnerPoints: leader }));
+    }
+    // The tank leading today has a place before its first day closes.
+    expect(l.monthly.ranking(1).thisMonth[0]).toMatchObject({ rank: 1, score: 100, countedDays: 0 });
   });
 
   test("a game master's tank plays the day but takes no place: no counted day, no top 3, no month rank", () => {
@@ -896,7 +919,8 @@ describe("restart", () => {
     first.ticks.advance(DAY_MS);
     const second = startLeague({ db, ticks: first.ticks });
     expect(second.monthly.live(1).day).toBe("2026-11-16");
-    expect(seatOf(second, ada)).toMatchObject({ countedDays: 1, score: points, points: 0, countsToday: true });
+    const winnerPoints = second.monthly.daysOf(1).days[0]?.top[0]?.points ?? Number.NaN;
+    expect(seatOf(second, ada)).toMatchObject({ countedDays: 1, score: dayRating({ points, winnerPoints }), points: 0, countsToday: true });
     second.monthly.stop();
   });
 });

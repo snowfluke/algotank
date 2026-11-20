@@ -254,7 +254,7 @@ export interface LeagueMonthRow {
   readonly seatId: PlayerId;
   readonly name: string;
   readonly look: TankLook;
-  /** The average of the counted day scores, to one decimal; 0 without a counted day. */
+  /** The month rating: the sum of the best day ratings, today's included while it plays (apps/server/src/monthly/score.ts). */
   readonly score: number;
   readonly countedDays: number;
   /** As in LeagueTodayRow: a game master has no counted day, so its rank is null. */

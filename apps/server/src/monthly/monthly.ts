@@ -90,7 +90,18 @@ import { EMPTY_SEATS, type Checkpoint, type DayScore, type LeagueStore, type Mon
 import { closeMonth } from "./month-close.ts";
 import { dayNumbersOf, type Disclosure } from "./disclosure.ts";
 import type { GameMasters } from "./game-masters.ts";
-import { rankMonth, type MonthPlace } from "./score.ts";
+import { bestDaysOf, rankMonth, type CountedDay, type MonthPlace } from "./score.ts";
+
+/** Today's points of a league while its day plays: the leader's so far, and each tank's for which today counts. */
+interface LiveDay {
+  readonly winnerPoints: number;
+  readonly points: ReadonlyMap<AccountId, number>;
+}
+
+/** A month ranked at its close (its closed days only), or while it runs (with the days left and today's live points). */
+type MonthPeriod = { readonly kind: "closed" } | { readonly kind: "running"; readonly live: LiveDay | null };
+
+const CLOSED_MONTH: MonthPeriod = { kind: "closed" };
 import type { LeagueStreams } from "./streams.ts";
 import { NO_METRICS, type MetricsRecorder } from "../metrics/metrics.ts";
 
@@ -337,7 +348,8 @@ export class MonthlyLeagues {
   /** The month close: the champion, then the moves between leagues. Runs once per month (closedMonth). */
   private closeMonthOf(month: MonthState): void {
     if (this.seats.closedMonth === month.month) return;
-    const rankings = Array.from({ length: this.seats.leagues }, (_, i) => this.monthRanking(i + 1, month));
+    // The month is over, so its league days are the closed ones only.
+    const rankings = Array.from({ length: this.seats.leagues }, (_, i) => this.monthRanking(i + 1, month, CLOSED_MONTH));
     if (month.month >= FIRST_PUBLISHED_RULES_MONTH) this.publishRules(month.month, rankings);
     const leagueOne = (rankings[0] ?? []).filter((place) => place.rank !== null);
     const rowOf = (place: MonthPlace<AccountId>): LeagueRow => {
@@ -703,7 +715,7 @@ export class MonthlyLeagues {
         return { rank: gm ? 0 : ++place, ...row, gm };
       });
     const thisMonth = [
-      ...this.monthRanking(league, this.month).map((p): LeagueMonthRow => {
+      ...this.monthRanking(league, this.month, this.runningMonth(league)).map((p): LeagueMonthRow => {
         const seat = this.seatOfAccount(p.id);
         return { rank: p.rank, seatId: seat.seatId, name: seat.name, look: seat.look, score: p.score, countedDays: p.countedDays, gm: false };
       }),
@@ -726,7 +738,7 @@ export class MonthlyLeagues {
     let seatView: MonthlyMeResponse["seat"] = null;
     if (seat !== undefined) {
       const day = this.dayOf(seat.league);
-      const place = this.monthRanking(seat.league, this.month).find((p) => p.id === accountId);
+      const place = this.monthRanking(seat.league, this.month, this.runningMonth(seat.league)).find((p) => p.id === accountId);
       seatView = {
         seatId: seat.seatId,
         league: seat.league,
@@ -755,7 +767,7 @@ export class MonthlyLeagues {
   seatedPlayers(): SeatedPlayers {
     const players: SeatedPlayer[] = [];
     for (let league = 1; league <= this.seats.leagues; league++) {
-      for (const place of this.monthRanking(league, this.month)) {
+      for (const place of this.monthRanking(league, this.month, this.runningMonth(league))) {
         const seat = this.seatOfAccount(place.id);
         players.push({ accountId: place.id, seatId: seat.seatId, league, name: seat.name, rank: place.rank, score: place.score, countedDays: place.countedDays, gm: false });
       }
@@ -832,14 +844,71 @@ export class MonthlyLeagues {
    * The seated tanks of `league` ranked by `month`'s finished counted days (score.ts). A game
    * master's tank is not in it, so it has no month rank, no move and no championship.
    */
-  private monthRanking(league: number, month: MonthState): MonthPlace<AccountId>[] {
+  private monthRanking(league: number, month: MonthState, period: MonthPeriod): MonthPlace<AccountId>[] {
+    const winners = new Map(month.records.map((r) => [`${r.day}/${r.league}`, r.top[0]?.points]));
+    const winnerOf = (day: string, dayLeague: number): number => {
+      const points = winners.get(`${day}/${dayLeague}`);
+      // withDayClosed writes a day's record together with its places, so a placed day always has one.
+      if (points === undefined) throw new Error(`The closed day ${day} of league ${dayLeague} has places but no winner record.`);
+      return points;
+    };
     return rankMonth(
       this.seatsIn(league).filter((seat) => !this.gameMasters.has(seat.accountId)).map((seat) => ({
         id: seat.accountId,
-        days: month.days.filter((d) => d.accountId === seat.accountId && d.place !== null).map((d) => ({ points: d.points, place: d.place ?? 0 })),
+        days: month.days.filter((d) => d.accountId === seat.accountId && d.place !== null).map((d) => ({ points: d.points, winnerPoints: winnerOf(d.day, d.league) })),
+        today: this.liveDayEntry(period, seat.accountId),
         seatOrder: seat.order,
       })),
+      bestDaysOf(this.leagueDaysOf(league, month, period)),
     );
+  }
+
+  /** Today's day of one tank while it plays, or null when the month is closed or today does not count for it. */
+  private liveDayEntry(period: MonthPeriod, accountId: AccountId): CountedDay | null {
+    if (period.kind === "closed" || period.live === null) return null;
+    const points = period.live.points.get(accountId);
+    return points === undefined ? null : { points, winnerPoints: period.live.winnerPoints };
+  }
+
+  /**
+   * The month of `league` while it runs, with today's points as a day not closed yet, so the month ranking moves with the
+   * board (owner, 2026-11-20: "can the monthly also a live scoring?"). Today is rated against today's leader so far, the
+   * way the day close rates it against the day's winner, and the close makes it final.
+   */
+  private runningMonth(league: number): MonthPeriod {
+    const seated = this.dayOf(league).standings().map(({ id, points, counts }) => ({ accountId: this.seatById(id).accountId, seatId: id, points, counts }));
+    const seatedIds = new Set(seated.map((s) => s.seatId));
+    // A tank that quit today keeps its points of today, saved without a place until the day closes.
+    const quit = this.month.days
+      .filter((d) => d.day === this.today.day && d.league === league && d.place === null && !seatedIds.has(d.seatId))
+      .map((d) => ({ accountId: d.accountId, seatId: d.seatId, points: d.points, counts: true }));
+    // As at the day close: every tank on the board can lead the day, a game master's tank cannot.
+    const tanks = [...seated, ...quit].filter((tank) => !this.gameMasters.has(tank.accountId));
+    const winnerPoints = Math.max(...tanks.map((tank) => tank.points));
+    // Until a tank has scored, today has no leader to rate against (every tank would rate 100 at the day's first turn).
+    if (tanks.length === 0 || winnerPoints <= 0) return { kind: "running", live: null };
+    return { kind: "running", live: { winnerPoints, points: new Map(tanks.filter((tank) => tank.counts).map((tank) => [tank.accountId, tank.points])) } };
+  }
+
+  /**
+   * The days `league` plays in `month`: its closed days (one record each) and, while the month runs, today and the days
+   * left after it. A league that opens in the middle of the month counts from its first day.
+   */
+  private leagueDaysOf(league: number, month: MonthState, period: MonthPeriod): number {
+    const closed = month.records.filter((r) => r.league === league).length;
+    return closed + (period.kind === "running" && month.month === this.today.month ? this.daysLeftInMonth() : 0);
+  }
+
+  private daysLeft: { readonly day: string; readonly left: number } | null = null;
+
+  /** Today and the days after it in today's month, counted once per day. */
+  private daysLeftInMonth(): number {
+    if (this.daysLeft?.day !== this.today.day) {
+      let left = 1;
+      for (let next = this.options.calendar.dayAt(this.today.endsAt); next.month === this.today.month; next = this.options.calendar.dayAt(next.endsAt)) left++;
+      this.daysLeft = { day: this.today.day, left };
+    }
+    return this.daysLeft.left;
   }
 
   /** Account to seat id of the tanks seated in `league`, for the streams' `own`. */

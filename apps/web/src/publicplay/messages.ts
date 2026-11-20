@@ -11,7 +11,7 @@ const tanks = (n: number) => (n === 1 ? "1 tank plays" : `${n} tanks play`);
 const aboutEn = {
   practice: "Quick games start often, so you can try new ideas.",
   tournament: "After each round, the top half go through, until one tank wins.",
-  monthly: "Your tank plays a round every day, and the best average of the month wins.",
+  monthly: "Your tank plays a round every day, and the tank with the best days of the month wins.",
 } satisfies Record<ChooserKind, string>;
 
 export const en = {
@@ -59,9 +59,12 @@ export const en = {
     /** The tag on a player's row in the lobby. */
     tag: "ready",
   },
-  /** The monthly arena's rule (77-monthly-league.md, section 3). The spec's "Skor" is "Poin" here, because the glossary bans "skor". */
+  /**
+   * The monthly arena's rule (77-monthly-league.md, section 3, apps/server/src/monthly/score.ts). A day's points become a
+   * rating ("nilai") out of 100, because the glossary bans "score" and "skor" and "points" are the day's own.
+   */
   league: {
-    rule: "Your monthly points are the average of your points on the days your tank played from the start of the day.",
+    rule: "Each day's winner gets a rating of 100, and the other tanks a share by their points. Your month rating adds up your best 2 of every 3 days.",
   },
   tournament: {
     nextIn: "Next tournament",
@@ -81,7 +84,7 @@ const pemain = (n: number) => `${n} pemain`;
 const aboutId: typeof aboutEn = {
   practice: "Permainan cepat sering mulai, jadi kamu bisa coba ide baru.",
   tournament: "Setelah tiap ronde, separuh teratas lolos sampai satu tank menang.",
-  monthly: "Tank kamu main satu ronde tiap hari, dan rata-rata terbaik bulan ini menang.",
+  monthly: "Tank kamu main satu ronde tiap hari, dan tank dengan hari-hari terbaik bulan ini menang.",
 };
 
 export const id: typeof en = {
@@ -122,7 +125,7 @@ export const id: typeof en = {
     tag: "siap",
   },
   league: {
-    rule: "Poin bulananmu adalah rata-rata poin dari hari-hari yang tank kamu ikuti sejak awal hari.",
+    rule: "Juara tiap hari dapat nilai 100, dan tank lain dapat nilai sesuai poinnya. Nilai bulananmu menjumlahkan 2 dari tiap 3 hari terbaikmu.",
   },
   tournament: {
     nextIn: "Turnamen berikutnya",

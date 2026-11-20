@@ -21,7 +21,7 @@ export const en = {
   monthEmpty: "No tank plays in the monthly arena this month yet.",
   monthsHeading: "Champions of past months",
   /** A past month's line under its name. */
-  champion: (name: string, score: number) => `${name} became champion with ${points(score)}.`,
+  champion: (name: string, score: number) => `${name} became champion with a month rating of ${score}.`,
   monthTop: "Top three",
   monthsEmpty: "No month has ended yet, so there is no champion yet.",
   tournamentsHeading: "Recent tournament champions",
@@ -51,7 +51,7 @@ export const id: typeof en = {
   rule: publicId.league.rule,
   monthEmpty: "Belum ada tank yang main di arena bulanan bulan ini.",
   monthsHeading: "Juara bulan-bulan lalu",
-  champion: (name, score) => `${name} jadi juara dengan ${score} poin.`,
+  champion: (name, score) => `${name} jadi juara dengan nilai bulanan ${score}.`,
   monthTop: "Tiga teratas",
   monthsEmpty: "Belum ada bulan yang selesai, jadi belum ada juara.",
   tournamentsHeading: "Juara turnamen terbaru",

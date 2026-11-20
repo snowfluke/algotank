@@ -6,14 +6,13 @@
 
 import { Info, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { MONTHLY_RANKED_DAYS } from "@game/arena";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
 
 /** The facts in reading order: how a round runs, that the tank plays alone, then how the month counts. */
 export function monthlyFacts(m: ReturnType<typeof useMessages>): readonly string[] {
   const t = m.monthly.about;
-  return [t.round, t.reshuffle, t.items, t.playsAlone, m.publicplay.league.rule, t.rankedDays(MONTHLY_RANKED_DAYS), t.leagues];
+  return [t.round, t.reshuffle, t.items, t.playsAlone, m.publicplay.league.rule, t.leagues];
 }
 
 export function MonthlyAbout() {

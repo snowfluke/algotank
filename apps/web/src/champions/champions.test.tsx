@@ -41,7 +41,7 @@ describe("ChampionsView", () => {
     // The tanks with fewer counted days come after a line that says why they have no place.
     expect(month).toContain("Not ranked yet");
     expect(render(ready, "month", "id")).toContain("Belum masuk peringkat");
-    expect(render(ready, "months")).toContain("Bima became champion with 499 points.");
+    expect(render(ready, "months")).toContain("Bima became champion with a month rating of 499.");
     expect(render(ready, "tournaments")).toContain("Citra beat 15 other tanks on 12 November 2026.");
     expect(render(ready, "months", "id")).toContain("Oktober 2026");
   });

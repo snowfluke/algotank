@@ -416,7 +416,7 @@ function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions 
                 {t.playsAlone}
               </p>
             ) : null}
-            <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score, seat.countedDays)}</p>
+            <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score)}</p>
           </div>
           {/* Keep the latest tunnel in the own feed (owner, 2026-11-19), so it can be read after the turn. */}
           {freshStart === null ? null : (

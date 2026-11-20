@@ -122,10 +122,10 @@ describe("the monthly page", () => {
     expect(ranking).toMatch(new RegExp(`aria-current="true"[^>]*data-player-id="${OWN_SEAT}"`));
     expect(ranking).not.toContain("data-monthly-join");
     const mine = render(props({ seat, onJoin: null, tab: "mine" }, 16), "id");
-    expect(mine).toContain("Tank kamu masuk peringkat setelah main sehari penuh, dari tengah malam sampai tengah malam.");
+    expect(mine).toContain("Tank kamu masuk peringkat pada hari pertama yang ia mainkan sejak tengah malam.");
     expect(mine).toContain("Hari ini masuk hitungan poin bulananmu.");
     expect(mine).toContain("Keluar dari arena bulanan");
-    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank gets a place after its first full day, from midnight to midnight.");
+    expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank gets a place on its first day played from midnight.");
   });
 
   test("Your tank shows the seat's own ultimate even when its rules match a different play style", () => {
@@ -144,7 +144,7 @@ describe("the monthly page", () => {
     const html = render(props());
     expect(html).toContain("data-monthly-about-open");
     expect(html).toContain("so you can close this page and come back any time.");
-    expect(html).toContain("A tank gets a place in the month&#x27;s ranking after one full day.");
+    expect(html).toContain("Your month rating adds up your best 2 of every 3 days.");
     expect(render(props(), "id")).toContain("jadi kamu boleh menutup halaman ini dan kembali kapan saja.");
   });
 

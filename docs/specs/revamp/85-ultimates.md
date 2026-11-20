@@ -194,7 +194,7 @@ Before the real migration runs, a dry run on a copy of the newest backup counts 
 
 ## Release
 
-- `ULTIMATES_FROM` = 22 November 2026, 00:00 Asia/Jakarta. A round created at or after that moment has `RoundConfig.ultimates: true`: monthly, room, presenter, tournament and practice rounds. A round created before it has `false`, so it plays as today until it ends.
+- `ULTIMATES_FROM` = 20 November 2026, 00:00 Asia/Jakarta (22 November until the owner moved it, 2026-11-20: "i think i'm gonna release it today, strip out the 22 november"). A round created at or after that moment has `RoundConfig.ultimates: true`: monthly, room, presenter, tournament and practice rounds. A round created before it has `false`, so it plays as today until it ends.
 - The catalogue's "Coming soon" tag and its note go away at the same moment, from the same constant.
 - The balance scripts, the landing demo and the seed fixtures pass `false`. A round with `ultimates: false` draws exactly what it drew before, and its snapshots and decisions stay equal byte for byte.
 - The new catalogue copy for Dash and the big umbrella, and their scenes, can go out before the gate.

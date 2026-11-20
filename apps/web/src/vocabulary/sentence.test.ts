@@ -127,7 +127,7 @@ describe.each(LANGUAGES)("sentences in %s", (_language, v) => {
     }
     expect(actionGroups(v, true).find(({ name }) => name === v.actionGroups.ultimate)?.items.map(({ id }) => id)).toEqual(["useUltimate"]);
     expect(actionGroups(v, true, true).flatMap(({ items }) => items).some(({ id }) => id === "useUltimate")).toBe(false);
-    // "Go to an area" names hybrid layouts, so the picker offers it only once they arrive on 22 November.
+    // "Go to an area" names hybrid layouts, so the picker offers it only once they arrive on 20 November.
     expect(actionGroups(v, false).flatMap(({ items }) => items).some(({ id }) => id === "goToArea")).toBe(false);
     expect(actionGroups(v, true).flatMap(({ items }) => items).some(({ id }) => id === "goToArea")).toBe(true);
   });

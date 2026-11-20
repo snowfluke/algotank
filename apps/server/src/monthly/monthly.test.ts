@@ -166,11 +166,11 @@ describe("the day round", () => {
     const l = startLeague({ at: ULTIMATES_FROM - 1 });
     const viewer = newAccount();
     take(l, viewer);
-    expect(l.monthly.live(1)).toMatchObject({ day: "2026-11-21", dayEndsInMs: 1 });
+    expect(l.monthly.live(1)).toMatchObject({ day: "2026-11-19", dayEndsInMs: 1 });
     expect(l.monthly.live(1).board.bots.every((bot) => bot.ultimate === undefined)).toBe(true);
     nextDay(l);
     const live = l.monthly.live(1);
-    expect(live).toMatchObject({ day: "2026-11-22", board: { tick: 0 } });
+    expect(live).toMatchObject({ day: "2026-11-20", board: { tick: 0 } });
     expect(live.board.bots).toHaveLength(2);
     expect(live.board.bots.every((bot) => bot.ultimate?.kind === "charging" && bot.ultimate.turnsLeft === ULTIMATE_RULES.firstReadyTurn && bot.ultimate.turnsTotal === ULTIMATE_RULES.firstReadyTurn)).toBe(true);
     // The stream after midnight carries the ultimates too, so the page draws the charge with no release on the day.

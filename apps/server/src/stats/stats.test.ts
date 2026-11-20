@@ -99,7 +99,7 @@ describe("a player's statistics in an arena", () => {
     });
     expect(own).toMatchObject({ game: 1, round: 1 });
     expect(own.last.modes[0]?.name).toBe(SECRET_MODE);
-    // The round has ultimates off (a room round before the 22 November gate), so it fired none.
+    // The round has ultimates off (a room round before the 20 November gate), so it fired none.
     expect(own.gameTotal).toEqual({ turns: own.last.turns, shots: own.last.shots, hits: own.last.hits, timesHit: own.last.timesHit, squaresMoved: own.last.squaresMoved, noRuleTurns: own.last.noRuleTurns, ultimateTurns: 0 });
     const ruleTurns = own.last.modes.reduce((sum, mode) => sum + mode.rules.reduce((s, n) => s + n, 0) + mode.fallback, 0);
     expect(ruleTurns).toBe(TICKS);

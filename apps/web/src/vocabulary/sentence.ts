@@ -274,7 +274,7 @@ function groupIdOf<G extends string>(groups: Readonly<Record<G, string>>, engine
 }
 
 /**
- * The area conditions and "Go to an area" name hybrid layouts, which arrive with the ultimates on 22 November
+ * The area conditions and "Go to an area" name hybrid layouts, which arrive with the ultimates on 20 November
  * (owner, 2026-11-19: "hold it for 22 nov"), so the pickers offer them only from then. A saved rule that has one
  * still shows.
  */

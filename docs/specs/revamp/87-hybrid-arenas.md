@@ -80,7 +80,7 @@ Four quarters and Rain front have presets more than 40 points from the field mea
 
 Music (2026-11-19): a layout plays the track of the condition that gives it its character: Mata badai and Front hujan play the Hujan deras track, Bukit plays the Mata tajam track, and Empat penjuru plays the Standar track (`musicTrackOf` in apps/web/src/sound/musicTracks.ts).
 
-Release (owner, 2026-11-19: "hold it for 22 nov"): the layouts join the monthly draw only from `ULTIMATES_FROM` (2026-11-22 00:00 Asia/Jakarta), the same gate as the ultimates. Before it, the draw gives only single conditions, so main can be released before that date without hybrid arenas.
+Release (owner, 2026-11-19: "hold it for 22 nov"): the layouts join the monthly draw only from `ULTIMATES_FROM` (2026-11-20 00:00 Asia/Jakarta since the owner moved it on 2026-11-20; it was 2026-11-22), the same gate as the ultimates. Before it, the draw gives only single conditions, so main can be released before that date without hybrid arenas.
 
 ## Going to an area
 

@@ -18,7 +18,8 @@ import { Champions } from "./champions.ts";
 import { openDatabase } from "../db/open.ts";
 import { insertAccount, memoryDatabase } from "../db/testing.ts";
 import { LeagueStore } from "./league-store.ts";
-import { BOARD_GROWTH, MONTHLY_CONDITIONS, RESHUFFLE_TURNS } from "./league-day.ts";
+import { RESHUFFLE_TURNS } from "@game/arena";
+import { BOARD_GROWTH, MONTHLY_CONDITIONS } from "./league-day.ts";
 import { MonthlyLeagues } from "./monthly.ts";
 import { LeagueStreams } from "./streams.ts";
 
@@ -625,7 +626,16 @@ describe("what anyone may read about a tank (monthly-protocol.ts, the visibility
     take(l, gm);
     take(l, ada);
     l.monthly.setGameMaster(seatOf(l, gm).seatId, true);
-    expect(l.monthly.tankSheet(seatOf(l, ada).seatId)).toEqual({ seatId: seatOf(l, ada).seatId, rules: null, lastDay: null });
+    const adaStrategy = seatOf(l, ada).strategy;
+    expect(l.monthly.tankSheet(seatOf(l, ada).seatId)).toEqual({
+      seatId: seatOf(l, ada).seatId,
+      rules: null,
+      // Every tank here plays a preset unchanged, so its play style is open; its ultimate shows on the board anyway.
+      playStyle: expect.any(String),
+      ultimate: adaStrategy.ultimate,
+      lastDay: null,
+    });
+    expect(PRESETS.map((preset): string => preset.id)).toContain(l.monthly.tankSheet(seatOf(l, ada).seatId).playStyle ?? "none");
     for (let i = 0; i < 50; i++) l.ticks.tick();
     nextDay(l);
     const sheet = l.monthly.tankSheet(seatOf(l, ada).seatId);

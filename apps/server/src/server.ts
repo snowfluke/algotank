@@ -3,7 +3,7 @@
 
 import type { Database } from "bun:sqlite";
 import { fileURLToPath } from "node:url";
-import type { HealthResponse } from "@game/arena";
+import { MONTHLY_RULE_CHANGES_PER_HOUR, type HealthResponse } from "@game/arena";
 import { AccountStrategies, registerAccountStrategyRoutes } from "./account-strategies.ts";
 import { AccountTanks, registerAccountTankRoutes } from "./account-tank.ts";
 import { AccountStatsStore, registerAccountStatsRoutes } from "./stats/account-stats.ts";
@@ -202,12 +202,14 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
     join: new SlidingWindowLimit(options.joinsPerMinute ?? JOINS_PER_MINUTE, 60_000, now),
   };
   const monthlyChanges = new SlidingWindowLimit(MONTHLY_CHANGES_PER_MINUTE, 60_000, now);
+  const monthlyRuleChanges = new SlidingWindowLimit(MONTHLY_RULE_CHANGES_PER_HOUR, 60 * 60_000, now);
   const metricEvents = new SlidingWindowLimit(METRIC_EVENTS_PER_MINUTE, 60_000, now);
   // Drops the counters of addresses that went quiet, so many one-time visitors do not fill memory.
   const stopLimitSweep = scheduler.every(() => {
     limits.seat.sweep();
     limits.join.sweep();
     monthlyChanges.sweep();
+    monthlyRuleChanges.sweep();
     metricEvents.sweep();
   }, EXPIRY_SWEEP_MS);
 
@@ -219,7 +221,7 @@ function startWithDatabase(options: ServerOptions, db: Database): RunningServer 
   registerAccountTankRoutes(router, { auth, tanks: new AccountTanks(db), now, onSaved: (accountId, tank) => monthly.followLook(accountId, tank.look) });
   registerAccountStatsRoutes(router, { auth, stats: accountStats });
   registerPublicRoutes(router, { publicArenas, monthly, champions, winners });
-  registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, metrics, mailOn });
+  registerMonthlyRoutes(router, { auth, monthly, streams: leagueStreams, changes: monthlyChanges, ruleChanges: monthlyRuleChanges, metrics, mailOn });
   const adminGate = { auth, adminEmails: new Set(options.adminEmails ?? []), mailOn };
   registerAdminMeRoute(router, adminGate);
   registerAdminPlayerRoutes(router, { gate: adminGate, monthly });

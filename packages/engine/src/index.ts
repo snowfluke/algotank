@@ -60,7 +60,7 @@ export { decide } from "./strategy/decide.ts";
 // A rule's sequence of steps: which actions can be steps, and how to tell a sequence from one action.
 export { STEP_ACTION_IDS, isSequence, isStepAction } from "./strategy/sequence.ts";
 export type { StepActionId } from "./strategy/sequence.ts";
-export { PRESETS, PRESET_IDS, DEFAULT_PRESET_ID, PICKER_ORDER } from "./strategy/presets.ts";
+export { PRESETS, PRESET_IDS, DEFAULT_PRESET_ID, PICKER_ORDER, matchingPreset, playStyleOf, sameStrategy } from "./strategy/presets.ts";
 export type { PresetId } from "./strategy/presets.ts";
 // stats/ owns a tank's statistics: running totals of fixed size, read from turn results.
 export { EMPTY_NUMBERS, EMPTY_STATS, addNumbers, addTurn, statsNumbers, statsOfRound, statsView, turnsOf } from "./stats/stats.ts";

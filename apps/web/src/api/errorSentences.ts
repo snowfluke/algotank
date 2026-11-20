@@ -7,7 +7,7 @@
 // a code the HTTP status decides. The server's own `error` text is English and
 // technical, so it reaches the page only as validation details.
 
-import type { ArenaRouteErrorCode, AuthErrorCode } from "@game/arena";
+import { MONTHLY_RULE_CHANGES_PER_HOUR, type ArenaRouteErrorCode, type AuthErrorCode } from "@game/arena";
 import { CATALOGS } from "../i18n/catalog.ts";
 import { languageStore } from "../i18n/language.ts";
 import { CLIENT_ERROR, type ApiFailure } from "./client.ts";
@@ -33,6 +33,9 @@ function currentText(): ErrorText {
  * sentence is in the current language of the app.
  */
 export function errorSentence(failure: ApiFailure, action: ErrorAction, text: ErrorText = currentText()): string {
+  if (failure.code === "rules_rate_limited") {
+    return text.rulesRateLimited(MONTHLY_RULE_CHANGES_PER_HOUR, Math.max(1, Math.ceil((failure.error.retryAfterSeconds ?? 3600) / 60)));
+  }
   if (failure.code === "rate_limited") {
     return text.rateLimited(Math.max(1, Math.ceil(failure.error.retryAfterSeconds ?? 60)));
   }

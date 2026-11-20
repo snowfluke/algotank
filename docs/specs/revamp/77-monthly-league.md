@@ -17,6 +17,9 @@ Owner, 2026-11-14: "monthly arena is long running arena. 1 round lasted 24h. Onc
 
 - Only a signed-in account takes a seat (as today). One seat per account over all leagues. The seat belongs to the account on any device.
 - Taking a seat submits the name, look, strategy and upgrades. Since 2026-11-16 "Change rules" gives the seated tank new rules in place (its points stay), and "Change look" its look.
+- New rules: at most `MONTHLY_RULE_CHANGES_PER_HOUR` (3) an hour per account, counting a seat and each change of rules; a refused strategy or a save of the same rules does not count (owner, 2026-11-20, before the source went public: "no daily limit but rate limit maybe hourly"). A quit and a new seat keep the day's points, so the seat counts. A script that watches the live board can then not re-tune a tank every few minutes; a tank's answers to the board belong in its rules. Past the limit the server answers 429 `rules_rate_limited` with the wait.
+- A tank's sheet (opened from a ranking row) shows its play style, the preset its rules and upgrades are whatever ultimate it chose (`playStyleOf`), or "Aturan sendiri", and its ultimate (owner, 2026-11-20). A preset is public, so a tank that plays one unchanged has open rules in effect.
+- The "Tank kamu" pane counts down to the next arena draw (every `RESHUFFLE_TURNS` turns; the draw can repeat the arena).
 - The name: the first name an account submits in a month stays its name until that month ends, also after quit and rejoin. From the first day of a later month the owner can change it once; that name is then fixed for that month. The block list and "a name already used in the league is refused" apply.
 - Quit: the tank leaves the board at the next turn. Its counted days of the month stay.
 - A seated tank plays every day round and stays seated when the month changes.

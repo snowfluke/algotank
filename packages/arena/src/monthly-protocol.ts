@@ -57,7 +57,7 @@
 //                                                -> 204; makes the seat's account a game master or not.
 //                                                404 no_monthly_seat
 
-import type { Decision, StatsView, StrategyInput } from "@game/engine";
+import type { Decision, PresetId, StatsView, StrategyInput, UltimateId } from "@game/engine";
 
 // Who may read a tank's rules (owner, 2026-11-17: "for fair play"). The server enforces it; a page
 // never receives rules it may not show.
@@ -69,7 +69,9 @@ import type { Decision, StatsView, StrategyInput } from "@game/engine";
 // |                      |                      |        | as they stood at the close; a tank that quit before it is |
 // |                      |                      |        | not in the list                                           |
 // "Published" is terminal for that month: the copy taken at the close never changes. A tank's
-// numbers of a finished day (DayNumbers) are open to everyone; they say what it did, not its rules.
+// numbers of a finished day (DayNumbers) are open to everyone; they say what it did, not its rules. So are its play
+// style (a preset's name, or "own rules") and its ultimate (owner, 2026-11-20): a preset is public, so a tank that
+// plays one unchanged has open rules in effect, and an ultimate shows on the board each time it fires.
 import { RULES, STANDARD_RULE_SET_ID, areaRuleSetIds, isArenaLayoutId, type ArenaArea, type ArenaLayout } from "@game/engine";
 import type { CompactTick } from "./compact-tick.ts";
 import type { MonthRecord } from "./public-protocol.ts";
@@ -93,6 +95,17 @@ export const MONTHLY_BOARD_MIN_TANKS = 16;
  * Close rivals can still swap places on one day's luck.
  */
 export const MONTHLY_RANKED_DAYS = 1;
+
+/**
+ * Turns between weather draws and between a tank's fresh starts: 333 turns are 5 minutes at
+ * 900 ms a turn. A day is one round of about 96,000 turns, and two or three tanks could settle
+ * into a loop that ran for the rest of it: in one measured field the same tank hit the same
+ * target 15,833 times in a row.
+ * Measured on 14 November 2026 over 3 seeds with a new start every 1,000 turns: that run was at
+ * most 70, and fields without a loop kept their result. 333 turns cut a loop shorter still.
+ */
+// Shared with the page, which counts down to the next weather draw in the "Tank kamu" pane (owner, 2026-11-20).
+export const RESHUFFLE_TURNS = 333;
 
 /**
  * A league's day (apps/server/src/monthly/league-day.ts holds the table):
@@ -361,8 +374,18 @@ export interface RenameRequest {
  * - monthly_seat_taken: the account already has a seat (409).
  * - no_monthly_seat: a quit without a seat (404).
  * - monthly_name_fixed: the account's name of this month is set; it changes in the next month (409).
+ * - rules_rate_limited: the tank's rules changed MONTHLY_RULE_CHANGES_PER_HOUR times in the last hour; a seat counts,
+ *   because a quit and a new seat keep the day's points. `retryAfterSeconds` says how long to wait (429).
  */
-export type MonthlyErrorCode = "monthly_seat_taken" | "no_monthly_seat" | "monthly_name_fixed" | "month_not_published";
+export type MonthlyErrorCode = "monthly_seat_taken" | "no_monthly_seat" | "monthly_name_fixed" | "month_not_published" | "rules_rate_limited";
+
+/**
+ * How often an account's monthly tank may get new rules: a change or a seat, in any hour (owner, 2026-11-20, before
+ * the source went public: "no daily limit but rate limit maybe hourly"). The rules have to carry a tank's answers to
+ * the board; a script that watches the live board cannot re-tune the tank every few minutes. Three leaves a player a
+ * change and two fixes.
+ */
+export const MONTHLY_RULE_CHANGES_PER_HOUR = 3;
 
 /**
  * One seated tank and its owner's account, for the host (owner, 2026-11-16: to check who is behind
@@ -420,6 +443,9 @@ export interface TankSheetResponse {
   readonly seatId: PlayerId;
   /** The rules of a game master's tank, which are always open; null for every other tank. */
   readonly rules: StrategyInput | null;
+  /** The preset its rules and upgrades are, whatever ultimate it chose (playStyleOf); null for rules changed by hand. */
+  readonly playStyle: PresetId | null;
+  readonly ultimate: UltimateId;
   /** The tank's numbers of its newest finished day before today (normally yesterday), or null before its first. */
   readonly lastDay: { readonly day: string; readonly numbers: DayNumbers } | null;
 }

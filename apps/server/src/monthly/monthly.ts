@@ -75,7 +75,7 @@ import {
   type TankLook,
   type TankSheetResponse,
 } from "@game/arena";
-import { parseStrategy, statsView } from "@game/engine";
+import { parseStrategy, playStyleOf, statsView } from "@game/engine";
 import { makeGameName } from "../game-names.ts";
 import { HttpError, isRecord } from "../http.ts";
 import { checkTypedName } from "../name-filter.ts";
@@ -404,6 +404,8 @@ export class MonthlyLeagues {
     return {
       seatId: seat.seatId,
       rules: this.gameMasters.has(seat.accountId) ? seat.strategy : null,
+      playStyle: playStyleOf(seat.strategy),
+      ultimate: seat.strategy.ultimate,
       lastDay: this.options.disclosure.lastDayNumbers(seat.seatId, this.today.day),
     };
   }
@@ -521,7 +523,8 @@ export class MonthlyLeagues {
    * turn. Its seat, name, look, today's points and whether today counts all stay (owner,
    * 2026-11-16, after players who changed rules by a quit and a new seat saw their points at 0).
    */
-  changeStrategy(accountId: AccountId, body: unknown): void {
+  /** Gives the seated tank new rules. Returns false when they are the rules it has, so the hourly limit counts only a change. */
+  changeStrategy(accountId: AccountId, body: unknown): boolean {
     const seat = this.seats.seats.get(accountId);
     const input = isRecord(body) ? body["strategy"] : undefined;
     const parsed = parseStrategy(assignMissingUltimate(input, seat?.strategy.ultimate));
@@ -529,11 +532,12 @@ export class MonthlyLeagues {
     if (seat === undefined) throw new HttpError(404, "Your account has no tank in the monthly arena.", { code: "no_monthly_seat" });
     if (this.closing) throw serviceBusy();
     // The same rules again change nothing, so a save never restarts the tank's mode.
-    if (JSON.stringify(seat.strategy) === JSON.stringify(parsed.strategy)) return;
+    if (JSON.stringify(seat.strategy) === JSON.stringify(parsed.strategy)) return false;
     const next: SeatsState = { ...this.seats, seats: new Map(this.seats.seats).set(accountId, { ...seat, strategy: parsed.strategy }) };
     this.saveSeatActivity(next, seat, "changedRules");
     this.dayOf(seat.league).restrategy(seat.seatId, parsed.strategy);
     this.sendState(seat.league);
+    return true;
   }
 
   /** PUT /api/monthly/name: once in a month whose name is not set yet. */

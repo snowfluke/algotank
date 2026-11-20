@@ -123,7 +123,9 @@ describe("the monthly page", () => {
     expect(ranking).not.toContain("data-monthly-join");
     const mine = render(props({ seat, onJoin: null, tab: "mine" }, 16), "id");
     expect(mine).toContain("Tank kamu masuk peringkat pada hari pertama yang ia mainkan sejak tengah malam.");
-    expect(mine).toContain("Hari ini masuk hitungan poin bulananmu.");
+    expect(mine).toContain("Hari ini masuk hitungan nilai bulananmu.");
+    // The own pane counts down to the next arena draw (monthlyParts.test.ts checks the arithmetic).
+    expect(mine).toMatch(/Arena berikutnya diundi dalam \d\d:\d\d\./);
     expect(mine).toContain("Keluar dari arena bulanan");
     expect(render(props({ seat, onJoin: null, tab: "mine" }, 16))).toContain("Your tank gets a place on its first day played from midnight.");
   });

@@ -11,7 +11,7 @@ import { CircleCheck, Wrench } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { StrategyInput } from "@game/engine";
 import { paths } from "../app/route.ts";
-import { sameStrategy } from "../editor/compare.ts";
+import { sameStrategy } from "@game/engine";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { playSound } from "../sound/player.ts";
 import { TankBadge } from "../tank/TankBadge.tsx";

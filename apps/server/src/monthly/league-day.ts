@@ -55,7 +55,7 @@ import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, t
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
 import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundState, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, secureRandom, secureRng } from "../secrets.ts";
-import { MONTHLY_BOARD_MIN_TANKS, ultimatesOn } from "@game/arena";
+import { MONTHLY_BOARD_MIN_TANKS, RESHUFFLE_TURNS, ultimatesOn } from "@game/arena";
 import type { Clock } from "../timers.ts";
 
 /** What the round needs of a seated tank. */
@@ -92,15 +92,6 @@ interface LeagueBot {
   readonly look: TankLook;
 }
 
-/**
- * Turns between weather draws and between a tank's fresh starts: 333 turns are 5 minutes at
- * 900 ms a turn. A day is one round of about 96,000 turns, and two or three tanks could settle
- * into a loop that ran for the rest of it: in one measured field the same tank hit the same
- * target 15,833 times in a row.
- * Measured on 14 November 2026 over 3 seeds with a new start every 1,000 turns: that run was at
- * most 70, and fields without a loop kept their result. 333 turns cut a loop shorter still.
- */
-export const RESHUFFLE_TURNS = 333;
 
 /** The usual turn result up to the end of the moves, with the tunnels that follow. */
 export interface LeagueTurn extends TickResult {

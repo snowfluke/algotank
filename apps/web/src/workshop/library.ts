@@ -28,7 +28,7 @@ import { ACCOUNT_STRATEGY_LIMITS, cleanStrategyName, type AccountStrategiesRespo
 import { assignUltimate, hasStrategyBody, isUltimateId, parseStrategy } from "@game/engine";
 import type { StrategyInput } from "@game/engine";
 import type { ApiResult } from "../api/client.ts";
-import { sameStrategy } from "../editor/compare.ts";
+import { sameStrategy } from "@game/engine";
 import type { KeyValueStore } from "../session/storage.ts";
 import type { Clock } from "../ui/timer.ts";
 import { emptyMemory, mergePlan, type MyPlayStyle, type SyncMemory } from "./merge.ts";

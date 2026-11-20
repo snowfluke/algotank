@@ -130,16 +130,39 @@ describe("the monthly routes' limit", () => {
   test("seat, quit and rename share a limit per account; past it they answer 429 with the wait, and another account is not held back", async () => {
     const t = start();
     const cookie = await signUp(t);
-    for (let i = 0; i < 6; i++) {
-      expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
-      expect((await t.api("/api/monthly/seat", { method: "DELETE", cookie })).status).toBe(204);
-    }
+    // 12 tries a minute: one seat, then quits (a quit without a seat is refused, and still counts as a try).
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+    expect((await t.api("/api/monthly/seat", { method: "DELETE", cookie })).status).toBe(204);
+    for (let i = 0; i < 10; i++) expect((await t.api("/api/monthly/seat", { method: "DELETE", cookie })).status).toBe(404);
     const refused = await t.api("/api/monthly/name", { method: "PUT", cookie, body: { name: "Bo" } });
     expect(refused.status).toBe(429);
     expect(await json<ErrorResponse>(refused)).toMatchObject({ code: "rate_limited", retryAfterSeconds: 60 });
     const other = await signUp(t);
     expect((await t.api("/api/monthly/seat", { method: "POST", cookie: other, body: tank })).status).toBe(201);
     t.ticks.advance(60_000);
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+  });
+});
+
+describe("the hourly limit on new rules (MONTHLY_RULE_CHANGES_PER_HOUR)", () => {
+  test("a seat and changes of rules count; the fourth in an hour answers 429 with the wait, and a refused change costs nothing", async () => {
+    const t = start();
+    const cookie = await signUp(t);
+    const change = (strategy: unknown) => t.api("/api/monthly/strategy", { method: "PUT", cookie, body: { strategy } });
+    const preset = (i: number) => (PRESETS[i] as (typeof PRESETS)[number]).strategy;
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
+    // Neither a refused strategy nor a save of the same rules is a change.
+    expect((await change({ not: "a strategy" })).status).toBe(400);
+    expect((await change(tank.strategy)).status).toBe(204);
+    expect((await change(preset(1))).status).toBe(204);
+    expect((await change(preset(2))).status).toBe(204);
+    const refused = await change(preset(3));
+    expect(refused.status).toBe(429);
+    expect(await json<ErrorResponse>(refused)).toMatchObject({ code: "rules_rate_limited", retryAfterSeconds: 3600 });
+    // A quit and a new seat would keep the day's points with new rules, so the seat is held back too.
+    expect((await t.api("/api/monthly/seat", { method: "DELETE", cookie })).status).toBe(204);
+    expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(429);
+    t.ticks.advance(60 * 60_000);
     expect((await t.api("/api/monthly/seat", { method: "POST", cookie, body: { ...tank, name: "Ada" } })).status).toBe(201);
   });
 });

@@ -44,7 +44,7 @@ import { useFitDetail } from "../ui/useFitDetail.ts";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { LeagueBoard, LeagueLiveLoad } from "./leagueLive.ts";
 import { MonthlyBoard, type BoardRow } from "./MonthlyBoard.tsx";
-import { formatDayClock, gameMastersFirst, lastFinishedDay, leagueSwitchKind, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
+import { formatDayClock, formatMinuteClock, gameMastersFirst, lastFinishedDay, leagueSwitchKind, monthItems, nextArenaInMs, todayItems, withLivePoints } from "./monthlyParts.ts";
 import type { LeagueConnection } from "./useLeagueLive.ts";
 import { useNow } from "./useNow.ts";
 
@@ -409,6 +409,9 @@ function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions 
               </div>
             )}
             {todayRow === null ? null : <p>{todayRow.gm ? t.todayGm(todayRow.points) : t.today(todayRow.rank, todayRow.points)}</p>}
+            {here && board !== null && board.live.phase !== "idle" ? (
+              <p data-own-next-arena="">{t.nextArena(formatMinuteClock(nextArenaInMs(board.snapshot.tick, board.live.tickMs)))}</p>
+            ) : null}
             {detail.level < countingLevel ? <p className="text-muted">{seat.countsToday ? t.counts : t.notCounted}</p> : null}
             {/* Only beside the own league: the other league's view spends this room on the way back, and the help dialog says it too. */}
             {here && detail.level === 0 ? (
@@ -416,7 +419,8 @@ function OwnPane({ seat, league, board, ranking, now, onLeague, onQuit, actions 
                 {t.playsAlone}
               </p>
             ) : null}
-            <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score)}</p>
+            {/* A game master's tank never takes a place, so it gets neither line. */}
+            {todayRow?.gm === true ? null : <p>{seat.rank === null ? t.daysNeeded(seat.countedDays, MONTHLY_RANKED_DAYS) : t.monthPlace(seat.rank, seat.score)}</p>}
           </div>
           {/* Keep the latest tunnel in the own feed (owner, 2026-11-19), so it can be read after the turn. */}
           {freshStart === null ? null : (

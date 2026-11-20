@@ -3,7 +3,8 @@ import { BUILD_BUDGET, buildCost } from "../combat/combat.ts";
 import { RULE_SET_IDS, STANDARD_RULE_SET_ID } from "../combat/rule-sets.ts";
 import { MOVES } from "../types.ts";
 import { runRound } from "../round/round.ts";
-import { DEFAULT_PRESET_ID, PICKER_ORDER, PRESETS } from "./presets.ts";
+import { DEFAULT_PRESET_ID, PICKER_ORDER, PRESETS, playStyleOf } from "./presets.ts";
+import { ULTIMATE_IDS } from "../ultimates/ultimates.ts";
 import { parseStrategy } from "./parse.ts";
 import { decide } from "./decide.ts";
 import { STANDARD, bot, contextFor, snapshotOf, stubRng } from "./test-helpers.ts";
@@ -198,5 +199,22 @@ describe("presets", () => {
       for (const b of last.bots) if (landed.has(b.id)) landed.set(b.id, (landed.get(b.id) ?? 0) + b.hitsLanded);
     }
     for (const [presetId, hits] of landed) expect(hits, presetId).toBeGreaterThan(0);
+  });
+});
+
+describe("playStyleOf", () => {
+  const preset = PRESETS[1] as (typeof PRESETS)[number];
+  const otherUltimate = ULTIMATE_IDS.find((id) => id !== preset.strategy.ultimate) ?? preset.strategy.ultimate;
+
+  test("names the preset a strategy is, whatever ultimate it chose", () => {
+    expect(playStyleOf(preset.strategy)).toBe(preset.id);
+    expect(playStyleOf({ ...preset.strategy, ultimate: otherUltimate })).toBe(preset.id);
+  });
+
+  test("is null for rules or upgrades changed by hand", () => {
+    const [first, ...rest] = preset.strategy.modes;
+    if (first === undefined) throw new Error("A preset has a mode.");
+    expect(playStyleOf({ ...preset.strategy, modes: [{ ...first, rules: first.rules.slice(1) }, ...rest] })).toBeNull();
+    expect(playStyleOf({ ...preset.strategy, build: { ...preset.strategy.build, camouflage: 2 } })).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 // Pure rules of the monthly page: the day's clock, which league switch it shows, the
 // rankings as rows of a paged list, and which finished day it names as yesterday's.
 
-import { type LeagueDayRecord, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow } from "@game/arena";
+import { RESHUFFLE_TURNS, type LeagueDayRecord, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow } from "@game/arena";
 import type { RankingItem } from "../standings/StandingsTable.tsx";
 
 /** Time left in the day round as "05:12:44", rounded up to the second. */
@@ -9,6 +9,22 @@ export function formatDayClock(ms: number): string {
   const total = Math.ceil(Math.max(0, ms) / 1000);
   const two = (n: number) => String(n).padStart(2, "0");
   return `${two(Math.floor(total / 3600))}:${two(Math.floor((total % 3600) / 60))}:${two(total % 60)}`;
+}
+
+/**
+ * Time until the league draws the next arena (a condition or a hybrid layout): it draws when the round's turn is a
+ * multiple of RESHUFFLE_TURNS (league-day.ts), and the round starts again at turn 0 on a new day, a restart or a
+ * rebuild. The draw may give the same arena again.
+ */
+export function nextArenaInMs(tick: number, tickMs: number): number {
+  return (RESHUFFLE_TURNS - (tick % RESHUFFLE_TURNS)) * tickMs;
+}
+
+/** Minutes and seconds ("04:12"), for a wait of less than an hour. */
+export function formatMinuteClock(ms: number): string {
+  const total = Math.ceil(Math.max(0, ms) / 1000);
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(Math.floor(total / 60))}:${two(total % 60)}`;
 }
 
 /** The calendar day before `day` (YYYY-MM-DD). */

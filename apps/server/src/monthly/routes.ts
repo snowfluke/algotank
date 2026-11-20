@@ -6,7 +6,7 @@
 // one limit per account (not per address: a classroom shares one address). The limit counts
 // tries, also refused ones, because a refused seat still parses a strategy.
 
-import type { AccountId } from "@game/arena";
+import { MONTHLY_RULE_CHANGES_PER_HOUR, type AccountId } from "@game/arena";
 import { HttpError, readJson, jsonResponse } from "../http.ts";
 import type { Auth } from "../auth/index.ts";
 import type { SlidingWindowLimit } from "../rate-limit.ts";
@@ -24,6 +24,8 @@ export interface MonthlyRouteDeps {
   readonly streams: LeagueStreams;
   /** MONTHLY_CHANGES_PER_MINUTE per account; the server sweeps it with its other limits. */
   readonly changes: SlidingWindowLimit;
+  /** MONTHLY_RULE_CHANGES_PER_HOUR per account, for a seat and a change of rules. */
+  readonly ruleChanges: SlidingWindowLimit;
   /** The usage numbers (metrics/metrics.ts). */
   readonly metrics: MetricsRecorder;
   /**
@@ -31,6 +33,14 @@ export interface MonthlyRouteDeps {
    * monthly arena is for verified accounts). Without email nobody could verify, so then it does not.
    */
   readonly mailOn: boolean;
+}
+
+/** New rules for the account's tank: checked before the body is read, recorded only when the change is accepted. */
+function checkRuleChanges(ruleChanges: SlidingWindowLimit, accountId: AccountId): void {
+  const check = ruleChanges.check(accountId);
+  if (!check.ok) {
+    throw new HttpError(429, `A monthly tank can get new rules ${MONTHLY_RULE_CHANGES_PER_HOUR} times an hour.`, { code: "rules_rate_limited", retryAfterSeconds: check.retryAfterSeconds });
+  }
 }
 
 function limitChanges(changes: SlidingWindowLimit, accountId: AccountId): void {
@@ -41,7 +51,7 @@ function limitChanges(changes: SlidingWindowLimit, accountId: AccountId): void {
   changes.record(accountId);
 }
 
-export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, changes, metrics, mailOn }: MonthlyRouteDeps): void {
+export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, changes, ruleChanges, metrics, mailOn }: MonthlyRouteDeps): void {
   router.add("GET", "/api/monthly", () => jsonResponse(monthly.overview()));
 
   router.add("GET", "/api/monthly/leagues/:league/events", (ctx) => {
@@ -69,8 +79,11 @@ export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, 
     const account = auth.requireAccount(ctx.req);
     if (mailOn && !account.emailVerified) throw new HttpError(403, "The monthly arena is for players whose email is verified.", { code: "email_not_verified" });
     limitChanges(changes, account.id);
+    checkRuleChanges(ruleChanges, account.id);
     const body = await readJson(ctx.req);
     const seat = monthly.takeSeat(account.id, body);
+    // A refused seat or strategy, or a save of the same rules, leaves the hour's changes as they were.
+    ruleChanges.record(account.id);
     metrics.count("monthlySeatTaken");
     return jsonResponse(seat, 201);
   });
@@ -93,7 +106,8 @@ export function registerMonthlyRoutes(router: Router, { auth, monthly, streams, 
   router.add("PUT", "/api/monthly/strategy", async (ctx) => {
     const account = auth.requireAccount(ctx.req);
     limitChanges(changes, account.id);
-    monthly.changeStrategy(account.id, await readJson(ctx.req));
+    checkRuleChanges(ruleChanges, account.id);
+    if (monthly.changeStrategy(account.id, await readJson(ctx.req))) ruleChanges.record(account.id);
     return new Response(null, { status: 204 });
   });
 

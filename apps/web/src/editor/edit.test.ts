@@ -31,7 +31,7 @@ import {
   toSteps,
 } from "./edit.ts";
 import { canSetLevel, levelOf, pointsLeft, setBuildLevel } from "./build.ts";
-import { matchingPreset, sameData } from "./compare.ts";
+import { matchingPreset, sameData } from "@game/engine";
 
 const MODE_NAME = (n: number) => `Mode ${n}`;
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { plainTankLook, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow } from "@game/arena";
-import { dayBefore, formatDayClock, gameMastersFirst, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems, withLivePoints } from "./monthlyParts.ts";
+import { dayBefore, formatDayClock, formatMinuteClock, nextArenaInMs, gameMastersFirst, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems, withLivePoints } from "./monthlyParts.ts";
 
 const look = plainTankLook(3);
 
@@ -102,5 +102,15 @@ describe("today's ranking follows the board", () => {
 
   test("equal points keep the server's order", () => {
     expect(withLivePoints(ranking, board({ a: 6, b: 6 }))?.today.map((r) => r.seatId)).toEqual(["a", "b", "gone"]);
+  });
+});
+
+describe("the time until the next arena draw", () => {
+  test("counts the turns to the next multiple of RESHUFFLE_TURNS (333), at the round's turn length", () => {
+    expect(nextArenaInMs(0, 900)).toBe(333 * 900);
+    expect(nextArenaInMs(330, 900)).toBe(3 * 900);
+    expect(nextArenaInMs(333, 900)).toBe(333 * 900);
+    expect(formatMinuteClock(333 * 900)).toBe("05:00");
+    expect(formatMinuteClock(2700)).toBe("00:03");
   });
 });

@@ -51,6 +51,9 @@ export const en = {
     network_error: "The page cannot reach the server, so check your connection and try again.",
     bad_response: "The server sent an answer this page cannot read, so reload the page and try again.",
   },
+  /** The monthly tank's hourly limit on new rules (MONTHLY_RULE_CHANGES_PER_HOUR); `times` is that limit. */
+  rulesRateLimited: (times: number, minutes: number) =>
+    `Your tank can get new rules ${times} times an hour, so wait ${minutes === 1 ? "1 minute" : `${minutes} minutes`} and save them again.`,
   rateLimited: (seconds: number) =>
     seconds <= 60
       ? `There were too many tries from this network, so wait ${seconds === 1 ? "1 second" : `${seconds} seconds`} and try again.`
@@ -157,6 +160,7 @@ export const id: typeof en = {
     network_error: "Halaman ini tidak bisa terhubung ke server, jadi periksa koneksimu, lalu coba lagi.",
     bad_response: "Server mengirim jawaban yang tidak bisa dibaca halaman ini, jadi muat ulang halaman, lalu coba lagi.",
   },
+  rulesRateLimited: (times, minutes) => `Tank kamu bisa ganti aturan ${times} kali per jam, jadi tunggu ${minutes} menit, lalu simpan lagi.`,
   rateLimited: (seconds) =>
     seconds <= 60
       ? `Terlalu banyak percobaan dari jaringan ini, jadi tunggu ${seconds} detik, lalu coba lagi.`

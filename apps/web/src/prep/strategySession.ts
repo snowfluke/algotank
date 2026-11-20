@@ -30,7 +30,7 @@ import { parseStrategy } from "@game/engine";
 import type { StrategyInput } from "@game/engine";
 import type { ErrorView } from "../api/errorSentences.ts";
 import type { ErrorText } from "../api/messages.ts";
-import { sameData } from "../editor/compare.ts";
+import { sameData } from "@game/engine";
 import type { Clock } from "../ui/timer.ts";
 
 /** Wait after the last edit before saving, so a run of taps sends one request. */

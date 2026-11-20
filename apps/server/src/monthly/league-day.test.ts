@@ -2,7 +2,8 @@
 import { describe, expect, test } from "bun:test";
 import { plainTankLook, ULTIMATES_FROM } from "@game/arena";
 import { ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, createRng, isArenaLayoutId, parseStrategy, PRESETS, ruleSet, waterCapacityOf, type ArenaConditionId, type Strategy, type UltimateId } from "@game/engine";
-import { LeagueDay, MONTHLY_CONDITIONS, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
+import { RESHUFFLE_TURNS } from "@game/arena";
+import { LeagueDay, MONTHLY_CONDITIONS, type DayTank } from "./league-day.ts";
 import { secureRandom } from "../secrets.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });

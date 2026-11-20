@@ -11,7 +11,9 @@
 import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { FIRST_PUBLISHED_RULES_MONTH, type DayNumbers, type TankLook } from "@game/arena";
-import type { StrategyInput } from "@game/engine";
+import { PICKER_ORDER, playStyleOf, type PresetId, type StrategyInput, type UltimateId } from "@game/engine";
+import { paths } from "../app/route.ts";
+import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { describeError } from "../api/errorSentences.ts";
 import { getMonthTankRules, getTankSheet, type ApiFailure } from "../api/client.ts";
 import { useFormat, useMessages } from "../i18n/I18nProvider.tsx";
@@ -34,15 +36,30 @@ export type SheetSource = { readonly kind: "live" } | { readonly kind: "month"; 
 type SheetLoad =
   | { readonly kind: "loading" }
   | { readonly kind: "failed"; readonly failure: ApiFailure }
-  | { readonly kind: "ready"; readonly rules: StrategyInput | null; readonly lastDay: { readonly day: string; readonly numbers: DayNumbers } | null };
+  | {
+      readonly kind: "ready";
+      readonly rules: StrategyInput | null;
+      readonly lastDay: { readonly day: string; readonly numbers: DayNumbers } | null;
+      readonly style: TankStyle;
+    };
+
+/** What the chips under the name show: the preset its rules are, or null for its own rules, and its ultimate. */
+interface TankStyle {
+  readonly playStyle: PresetId | null;
+  readonly ultimate: UltimateId;
+}
 
 async function loadSheet(tank: SheetTank, source: SheetSource): Promise<SheetLoad> {
   if (source.kind === "month") {
     const result = await getMonthTankRules(source.month, tank.seatId);
-    return result.ok ? { kind: "ready", rules: result.data.rules, lastDay: null } : { kind: "failed", failure: result };
+    if (!result.ok) return { kind: "failed", failure: result };
+    const { rules } = result.data;
+    return { kind: "ready", rules, lastDay: null, style: { playStyle: playStyleOf(rules), ultimate: rules.ultimate } };
   }
   const result = await getTankSheet(tank.seatId);
-  return result.ok ? { kind: "ready", rules: result.data.rules, lastDay: result.data.lastDay } : { kind: "failed", failure: result };
+  if (!result.ok) return { kind: "failed", failure: result };
+  const { rules, lastDay, playStyle, ultimate } = result.data;
+  return { kind: "ready", rules, lastDay, style: { playStyle, ultimate } };
 }
 
 /** Open while `tank` is not null; `onClose` runs on the close button, Escape and the backdrop. */
@@ -119,9 +136,10 @@ function SheetBody({ tank, source, load }: { readonly tank: SheetTank; readonly 
     );
   }
   if (load.kind === "failed") return <p role="alert">{describeError(load.failure, "loadTank", m.errors).sentence}</p>;
-  // The day's numbers first: they are short, and the rules can run to 120 sentences (LIMITS).
+  // The style chips and the day's numbers first: they are short, and the rules can run to 120 sentences (LIMITS).
   return (
     <>
+      <StyleChips style={load.style} />
       {source.kind === "live" ? <LastDay lastDay={load.lastDay} /> : null}
       <section className="flex min-w-0 flex-col gap-2">
         <h3 className="text-lead font-semibold">{t.rules}</h3>
@@ -130,6 +148,30 @@ function SheetBody({ tank, source, load }: { readonly tank: SheetTank; readonly 
         {load.rules === null ? <p className="[overflow-wrap:anywhere]">{t.rulesLater(f.month(FIRST_PUBLISHED_RULES_MONTH))}</p> : <RulesText strategy={load.rules} />}
       </section>
     </>
+  );
+}
+
+/**
+ * The play style and the ultimate, as the chips the workshop shows (owner, 2026-11-20). A play style the catalogue
+ * has opens its card in a new tab, like the ultimate's chip; the Charger has no card, so its chip is plain text.
+ */
+function StyleChips({ style }: { readonly style: TankStyle }) {
+  const m = useMessages();
+  const { playStyle, ultimate } = style;
+  const chip = "inline-flex min-h-7 max-w-full min-w-0 items-center rounded-full bg-ground px-2.5 py-px text-caption font-semibold text-ink [overflow-wrap:anywhere]";
+  const name = playStyle === null ? m.monthly.sheet.ownRules : m.vocabulary.playStyles[playStyle].name;
+  const inCatalogue = playStyle !== null && PICKER_ORDER.some((id) => id === playStyle);
+  return (
+    <div role="group" aria-label={m.monthly.sheet.styleLabel} data-tank-style={playStyle ?? "own"} className="flex min-w-0 flex-wrap items-center gap-1.5">
+      {inCatalogue ? (
+        <a href={`${paths.catalogue("playStyles")}&card=${playStyle}`} target="_blank" rel="noopener noreferrer" className={`press ${chip}`}>
+          {name}
+        </a>
+      ) : (
+        <span className={chip}>{name}</span>
+      )}
+      <UltimateLink ultimate={ultimate} />
+    </div>
   );
 }
 

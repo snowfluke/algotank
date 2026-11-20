@@ -13,6 +13,7 @@
 
 import type { ActionRef, Build, ConditionRef, Mode, ParamValues, Preset, Rule, StrategyInput } from "../types.ts";
 import type { UltimateId } from "../ultimates/ultimates.ts";
+import { sameData } from "./compare.ts";
 import { withLiteralIds } from "./define.ts";
 import { parseStrategy } from "./parse.ts";
 
@@ -270,4 +271,22 @@ if (new Set(PRESETS.map((preset) => preset.id)).size !== PRESETS.length) {
 }
 for (const id of PICKER_ORDER) {
   if (!PRESETS.some((preset) => preset.id === id)) throw new Error(`PICKER_ORDER names "${id}", which is not a preset.`);
+}
+
+/** Two strategies play the same; a saved build without Camouflage plays at level zero. */
+export function sameStrategy(a: StrategyInput, b: StrategyInput): boolean {
+  return sameData({ ...a, build: { camouflage: 0, ...a.build } }, { ...b, build: { camouflage: 0, ...b.build } });
+}
+
+/** The preset this strategy is, or null when the player changed rules, upgrades or the ultimate by hand. */
+export function matchingPreset(strategy: StrategyInput): (Preset & { readonly id: PresetId }) | null {
+  return PRESETS.find((preset) => sameStrategy(strategy, preset.strategy)) ?? null;
+}
+
+/**
+ * The play style a tank plays: the preset whose rules and upgrades it has, whatever ultimate it chose, because a
+ * tank's ultimate is shown on its own (the monthly tank sheet, owner 2026-11-20). null for rules changed by hand.
+ */
+export function playStyleOf(strategy: StrategyInput): PresetId | null {
+  return PRESETS.find((preset) => sameStrategy({ ...strategy, ultimate: preset.strategy.ultimate }, preset.strategy))?.id ?? null;
 }

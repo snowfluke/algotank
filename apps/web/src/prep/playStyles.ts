@@ -6,7 +6,7 @@
 
 import { PICKER_ORDER, PRESET_IDS, PRESETS, isSequence } from "@game/engine";
 import type { ActionRef, ConditionRef, PresetId, StrategyInput } from "@game/engine";
-import { matchingPreset } from "../editor/compare.ts";
+import { matchingPreset } from "@game/engine";
 import { isOneOf } from "../vocabulary/ids.ts";
 
 export const TRAIT_IDS = [

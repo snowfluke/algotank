@@ -86,6 +86,10 @@ export const en = {
     /** The GM's row: its rules are open, so the row says so instead of a bare chevron. */
     openRules: (name: string) => `Show the rules of ${name}`,
     rulesCue: "See rules",
+    /** The chips under the name: the play style its rules are, then its ultimate (owner, 2026-11-20). */
+    styleLabel: "Play style and ultimate",
+    /** A tank whose rules are no preset: its rules stay private until the month's close. */
+    ownRules: "Own rules",
     rules: "Rules",
     upgrades: (list: string) => `Upgrades: ${list}.`,
     gm: "This is the organizer's tank, so everyone can read its rules.",
@@ -109,7 +113,9 @@ export const en = {
     /** The game master's own line and pane: it has points but no place. */
     todayGmShort: (score: number) => `GM · ${points(score)}`,
     todayGm: (score: number) => `Your tank is the game master, with ${points(score)} today and no place in the ranking.`,
-    counts: "Today counts for your monthly points.",
+    counts: "Today counts for your month rating.",
+    /** The time until the league draws the next arena (nextArenaInMs); the draw can give the same arena again. */
+    nextArena: (clock: string) => `The next arena is drawn in ${clock}.`,
     notCounted: "Today does not count yet, because your tank joined after the round started.",
     /** People thought they had to keep the page open; the tank plays without it. */
     playsAlone: "Your tank plays every round by itself, so you can close this page and come back any time.",
@@ -237,6 +243,8 @@ export const id: typeof en = {
     open: (name) => `Lihat tank ${name}`,
     openRules: (name) => `Lihat aturan ${name}`,
     rulesCue: "Lihat aturan",
+    styleLabel: "Gaya main dan jurus",
+    ownRules: "Aturan sendiri",
     rules: "Aturan",
     upgrades: (list) => `Peningkatan: ${list}.`,
     gm: "Ini tank penyelenggara, jadi semua orang boleh membaca aturannya.",
@@ -256,7 +264,8 @@ export const id: typeof en = {
     todayShort: (place, score) => `#${place} · ${score} poin`,
     todayGmShort: (score) => `GM · ${score} poin`,
     todayGm: (score) => `Tank kamu adalah GM dengan ${score} poin hari ini, dan tidak masuk peringkat.`,
-    counts: "Hari ini masuk hitungan poin bulananmu.",
+    counts: "Hari ini masuk hitungan nilai bulananmu.",
+    nextArena: (clock) => `Arena berikutnya diundi dalam ${clock}.`,
     notCounted: "Hari ini belum dihitung karena tank kamu masuk setelah ronde dimulai.",
     playsAlone: "Tank kamu main sendiri di setiap ronde, jadi kamu boleh menutup halaman ini dan kembali kapan saja.",
     daysNeeded: (days, need) =>

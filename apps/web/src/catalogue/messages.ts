@@ -37,7 +37,9 @@ export const en = {
   earlierCards: "Earlier cards",
   /**
    * One short sentence per card for the catalogue (owner, 2026-11-20: "kids don't read that long"). The game's longer
-   * texts stay where a player sets things up; these only teach the idea next to the scene.
+   * texts stay where a player sets things up; these only teach the idea next to the scene. The ultimates' sentences
+   * follow the trailer's narration (trailer-1122/tools/narration.json), because players compare the two (owner,
+   * 2026-11-20); a rule change edits the trailer's line, this sentence and the long `ultimates` body.
    */
   briefs: {
     items: {
@@ -55,14 +57,14 @@ export const en = {
       "sharp-eyes": "Aim and Dodge are twice as strong.",
     } satisfies Record<RuleSetId, string>,
     ultimates: {
-      dash: "Zooms 3 squares and rams a tank for 2 points.",
-      smoke: "Your tank hides, so shots often miss.",
-      splash: "Sprays all 8 squares around your tank at once.",
-      fullTank: "Fills your water, and the next 3 shots are free.",
-      mudBomb: "Mud traps a tank and the tanks next to it.",
-      whirlwind: "Tanks near you spin in a daze.",
-      bigUmbrella: "Blocks 3 shots from the front and sides.",
-      magnet: "Pulls a bucket and nearby items to your tank.",
+      dash: "Zooms 3 squares, then rams a tank for 2 points.",
+      smoke: "Your tank hides, and shots at it can turn to another tank.",
+      splash: "All 8 squares around your tank get hit at once.",
+      fullTank: "Your water is full again, and the next 3 shots are free.",
+      mudBomb: "A tank and the tanks next to it get stuck for 5 turns.",
+      whirlwind: "Every tank near you spins in a daze.",
+      bigUmbrella: "3 shots from the front and the sides are stopped.",
+      magnet: "The nearest items fly to you, and a new bucket lands in your hand.",
     } satisfies Record<UltimateId, string>,
   },
   // Owner, 2026-11-19: one simple pattern for kids. Each body starts with "Your tank", says what happens, then
@@ -118,14 +120,14 @@ export const id: typeof en = {
       "sharp-eyes": "Bidikan dan Hindaran dua kali lebih kuat.",
     },
     ultimates: {
-      dash: "Melaju 3 petak dan menabrak lawan untuk 2 poin.",
-      smoke: "Tankmu bersembunyi, jadi tembakan lawan sering meleset.",
-      splash: "Menyemprot 8 petak di sekeliling tankmu sekaligus.",
-      fullTank: "Air penuh, dan 3 tembakan berikutnya gratis.",
-      mudBomb: "Lumpur menjebak lawan dan tank di sebelahnya.",
-      whirlwind: "Tank di dekatmu berputar kebingungan.",
-      bigUmbrella: "Menahan 3 tembakan dari depan dan samping.",
-      magnet: "Menarik ember dan item terdekat ke tankmu.",
+      dash: "Tankmu melaju 3 petak, lalu menabrak lawan untuk 2 poin.",
+      smoke: "Tankmu bersembunyi, dan tembakan lawan bisa berbelok ke tank lain.",
+      splash: "8 petak di sekeliling tankmu kena sekaligus.",
+      fullTank: "Airmu penuh lagi, dan 3 tembakan berikutnya gratis.",
+      mudBomb: "Lawan dan tank di sebelahnya terjebak 5 giliran.",
+      whirlwind: "Semua tank di dekatmu berputar kebingungan.",
+      bigUmbrella: "3 tembakan dari depan dan samping tertahan.",
+      magnet: "Item terdekat tertarik, dan ember baru langsung di tanganmu.",
     },
   },
   ultimates: {

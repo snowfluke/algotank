@@ -39,6 +39,7 @@ import type {
   Build,
   Decision,
   Direction,
+  Handicap,
   Rng,
   RoundConfig,
   RoundPlayer,
@@ -73,7 +74,7 @@ class RoundRuntime implements RoundState {
   readonly sequences = new Map<BotId, RunningSequence>();
   layoutStartedAt = 0;
   /** RoundPlayer.handicap of the tanks that have one, set by createRound, joinRound and replaceStrategy. */
-  readonly handicaps = new Map<BotId, number>();
+  readonly handicaps = new Map<BotId, Handicap>();
 
   constructor(
     readonly config: RoundConfig,
@@ -92,13 +93,18 @@ class RoundRuntime implements RoundState {
   }
 }
 
-function setHandicap(round: RoundRuntime, id: BotId, handicap: number | undefined): void {
-  if (handicap === undefined || handicap === 0) {
+function setHandicap(round: RoundRuntime, id: BotId, handicap: RoundPlayer["handicap"]): void {
+  // A number is both parts (RoundPlayer.handicap).
+  const parts = typeof handicap === "number" ? { miss: handicap, exposure: handicap } : handicap;
+  for (const points of parts === undefined ? [] : [parts.miss, parts.exposure]) {
+    // Not whole: the league takes a share off for each change of rules (apps/server league-day.ts, relieved).
+    if (!Number.isFinite(points) || points < 0) throw new Error(`a handicap is a number of 0 or more, got ${points}`);
+  }
+  if (parts === undefined || (parts.miss === 0 && parts.exposure === 0)) {
     round.handicaps.delete(id);
     return;
   }
-  if (!Number.isInteger(handicap) || handicap < 0) throw new Error(`a handicap is a whole number of 0 or more, got ${handicap}`);
-  round.handicaps.set(id, handicap);
+  round.handicaps.set(id, parts);
 }
 
 function runtimeOf(state: RoundState): RoundRuntime {
@@ -333,7 +339,7 @@ export function changeRoundRules(state: RoundState, condition: ArenaConditionId,
  * new strategy's upgrades and no running step sequence. Changing an ultimate starts a first charge
  * and clears that ultimate's active effect (85-ultimates.md, owner 2026-11-19).
  */
-export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy, handicap: number | undefined): BotState {
+export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy, handicap: RoundPlayer["handicap"]): BotState {
   const round = runtimeOf(state);
   const before = round.snapshot;
   const old = before.bots.find((bot) => bot.id === id);

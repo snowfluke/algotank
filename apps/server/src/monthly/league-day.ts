@@ -53,7 +53,7 @@
 
 import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, handicapOf, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundPlayer, type RoundState, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, handicapOf, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundPlayer, type RoundState, type Handicap, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, secureRandom, secureRng } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS, RESHUFFLE_TURNS, ultimatesOn } from "@game/arena";
 import type { Clock } from "../timers.ts";
@@ -72,6 +72,21 @@ interface Seated {
   readonly counts: boolean;
   /** What its rules did today (K2): fixed in size, gone with the seat at a quit and zero at a new day. */
   stats: TankStats;
+  /** Its changes of rules today, each taking RULE_CHANGE_RELIEF of its handicap off; zero at a seat and a new day. */
+  ruleChanges: number;
+}
+
+/**
+ * The share of a tank's handicap each change of rules during a day takes off, to another built-in style too (owner,
+ * 2026-11-21: "slightly lower the handicap by 4.167% per change, we at least reward the effort"). After 24 changes in
+ * a day, eight hours at the hourly limit, the handicap is gone until the next day.
+ */
+export const RULE_CHANGE_RELIEF = 1 / 24;
+
+/** A handicap after `changes` changes of rules today. */
+export function relieved(handicap: Handicap, changes: number): Handicap | undefined {
+  const left = Math.max(0, 1 - changes * RULE_CHANGE_RELIEF);
+  return left === 0 ? undefined : { miss: handicap.miss * left, exposure: handicap.exposure * left };
 }
 
 /** The most bots a league draws at a new round. */
@@ -155,7 +170,7 @@ export class LeagueDay {
       readonly rng: () => Rng;
       readonly conditions?: readonly ArenaConditionId[];
       /** The balance scripts try other handicaps; the league uses the engine's (handicapOf, "league"). */
-      readonly handicap?: (strategy: Strategy) => number;
+      readonly handicap?: (strategy: Strategy) => Handicap | undefined;
     } = { rng: secureRng },
   ) {}
 
@@ -164,12 +179,12 @@ export class LeagueDay {
    * today's points of a tank that resumes after a restart; `counts` whether today counts for it.
    * Returns true when the board had to grow.
    */
-  seat(tank: DayTank, points: number, counts: boolean, ticksLeft: number, stats: TankStats = EMPTY_STATS): boolean {
+  seat(tank: DayTank, points: number, counts: boolean, ticksLeft: number, stats: TankStats = EMPTY_STATS, ruleChanges = 0): boolean {
     if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
     const fresh = this.round === null;
     if (this.round === null) this.round = this.newRound(1, ticksLeft);
-    joinRound(this.round, this.player(tank.id, tank.strategy), points);
-    this.seated.set(tank.id, { tank, counts, stats });
+    joinRound(this.round, this.player(tank.id, tank.strategy, ruleChanges), points);
+    this.seated.set(tank.id, { tank, counts, stats, ruleChanges });
     if (fresh) this.drawBots();
     else if (this.seated.size > this.boardFor * BOARD_GROWTH) {
       this.rebuild(ticksLeft);
@@ -222,8 +237,9 @@ export class LeagueDay {
   restrategy(id: PlayerId, strategy: Strategy): void {
     const seated = this.seated.get(id);
     if (seated === undefined || this.round === null) throw new Error(`Seat ${id} is not in league ${this.league}.`);
-    replaceStrategy(this.round, id, strategy, this.player(id, strategy).handicap);
-    this.seated.set(id, { ...seated, tank: { ...seated.tank, strategy } });
+    const ruleChanges = seated.ruleChanges + 1;
+    replaceStrategy(this.round, id, strategy, this.player(id, strategy, ruleChanges).handicap);
+    this.seated.set(id, { ...seated, tank: { ...seated.tank, strategy }, ruleChanges });
   }
 
   unseat(id: PlayerId): { readonly points: number; readonly counts: boolean } {
@@ -360,7 +376,7 @@ export class LeagueDay {
    * after a restart, and the bots are drawn again as new tanks with 0 points.
    */
   rebuild(ticksLeft: number): void {
-    const tanks = [...this.seated.values()].map(({ tank, counts, stats }) => ({ tank, counts, stats, points: this.pointsOf(tank.id) }));
+    const tanks = [...this.seated.values()].map(({ tank, counts, stats, ruleChanges }) => ({ tank, counts, stats, ruleChanges, points: this.pointsOf(tank.id) }));
     this.round = null;
     this.seated.clear();
     this.bots = [];
@@ -371,7 +387,7 @@ export class LeagueDay {
    * A new round with all these tanks at once, then one draw of the bots: a new day, a restart and
    * a rebuild. Seating them one by one would make the first draw see one tank and always add a bot.
    */
-  start(tanks: readonly { readonly tank: DayTank; readonly points: number; readonly counts: boolean; readonly stats: TankStats | undefined }[], ticksLeft: number, normalStreak = this.normalStreak): void {
+  start(tanks: readonly { readonly tank: DayTank; readonly points: number; readonly counts: boolean; readonly stats: TankStats | undefined; readonly ruleChanges?: number | undefined }[], ticksLeft: number, normalStreak = this.normalStreak): void {
     if (this.round !== null) throw new Error(`League ${this.league} already has a round.`);
     this.normalStreak = normalStreak;
     if (tanks.length === 0) return;
@@ -379,10 +395,10 @@ export class LeagueDay {
     this.round = round;
     // A random seating order, so the board's tank order (which settles some ties) changes with every
     // new round, like the tie ranks the engine draws at each join (BotState.tieRank).
-    for (const { tank, points, counts, stats } of this.shuffled(tanks)) {
+    for (const { tank, points, counts, stats, ruleChanges = 0 } of this.shuffled(tanks)) {
       if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
-      joinRound(round, this.player(tank.id, tank.strategy), points);
-      this.seated.set(tank.id, { tank, counts, stats: stats ?? EMPTY_STATS });
+      joinRound(round, this.player(tank.id, tank.strategy, ruleChanges), points);
+      this.seated.set(tank.id, { tank, counts, stats: stats ?? EMPTY_STATS, ruleChanges });
     }
     this.drawBots();
   }
@@ -452,8 +468,16 @@ export class LeagueDay {
   }
 
   /** A tank as the engine plays it: a built-in style, a bot's included, plays with the handicap (handicapOf). */
-  private player(id: PlayerId, strategy: Strategy): RoundPlayer {
-    const handicap = this.field.handicap === undefined ? handicapOf(strategy, "league") : this.field.handicap(strategy);
-    return handicap === 0 ? { id, strategy } : { id, strategy, handicap };
+  private player(id: PlayerId, strategy: Strategy, ruleChanges = 0): RoundPlayer {
+    const full = this.field.handicap === undefined ? handicapOf(strategy, "league") : this.field.handicap(strategy);
+    const handicap = full === undefined ? undefined : relieved(full, ruleChanges);
+    return handicap === undefined ? { id, strategy } : { id, strategy, handicap };
+  }
+
+  /** The seat's changes of rules today, for the checkpoint. */
+  ruleChangesOf(id: PlayerId): number {
+    const seated = this.seated.get(id);
+    if (seated === undefined) throw new Error(`Seat ${id} is not in league ${this.league}.`);
+    return seated.ruleChanges;
   }
 }

@@ -253,7 +253,10 @@ export class MonthlyLeagues {
   }
 
   private checkpointOf(): Checkpoint {
-    const tanks = [...this.days.values()].flatMap((day) => day.standings().map(({ id, points, counts }) => ({ seatId: id, points, counts, stats: day.statsOf(id) })));
+    const tanks = [...this.days.values()].flatMap((day) => day.standings().map(({ id, points, counts }) => {
+      const ruleChanges = day.ruleChangesOf(id);
+      return { seatId: id, points, counts, stats: day.statsOf(id), ...(ruleChanges === 0 ? {} : { ruleChanges }) };
+    }));
     const normalStreaks = [...this.days.values()].flatMap((day) => {
       const normalStreak = day.normalWeatherStreak();
       return normalStreak === 0 ? [] : [{ league: day.league, normalStreak }];
@@ -279,7 +282,7 @@ export class MonthlyLeagues {
         .filter((seat) => seat.league === league)
         .map((seat) => {
           const saved = checkpoint?.tanks.find((t) => t.seatId === seat.seatId);
-          return { tank: dayTankOf(seat), points: saved?.points ?? 0, counts: checkpoint === null ? true : (saved?.counts ?? false), stats: saved?.stats };
+          return { tank: dayTankOf(seat), points: saved?.points ?? 0, counts: checkpoint === null ? true : (saved?.counts ?? false), stats: saved?.stats, ruleChanges: saved?.ruleChanges };
         });
       day.start(tanks, ticksLeft, checkpoint?.normalStreaks?.find((entry) => entry.league === league)?.normalStreak ?? 0);
     }

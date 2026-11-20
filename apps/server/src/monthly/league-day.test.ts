@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { plainTankLook, ULTIMATES_FROM } from "@game/arena";
 import { ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, createRng, isArenaLayoutId, parseStrategy, PRESETS, ruleSet, waterCapacityOf, type ArenaConditionId, type Strategy, type UltimateId } from "@game/engine";
 import { RESHUFFLE_TURNS } from "@game/arena";
-import { LeagueDay, MONTHLY_CONDITIONS, type DayTank } from "./league-day.ts";
+import { LeagueDay, MONTHLY_CONDITIONS, relieved, type DayTank } from "./league-day.ts";
 import { secureRandom } from "../secrets.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
@@ -400,6 +400,28 @@ describe("new rules for a seated tank", () => {
     expect(() => day.step()).not.toThrow();
     day.rebuild(1000);
     expect(day.countsToday("seat-1")).toBe(true);
+  });
+
+  test("each change of rules today takes a 24th of the handicap off, to another built-in style too, and a rebuild keeps the count", () => {
+    const handicap = { miss: 6, exposure: 12 };
+    const day = new LeagueDay(1, () => 0.5, () => 0, { rng: () => createRng(1), handicap: () => handicap });
+    day.start([{ tank: tank(1), points: 0, counts: true, stats: undefined }, { tank: tank(2), points: 0, counts: true, stats: undefined }], 1000);
+    day.restrategy("seat-1", (PRESETS[1] as (typeof PRESETS)[number]).strategy);
+    day.restrategy("seat-1", (PRESETS[2] as (typeof PRESETS)[number]).strategy);
+    expect(day.ruleChangesOf("seat-1")).toBe(2);
+    expect(day.ruleChangesOf("seat-2")).toBe(0);
+    day.rebuild(1000);
+    expect(day.ruleChangesOf("seat-1")).toBe(2);
+    expect(relieved(handicap, 2)).toEqual({ miss: 6 * (22 / 24), exposure: 12 * (22 / 24) });
+    expect(relieved(handicap, 0)).toEqual(handicap);
+    expect(relieved(handicap, 24)).toBeUndefined();
+    expect(relieved(handicap, 30)).toBeUndefined();
+  });
+
+  test("a restart seats the tank with the changes the checkpoint saved", () => {
+    const day = new LeagueDay(1, () => 0.5, () => 0);
+    day.start([{ tank: tank(1), points: 0, counts: true, stats: undefined, ruleChanges: 5 }, { tank: tank(2), points: 0, counts: true, stats: undefined }], 1000);
+    expect(day.ruleChangesOf("seat-1")).toBe(5);
   });
 });
 

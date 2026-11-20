@@ -4,7 +4,7 @@ import { STANDARD_RULE_SET_ID, ruleSet } from "../combat/rule-sets.ts";
 import type { RuleSetId } from "../combat/rule-sets.ts";
 import { createRng } from "./rng.ts";
 import { DIRECTIONS } from "../types.ts";
-import type { BotState, Build, Direction, Move, Rng } from "../types.ts";
+import type { BotState, Build, Direction, Handicap, Move, Rng } from "../types.ts";
 import { DIRECTION_STEP, rotate } from "../directions.ts";
 import { resolveTick } from "./resolve.ts";
 import type { TickMove } from "./resolve.ts";
@@ -178,11 +178,12 @@ describe("movement", () => {
   });
 });
 
-describe("handicap (round/handicap of built-in styles, owner 2026-11-20)", () => {
-  // a throws at b from 1 square away: 90% for everyone.
-  const shot = (handicaps: Record<string, number>) => {
+describe("handicap (built-in styles, owner 2026-11-20)", () => {
+  // a throws at b from 1 square away: 90% for everyone. A number is both parts, as rounds stored before the parts.
+  const shot = (handicaps: Record<string, number | Handicap>) => {
     const rng = fixedRng(true);
-    const result = resolveTick(arena([bot("a", 1, 2, "E"), bot("b", 2, 2, "N")]), moves({ a: "T", b: "L" }), ["a", "b"], rng, undefined, new Map(Object.entries(handicaps)));
+    const parts = Object.entries(handicaps).map(([id, h]): [string, Handicap] => [id, typeof h === "number" ? { miss: h, exposure: h } : h]);
+    const result = resolveTick(arena([bot("a", 1, 2, "E"), bot("b", 2, 2, "N")]), moves({ a: "T", b: "L" }), ["a", "b"], rng, undefined, new Map(parts));
     return { rolled: rng.rolls, shown: result.throws };
   };
 
@@ -199,6 +200,16 @@ describe("handicap (round/handicap of built-in styles, owner 2026-11-20)", () =>
 
   test("the rolled chance stays within 5 to 95", () => {
     expect(shot({ a: 99 }).rolled).toEqual([5]);
+  });
+
+  test("the miss part comes off the thrower's throws and the exposure part onto throws at the tank", () => {
+    const h = { miss: 10, exposure: 30 };
+    expect(shot({ a: h }).rolled).toEqual([80]);
+    expect(shot({ b: { miss: 10, exposure: 3 } }).rolled).toEqual([93]);
+    expect(shot({ a: h, b: h }).rolled).toEqual([90]);
+    // A tweaked tank throwing at a built-in one: only what the target has more of counts.
+    expect(shot({ a: { miss: 4, exposure: 10 }, b: { miss: 10, exposure: 30 } }).rolled).toEqual([95]);
+    expect(shot({ a: { miss: 10, exposure: 30 }, b: { miss: 4, exposure: 2 } }).rolled).toEqual([84]);
   });
 });
 

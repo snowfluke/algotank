@@ -6,7 +6,7 @@ import { rulesAt, waterCapacityOf } from "./arena-layouts.ts";
 import type { RoundRules } from "../combat/rule-sets.ts";
 import { DIRECTIONS } from "../types.ts";
 import type {
-  BoardItem, BotId, BotState, Build, MagnetFire, Pickup, Rng, ShotProtection, Snapshot,
+  BoardItem, BotId, BotState, Build, Handicap, MagnetFire, Pickup, Rng, ShotProtection, Snapshot,
   SplashSquare, TankEffect, TankEffectKind, ThrowEvent, TurnAction, UltimateFire,
 } from "../types.ts";
 import { ITEM_RULES, actsOnOwnHit, ageItems, effectOfHit, holdItem, holderBlocks, nearestItems, newEffect, pickUp, receiveEffect, spawnItems, useOnce } from "../items/items.ts";
@@ -45,8 +45,8 @@ interface Slot {
   readonly action: TickMove;
   readonly stuck: boolean;
   readonly ultimatesOn: boolean;
-  /** RoundPlayer.handicap, 0 when the tank has none. */
-  readonly handicap: number;
+  /** RoundPlayer.handicap, NO_HANDICAP when the tank has none. */
+  readonly handicap: Handicap;
   waterChange: "refill" | "spend" | "keep";
 }
 
@@ -60,7 +60,7 @@ export function resolveTick(
   rng: Rng,
   itemTurn?: ItemTurn,
   /** RoundPlayer.handicap of the tanks that have one; the others have none. */
-  handicaps: ReadonlyMap<BotId, number> = new Map(),
+  handicaps: ReadonlyMap<BotId, Handicap> = new Map(),
 ): TickResolution {
   const capacity = waterCapacityOf(snapshot);
   const byId = new Map<BotId, TickMove>();
@@ -88,7 +88,7 @@ export function resolveTick(
       waterChange: "refill",
       stuck: bot.effect?.kind === "stuck",
       ultimatesOn,
-      handicap: handicaps.get(bot.id) ?? 0,
+      handicap: handicaps.get(bot.id) ?? NO_HANDICAP,
     };
     // Activate defenses here so earlier shots count too (85-ultimates.md, owner 2026-11-18).
     // The fire in move order only records the event, since the shots can already spend blocks.
@@ -199,7 +199,7 @@ function resolveThrow(
 
   const baseChance = hitChancePercent(thrower.build, target.build, distance, rules);
   const hitChance = chanceThroughSmoke(target, baseChance);
-  // The roll uses the handicapped chance; the event and the rules keep the chance a player can read (round/handicap.ts).
+  // The roll uses the handicapped chance; the event and the rules keep the chance a player can read (handicapped, below).
   const rolledBase = handicapped(baseChance, thrower.handicap, target.handicap);
   const bucket = me.item === "bucket";
   const points = bucket ? ITEM_RULES.bucketHitPoints : POINTS_PER_HIT;
@@ -249,10 +249,17 @@ function deflectThrow(
   };
 }
 
-/** The chance a throw is rolled with: the thrower's handicap off, the target's on, within the usual 5 to 95. */
-function handicapped(chance: number, thrower: number, target: number): number {
-  if (thrower === target) return chance;
-  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, chance - thrower + target));
+const NO_HANDICAP: Handicap = { miss: 0, exposure: 0 };
+
+/**
+ * The chance a throw is rolled with, within the usual 5 to 95: off by the thrower's miss above the target's, on by the
+ * target's exposure above the thrower's. With both parts equal (every handicap stored as a number) this is the
+ * target's handicap minus the thrower's, as it was before the parts.
+ */
+function handicapped(chance: number, thrower: Handicap, target: Handicap): number {
+  const shift = Math.max(0, target.exposure - thrower.exposure) - Math.max(0, thrower.miss - target.miss);
+  if (shift === 0) return chance;
+  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, chance + shift));
 }
 
 function chanceThroughSmoke(target: Slot, baseChance: number): number {

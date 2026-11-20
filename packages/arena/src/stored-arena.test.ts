@@ -65,6 +65,21 @@ describe("parseStoredArena", () => {
     expect(wrong.ok ? "" : wrong.error).toMatch(/items/);
   });
 
+  test("a handicap reads back as one number (rounds of 2026-11-21 before its two parts) or as its two parts", () => {
+    const one = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.players[0].handicap = 35)));
+    if (!one.ok) throw new Error(one.error);
+    const config = one.stored.roundConfigs[0]!.config;
+    expect(config.players[0]?.handicap).toBe(35);
+    // The number plays as both parts of that size, so its replay is the round that was played.
+    const asParts = { ...config, players: config.players.map((p, i) => (i === 0 ? { ...p, handicap: { miss: 35, exposure: 35 } } : p)) };
+    expect(runRound(asParts).standings).toEqual(runRound(config).standings);
+    const two = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.players[0].handicap = { miss: 2.5, exposure: 30 })));
+    if (!two.ok) throw new Error(two.error);
+    expect(two.stored.roundConfigs[0]?.config.players[0]?.handicap).toEqual({ miss: 2.5, exposure: 30 });
+    const wrong = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.players[0].handicap = { miss: -1, exposure: 3 })));
+    expect(wrong.ok ? "" : wrong.error).toMatch(/handicap\.miss/);
+  });
+
   test("a round config stored before ultimates replays with them off", () => {
     const parsed = parseStoredArena(damaged((p) => delete p.roundConfigs[0].config.ultimates));
     if (!parsed.ok) throw new Error(parsed.error);

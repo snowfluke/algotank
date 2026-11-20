@@ -14,12 +14,12 @@
 // A strategy is a built-in style in all but name when it fails either test.
 
 import { createRound, stepRound } from "../round/round.ts";
-import type { BotState, DecisionContext, Snapshot, Strategy } from "../types.ts";
+import type { BotState, DecisionContext, Handicap, Snapshot, Strategy } from "../types.ts";
 import type { RuleSetId } from "../combat/rule-sets.ts";
 import { createRng } from "../round/rng.ts";
 import { decide } from "./decide.ts";
 import { parseStrategy } from "./parse.ts";
-import { PRESETS, PRESET_IDS, type PresetId } from "./presets.ts";
+import { PRESETS, PRESET_IDS, sameStrategy, type PresetId } from "./presets.ts";
 import BEFORE_RETUNE from "./former-presets/presets-before-2026-11-16.json";
 import BEFORE_DRY_SPELL from "./former-presets/presets-before-2026-11-16-dry-spell.json";
 import BEFORE_GRAB from "./former-presets/presets-before-2026-11-16-grab.json";
@@ -185,31 +185,53 @@ export function builtInStyleOf(strategy: Strategy): PresetId | null {
 export type HandicapPlace = "league" | "room";
 
 /**
- * The handicap of a tank that plays a built-in style in all but name (RoundPlayer.handicap, round/resolve.ts), in
- * percentage points of hit chance. Owner, 2026-11-20: a built-in style should win against good rules of a child's own
- * only about 5% of the time, and the rule stays unwritten: no screen shows it. A league day of 96,000 turns averages
- * out the luck that a room's 90-turn round keeps, so the same handicap moves a day far more and the league needs less.
- * Calibrated on 2026-11-20 with the live league's rules: apps/server/scripts/handicap-calibration.ts (league) and
- * handicap-rooms.ts (rooms).
+ * How far from its own rules a tank is (owner, 2026-11-21: "worst: built-in, slightly worse: change number, rules that
+ * are no effect", and a built-in style that at least changed its ultimate is rewarded). "builtIn": the rules, upgrades
+ * and ultimate of a built-in style, today's or a retired one. "builtInNewUltimate": its rules and upgrades with another
+ * ultimate, as the monthly sheet's style badge reads it (playStyleOf). "tweaked": any other strategy builtInStyleOf
+ * flags.
  */
-// Measured: a league day with the game master's leader chase, 40 days each, built-in day wins 48% at 0, 12% at 5, 2% at 8;
-// without the leader chase 5% at 0 and 0% at 10. A public tournament (16 tanks, the six best own tanks of the live
-// month), 1,000 each: 59% at 0, 22% at 20, 10% at 30, 5.7% at 35.
-export const BUILT_IN_HANDICAP: Readonly<Record<HandicapPlace, number>> = { league: 8, room: 35 };
+export type HandicapTier = "builtIn" | "builtInNewUltimate" | "tweaked";
 
-const builtIn = new Map<string, boolean>();
+/** The tier of a strategy, or null for rules of its own. */
+export function handicapTierOf(strategy: Strategy): HandicapTier | null {
+  const styles = referencesOf();
+  if (styles.some((style) => sameStrategy(strategy, style.strategy))) return "builtIn";
+  if (styles.some((style) => sameStrategy({ ...strategy, ultimate: style.strategy.ultimate }, style.strategy))) return "builtInNewUltimate";
+  return builtInStyleOf(strategy) === null ? null : "tweaked";
+}
+
+/**
+ * The handicap of each tier (RoundPlayer.handicap), in percentage points of hit chance. Owner: a built-in style should
+ * win against good rules of a child's own only about 5% of the time and a tweaked one about 15%, and the rule stays
+ * unwritten: no screen shows the numbers or the mechanism. The misses a player sees stay small ("I want the misses
+ * hit not too apparent"), so the miss part stays low and being hit more carries the rest where that works: over a
+ * league day of 96,000 turns. A room's 90-turn round barely feels the exposure part, so the owner chose a medium miss
+ * there and about one room in four for a built-in style over the 5% (2026-11-21). builtInNewUltimate sits between.
+ * Calibrated with the live league's rules: apps/server/scripts/handicap-calibration.ts and handicap-rooms.ts.
+ */
+// Measured 2026-11-21 on the live league (11 own, 5 tweaked, 18 built-in tanks). League day wins of the tier, 40-80
+// days: none 23% built-in and 35% tweaked; builtIn {3,16} 2.5%; tweaked {4,4} about 20%. A public tournament of 6 best
+// own tanks and 10 of the tier, 1,000 each: builtIn none 60%, {10,35} 33%, {10,70} 31%, {20,20} 23%, {45,45} 2.9%;
+// tweaked none 54%, {10,10} 28%, {15,15} 22%. builtInNewUltimate is set between, not measured.
+export const BUILT_IN_HANDICAP: Readonly<Record<HandicapPlace, Readonly<Record<HandicapTier, Handicap>>>> = {
+  league: { builtIn: { miss: 3, exposure: 16 }, builtInNewUltimate: { miss: 3, exposure: 10 }, tweaked: { miss: 4, exposure: 4 } },
+  room: { builtIn: { miss: 20, exposure: 20 }, builtInNewUltimate: { miss: 15, exposure: 15 }, tweaked: { miss: 10, exposure: 10 } },
+};
+
+const tiers = new Map<string, HandicapTier | null>();
 /** The checks remembered; the oldest goes first, so a stream of new strategies cannot grow the server's memory. */
 const REMEMBERED = 5_000;
 
-/** RoundPlayer.handicap for a strategy; the check is remembered by its rules, so each strategy is checked once per process. */
-export function handicapOf(strategy: Strategy, place: HandicapPlace): number {
+/** RoundPlayer.handicap for a strategy, undefined for none; the tier is remembered by its rules, so each strategy is checked once per process. */
+export function handicapOf(strategy: Strategy, place: HandicapPlace): Handicap | undefined {
   const key = JSON.stringify(strategy);
-  let plays = builtIn.get(key);
-  if (plays === undefined) {
-    plays = builtInStyleOf(strategy) !== null;
-    const oldest = builtIn.size >= REMEMBERED ? builtIn.keys().next().value : undefined;
-    if (oldest !== undefined) builtIn.delete(oldest);
-    builtIn.set(key, plays);
+  let tier = tiers.get(key);
+  if (tier === undefined) {
+    tier = handicapTierOf(strategy);
+    const oldest = tiers.size >= REMEMBERED ? tiers.keys().next().value : undefined;
+    if (oldest !== undefined) tiers.delete(oldest);
+    tiers.set(key, tier);
   }
-  return plays ? BUILT_IN_HANDICAP[place] : 0;
+  return tier === null ? undefined : BUILT_IN_HANDICAP[place][tier];
 }

@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import type { Rule, Strategy } from "../types.ts";
-import { BUILT_IN_HANDICAP, BUILT_IN_LIKENESS, builtInStyleOf, checkBuiltIn, handicapOf, OWN_RULE_CHANGES, ruleChanges } from "./built-in.ts";
+import { BUILT_IN_HANDICAP, BUILT_IN_LIKENESS, builtInStyleOf, checkBuiltIn, handicapOf, handicapTierOf, OWN_RULE_CHANGES, ruleChanges } from "./built-in.ts";
 import { parseStrategy } from "./parse.ts";
 import { PRESETS } from "./presets.ts";
 
@@ -44,6 +44,7 @@ describe("builtInStyleOf: the cheap edits still count as the built-in style (own
     });
     expect(ruleChanges(evader, preset("evader"))).toBe(0);
     expect(builtInStyleOf(evader)).toBe("evader");
+    expect(handicapTierOf(evader)).toBe("tweaked");
   });
 
   test(`${OWN_RULE_CHANGES} rules that almost never run change too few choices to count`, () => {
@@ -54,6 +55,7 @@ describe("builtInStyleOf: the cheap edits still count as the built-in style (own
     expect(check.closest.changes).toBeGreaterThanOrEqual(OWN_RULE_CHANGES);
     expect(check.alike.likeness).toBeGreaterThanOrEqual(BUILT_IN_LIKENESS);
     expect(check.style).toBe("item-hunter");
+    expect(handicapTierOf(hunter)).toBe("tweaked");
   });
 });
 
@@ -71,12 +73,24 @@ describe("builtInStyleOf: rules of a child's own", () => {
       }],
     });
     expect(builtInStyleOf(own)).toBeNull();
-    expect(handicapOf(own, "league")).toBe(0);
-    expect(handicapOf(own, "room")).toBe(0);
+    expect(handicapOf(own, "league")).toBeUndefined();
+    expect(handicapOf(own, "room")).toBeUndefined();
   });
 
-  test("a built-in style plays with the handicap of where it plays", () => {
-    expect(handicapOf(preset("evader"), "league")).toBe(BUILT_IN_HANDICAP.league);
-    expect(handicapOf(preset("evader"), "room")).toBe(BUILT_IN_HANDICAP.room);
+  test("an untouched built-in style has the worst tier, and plays with the handicap of where it plays", () => {
+    const other = { ...preset("evader"), ultimate: preset("item-hunter").ultimate };
+    expect(handicapTierOf(preset("evader"))).toBe("builtIn");
+    expect(handicapTierOf(other)).toBe("builtInNewUltimate");
+    expect(handicapOf(preset("evader"), "league")).toEqual(BUILT_IN_HANDICAP.league.builtIn);
+    expect(handicapOf(preset("evader"), "room")).toEqual(BUILT_IN_HANDICAP.room.builtIn);
+  });
+
+  test("each tier further from the built-in style carries a smaller handicap", () => {
+    const size = (h: { miss: number; exposure: number }) => h.miss + h.exposure;
+    for (const place of ["league", "room"] as const) {
+      const { builtIn, builtInNewUltimate, tweaked } = BUILT_IN_HANDICAP[place];
+      expect(size(builtIn)).toBeGreaterThan(size(builtInNewUltimate));
+      expect(size(builtInNewUltimate)).toBeGreaterThan(size(tweaked));
+    }
   });
 });

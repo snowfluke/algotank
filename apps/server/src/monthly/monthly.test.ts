@@ -891,6 +891,22 @@ describe("restart", () => {
     second.monthly.stop();
   });
 
+  test("a restart keeps each tank's changes of rules today, so the handicap it took off stays off", () => {
+    const db = memoryDatabase();
+    const first = startLeague({ db });
+    const ada = newAccount();
+    take(first, ada, FIGHTER);
+    take(first, newAccount(), FIGHTER);
+    first.monthly.changeStrategy(ada, { strategy: PRESETS.find((preset) => preset.id === "evader")!.strategy });
+    first.monthly.changeStrategy(ada, FIGHTER);
+    first.monthly.stop();
+    const saved = new LeagueStore(db, first.ticks.now).readCheckpoint()?.tanks.find((t) => t.seatId === seatOf(first, ada)?.seatId);
+    expect(saved?.ruleChanges).toBe(2);
+    const second = startLeague({ db, ticks: first.ticks });
+    second.monthly.stop();
+    expect(new LeagueStore(db, second.ticks.now).readCheckpoint()?.tanks.find((t) => t.seatId === saved?.seatId)?.ruleChanges).toBe(2);
+  });
+
   test("a clean stop writes the checkpoint; the start resumes the day with each tank's points and counts", () => {
     const db = memoryDatabase();
     const first = startLeague({ db });

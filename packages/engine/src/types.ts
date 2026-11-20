@@ -350,15 +350,26 @@ export interface Snapshot {
   readonly items: readonly BoardItem[];
 }
 
+/**
+ * A handicap in percentage points of hit chance (handicapped in round/resolve.ts). `miss` comes off this tank's throws at a
+ * tank with a smaller miss, and `exposure` goes onto throws at it from a tank with a smaller exposure, so two tanks
+ * with the same handicap play each other as without one. Two parts, so the misses a player sees can stay small while
+ * being hit more carries the rest (owner, 2026-11-21: "I want the misses hit not too apparent").
+ */
+export interface Handicap {
+  readonly miss: number;
+  readonly exposure: number;
+}
+
 export interface RoundPlayer {
   readonly id: BotId;
   readonly strategy: Strategy;
   /**
-   * Percentage points off this tank's throws, and onto the throws aimed at it (round/handicap.ts). The server sets it;
-   * the engine never derives it, so a stored config replays as it played. Absent means none, so older configs and
-   * fixtures play exactly as before.
+   * The tank's handicap. The server sets it; the engine never derives it, so a stored config replays as it played.
+   * Absent means none, so older configs and fixtures play exactly as before. A number is a handicap of that many points
+   * in both parts: rounds stored from 2026-11-21 00:15 until the two parts came carry one.
    */
-  readonly handicap?: number;
+  readonly handicap?: number | Handicap;
 }
 
 export interface RoundConfig {

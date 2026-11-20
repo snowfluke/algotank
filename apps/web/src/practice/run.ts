@@ -103,7 +103,7 @@ export function runPractice(settings: PracticeSettings): PracticeRun {
     players: [{ id: PLAYER_ID, strategy: settings.strategy }, ...opponents.map((preset, index) => ({ id: `bot-${index + 1}`, strategy: preset.strategy }))].map(
       (player) => {
         const handicap = handicapOf(player.strategy, "room");
-        return handicap === 0 ? player : { ...player, handicap };
+        return handicap === undefined ? player : { ...player, handicap };
       },
     ),
   };

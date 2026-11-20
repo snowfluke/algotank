@@ -6,7 +6,7 @@
 // To add a field to Arena, RoundSummary or ArenaPhase, change the type in types.ts and
 // the matching reader below. stored-arena.test.ts fails when they disagree.
 
-import { isRuleSetId, parseStrategy, type RoundConfig, type RuleSetId, type Standing, type Strategy } from "@game/engine";
+import { isRuleSetId, parseStrategy, type Handicap, type RoundConfig, type RuleSetId, type Standing, type Strategy } from "@game/engine";
 import { announcementFitsMode, parseArenaSettings, readyIsOpen, seatsOf, tankCountFits } from "./arena.ts";
 import type { AccountId } from "./auth-protocol.ts";
 import { isResultId } from "./results-protocol.ts";
@@ -340,6 +340,18 @@ function readArena(raw: unknown): Arena {
   return arena;
 }
 
+/** RoundPlayer.handicap: a number from the rounds of 2026-11-21 before the two parts, or its miss and exposure. */
+function handicapOf(raw: unknown, path: string): number | Handicap {
+  if (typeof raw === "number") return int(raw, path, 1);
+  const h = obj(raw, path);
+  const part = (key: "miss" | "exposure") => {
+    const value = h[key];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) fail(`${path}.${key}`, "a number of at least 0");
+    return value;
+  };
+  return { miss: part("miss"), exposure: part("exposure") };
+}
+
 function roundConfig(raw: unknown, path: string): RoundConfig {
   const c = obj(raw, path);
   const survivors = c["survivorsAfterRound"];
@@ -347,7 +359,7 @@ function roundConfig(raw: unknown, path: string): RoundConfig {
     const p = obj(x, `${path}.players[${i}]`);
     const player = { id: text(p["id"], `${path}.players[${i}].id`), strategy: strategy(p["strategy"], `${path}.players[${i}].strategy`) };
     // A config saved before handicaps (2026-11-20) has none, and plays as it did.
-    return p["handicap"] === undefined ? player : { ...player, handicap: int(p["handicap"], `${path}.players[${i}].handicap`, 1) };
+    return p["handicap"] === undefined ? player : { ...player, handicap: handicapOf(p["handicap"], `${path}.players[${i}].handicap`) };
   });
   if (players.length < 2) fail(`${path}.players`, "a list of at least 2 players");
   uniqueIds(players.map((p) => p.id), `${path}.players`);

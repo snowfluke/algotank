@@ -82,7 +82,14 @@ export interface Checkpoint {
   readonly startsAt: number;
   readonly endsAt: number;
   readonly normalStreaks?: readonly { readonly league: number; readonly normalStreak: number }[];
-  readonly tanks: readonly { readonly seatId: PlayerId; readonly points: number; readonly counts: boolean; readonly stats: TankStats }[];
+  readonly tanks: readonly {
+    readonly seatId: PlayerId;
+    readonly points: number;
+    readonly counts: boolean;
+    readonly stats: TankStats;
+    /** Its changes of rules today (LeagueDay.ruleChangesOf); absent for none, and in checkpoints written before 2026-11-21. */
+    readonly ruleChanges?: number;
+  }[];
 }
 
 export const EMPTY_SEATS: SeatsState = { leagues: 1, nextOrder: 1, closedMonth: null, seats: new Map(), names: new Map(), moves: new Map() };
@@ -455,7 +462,12 @@ function readCheckpointJson(raw: unknown): Checkpoint {
   need(typeof day === "string" && DAY.test(day) && typeof month === "string" && MONTH.test(month) && integer(startsAt) && integer(endsAt) && endsAt > startsAt, "it must hold a day, its month, its start and its end");
   const tanks = list(raw["tanks"], "tanks").map((entry, i) => {
     need(isRecord(entry) && text(entry["seatId"]) && integer(entry["points"]) && typeof entry["counts"] === "boolean", `tanks[${i}] must have a seat id, points and counts`);
-    return { seatId: entry["seatId"], points: entry["points"], counts: entry["counts"], stats: readStats(entry["stats"], `tanks[${i}].stats`) };
+    const ruleChanges = entry["ruleChanges"];
+    need(ruleChanges === undefined || whole(ruleChanges, 1), `tanks[${i}].ruleChanges must be a whole number of at least 1`);
+    return {
+      seatId: entry["seatId"], points: entry["points"], counts: entry["counts"], stats: readStats(entry["stats"], `tanks[${i}].stats`),
+      ...(ruleChanges === undefined ? {} : { ruleChanges }),
+    };
   });
   const normalStreaks = raw["normalStreaks"] === undefined ? undefined : list(raw["normalStreaks"], "normalStreaks").map((entry, i) => {
     need(isRecord(entry) && whole(entry["league"], 1) && whole(entry["normalStreak"], 0), `normalStreaks[${i}] must have a league and a normal streak`);

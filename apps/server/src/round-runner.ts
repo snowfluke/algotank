@@ -75,7 +75,7 @@ export class RoundRunner {
           // ponytail: checked here, not when the strategy arrives, because that route has no rate limit; a round of
           // many new own rules waits about 0.1 s for each. Check at submit once the route is rate limited.
           const handicap = handicapOf(strategy, "room");
-          return handicap === 0 ? { id, strategy } : { id, strategy, handicap };
+          return handicap === undefined ? { id, strategy } : { id, strategy, handicap };
         }),
         // Every arena plays with items (docs/specs/revamp/84-items.md); the stored config keeps it for the replay.
         items: true,

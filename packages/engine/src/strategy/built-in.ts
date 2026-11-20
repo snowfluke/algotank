@@ -211,11 +211,11 @@ export function handicapTierOf(strategy: Strategy): HandicapTier | null {
  * Calibrated with the live league's rules: apps/server/scripts/handicap-calibration.ts and handicap-rooms.ts.
  */
 // Measured 2026-11-21 on the live league (11 own, 5 tweaked, 18 built-in tanks). League day wins of the tier, 40-80
-// days: none 23% built-in and 35% tweaked; builtIn {3,16} 2.5%; tweaked {4,4} about 20%. A public tournament of 6 best
+// days: none 23% built-in and 35% tweaked; builtIn {3,16} 2.5%; tweaked {4,4} 20% (120 days), {5,6} 16% (80 days). A public tournament of 6 best
 // own tanks and 10 of the tier, 1,000 each: builtIn none 60%, {10,35} 33%, {10,70} 31%, {20,20} 23%, {45,45} 2.9%;
 // tweaked none 54%, {10,10} 28%, {15,15} 22%. builtInNewUltimate is set between, not measured.
 export const BUILT_IN_HANDICAP: Readonly<Record<HandicapPlace, Readonly<Record<HandicapTier, Handicap>>>> = {
-  league: { builtIn: { miss: 3, exposure: 16 }, builtInNewUltimate: { miss: 3, exposure: 10 }, tweaked: { miss: 4, exposure: 4 } },
+  league: { builtIn: { miss: 3, exposure: 16 }, builtInNewUltimate: { miss: 3, exposure: 10 }, tweaked: { miss: 5, exposure: 6 } },
   room: { builtIn: { miss: 20, exposure: 20 }, builtInNewUltimate: { miss: 15, exposure: 15 }, tweaked: { miss: 10, exposure: 10 } },
 };
 

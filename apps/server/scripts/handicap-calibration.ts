@@ -6,7 +6,7 @@
 // The field is a JSON array of { id, gm, strategy } and stays outside the repository: the calibrations used the live
 // league's seats, which are players' private rules.
 // Run: bun apps/server/scripts/handicap-calibration.ts <field.json> <handicaps.json> <turns> <days> <first-seed>
-//   handicaps.json, inline: {"builtIn":{"miss":3,"exposure":16},"builtInNewUltimate":{"miss":3,"exposure":10},"tweaked":{"miss":4,"exposure":4}}
+//   handicaps.json, inline: {"builtIn":{"miss":3,"exposure":16},"builtInNewUltimate":{"miss":3,"exposure":10},"tweaked":{"miss":5,"exposure":6}}
 import { plainTankLook } from "@game/arena";
 import { createRng, handicapTierOf, parseStrategy, type Handicap, type HandicapTier, type Strategy } from "@game/engine";
 import { LeagueDay } from "../src/monthly/league-day.ts";

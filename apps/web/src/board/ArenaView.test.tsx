@@ -19,6 +19,13 @@ describe("ArenaView", () => {
     expect(renderToStaticMarkup(<ArenaView {...props} snapshot={small} fixedBox={fixedBox} />)).not.toContain("data-camera-switch");
   });
 
+  test("every board has the focus mode button in its corner, off at first (owner, 2026-11-20)", () => {
+    const snapshot = { ...snapshotAt(10), width: 15, height: 11 };
+    const html = renderToStaticMarkup(<ArenaView {...props} snapshot={snapshot} fixedBox={{ width: 800, height: 450 }} wholeOnly />);
+    expect(html).toMatch(/aria-label="(Focus mode|Mode fokus)"[^>]*aria-pressed="false"[^>]*data-board-focus=""/);
+    expect(html).not.toContain('aria-modal="true"');
+  });
+
   test("turns a whole-only board to fit a tall box and leaves out the zoom switch", () => {
     const snapshot = { ...snapshotAt(10), width: 15, height: 11 };
     const html = renderToStaticMarkup(<ArenaView {...props} snapshot={snapshot} fixedBox={{ width: 300, height: 450 }} wholeOnly />);

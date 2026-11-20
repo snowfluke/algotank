@@ -20,6 +20,9 @@ export const en = {
     leader: "Leader",
     whole: "Whole arena",
     overview: "Map of the whole arena, where the frame marks the part you see.",
+    /** The button in the board's corner that fills the screen with the board, and its way back (owner, 2026-11-20). */
+    focus: "Focus mode",
+    leaveFocus: "Leave focus mode",
   },
   legend: {
     summary: "What the board shows",
@@ -91,6 +94,8 @@ export const id: typeof en = {
     leader: "Pemimpin",
     whole: "Seluruh arena",
     overview: "Peta seluruh arena, dan bingkainya menandai bagian yang kamu lihat.",
+    focus: "Mode fokus",
+    leaveFocus: "Keluar dari mode fokus",
   },
   legend: {
     summary: "Arti tanda di arena",

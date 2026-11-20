@@ -1189,6 +1189,8 @@ STATES.push(
   monthlyKit("about", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-monthly-about-open]" }, { wait: "dialog[data-monthly-about][open]" }] }),
   monthlyKit("legend", "case=seated&leagues=2", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: "[data-legend-open]" }, { wait: "dialog[open]" }] }),
   { screen: "monthly", state: "page-visitor", owner: "M2", path: () => "/monthly", as: "visitor", sizes: MONTHLY_SIZES, steps: [{ wait: "[data-monthly-board]" }] },
+  // Focus mode (owner, 2026-11-20): the board alone fills the screen, with the way back in its corner.
+  { screen: "monthly", state: "focus", owner: "M2", path: () => "/monthly", as: "visitor", sizes: MONTHLY_SIZES, steps: [{ wait: "[data-monthly-board] [data-board-focus]" }, { click: "[data-monthly-board] [data-board-focus]" }, { wait: '[data-board-focus][aria-pressed="true"]' }] },
   { screen: "monthly", state: "join-name", owner: "M2", path: () => "/monthly", as: "creator", perSize: true, steps: [{ click: "[data-monthly-join]" }, { wait: "[data-monthly-name]" }] },
   {
     screen: "monthly",
@@ -1721,6 +1723,8 @@ export function overlapInPage(containedScroll) {
     if (el.closest("[data-pager-measure]") !== null) continue;
     if (el.disabled === true || el.getAttribute("aria-disabled") === "true") continue;
     if (modal !== null && !modal.contains(el)) continue;
+    // An inert control cannot be used, so nothing covering it hides anything (the board's focus mode).
+    if (el.closest("[inert]") !== null) continue;
     if (typeof el.checkVisibility === "function" && !el.checkVisibility({ visibilityProperty: true, opacityProperty: true })) continue;
     const box = el.getBoundingClientRect();
     if (box.width <= 1 || box.height <= 1) continue;

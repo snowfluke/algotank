@@ -27,6 +27,8 @@ export interface PrepText {
   readonly style: {
     readonly legend: string;
     readonly ownRules: string;
+    /** Under a built-in style the tank plays unchanged. Says the outcome only: the handicap itself stays unwritten. */
+    readonly builtInHint: string;
     readonly traitsLabel: string;
     changed(name: string): string;
     readonly traits: Readonly<Record<TraitId, string>>;
@@ -196,6 +198,7 @@ export const en: PrepText = {
   style: {
     legend: "Play style",
     ownRules: "Your tank plays by your own rules.",
+    builtInHint: "A built-in play style wins less often, so give your tank rules of your own in the Rules tab.",
     traitsLabel: "What it does",
     changed: (name) => `Your tank now plays as ${name}.`,
     traits: {
@@ -434,6 +437,7 @@ export const id: PrepText = {
   style: {
     legend: "Gaya main",
     ownRules: "Tank kamu memakai aturan buatanmu sendiri.",
+    builtInHint: "Gaya main bawaan lebih jarang menang, jadi buat aturan sendiri untuk tankmu di tab Aturan.",
     traitsLabel: "Yang dilakukannya",
     changed: (name) => `Tank kamu sekarang bermain sebagai ${name}.`,
     traits: {

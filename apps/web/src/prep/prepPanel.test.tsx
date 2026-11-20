@@ -88,3 +88,23 @@ describe("ultimates on play style cards", () => {
     }
   });
 });
+
+describe("the play style line", () => {
+  const look = plainTankLook(3);
+  const noop = () => undefined;
+  const line = (input: typeof strategy) => renderToStaticMarkup(
+    <ToastProvider>
+      <StylePane strategy={input} look={look} wide={false} nowMs={ULTIMATES_FROM} onChange={noop} onSaveNow={noop} />
+    </ToastProvider>,
+  );
+
+  test("under a built-in style nudges toward rules of the player's own, and leaves own rules alone", () => {
+    // The pane renders in whichever language an earlier test left, so the line may be in either.
+    const says = (html: string, pick: (style: typeof CATALOGS.en.prep.style) => string) => Object.values(CATALOGS).some((c) => html.includes(pick(c.prep.style)));
+    expect(says(line(strategy), (s) => s.builtInHint)).toBe(true);
+    const own = { ...strategy, modes: strategy.modes.map((mode, i) => (i === 0 ? { ...mode, rules: mode.rules.slice(1) } : mode)) };
+    const html = line(own);
+    expect(says(html, (s) => s.ownRules)).toBe(true);
+    expect(says(html, (s) => s.builtInHint)).toBe(false);
+  });
+});

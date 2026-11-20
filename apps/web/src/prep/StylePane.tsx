@@ -119,8 +119,10 @@ export function StylePane({ strategy, look, wide, nowMs, onChange, onSaveNow }: 
     onSaveNow();
   }
 
-  // One line: the toast that offers Undo says the rest when a style replaces own rules.
-  const status = saved !== null ? s.fromMine(saved.name) : current === null ? s.ownRules : null;
+  // One line: the toast that offers Undo says the rest when a style replaces own rules. Under a built-in style the
+  // line nudges toward own rules (owner, 2026-11-21), because a built-in style plays with a handicap (engine
+  // strategy/built-in.ts) that no screen names.
+  const status = saved !== null ? s.fromMine(saved.name) : current === null ? s.ownRules : s.builtInHint;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">

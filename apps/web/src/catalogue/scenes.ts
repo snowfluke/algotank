@@ -169,12 +169,13 @@ export const CONDITION_SCENES: Readonly<Record<RuleSetId, Scene>> = {
     { tanks: { you: { x: 0, y: 1, dir: "E", score: 1, water: 2 }, a: { x: 2, y: 1, dir: "W", score: -1 } }, shots: [["you", "a", "dry"]] },
   ], 2),
   // A field twice as large: the tanks start far apart and drive a long way.
-  "open-field": scene("open-field", 8, 4, [
-    { tanks: { you: { x: 0, y: 0, dir: "SE" }, a: { x: 7, y: 3, dir: "NW" } } },
-    { tanks: { you: { x: 1, y: 1, dir: "SE" }, a: { x: 6, y: 3, dir: "W" } } },
-    { tanks: { you: { x: 2, y: 2, dir: "E" }, a: { x: 5, y: 3, dir: "W" } } },
-    { tanks: { you: { x: 3, y: 2, dir: "E" }, a: { x: 5, y: 2, dir: "W" } } },
-    { tanks: { you: { x: 3, y: 2, dir: "E", score: 1, water: 6 }, a: { x: 5, y: 2, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]] },
+  // 7 by 4, about twice the squares of the 5 by 3 scenes and nearly their shape, so it fills the same box (owner, 2026-11-20).
+  "open-field": scene("open-field", 7, 4, [
+    { tanks: { you: { x: 0, y: 0, dir: "SE" }, a: { x: 6, y: 3, dir: "NW" } } },
+    { tanks: { you: { x: 1, y: 1, dir: "SE" }, a: { x: 5, y: 3, dir: "W" } } },
+    { tanks: { you: { x: 2, y: 2, dir: "E" }, a: { x: 4, y: 3, dir: "NW" } } },
+    { tanks: { you: { x: 2, y: 2, dir: "E" }, a: { x: 4, y: 2, dir: "W" } } },
+    { tanks: { you: { x: 2, y: 2, dir: "E", score: 1, water: 6 }, a: { x: 4, y: 2, dir: "W", score: -1 } }, shots: [["you", "a", "hit"]] },
   ], 4),
   // Aim and Dodge count double: the tank with Aim hits, the shot at the tank with Dodge misses.
   "sharp-eyes": scene("sharp-eyes", 5, 3, [
@@ -208,15 +209,17 @@ function squareArea({ x, y }: Square, reach: number, width: number, height: numb
 
 const DASH_SHOT = { throwerId: "you", outcome: "hit", targetId: "a", distance: 1, hitChance: 100 } as const;
 
+// The ring sits in the middle of the 5 by 3 board every other scene uses, so the catalogue's boards share one size
+// (owner, 2026-11-20: "all 4 catalogue have the same arena dimension").
 const RING_TANKS = {
-  a: { x: 0, y: 0, dir: "SE" },
-  b: { x: 1, y: 0, dir: "S" },
-  c: { x: 2, y: 0, dir: "SW" },
-  d: { x: 0, y: 1, dir: "E" },
-  e: { x: 2, y: 1, dir: "W" },
-  f: { x: 0, y: 2, dir: "NE" },
-  g: { x: 1, y: 2, dir: "N" },
-  h: { x: 2, y: 2, dir: "NW" },
+  a: { x: 1, y: 0, dir: "SE" },
+  b: { x: 2, y: 0, dir: "S" },
+  c: { x: 3, y: 0, dir: "SW" },
+  d: { x: 1, y: 1, dir: "E" },
+  e: { x: 3, y: 1, dir: "W" },
+  f: { x: 1, y: 2, dir: "NE" },
+  g: { x: 2, y: 2, dir: "N" },
+  h: { x: 3, y: 2, dir: "NW" },
 } as const satisfies Partial<Record<SceneTankId, Pose>>;
 const RING_HITS = (["b", "c", "e", "h", "g", "f", "d", "a"] as const).map((targetId) =>
   ({ x: RING_TANKS[targetId].x, y: RING_TANKS[targetId].y, targetId, outcome: "hit" as const }));
@@ -259,11 +262,11 @@ function windAfter(turn: number, a: Direction, b: Direction, c: Direction): Turn
 }
 
 const MAGNET_PULLS = [
-  { kind: "umbrella", from: { x: 1, y: 0 } },
-  { kind: "pinwheel", from: { x: 5, y: 2 } },
+  { kind: "umbrella", from: { x: 0, y: 0 } },
+  { kind: "pinwheel", from: { x: 4, y: 2 } },
 ] as const;
 const MAGNET_BUCKET = { kind: ULTIMATE_RULES.magnet.newItem } as const;
-const MAGNET_HAND = { x: 3, y: 1, dir: "N", item: MAGNET_BUCKET.kind, waiting: [MAGNET_PULLS[0].kind, MAGNET_PULLS[1].kind] } as const;
+const MAGNET_HAND = { x: 2, y: 1, dir: "N", item: MAGNET_BUCKET.kind, waiting: [MAGNET_PULLS[0].kind, MAGNET_PULLS[1].kind] } as const;
 
 export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
   dash: scene("standard", 5, 3, [
@@ -286,13 +289,13 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     { tanks: { you: { x: 3, y: 1, dir: "W", score: 1, active: { kind: "smoke", turnsLeft: 13 } }, a: { x: 0, y: 1, dir: "E", water: 3 }, b: { x: 3, y: 2, dir: "N", score: -1 } }, shots: [["a", "you", "miss"]] },
     { tanks: { you: { x: 3, y: 1, dir: "W", active: { kind: "smoke", turnsLeft: 12 } }, a: { x: 0, y: 1, dir: "E", score: 1, water: 0 }, b: { x: 3, y: 2, dir: "N", score: -1 } }, shots: [["a", "you", "hit"]] },
   ], 2, "smoke"),
-  splash: scene("standard", 3, 3, [
-    { tanks: { you: { x: 1, y: 1, dir: "N" }, ...RING_TANKS } },
+  splash: scene("standard", 5, 3, [
+    { tanks: { you: { x: 2, y: 1, dir: "N" }, ...RING_TANKS } },
     {
-      tanks: { you: { x: 1, y: 1, dir: "N", score: RING_SCORE, water: ULTIMATE_RULES.splash.waterAfter }, ...RING_AFTER },
-      fire: { botId: "you", kind: "splash", at: { x: 1, y: 1 }, squares: RING_HITS },
+      tanks: { you: { x: 2, y: 1, dir: "N", score: RING_SCORE, water: ULTIMATE_RULES.splash.waterAfter }, ...RING_AFTER },
+      fire: { botId: "you", kind: "splash", at: { x: 2, y: 1 }, squares: RING_HITS },
     },
-    { tanks: { you: { x: 1, y: 1, dir: "N", score: RING_SCORE, water: waterAfterTick(ULTIMATE_RULES.splash.waterAfter, false, ruleSet("standard")) }, ...RING_AFTER } },
+    { tanks: { you: { x: 2, y: 1, dir: "N", score: RING_SCORE, water: waterAfterTick(ULTIMATE_RULES.splash.waterAfter, false, ruleSet("standard")) }, ...RING_AFTER } },
   ], 1, "splash"),
   fullTank: scene("standard", 5, 3, [
     { tanks: { you: { x: 0, y: 1, dir: "E", water: 1 }, a: { x: 2, y: 1, dir: "W" } } },
@@ -336,11 +339,12 @@ export const ULTIMATE_SCENES: Readonly<Record<UltimateId, Scene>> = {
     },
     { tanks: { you: { x: 2, y: 1, dir: "W", score: -1, active: { kind: "bigUmbrella", blocksLeft: ULTIMATE_RULES.bigUmbrella.blocks - 1 } }, a: { x: 2, y: 0, dir: "S", water: 7 }, b: { x: 4, y: 1, dir: "W", score: 1, water: 7 } } },
   ], 2, "bigUmbrella"),
-  magnet: scene("standard", 7, 3, [
-    { tanks: { you: { x: 3, y: 1, dir: "N" } }, items: MAGNET_PULLS.map(({ kind, from }) => ({ kind, ...from })) },
+  // 5 by 3 like every catalogue scene (owner, 2026-11-20); the magnet's reach of 4 runs past this small board.
+  magnet: scene("standard", 5, 3, [
+    { tanks: { you: { x: 2, y: 1, dir: "N" } }, items: MAGNET_PULLS.map(({ kind, from }) => ({ kind, ...from })) },
     {
       tanks: { you: MAGNET_HAND },
-      fire: { botId: "you", kind: "magnet", at: { x: 3, y: 1 }, items: [MAGNET_BUCKET, ...MAGNET_PULLS] },
+      fire: { botId: "you", kind: "magnet", at: { x: 2, y: 1 }, items: [MAGNET_BUCKET, ...MAGNET_PULLS] },
     },
     { tanks: { you: MAGNET_HAND } },
   ], 1, "magnet"),

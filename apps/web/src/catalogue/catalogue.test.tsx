@@ -43,10 +43,10 @@ describe("CatalogueView", () => {
     }
   });
 
-  test("the chosen card's name and the game's own sentence head the stage", () => {
+  test("the chosen card's name and its short sentence head the stage", () => {
     const html = render("items", "en", "umbrella");
     expect(html).toContain('data-catalogue-entry="umbrella"');
-    expect(html).toContain("The umbrella opens and stops the next 2 hits on its tank");
+    expect(html).toContain("Stops the next 2 shots at your tank.");
   });
 });
 

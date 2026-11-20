@@ -50,7 +50,7 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
     expect(tick.snapshot.bots.find((bot) => bot.id === fire.botId)).toMatchObject({ item: "bucket", itemsWaiting: ["umbrella", "pinwheel"] });
 
     const emptyHand = renderBoard(tick);
-    expect(emptyHand).toContain('data-ultimate-drop="bucket" transform="translate(31.5 11.7)"');
+    expect(emptyHand).toContain('data-ultimate-drop="bucket" transform="translate(21.5 11.7)"');
     expect(emptyHand).toContain('data-held="bucket"><g class="ue-held"');
     expect(emptyHand).toContain('class="ue-held" data-waiting-item="umbrella"');
     expect(emptyHand).toContain('class="ue-held" data-waiting-item="pinwheel"');
@@ -62,14 +62,14 @@ describe("ultimate fires on the board (85-ultimates.md)", () => {
         : bot) },
       fires: [{ ...fire, items }],
     });
-    const oneItem = renderWithHand(["bucket", "pinwheel"], [{ kind: "bucket" }, { kind: "pinwheel", from: { x: 5, y: 2 } }]);
-    expect(oneItem).toContain('data-ultimate-drop="bucket" transform="translate(31.3 14.8)"');
+    const oneItem = renderWithHand(["bucket", "pinwheel"], [{ kind: "bucket" }, { kind: "pinwheel", from: { x: 4, y: 2 } }]);
+    expect(oneItem).toContain('data-ultimate-drop="bucket" transform="translate(21.3 14.8)"');
     expect(oneItem).toContain('data-held="mudBall"><g class="ab-anim ab-item-in"');
     expect(oneItem).toContain('class="ue-held" data-waiting-item="bucket"');
     expect(oneItem).toContain('class="ue-held" data-waiting-item="pinwheel"');
 
     const twoItems = renderWithHand(["umbrella", "bucket"], [{ kind: "bucket" }]);
-    expect(twoItems).toContain('data-ultimate-drop="bucket" transform="translate(31.3 17.6)"');
+    expect(twoItems).toContain('data-ultimate-drop="bucket" transform="translate(21.3 17.6)"');
     expect(twoItems).toContain('data-held="mudBall"><g class="ab-anim ab-item-in"');
     expect(twoItems).toContain('<g data-waiting-item="umbrella"');
     expect(twoItems).toContain('class="ue-held" data-waiting-item="bucket"');

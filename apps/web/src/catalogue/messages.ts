@@ -1,9 +1,10 @@
 // Interface text for "/catalogue", the catalogue of what a tank meets in the arena. Catalog slot:
-// `catalogue`. The play styles, items and arena conditions keep their names and sentences where
-// the game already says them (vocabulary/messages.ts, board/messages.ts legend), so the catalogue
-// never words a rule differently from the game. The live feed reuses the ultimate names from here.
+// `catalogue`. The play styles, items and arena conditions keep their names where the game already
+// says them (vocabulary/messages.ts, board/messages.ts legend). Each card's sentence is the short
+// `briefs` text below, written for children; it repeats a rule's numbers, so a rule change edits
+// the game's sentence and the brief. The live feed reuses the ultimate names from here.
 
-import type { UltimateId } from "@game/engine";
+import type { ItemKind, RuleSetId, UltimateId } from "@game/engine";
 
 type UltimateText = { readonly name: string; readonly body: string };
 
@@ -31,6 +32,39 @@ export const en = {
   sceneLabel: (name: string) => `A small board shows ${name}.`,
   /** Under reduced motion the scene does not play by itself. */
   nextStep: "Next step",
+  /** The arrows beside the phone's row of cards. */
+  moreCards: "More cards",
+  earlierCards: "Earlier cards",
+  /**
+   * One short sentence per card for the catalogue (owner, 2026-11-20: "kids don't read that long"). The game's longer
+   * texts stay where a player sets things up; these only teach the idea next to the scene.
+   */
+  briefs: {
+    items: {
+      bucket: "Your next 2 hits take 2 points each.",
+      umbrella: "Stops the next 2 shots at your tank.",
+      pinwheel: "Makes a tank dizzy, but sometimes you get dizzy.",
+      mudBall: "Sticks a tank in mud, but sometimes you get stuck.",
+    } satisfies Record<ItemKind, string>,
+    conditions: {
+      standard: "Shots reach 3 squares and use 3 water.",
+      "arms-length": "Shots reach only 1 square, so get close.",
+      "dry-spell": "Water is scarce, and each shot uses 5.",
+      downpour: "Plenty of water, but shots reach only 1 square.",
+      "open-field": "The arena is twice as big.",
+      "sharp-eyes": "Aim and Dodge are twice as strong.",
+    } satisfies Record<RuleSetId, string>,
+    ultimates: {
+      dash: "Zooms 3 squares and rams a tank for 2 points.",
+      smoke: "Your tank hides, so shots often miss.",
+      splash: "Sprays all 8 squares around your tank at once.",
+      fullTank: "Fills your water, and the next 3 shots are free.",
+      mudBomb: "Mud traps a tank and the tanks next to it.",
+      whirlwind: "Tanks near you spin in a daze.",
+      bigUmbrella: "Blocks 3 shots from the front and sides.",
+      magnet: "Pulls a bucket and nearby items to your tank.",
+    } satisfies Record<UltimateId, string>,
+  },
   // Owner, 2026-11-19: one simple pattern for kids. Each body starts with "Your tank", says what happens, then
   // what it gives, in at most two sentences. Exact numbers live in 85-ultimates.md.
   ultimates: {
@@ -66,6 +100,34 @@ export const id: typeof en = {
   ultimateCharge: (percent) => `Terisi ${percent}%`,
   sceneLabel: (name) => `Papan kecil memperlihatkan ${name}.`,
   nextStep: "Langkah berikutnya",
+  moreCards: "Kartu berikutnya",
+  earlierCards: "Kartu sebelumnya",
+  briefs: {
+    items: {
+      bucket: "2 tembakan kena berikutnya dapat 2 poin.",
+      umbrella: "Menahan 2 tembakan berikutnya ke tankmu.",
+      pinwheel: "Membuat lawan pusing, tapi kadang kamu yang pusing.",
+      mudBall: "Membuat lawan terjebak, tapi kadang kamu yang terjebak.",
+    },
+    conditions: {
+      standard: "Tembakan sampai 3 petak dan memakai 3 air.",
+      "arms-length": "Tembakan hanya 1 petak, jadi dekati lawan.",
+      "dry-spell": "Air sedikit, dan tiap tembakan memakai 5 air.",
+      downpour: "Air melimpah, tapi tembakan hanya 1 petak.",
+      "open-field": "Arenanya dua kali lebih luas.",
+      "sharp-eyes": "Bidikan dan Hindaran dua kali lebih kuat.",
+    },
+    ultimates: {
+      dash: "Melaju 3 petak dan menabrak lawan untuk 2 poin.",
+      smoke: "Tankmu bersembunyi, jadi tembakan lawan sering meleset.",
+      splash: "Menyemprot 8 petak di sekeliling tankmu sekaligus.",
+      fullTank: "Air penuh, dan 3 tembakan berikutnya gratis.",
+      mudBomb: "Lumpur menjebak lawan dan tank di sebelahnya.",
+      whirlwind: "Tank di dekatmu berputar kebingungan.",
+      bigUmbrella: "Menahan 3 tembakan dari depan dan samping.",
+      magnet: "Menarik ember dan item terdekat ke tankmu.",
+    },
+  },
   ultimates: {
     dash: { name: "Lari kencang", body: "Tankmu melaju hingga 3 petak ke depan dan menabrak tank pertama di depannya untuk 2 poin. Tembakan tidak bisa mengenai tankmu pada giliran itu." },
     smoke: { name: "Kabut", body: "Tankmu bersembunyi dalam kabut selama 15 giliran, jadi tembakan hanya mengenainya 1 dari 4 kali. Tembakan yang dibelokkan kabut bisa mengenai tank di sebelahmu, dan tankmu mendapat 1 poin." },

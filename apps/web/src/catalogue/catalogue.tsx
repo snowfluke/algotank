@@ -72,9 +72,8 @@ export type CataloguePreview = { readonly kind: "playStyle"; readonly style: Pre
 export interface CatalogueEntry {
   readonly key: string;
   readonly name: string;
+  /** One short sentence: the catalogue's own brief, or a play style's summary, which is already one. */
   readonly body: string;
-  /** A second, quieter line, or null. */
-  readonly extra: string | null;
   /** True for what the game does not have yet. */
   readonly soon: boolean;
   readonly icon: ReactNode;
@@ -115,7 +114,6 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
         key: style,
         name: v.playStyles[style].name,
         body: v.playStyles[style].summary,
-        extra: null,
         soon: false,
         icon: (
           <span className="block aspect-[5/3] h-full overflow-hidden rounded-[0.35rem]">
@@ -128,8 +126,7 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
       return ITEM_KINDS.map((kind) => ({
         key: kind,
         name: legend[kind].term,
-        body: legend[kind].body,
-        extra: kind === "pinwheel" ? legend.dizzy.body : kind === "mudBall" ? legend.stuck.body : null,
+        body: m.catalogue.briefs.items[kind],
         soon: false,
         icon: <ItemIcon kind={kind} />,
         preview: { kind: "board", scene: ITEM_SCENES[kind] },
@@ -138,8 +135,7 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
       return RULE_SET_IDS.map((id) => ({
         key: id,
         name: v.roundRules[id].name,
-        body: v.roundRules[id].summary,
-        extra: null,
+        body: m.catalogue.briefs.conditions[id],
         soon: false,
         icon: <GroundIcon ruleSetId={id} />,
         preview: { kind: "board", scene: CONDITION_SCENES[id] },
@@ -148,9 +144,7 @@ export function catalogueEntries(m: ReturnType<typeof useMessages>, section: Cat
       return ULTIMATE_IDS.map((id) => ({
         key: id,
         name: m.catalogue.ultimates[id].name,
-        body: m.catalogue.ultimates[id].body,
-        // One description: the "soon" tag already says it is not in the game yet (owner, 2026-11-19: "so much description").
-        extra: null,
+        body: m.catalogue.briefs.ultimates[id],
         soon: !released,
         icon: <UltimateEmblem ultimate={id} size={40} />,
         preview: { kind: "board", scene: ULTIMATE_SCENES[id] },

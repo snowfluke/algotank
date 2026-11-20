@@ -13,6 +13,9 @@
 //   (b) an element scrolls inside itself (scrollable overflow and more content than room);
 //   (c) a visible text or control is cut off by an ancestor that hides overflow, or by the
 //       viewport.
+//   A row marked `data-scroll-row` may scroll sideways (the catalogue's phone cards, owner 2026-11-20:
+//   "Scrolling horizontal is acceptable as long as the visual cue providing good UX"). It must keep
+//   sideways scrolling from reaching the page, and the row itself must fit; its cards may sit past its edges.
 // The monthly phone tabs also check that every label fits on one line (77-monthly-league.md).
 // The "fallback" size (a phone held sideways) checks only (c) and horizontal overflow, because
 // the page may scroll there. The "sweep" moves the width from 360 to 1280 px at a height of
@@ -1621,7 +1624,10 @@ export function measureInPage({ kind, containedScroll }) {
   for (const el of document.body.querySelectorAll("*")) {
     if (el.tagName === "TEXTAREA" || exempt(el)) continue;
     const style = getComputedStyle(el);
-    if (scrolls(style.overflowX) && el.scrollWidth > el.clientWidth + 1) b.push(`${describe(el)} scrolls sideways (${el.scrollWidth} > ${el.clientWidth})`);
+    if (scrolls(style.overflowX) && el.scrollWidth > el.clientWidth + 1) {
+      if (!el.matches("[data-scroll-row]")) b.push(`${describe(el)} scrolls sideways (${el.scrollWidth} > ${el.clientWidth})`);
+      else if (style.overscrollBehaviorX !== "contain") b.push(`${describe(el)} lets sideways scrolling reach the page`);
+    }
     if (kind === "fit" && scrolls(style.overflowY) && el.scrollHeight > el.clientHeight + 1) {
       if (!el.matches(containedScroll)) b.push(`${describe(el)} scrolls (${el.scrollHeight} > ${el.clientHeight})`);
       else if (style.overscrollBehaviorY !== "contain") b.push(`${describe(el)} lets vertical scrolling reach the page`);
@@ -1657,6 +1663,8 @@ export function measureInPage({ kind, containedScroll }) {
         srOnly = true;
         break;
       }
+      // A card scrolled out of its row is reached by scrolling the row, so ancestors past the row do not cut it.
+      if (parent.matches("[data-scroll-row]")) break;
       const clipX = hides(parentStyle.overflowX) && parentStyle.textOverflow !== "ellipsis";
       const clipY = hides(parentStyle.overflowY);
       if (clipX || clipY) {
@@ -1676,7 +1684,7 @@ export function measureInPage({ kind, containedScroll }) {
         problem = `${describe(el)} does not fit on one line in the monthly tab bar`;
       }
     }
-    if (problem === null && box.right > viewportWidth + 1) problem = `${describe(el)} runs past the right edge of the viewport`;
+    if (problem === null && box.right > viewportWidth + 1 && el.parentElement?.closest("[data-scroll-row]") == null) problem = `${describe(el)} runs past the right edge of the viewport`;
     if (problem === null && kind === "fit" && (visibleBottom > viewportHeight + 1 || visibleTop < -1)) problem = `${describe(el)} is outside the viewport height`;
     if (problem !== null) c.push(problem);
   }
@@ -1712,6 +1720,11 @@ export function overlapInPage(containedScroll) {
     if (scrollPane && /^(auto|scroll)$/.test(getComputedStyle(scrollPane).overflowY)) {
       const pane = scrollPane.getBoundingClientRect();
       if (y < pane.top || y >= pane.bottom) continue;
+    }
+    const row = el.parentElement?.closest("[data-scroll-row]");
+    if (row) {
+      const pane = row.getBoundingClientRect();
+      if (x < pane.left || x >= pane.right) continue;
     }
     const hit = document.elementFromPoint(x, y);
     if (hit === null || hit === el || el.contains(hit)) continue;

@@ -18,6 +18,7 @@ import { chebyshev, rotate } from "../directions.ts";
 import {
   botsThatCanHit,
   directionToFace,
+  enemiesOf,
   firstBotInLine,
   isCellInLineOfFire,
   isFree,
@@ -71,21 +72,69 @@ function arenaCentre(ctx: DecisionContext): Cell {
   return { x: Math.floor((ctx.snapshot.width - 1) / 2), y: Math.floor((ctx.snapshot.height - 1) / 2) };
 }
 
-/** The corner nearest to the bot. A tie goes to the smaller y, then the smaller x. */
-function nearestCorner(ctx: DecisionContext): Cell {
+/** The four corners, smaller y first, then smaller x: the order that settles a tie. */
+function cornersOf(ctx: DecisionContext): readonly Cell[] {
   const { width, height } = ctx.snapshot;
-  const corners: readonly Cell[] = [
+  return [
     { x: 0, y: 0 },
     { x: width - 1, y: 0 },
     { x: 0, y: height - 1 },
     { x: width - 1, y: height - 1 },
   ];
+}
+
+/** The corner nearest to the bot. A tie goes to the smaller y, then the smaller x. */
+function nearestCorner(ctx: DecisionContext): Cell {
   let best: Cell | null = null;
-  for (const corner of corners) {
+  for (const corner of cornersOf(ctx)) {
     if (best === null || chebyshev(ctx.self, corner) < chebyshev(ctx.self, best)) best = corner;
   }
   if (best === null) throw new Error("an arena has corners");
   return best;
+}
+
+/**
+ * The corner whose nearest tank of `away` is farthest, so the bot runs to the side away from them (owner,
+ * 2026-11-20: corners picked by the board, not by the screen, which turns on a phone). A tie goes to the corner
+ * nearer the bot, then the corner order. Null when `away` is empty: there is nobody to run from.
+ */
+function cornerAwayFrom(ctx: DecisionContext, away: readonly Pick<BotState, "x" | "y">[]): Cell | null {
+  if (away.length === 0) return null;
+  const room = (corner: Cell) => Math.min(...away.map((bot) => chebyshev(bot, corner)));
+  let best: Cell | null = null;
+  for (const corner of cornersOf(ctx)) {
+    if (best === null) best = corner;
+    else {
+      const gap = room(corner) - room(best);
+      if (gap > 0 || (gap === 0 && chebyshev(ctx.self, corner) < chebyshev(ctx.self, best))) best = corner;
+    }
+  }
+  return best;
+}
+
+/** The place of goToPlace, or null when it names a tank to run from and there is none. */
+function placeOf(ctx: DecisionContext, place: string): Cell | null {
+  switch (place) {
+    case "middle":
+      return arenaCentre(ctx);
+    case "corner":
+      return nearestCorner(ctx);
+    // The quietest corner: away from every other tank; on an empty board any corner is quiet, so the nearest.
+    case "quietCorner":
+      return cornerAwayFrom(ctx, enemiesOf(ctx.snapshot, ctx.self)) ?? nearestCorner(ctx);
+    case "cornerAwayFromNearest":
+      return cornerAwayFromTarget(ctx, "nearest");
+    // The leader as "highestScore" picks it, so Kamuflase hides a leader here too (88-camouflage.md).
+    case "cornerAwayFromLeader":
+      return cornerAwayFromTarget(ctx, "highestScore");
+    default:
+      throw new Error(`Unknown place "${place}".`);
+  }
+}
+
+function cornerAwayFromTarget(ctx: DecisionContext, target: "nearest" | "highestScore"): Cell | null {
+  const bot = pickTarget(ctx, { target });
+  return bot === null ? null : cornerAwayFrom(ctx, [bot]);
 }
 
 /** The 8 directions by turn cost, right before left: ahead, 45 right, 45 left, 90 right, 90 left, 135 right, 135 left, behind. It settles equal choices. */
@@ -280,13 +329,19 @@ const defs = withLiteralIds<ActionDef>()([
         options: [
           { value: "middle", label: "the middle of the arena" },
           { value: "corner", label: "the nearest corner" },
+          { value: "quietCorner", label: "the quietest corner" },
+          { value: "cornerAwayFromNearest", label: "the corner farthest from the nearest tank" },
+          { value: "cornerAwayFromLeader", label: "the corner farthest from the tank with the most points" },
         ],
         default: "middle",
       },
     ],
-    // On the place the bot faces its most open direction and throws, so it holds the place.
-    toMove: (ctx, params) =>
-      movePlace(ctx, textValue(params, "place") === "corner" ? nearestCorner(ctx) : arenaCentre(ctx)),
+    // On the place the bot faces its most open direction and throws, so it holds the place. With nobody to run from,
+    // the rule is skipped, so the next rule acts.
+    toMove: (ctx, params) => {
+      const place = placeOf(ctx, textValue(params, "place"));
+      return place === null ? null : movePlace(ctx, place);
+    },
   },
   {
     id: "goToArea",

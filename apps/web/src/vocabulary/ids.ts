@@ -45,7 +45,7 @@ export const CHOICE_OPTIONS = {
   compare: ["atLeast", "atMost", "fewerThan", "moreThan"],
   bearing: ["ahead", "left", "right", "behind"],
   round: ["cut", "final"],
-  place: ["middle", "corner"],
+  place: ["middle", "corner", "quietCorner", "cornerAwayFromNearest", "cornerAwayFromLeader"],
   way: ["left", "right", "slightLeft", "slightRight"],
   item: ["any", "bucket", "umbrella", "pinwheel", "mudBall"],
   effect: ["dizzy", "stuck"],

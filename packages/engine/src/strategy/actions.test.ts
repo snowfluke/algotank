@@ -368,6 +368,33 @@ describe("go to a place", () => {
   test("a held cell on the way is thrown at", () => {
     expect(run("goToPlace", [bot("me", 1, 3, "E"), bot("b", 2, 3, "N")], { place: "middle" })).toBe("T");
   });
+
+  // A 9 x 7 arena: the corners are (0,0), (8,0), (0,6) and (8,6). Facing the corner, the move is a step forward.
+  test("the quietest corner is the one farthest from every other tank", () => {
+    const crowd = [bot("a", 0, 0, "E"), bot("b", 8, 0, "W"), bot("c", 0, 6, "E")];
+    expect(run("goToPlace", [bot("me", 4, 3, "SE"), ...crowd], { place: "quietCorner" })).toBe("F");
+    expect(run("goToPlace", [bot("me", 4, 3, "NW"), ...crowd], { place: "quietCorner" })).not.toBe("F");
+  });
+
+  test("the corner farthest from the nearest tank is on its far side", () => {
+    // From (2,1), the corners (8,0) and (8,6) are both 6 away and both 4 from the bot, so the corner order picks (8,0).
+    expect(run("goToPlace", [bot("me", 4, 3, "NE"), bot("a", 2, 1, "E")], { place: "cornerAwayFromNearest" })).toBe("F");
+  });
+
+  test("the corner farthest from the leader runs from the tank with the most points, not the nearest one", () => {
+    // The leader at (6,5) is 6 squares from (0,0) and (0,6); both are 4 from the bot, so the corner order picks (0,0).
+    // The nearest tank at (3,4) sends the bot to (8,0) instead.
+    const board = [bot("near", 3, 4, "E"), bot("leader", 6, 5, "W", { score: 10 })];
+    expect(run("goToPlace", [bot("me", 4, 3, "NW"), ...board], { place: "cornerAwayFromLeader" })).toBe("F");
+    expect(run("goToPlace", [bot("me", 4, 3, "NE"), ...board], { place: "cornerAwayFromNearest" })).toBe("F");
+  });
+
+  test("with nobody to run from the rule is skipped, and on an empty board the quietest corner is the nearest", () => {
+    const alone = [bot("me", 2, 1, "NW")];
+    expect(runOrNull("goToPlace", alone, { place: "cornerAwayFromNearest" })).toBeNull();
+    expect(runOrNull("goToPlace", alone, { place: "cornerAwayFromLeader" })).toBeNull();
+    expect(run("goToPlace", alone, { place: "quietCorner" })).toBe(run("goToPlace", alone, { place: "corner" }));
+  });
 });
 
 describe("wander", () => {

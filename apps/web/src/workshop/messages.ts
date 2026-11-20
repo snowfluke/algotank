@@ -1,6 +1,11 @@
 // Interface text for the tank workshop at "/workshop". Catalog slot: `workshop`.
 // The editor's panes are the arena's (prep/), so their words are in prep/messages.ts.
 
+import type { RuleSetId } from "@game/engine";
+
+/** A note for some arena conditions only; the workshop shows none for the others. */
+type ConditionNotes = Readonly<Partial<Record<RuleSetId, string>>>;
+
 export const en = {
   heading: "Tank workshop",
   intro: "Build play styles here at your own pace, and pick them under Mine in any arena.",
@@ -51,6 +56,21 @@ export const en = {
   roundRulesTitle: "Try an arena condition",
   roundRulesIntro: "The monthly arena draws a condition when a round starts. Your choice changes the workshop's numbers and test match.",
   chosen: "Chosen",
+  /** The number chips on a condition's card, read from the engine's rule set (ruleSet). */
+  conditionNumbers: {
+    reach: (n: number) => `Shoots ${n} ${n === 1 ? "square" : "squares"}`,
+    carry: (n: number) => `Carries ${n} water`,
+    cost: (n: number) => `${n} water a shot`,
+  },
+  /**
+   * What a condition changes beyond its three numbers, for the conditions whose numbers alone look like another's
+   * (owner, 2026-11-20: the cards had to get shorter). The others need no note.
+   */
+  conditionNotes: {
+    "arms-length": "A tank with Range shoots farther.",
+    "open-field": "The arena is about twice as big.",
+    "sharp-eyes": "Aim and Dodge count double, also side by side.",
+  } satisfies ConditionNotes as ConditionNotes,
   notFound: "This play style is not on this device any more.",
   tryInvalid: "Fix the part marked in red on the Rules or Upgrades tab, and then you can try it here.",
 };
@@ -102,6 +122,16 @@ export const id: typeof en = {
   roundRulesTitle: "Coba kondisi arena",
   roundRulesIntro: "Arena bulanan mengundi kondisi saat ronde dimulai. Pilihanmu mengubah angka dan uji coba di bengkel.",
   chosen: "Dipilih",
+  conditionNumbers: {
+    reach: (n) => `Tembak ${n} petak`,
+    carry: (n) => `Bawa ${n} air`,
+    cost: (n) => `${n} air per tembakan`,
+  },
+  conditionNotes: {
+    "arms-length": "Tank dengan Jangkauan menembak lebih jauh.",
+    "open-field": "Arenanya sekitar dua kali lebih luas.",
+    "sharp-eyes": "Bidikan dan Hindaran dua kali lebih kuat, juga saat bersebelahan.",
+  },
   notFound: "Gaya main ini sudah tidak ada di perangkat ini.",
   tryInvalid: "Perbaiki bagian yang ditandai merah di tab Aturan atau Peningkatan, lalu kamu bisa mencobanya di sini.",
 };

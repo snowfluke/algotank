@@ -4,10 +4,11 @@
 // the library; every edit is written to the library at once (a draft with a problem
 // too, see editorSession.ts) and the account follows (workshop/library.ts).
 
-import { ArrowLeft, CircleAlert, CircleCheck, Cog, ListChecks, Pencil, Play, Scale } from "lucide-react";
+import { ArrowLeft, CircleAlert, CircleCheck, Cog, Crosshair, Droplet, Droplets, ListChecks, Pencil, Play, Scale } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { ACCOUNT_STRATEGY_LIMITS } from "@game/arena";
 import { parseStrategy, ruleSet, RULE_SET_IDS, STANDARD_RULE_SET_ID, type RuleSetId, type UltimateId } from "@game/engine";
+import { GroundIcon } from "../catalogue/catalogue.tsx";
 import { UltimateEmblem } from "../catalogue/UltimateEmblem.tsx";
 import { guideSignal } from "../guide/guideStore.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -107,23 +108,47 @@ function RoundRulesStep({ value, onChange, onBack }: { readonly value: RuleSetId
         items={RULE_SET_IDS}
         itemKey={(id) => id}
         ordered={false}
-        renderItem={(id) => (
-          <button
-            type="button"
-            aria-pressed={id === value}
-            onClick={() => {
-              onChange(id);
-              onBack();
-            }}
-            className={`press flex min-h-12 w-full min-w-0 flex-col gap-0.5 rounded-[var(--radius-control)] border-2 border-b-4 px-3 py-2 text-left ${id === value ? "border-water bg-water-soft" : "border-line bg-panel"}`}
-          >
-            <span className="flex min-w-0 items-center gap-2 font-display font-semibold">
-              <span className="min-w-0 flex-1">{v.roundRules[id].name}</span>
-              {id === value ? <CircleCheck aria-label={w.chosen} size={18} strokeWidth={2.5} className="shrink-0 text-water" /> : null}
-            </span>
-            <span className="text-caption text-muted [overflow-wrap:anywhere]">{v.roundRules[id].summary}</span>
-          </button>
-        )}
+        renderItem={(id) => {
+          const chosen = id === value;
+          const rules = ruleSet(id);
+          const note = w.conditionNotes[id];
+          // The numbers a child compares at a glance, from the engine's table; a note says what they cannot (conditionNotes).
+          const numbers = [
+            { key: "reach", icon: <Crosshair aria-hidden size={14} strokeWidth={2.5} />, text: w.conditionNumbers.reach(rules.baseRange) },
+            { key: "carry", icon: <Droplets aria-hidden size={14} strokeWidth={2.5} />, text: w.conditionNumbers.carry(rules.waterCapacity) },
+            { key: "cost", icon: <Droplet aria-hidden size={14} strokeWidth={2.5} />, text: w.conditionNumbers.cost(rules.waterPerThrow) },
+          ];
+          return (
+            <button
+              type="button"
+              aria-pressed={chosen}
+              data-round-rules={id}
+              onClick={() => {
+                onChange(id);
+                onBack();
+              }}
+              className={`press flex min-h-12 w-full min-w-0 items-center gap-3 rounded-[var(--radius-card)] border-2 border-b-4 px-3 py-1.5 text-left ${chosen ? "border-water bg-water-soft" : "border-line bg-panel [@media(hover:hover)]:hover:border-line-strong"}`}
+            >
+              <span className="flex h-8 w-11 shrink-0 items-center justify-center">
+                <GroundIcon ruleSetId={id} />
+              </span>
+              {/* One line on a laptop, a few on a phone: the six cards fit a page as the plain list did. */}
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="min-w-0 font-display text-lead font-semibold [overflow-wrap:anywhere]">{v.roundRules[id].name}</span>
+                <span className="flex min-w-0 flex-wrap gap-1.5">
+                  {numbers.map((number) => (
+                    <span key={number.key} className={`inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-px text-caption font-semibold text-ink ${chosen ? "bg-panel" : "bg-ground"}`}>
+                      <span className="shrink-0 text-water">{number.icon}</span>
+                      <span className="min-w-0 [overflow-wrap:anywhere]">{number.text}</span>
+                    </span>
+                  ))}
+                </span>
+                {note === undefined ? null : <span className="min-w-0 text-caption text-muted [overflow-wrap:anywhere]">{note}</span>}
+              </span>
+              {chosen ? <CircleCheck aria-label={w.chosen} size={22} strokeWidth={2.5} className="shrink-0 text-water" /> : null}
+            </button>
+          );
+        }}
       />
     </StepSheet>
   );

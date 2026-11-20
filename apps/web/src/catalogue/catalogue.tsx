@@ -91,7 +91,8 @@ function ItemIcon({ kind }: { readonly kind: ItemKind }) {
 }
 
 /** A patch of the condition's ground: 3 by 2 squares with its marks, inside its wall. */
-function GroundIcon({ ruleSetId }: { readonly ruleSetId: RuleSetId }) {
+/** The condition's ground as a small board: the catalogue's cards and the workshop's condition step show it. */
+export function GroundIcon({ ruleSetId }: { readonly ruleSetId: RuleSetId }) {
   const ground = ARENA_GROUNDS[ruleSetId];
   const marks = groundMarksPath(3, 2, ruleSetId);
   const filled = marksFilled(ground.marks);

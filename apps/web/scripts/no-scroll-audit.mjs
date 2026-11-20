@@ -640,6 +640,8 @@ export const STATES = [
   { screen: "workshop", state: "start-from-full-list", owner: "S1b", path: () => "/workshop", as: "visitor", seedWorkshop: 3, steps: [{ click: "[data-workshop-new]" }, { wait: "[data-workshop-start-from]" }] },
   { screen: "workshop", state: "list-1-signed-in", owner: "S1b", path: () => "/workshop", as: "creator", seedWorkshop: 1, steps: [{ wait: "[data-workshop-list]" }] },
   { screen: "workshop", state: "start-from", owner: "S1b", path: () => "/workshop", as: "visitor", steps: [{ click: "[data-workshop-new]" }, { wait: "[data-workshop-start-from]" }] },
+  // The arena condition step's cards with their ground and number chips (owner, 2026-11-20): six must fit, also at 360 x 640.
+  { screen: "workshop", state: "round-rules", owner: "S1b", path: () => "/workshop", as: "visitor", seedWorkshop: 1, steps: [{ click: "[data-workshop-open]" }, { click: '[data-focus-key="workshop-round-rules"]' }, { wait: "[data-round-rules]" }] },
   ...[
     { state: "ultimate-picker", steps: [{ click: "[data-workshop-new]" }, { click: '[data-focus-key="workshop-empty-start"]' }, { wait: "[data-ultimate-picker]" }, { click: "[data-ultimate-save]" }, { wait: '[data-ultimate-save] + [role="alert"]' }] },
     { state: "card-ultimate", seedWorkshop: 1, steps: [{ wait: "[data-pager-item] [data-ultimate-link]" }] },

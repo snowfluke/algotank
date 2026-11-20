@@ -8,6 +8,10 @@ import { paths } from "../app/route.ts";
 import { ArenaBoard } from "../board/ArenaBoard.tsx";
 import { CATALOGUE_SECTIONS, musicConditionOf, placeFromSearch, searchWithPlace, type CatalogueSection } from "./catalogue.tsx";
 import { CatalogueView } from "./CataloguePage.tsx";
+import { guideItems, type GuidePart } from "./RulesGuide.tsx";
+import { partFromSearch } from "./RulesPage.tsx";
+import { CATALOGS } from "../i18n/catalog.ts";
+import { ACTION_IDS, CONDITION_IDS, TARGET_IDS } from "@game/engine";
 import { ULTIMATE_IDS } from "@game/engine";
 import { CONDITION_SCENES, ITEM_SCENES, ULTIMATE_SCENES, type Scene } from "./scenes.ts";
 
@@ -153,5 +157,29 @@ describe("the catalogue's music", () => {
     expect(musicConditionOf("ultimates", "dash")).toBeNull();
     expect(musicConditionOf("items", "umbrella")).toBeNull();
     expect(musicConditionOf("conditions", undefined)).toBeNull();
+  });
+});
+
+describe("the rules guide (RulesGuide.tsx)", () => {
+  test("names every condition, action and tank a rule can aim at, each once, with every answer of each dropdown", () => {
+    for (const language of ["en", "id"] as const) {
+      const m = CATALOGS[language];
+      const keys = (part: GuidePart) => guideItems(m, part, true).map((item) => item.key);
+      expect(keys("when").sort()).toEqual([...CONDITION_IDS].sort());
+      // "Wait" is a step of a sequence only, as in the editor's one-action picker; "Steps in order" is under More options.
+      expect(keys("do").sort()).toEqual(ACTION_IDS.filter((id) => id !== "wait").sort());
+      expect(keys("targets")).toEqual([...TARGET_IDS]);
+      const place = guideItems(m, "do", true).find((item) => item.key === "goToPlace");
+      expect(place?.choices[0]?.answers).toContain(m.vocabulary.options.place.cornerAwayFromLeader);
+      // A group's heading rides on its first row, so no page ends on a heading alone.
+      expect(guideItems(m, "when", true)[0]?.heading?.name).toBe(m.vocabulary.conditionGroups.otherTanks);
+      expect(keys("more")).toEqual(["match", "negate", "steps", "chance", "switch", "modes", "fallback"]);
+    }
+  });
+
+  test("opens on the part the address names, and the first part for anything else", () => {
+    expect(partFromSearch("?part=targets")).toBe("targets");
+    expect(partFromSearch("?part=nonsense")).toBe("when");
+    expect(partFromSearch("")).toBe("when");
   });
 });

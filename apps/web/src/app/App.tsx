@@ -7,6 +7,7 @@ import { CreateArenaPage } from "../create/CreateArenaPage.tsx";
 import { HomePage } from "../home/HomePage.tsx";
 import { JoinPage } from "../home/JoinPage.tsx";
 import { CataloguePage } from "../catalogue/CataloguePage.tsx";
+import { RulesPage } from "../catalogue/RulesPage.tsx";
 import { ChampionsPage } from "../champions/ChampionsPage.tsx";
 import { MonthlyPage } from "../monthly/MonthlyPage.tsx";
 import { useMusicVenue } from "../sound/music.ts";
@@ -58,6 +59,8 @@ function RoutePage({ route }: { route: Route }) {
       return <ChampionsPage />;
     case "catalogue":
       return <CataloguePage />;
+    case "rules":
+      return <RulesPage />;
     case "monthly":
       return <MonthlyPage />;
     case "result":
@@ -81,7 +84,7 @@ export function App() {
   // The sign-in page is newer than the shared title list, so its title lives with its own text.
   // Home's tab carries the game's slogan after its name (owner, 2026-11-19); other pages put their own title first.
   const title =
-    route.page === "home" ? `${GAME_NAME} - ${m.home.tagline}` : route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : route.page === "adminPlayers" ? m.adminPlayers.pageTitle : route.page === "catalogue" ? m.catalogue.pageTitle : m.common.pageTitles[route.page];
+    route.page === "home" ? `${GAME_NAME} - ${m.home.tagline}` : route.page === "signIn" ? m.auth.pageTitle : route.page === "verifyEmail" ? m.auth.verifyPageTitle : route.page === "adminMetrics" ? m.metrics.pageTitle : route.page === "adminPlayers" ? m.adminPlayers.pageTitle : route.page === "catalogue" ? m.catalogue.pageTitle : route.page === "rules" ? m.catalogue.rulesGuide.pageTitle : m.common.pageTitles[route.page];
   useUsageCounts(route.page);
 
   const documentTitle = route.page === "home" ? title : `${title} - ${GAME_NAME}`;

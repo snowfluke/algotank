@@ -281,11 +281,14 @@ function groupIdOf<G extends string>(groups: Readonly<Record<G, string>>, engine
 const AREA_CONDITIONS: ReadonlySet<ConditionId> = new Set<ConditionId>(["myArea", "targetArea"]);
 const AREA_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>(["goToArea"]);
 
-/** The conditions under their group headings, in the engine's order. */
-export function conditionGroups(v: VocabularyText, ultimate: UltimateId, hybridOn: boolean): PickGroup<ConditionId>[] {
+/**
+ * The conditions under their group headings, in the engine's order. `ultimate` is the style's, which hides a condition
+ * its ultimate cannot use; null shows every condition (the catalogue's rules guide).
+ */
+export function conditionGroups(v: VocabularyText, ultimate: UltimateId | null, hybridOn: boolean): PickGroup<ConditionId>[] {
   const groups = new Map<ConditionGroupId, { id: ConditionId; name: string }[]>();
   for (const id of CONDITION_IDS) {
-    if (id === "ultimateCatches" && !ultimateCatchesTanks(ultimate)) continue;
+    if (id === "ultimateCatches" && ultimate !== null && !ultimateCatchesTanks(ultimate)) continue;
     if (!hybridOn && AREA_CONDITIONS.has(id)) continue;
     const def = CONDITIONS[id];
     if (def === undefined) continue;

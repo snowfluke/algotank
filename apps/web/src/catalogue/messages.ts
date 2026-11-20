@@ -21,6 +21,23 @@ export const en = {
   },
   /** Below 480px wide, where four whole names do not fit beside each other. */
   short: { playStyles: "Styles", items: "Items", conditions: "Arena", ultimates: "Ultimate" },
+  /** The rules guide at "/rules" (RulesGuide.tsx). The parts and most entries use the rules editor's own words (prep/messages.ts). */
+  rulesGuide: {
+    pageTitle: "Rules guide",
+    heading: "Rules guide",
+    /** The catalogue's button to the guide. */
+    open: "Rules guide",
+    /** "More options" on a phone, where the part switch has less room. */
+    moreShort: "More",
+    partsLabel: "Part of a rule",
+    targets: "Targets",
+    range: (min: number, max: number) => `${min} to ${max}`,
+    pickTarget: "one of the tanks under Targets",
+    negateName: "The opposite of a condition",
+    match: "A rule fits when all its conditions are true, or when any one of them is true: you choose.",
+    modes: (max: number) => `A play style has up to ${max} modes, each with its own rules, and a rule can switch to another mode.`,
+    fallback: "When no rule fits, your tank does this one action.",
+  },
   /** The list of one section's cards. */
   listLabel: (section: string) => `${section} to choose from`,
   /** The tag shown until ultimates release (85-ultimates.md). */
@@ -96,6 +113,20 @@ export const id: typeof en = {
     ultimates: "Jurus pamungkas",
   },
   short: { playStyles: "Gaya", items: "Item", conditions: "Arena", ultimates: "Jurus" },
+  rulesGuide: {
+    pageTitle: "Kamus aturan",
+    heading: "Kamus aturan",
+    open: "Kamus aturan",
+    moreShort: "Opsi",
+    partsLabel: "Bagian aturan",
+    targets: "Sasaran",
+    range: (min, max) => `${min} sampai ${max}`,
+    pickTarget: "salah satu tank di Sasaran",
+    negateName: "Kebalikan kondisi",
+    match: "Aturan cocok kalau semua kondisinya benar, atau kalau salah satunya benar: kamu yang memilih.",
+    modes: (max) => `Gaya main punya sampai ${max} mode dengan aturannya masing-masing, dan sebuah aturan bisa pindah ke mode lain.`,
+    fallback: "Kalau tidak ada aturan yang cocok, tank kamu menjalankan satu tindakan ini.",
+  },
   listLabel: (section) => `Pilihan ${section.toLowerCase()}`,
   soon: "Segera hadir",
   ultimateReady: "Siap!",

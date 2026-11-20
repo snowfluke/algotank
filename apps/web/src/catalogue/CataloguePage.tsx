@@ -8,9 +8,9 @@
 // card's scene gets the same 5 by 3 box, so the arena keeps one size across the four collections.
 
 import { ultimatesOn } from "@game/arena";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { goBack } from "../app/navigation.ts";
+import { goBack, navigate } from "../app/navigation.ts";
 import { paths } from "../app/route.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { PlayStyleScene } from "../prep/PlayStyleScene.tsx";
@@ -78,7 +78,10 @@ export function CatalogueView({
         <div className="flex min-w-0 shrink-0 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-2">
             <IconButton label={m.common.back} icon={<ArrowLeft aria-hidden size={22} />} variant="quiet" data-catalogue-back="" onClick={() => goBack(paths.home())} />
-            <h1 className="min-w-0 text-heading [overflow-wrap:anywhere]">{t.heading}</h1>
+            <h1 className="min-w-0 flex-1 text-heading [overflow-wrap:anywhere]">{t.heading}</h1>
+            {/* The rules guide has its own page: a fifth collection did not fit the switch on a phone. */}
+            {/* Words from 480px; on a narrow phone the book alone, so the heading keeps one line. */}
+            <IconButton label={t.rulesGuide.open} text={t.rulesGuide.open} icon={<BookOpen aria-hidden size={22} />} data-catalogue-rules="" onClick={() => navigate(paths.rules())} />
           </div>
           <p className="max-w-[60ch] text-muted [overflow-wrap:anywhere] [@media(max-height:700px)]:hidden">{t.intro}</p>
         </div>

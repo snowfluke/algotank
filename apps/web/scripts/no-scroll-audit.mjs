@@ -733,6 +733,15 @@ export const STATES = [
     ...(section === "playStyles" ? { sweep: true } : {}),
     steps: [{ wait: "[data-catalogue]" }, { click: `[data-catalogue] label:has(input[value="${section}"])` }, { wait: `[data-catalogue="${section}"]` }],
   })),
+  // The rules guide at /rules (owner, 2026-11-20): each of its four parts, a page of rows that never scrolls.
+  ...["when", "do", "targets", "more"].map((part) => ({
+    screen: "rules",
+    state: part,
+    owner: "P3b",
+    path: () => `/rules?part=${part}`,
+    as: "visitor",
+    steps: [{ wait: `[data-rules-guide="${part}"] [data-rules-guide-entry]` }],
+  })),
   { screen: "champions", state: "failed", owner: "P3b", path: () => "/champions", as: "visitor", mock: [{ route: "**/api/champions", status: 503, body: { error: "down" } }], steps: [{ wait: "[role=alert], [data-champions] button" }] },
 ];
 

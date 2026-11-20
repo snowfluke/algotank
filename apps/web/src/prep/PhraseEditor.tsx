@@ -19,10 +19,11 @@ export interface PhraseEditorProps {
   onChange(next: ParamValues): void;
 }
 
-type ParamName = keyof PrepText["rules"]["paramNames"];
+export type ParamName = keyof PrepText["rules"]["paramNames"];
 
 /** The plain name of a parameter, by its key, so "n" is never read out. */
-function paramName(spec: ParamSpec): ParamName {
+/** The kind of question a parameter asks ("Which tank?"), shared with the catalogue's rules guide. */
+export function paramName(spec: ParamSpec): ParamName {
   if (spec.kind === "target") return "target";
   switch (spec.key) {
     case "compare":

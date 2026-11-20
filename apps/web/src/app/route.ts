@@ -22,6 +22,7 @@ export type Route =
   | { readonly page: "myTank" }
   | { readonly page: "champions" }
   | { readonly page: "catalogue" }
+  | { readonly page: "rules" }
   /** The monthly arena: a league that always runs (docs/specs/revamp/77-monthly-league.md). */
   | { readonly page: "monthly" }
   /** A stored tournament result (results-protocol.ts); the id is the only key to it. */
@@ -51,6 +52,8 @@ export const paths = {
   champions: () => "/champions",
   /** The catalogue, opened on one collection (catalogue/catalogue.tsx CATALOGUE_SECTIONS reads "section"). */
   catalogue: (section?: "playStyles" | "items" | "conditions" | "ultimates") => (section === undefined ? "/catalogue" : `/catalogue?section=${section}`),
+  /** The rules guide, opened on one part (catalogue/RulesGuide.tsx GUIDE_PARTS reads "part"). */
+  rules: (part?: "when" | "do" | "targets" | "more") => (part === undefined ? "/rules" : `/rules?part=${part}`),
   monthly: () => "/monthly",
   /** The monthly arena with its join step open, where the sign-in page returns to. */
   monthlyJoin: () => "/monthly?join=1",
@@ -78,6 +81,7 @@ const SINGLE_SEGMENT: Readonly<Record<string, Route>> = {
   "my-tank": { page: "myTank" },
   champions: { page: "champions" },
   catalogue: { page: "catalogue" },
+  rules: { page: "rules" },
   monthly: { page: "monthly" },
   "my-results": { page: "myResults" },
 };

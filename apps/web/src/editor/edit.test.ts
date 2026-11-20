@@ -29,6 +29,8 @@ import {
   stepsOf,
   toOneAction,
   toSteps,
+  switchDoKind,
+  EMPTY_DO_STASH,
 } from "./edit.ts";
 import { canSetLevel, levelOf, pointsLeft, setBuildLevel } from "./build.ts";
 import { matchingPreset, sameData } from "@game/engine";
@@ -365,5 +367,23 @@ describe("steps in order", () => {
     const moved = moveStep(rule, 0, 1);
     expect(stepsOf(moved)?.map((s) => s.action)).toEqual(["turn", "throw", "stepForward"]);
     expect(stepsOf(moveStep(rule, 2, 1))).toEqual(stepsOf(rule));
+  });
+});
+
+describe("switching a rule's Do between one action and steps (switchDoKind)", () => {
+  const rule: Rule = { ...DEFAULT_STRATEGY.modes[0]!.rules[0]!, action: actionOf("throw") };
+
+  test("a look at steps and back gives the one action back, and a second look gives the edited steps back", () => {
+    const toStepsOnce = switchDoKind(rule, "steps", EMPTY_DO_STASH);
+    expect(stepsOf(toStepsOnce.rule)).not.toBeNull();
+    const edited = addStep(toStepsOnce.rule);
+    const back = switchDoKind(edited, "one", toStepsOnce.stash);
+    expect(back.rule.action).toEqual(rule.action);
+    const again = switchDoKind(back.rule, "steps", back.stash);
+    expect(again.rule.action).toEqual(edited.action);
+  });
+
+  test("the kind the rule has already changes nothing", () => {
+    expect(switchDoKind(rule, "one", EMPTY_DO_STASH)).toEqual({ rule, stash: EMPTY_DO_STASH });
   });
 });

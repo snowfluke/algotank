@@ -29,8 +29,9 @@ import {
   setChance,
   setCondition,
   setFallback,
-  toOneAction,
-  toSteps,
+  switchDoKind,
+  EMPTY_DO_STASH,
+  type DoStash,
   canRemoveStep,
   moveStep,
   removeStep,
@@ -56,6 +57,8 @@ import { chosenMode, focusLater, openerKey, resolveView, type RuleSection, type 
 
 /** The open step, or null when the list is shown. */
 export function RulesStep(props: RulesEditorProps) {
+  // What each rule's other kind of Do held, by rule id, kept while the editor is open (a step's sheet included).
+  const doStashes = useRef(new Map<string, DoStash>());
   const view = resolveView(props.strategy, props.nav);
   switch (view.kind) {
     case "list":
@@ -67,7 +70,7 @@ export function RulesStep(props: RulesEditorProps) {
     case "fallback":
       return <FallbackStep {...props} />;
     case "rule":
-      return <RuleStep {...props} ruleId={view.ruleId} section={view.section} />;
+      return <RuleStep {...props} ruleId={view.ruleId} section={view.section} doStashes={doStashes.current} />;
     case "condition":
       return <ConditionStep {...props} ruleId={view.ruleId} index={view.index} />;
     case "seqStep":
@@ -83,7 +86,7 @@ function useGo(props: RulesEditorProps) {
   };
 }
 
-function RuleStep(props: RulesEditorProps & { readonly ruleId: string; readonly section: RuleSection }) {
+function RuleStep(props: RulesEditorProps & { readonly ruleId: string; readonly section: RuleSection; readonly doStashes: Map<string, DoStash> }) {
   const m = useMessages();
   const [language] = useLanguage();
   const r = m.prep.rules;
@@ -174,7 +177,11 @@ function RuleStep(props: RulesEditorProps & { readonly ruleId: string; readonly 
                 { value: "steps", label: r.stepsInOrder },
               ]}
               value={isSequence(rule.action) ? "steps" : "one"}
-              onChange={(kind) => change(kind === "steps" ? toSteps(rule) : toOneAction(rule))}
+              onChange={(kind) => {
+                const switched = switchDoKind(rule, kind, props.doStashes.get(rule.id) ?? EMPTY_DO_STASH);
+                props.doStashes.set(rule.id, switched.stash);
+                change(switched.rule);
+              }}
             />
             {detail.level === 0 && isSequence(rule.action) ? <p className="text-muted">{r.stepsHelp}</p> : null}
             {isSequence(rule.action) ? (

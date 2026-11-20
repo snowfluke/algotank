@@ -23,6 +23,7 @@ import type {
   ParamSpec,
   ParamValues,
   Rule,
+  StepSequence,
   StrategyInput,
 } from "@game/engine";
 
@@ -186,6 +187,31 @@ export function toSteps(rule: Rule): Rule {
 export function toOneAction(rule: Rule): Rule {
   if (!isSequence(rule.action)) return rule;
   return { ...rule, action: rule.action.steps[0] ?? actionOf("stepForward") };
+}
+
+/** The kind of a rule's Do: one action, or steps in order. */
+export type DoKind = "one" | "steps";
+
+/** What each kind of Do last held while the rule was open; null for a kind the rule has not had. */
+export interface DoStash {
+  readonly one: ActionRef | null;
+  readonly steps: StepSequence | null;
+}
+
+export const EMPTY_DO_STASH: DoStash = { one: null, steps: null };
+
+/**
+ * Switches a rule's Do to `kind`. What the rule held is kept in the stash, and the stash gives back what `kind` held
+ * before, so a look at the other side and back loses nothing (owner, 2026-11-20: switching "always reset each other").
+ * A kind the rule never had starts from toSteps or toOneAction.
+ */
+export function switchDoKind(rule: Rule, kind: DoKind, stash: DoStash): { readonly rule: Rule; readonly stash: DoStash } {
+  const current: DoKind = isSequence(rule.action) ? "steps" : "one";
+  if (current === kind) return { rule, stash };
+  const kept: DoStash = isSequence(rule.action) ? { ...stash, steps: rule.action } : { ...stash, one: rule.action };
+  const back = kind === "steps" ? stash.steps : stash.one;
+  const next = back !== null ? { ...rule, action: back } : kind === "steps" ? toSteps(rule) : toOneAction(rule);
+  return { rule: next, stash: kept };
 }
 
 function withSteps(rule: Rule, change: (steps: readonly ActionRef[]) => readonly ActionRef[]): Rule {

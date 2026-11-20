@@ -1034,7 +1034,7 @@ describe("ultimate lifetime and precedence", () => {
   });
 
   test("a join and a new ultimate start a first charge; the same ultimate stays ready", () => {
-    const round = createOpenRound({ seed: 9, ticksTotal: 30, boardFor: 8, ruleSetId: STANDARD_RULE_SET_ID, items: false, ultimates: true });
+    const round = createOpenRound({ rng: createRng(9), ticksTotal: 30, boardFor: 8, ruleSetId: STANDARD_RULE_SET_ID, items: false, ultimates: true });
     stepRound(round);
     const joined = joinRound(round, { id: "self", strategy: waiting("smoke") });
     expect(joined.ultimate).toEqual({ id: "smoke", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn, turnsTotal: ULTIMATE_RULES.firstReadyTurn });

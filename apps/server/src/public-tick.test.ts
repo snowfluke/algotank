@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { expandTick } from "@game/arena";
-import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, ULTIMATE_IDS, ULTIMATE_RULES, createOpenRound, createRound, runRound, ruleSet, stepRound, type Snapshot } from "@game/engine";
+import { DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, ULTIMATE_IDS, ULTIMATE_RULES, createOpenRound, createRng, createRound, runRound, ruleSet, stepRound, type Snapshot } from "@game/engine";
 import { roundStartMessage, toCompactTick, toPublicSnapshot, toPublicTick } from "./public-tick.ts";
 
 // Sorted, so the test names the allow-list and not an order. The mode of a bot stays out.
@@ -92,7 +92,7 @@ test("a bucket-first Magnet pull reaches both the public turn and the compact wi
 });
 
 test("a single-condition state keeps the original board bytes", () => {
-  const round = createOpenRound({ seed: 87, ruleSetId: "dry-spell", boardFor: 1, ticksTotal: 40, items: true, ultimates: false });
+  const round = createOpenRound({ rng: createRng(87), ruleSetId: "dry-spell", boardFor: 1, ticksTotal: 40, items: true, ultimates: false });
   const bytes = '{"width":8,"height":6,"tick":0,"ticksTotal":40,"survivorsAfterRound":null,"ruleSetId":"dry-spell","bots":[],"items":[]}';
   expect(JSON.stringify(toPublicSnapshot(round.snapshot))).toBe(bytes);
 });

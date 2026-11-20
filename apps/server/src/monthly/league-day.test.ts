@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { plainTankLook, ULTIMATES_FROM } from "@game/arena";
 import { ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, createRng, isArenaLayoutId, parseStrategy, PRESETS, ruleSet, waterCapacityOf, type ArenaConditionId, type Strategy, type UltimateId } from "@game/engine";
 import { LeagueDay, MONTHLY_CONDITIONS, RESHUFFLE_TURNS, type DayTank } from "./league-day.ts";
+import { secureRandom } from "../secrets.ts";
 
 const tank = (n: number): DayTank => ({ id: `seat-${n}`, name: `Tank ${n}`, look: plainTankLook(n as 1), strategy: (PRESETS[0] as (typeof PRESETS)[number]).strategy });
 function weatherDraws() {
@@ -159,7 +160,7 @@ describe("the arena condition", () => {
   test("all six normal conditions and all four layouts share equal odds within their group", () => {
     expect(MONTHLY_CONDITIONS).toHaveLength(6);
     expect(ARENA_LAYOUT_IDS).toHaveLength(4);
-    const day = new LeagueDay(1, createRng(8237).next, () => ULTIMATES_FROM, { seed: () => 10 });
+    const day = new LeagueDay(1, createRng(8237).next, () => ULTIMATES_FROM, { rng: () => createRng(10) });
     const totals = new Map<ArenaConditionId, number>();
     day.start(two, 1000);
     for (let i = 0; i < 4000; i++) {
@@ -200,7 +201,7 @@ describe("the arena condition", () => {
   });
 
   test("before the ultimates release the draw gives only single conditions; from it, layouts with ultimates", () => {
-    const before = new LeagueDay(1, createRng(31).next, () => ULTIMATES_FROM - 1, { seed: () => 10 });
+    const before = new LeagueDay(1, createRng(31).next, () => ULTIMATES_FROM - 1, { rng: () => createRng(10) });
     before.start(two, 1000);
     for (let i = 0; i < 400; i++) {
       before.rebuild(1000);
@@ -398,5 +399,25 @@ describe("new rules for a seated tank", () => {
     expect(() => day.step()).not.toThrow();
     day.rebuild(1000);
     expect(day.countsToday("seat-1")).toBe(true);
+  });
+});
+
+describe("the day's draws (secrets.ts, secureRng)", () => {
+  test("two days with the same tanks and the same league draws still play differently, because the round draws from the system", () => {
+    const play = () => {
+      const day = new LeagueDay(1, () => 0, () => 0);
+      day.start([1, 2, 3, 4].map((n) => ({ tank: tank(n), points: 0, counts: true, stats: undefined })), 5000);
+      for (let turn = 0; turn < 300; turn++) day.step();
+      return JSON.stringify(day.view(5000).board.bots.map((bot) => [bot.id, bot.x, bot.y, bot.score]));
+    };
+    expect(play()).not.toBe(play());
+  });
+
+  test("a secure number is in [0, 1) and spread over it", () => {
+    const draws = Array.from({ length: 20_000 }, secureRandom);
+    expect(draws.every((n) => n >= 0 && n < 1)).toBe(true);
+    const mean = draws.reduce((sum, n) => sum + n, 0) / draws.length;
+    expect(Math.abs(mean - 0.5)).toBeLessThan(0.02);
+    expect(draws.filter((n) => n < 0.1).length / draws.length).toBeGreaterThan(0.08);
   });
 });

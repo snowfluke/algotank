@@ -1,8 +1,9 @@
 // Random identifiers and secret comparison. Every value here comes from the
 // operating system's random source, never from Math.random.
 
-import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomFillSync, randomInt, timingSafeEqual } from "node:crypto";
 import { ARENA_CODE_ALPHABET, ARENA_CODE_LENGTH } from "@game/arena";
+import { rngFrom, type Rng } from "@game/engine";
 
 // The code shape lives in @game/arena, so the web reads typed codes the same way.
 // The largest multiple of the alphabet length that fits in a byte. Bytes at or
@@ -54,4 +55,28 @@ export function safeEqual(a: string, b: string): boolean {
 /** 48 random bits. A chat message's id only has to be unique in its arena's 500 messages. */
 export function newChatMessageId(): string {
   return `m${randomBytes(6).toString("hex")}`;
+}
+
+// The monthly league's draws (2026-11-20, before the source went public). Its players change their rules while a day
+// plays, so a draw anyone could foresee would be worth acting on: a 32-bit round seed can be found by trying every
+// value against the public board, and Math.random's state can be worked out from enough of its outputs. These come
+// straight from the operating system, so a copy of the game and of the live state still cannot tell the next draw.
+// 2,048 words per refill, because one randomInt call per draw costs about 30 times more (378 ms per million on Bun 1.4).
+const pool = new Uint32Array(2048);
+let poolAt = pool.length;
+
+/** A uniform number in [0, 1) with 53 random bits, from the operating system's random source. */
+export function secureRandom(): number {
+  if (poolAt + 2 > pool.length) {
+    randomFillSync(pool);
+    poolAt = 0;
+  }
+  const high = (pool[poolAt++] ?? 0) >>> 5;
+  const low = (pool[poolAt++] ?? 0) >>> 6;
+  return (high * 67_108_864 + low) / 9_007_199_254_740_992;
+}
+
+/** A round's draws from the operating system's random source (a monthly day round). */
+export function secureRng(): Rng {
+  return rngFrom(secureRandom);
 }

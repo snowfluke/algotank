@@ -172,8 +172,12 @@ function spawnedBot(id: BotId, cell: Cell, direction: Direction, modeId: string,
 
 /** An open round: no tank at the start, a board sized for a fixed number of tanks. See the header. */
 export interface OpenRoundConfig {
-  /** A safe integer. */
-  readonly seed: number;
+  /**
+   * Every draw of the round. Tests and balance scripts pass createRng(seed); the monthly league passes the operating
+   * system's random source, because its players change their rules while it plays (2026-11-20, before the source
+   * went public): a 32-bit seed could be found from the public board and predict the rest of the day.
+   */
+  readonly rng: Rng;
   /** The turns planned for the round; the "time left" condition reads it. */
   readonly ticksTotal: number;
   /** The single condition or hybrid layout the round starts with. */
@@ -196,8 +200,9 @@ export function createOpenRound(config: OpenRoundConfig): RoundState {
   const condition = config.ruleSetId;
   const ruleSetId = boardRuleSetId(condition);
   const size = arenaSize(config.boardFor, ruleSet(ruleSetId));
-  const rng = createRng(config.seed);
-  const roundConfig: RoundConfig = { seed: config.seed, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, players: [], items: config.items, ultimates: config.ultimates };
+  const rng = config.rng;
+  // An open round has no seed: it draws from config.rng and cannot be replayed (above), so nothing reads this one.
+  const roundConfig: RoundConfig = { seed: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, players: [], items: config.items, ultimates: config.ultimates };
   const spawn: Snapshot = {
     ...size, tick: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, bots: [], items: [],
     ...(isArenaLayoutId(condition) ? { layout: createArenaLayout(condition, size, rng) } : {}),

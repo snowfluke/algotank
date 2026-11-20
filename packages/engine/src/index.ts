@@ -8,7 +8,7 @@ export { DIRECTION_STEP, directionDegreesFromNorth, isDiagonal, rotate } from ".
 
 // round/ owns the rules of play: the grid, spawning, move resolution, throws,
 // scoring and the final standings.
-export { createRng } from "./round/rng.ts";
+export { createRng, rngFrom } from "./round/rng.ts";
 export { arenaSize } from "./round/grid.ts";
 export { createRound, stepRound, runRound, standings } from "./round/round.ts";
 // An open round of the monthly league: tanks join and leave between turns.

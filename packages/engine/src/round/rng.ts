@@ -23,20 +23,28 @@ function foldSeed(seed: number): number {
   return mix32(low ^ mix32(high + 0x9e3779b9));
 }
 
+/**
+ * A seeded generator: the same seed gives the same round, so a room's round replays from its seed. Its state has 32
+ * bits, so a round whose players can change their rules while it plays (the monthly league) draws from
+ * `rngFrom` with the operating system's random source instead (apps/server/src/secrets.ts, secureRng).
+ */
 export function createRng(seed: number): Rng {
   if (!Number.isSafeInteger(seed)) throw new Error(`seed must be a safe integer, got ${seed}`);
 
   // Mulberry32. A neighbouring seed starts from a far-away state because of foldSeed.
   let state = foldSeed(seed);
 
-  function next(): number {
+  return rngFrom(() => {
     state = (state + 0x6d2b79f5) >>> 0;
     let t = state;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / TWO_POW_32;
-  }
+  });
+}
 
+/** The round's draws (whole numbers, chances, shuffles) on top of `next`, a source of uniform numbers in [0, 1). */
+export function rngFrom(next: () => number): Rng {
   function int(maxExclusive: number): number {
     if (!Number.isSafeInteger(maxExclusive) || maxExclusive < 1) {
       throw new Error(`int() needs a positive integer bound, got ${maxExclusive}`);

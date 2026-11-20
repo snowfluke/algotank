@@ -11,7 +11,7 @@ import { changeRoundRules, createOpenRound, freshStartRound, joinRound, stepRoun
 
 const waiter = strategyOf([mode("main", [], act("wait"))]);
 const open = (ruleSetId: ArenaLayoutId | RuleSetId, boardFor = 1) =>
-  createOpenRound({ ruleSetId, boardFor, seed: 87, ticksTotal: 500, items: false, ultimates: false });
+  createOpenRound({ ruleSetId, boardFor, rng: createRng(87), ticksTotal: 500, items: false, ultimates: false });
 
 describe("hybrid arena geometry", () => {
   test("Four quarters uses whole squares at each edge on an odd board", () => {

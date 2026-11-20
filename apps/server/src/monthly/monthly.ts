@@ -124,7 +124,7 @@ export interface MonthlyOptions {
   readonly tickMs: number;
   /** Times the turns and counts a failed league round (metrics/metrics.ts). NO_METRICS when not given. */
   readonly metrics?: MetricsRecorder;
-  /** Draws the leagues' bots (league-day.ts). Math.random when not given; tests fix it. */
+  /** Draws the leagues' bots, seating and conditions (league-day.ts). secureRandom when not given; tests fix it. */
   readonly random?: Random;
   /** Seats in one league: MONTHLY_SEATS when not given; the tests of several leagues use a small number. */
   readonly seatsPerLeague?: number;

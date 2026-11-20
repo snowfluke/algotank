@@ -331,7 +331,7 @@ describe("appearing and vanishing", () => {
   });
 
   test("a round with items on shows them, and a joining tank never lands on one", () => {
-    const state = createOpenRound({ seed: 5, ticksTotal: 200, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 2, items: true, ultimates: false });
+    const state = createOpenRound({ rng: createRng(5), ticksTotal: 200, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 2, items: true, ultimates: false });
     joinRound(state, { id: "a", strategy: waiter });
     joinRound(state, { id: "b", strategy: waiter });
     for (let turn = 0; turn < 10; turn++) stepRound(state);

@@ -53,8 +53,8 @@
 
 import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundState, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
-import { newBotId, newSeed } from "../secrets.ts";
+import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundState, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { newBotId, secureRandom, secureRng } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS, ultimatesOn } from "@game/arena";
 import type { Clock } from "../timers.ts";
 
@@ -83,7 +83,7 @@ const botStrategies: readonly Strategy[] = BOT_LINEUP.map((slot) => {
   return preset.strategy;
 });
 
-/** A number from 0 (inclusive) to 1 (exclusive): Math.random in the server, a fixed value in tests. */
+/** A number from 0 (inclusive) to 1 (exclusive): secureRandom in the server, a fixed value in tests. */
 export type Random = () => number;
 
 interface LeagueBot {
@@ -157,10 +157,10 @@ export class LeagueDay {
 
   constructor(
     readonly league: number,
-    private readonly random: Random = Math.random,
+    private readonly random: Random = secureRandom,
     private readonly now: Clock,
-    // The balance script pairs round seeds and holds one condition for each run.
-    private readonly field: { readonly seed: () => number; readonly conditions?: readonly ArenaConditionId[] } = { seed: newSeed },
+    // The balance script pairs seeded rounds and holds one condition for each run; the game draws from the system.
+    private readonly field: { readonly rng: () => Rng; readonly conditions?: readonly ArenaConditionId[] } = { rng: secureRng },
   ) {}
 
   /**
@@ -193,7 +193,7 @@ export class LeagueDay {
     this.pendingWeather = undefined;
     const ruleSetId = this.drawCondition();
     // Hold the release choice for this round, even if a seat joins after the gate opens (85-ultimates.md).
-    return createOpenRound({ seed: this.field.seed(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: ultimatesOn(this.now()) });
+    return createOpenRound({ rng: this.field.rng(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: ultimatesOn(this.now()) });
   }
 
   private drawCondition(): ArenaConditionId {

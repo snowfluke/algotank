@@ -30,7 +30,7 @@ const field = PRESET_IDS.flatMap((id) => {
 function measure(condition: ArenaConditionId, days: readonly (typeof DAYS)[number][]) {
   const totals = new Map<string, number>();
   for (const { round, seating } of days) {
-    const day = new LeagueDay(1, createRng(seating).next, () => 0, { seed: () => round, conditions: [condition] });
+    const day = new LeagueDay(1, createRng(seating).next, () => 0, { rng: () => createRng(round), conditions: [condition] });
     day.start(field, TURNS);
     if (day.holdings().onBoard !== field.length) throw new Error("The field drew an extra bot.");
     for (let turn = 0; turn < TURNS; turn++) {

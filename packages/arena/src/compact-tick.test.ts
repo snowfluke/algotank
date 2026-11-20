@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ARENA_LAYOUT_IDS, createOpenRound, joinRound, PRESETS, RULE_SET_IDS, runRound, stepRound, type Snapshot, type TickResult } from "@game/engine";
+import { ARENA_LAYOUT_IDS, createOpenRound, createRng, joinRound, PRESETS, RULE_SET_IDS, runRound, stepRound, type Snapshot, type TickResult } from "@game/engine";
 import { COMPACT_OUTCOMES, compactTick, expandTick, type CompactTick } from "./compact-tick.ts";
 import type { PublicSnapshot, PublicTick } from "./types.ts";
 
@@ -108,7 +108,7 @@ describe("compactTick and expandTick", () => {
 
   for (const layout of ARENA_LAYOUT_IDS) {
     test(`the ${layout} map comes from state and only rain sends its first column in ticks`, () => {
-      const round = createOpenRound({ seed: 87, ticksTotal: 241, ruleSetId: layout, boardFor: 1, items: false, ultimates: false });
+      const round = createOpenRound({ rng: createRng(87), ticksTotal: 241, ruleSetId: layout, boardFor: 1, items: false, ultimates: false });
       joinRound(round, { id: "a", strategy: PRESETS[0]!.strategy });
       joinRound(round, { id: "b", strategy: PRESETS[1]!.strategy });
       let board = JSON.parse(JSON.stringify(publicSnapshot(round.snapshot))) as PublicSnapshot;

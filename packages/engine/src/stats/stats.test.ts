@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { STANDARD_RULE_SET_ID } from "../combat/rule-sets.ts";
 import { createOpenRound, joinRound, runRound, stepRound } from "../round/round.ts";
+import { createRng } from "../round/rng.ts";
 import { PRESETS } from "../strategy/presets.ts";
 import type { RoundConfig, Strategy } from "../types.ts";
 import { addNumbers, addTurn, EMPTY_STATS, statsNumbers, statsOfRound, statsView, turnsOf } from "./stats.ts";
@@ -70,7 +71,7 @@ describe("tank statistics", () => {
   });
 
   test("a tank that joins an open round counts from its first turn", () => {
-    const round = createOpenRound({ seed: 3, ticksTotal: 20, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 8, items: false, ultimates: false });
+    const round = createOpenRound({ rng: createRng(3), ticksTotal: 20, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 8, items: false, ultimates: false });
     joinRound(round, { id: "a", strategy: preset("picker") });
     joinRound(round, { id: "b", strategy: preset("charger") });
     let stats = EMPTY_STATS;

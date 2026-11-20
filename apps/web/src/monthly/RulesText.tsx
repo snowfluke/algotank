@@ -18,7 +18,8 @@ export function RulesText({ strategy }: { readonly strategy: StrategyInput }) {
         <section key={mode.id} className="flex min-w-0 flex-col gap-1">
           {/* With one mode its name says nothing the list does not. */}
           {strategy.modes.length > 1 ? <h4 className="font-display font-semibold [overflow-wrap:anywhere]">{modeName(v, mode)}</h4> : null}
-          <ol className="m-0 flex min-w-0 list-decimal flex-col gap-1 pl-6 [overflow-wrap:anywhere] marker:text-muted">
+          {/* Room for two-digit numbers ("20."), because a mode holds up to 20 rules (LIMITS) and the sheet's scroll box cuts what sticks out. */}
+          <ol className="m-0 flex min-w-0 list-decimal flex-col gap-1 pl-[2.25em] [overflow-wrap:anywhere] marker:text-muted">
             {mode.rules.map((rule) => (
               <li key={rule.id}>{ruleText(v, rule, strategy.modes)}</li>
             ))}

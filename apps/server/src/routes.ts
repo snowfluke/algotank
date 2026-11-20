@@ -36,7 +36,7 @@ import {
   type StreamMessage,
   type TankLook,
 } from "@game/arena";
-import { DEFAULT_PRESET_ID, handicapOf, parseStrategy, PRESETS, type Strategy } from "@game/engine";
+import { DEFAULT_PRESET_ID, parseStrategy, PRESETS, type Strategy } from "@game/engine";
 import { closeArena } from "./arena-lifetime.ts";
 import { assignMissingUltimate } from "./ultimates/strategy.ts";
 import { removePlayerChat, type ChatLimits, type ChatStore } from "./chat.ts";
@@ -137,8 +137,6 @@ function settingsEvent(body: unknown): Extract<ArenaEvent, { kind: "setBotFill" 
 async function readSubmittedStrategy(req: Request): Promise<Strategy> {
   const parsed = parseStrategy(assignMissingUltimate(await readJson(req)));
   if (!parsed.ok) throw new HttpError(400, "The strategy has problems.", { details: parsed.errors });
-  // The check takes up to about 0.1 s for rules of a child's own; doing it now means a round start finds it remembered.
-  handicapOf(parsed.strategy, "room");
   return parsed.strategy;
 }
 

@@ -198,6 +198,8 @@ export type HandicapPlace = "league" | "room";
 export const BUILT_IN_HANDICAP: Readonly<Record<HandicapPlace, number>> = { league: 8, room: 35 };
 
 const builtIn = new Map<string, boolean>();
+/** The checks remembered; the oldest goes first, so a stream of new strategies cannot grow the server's memory. */
+const REMEMBERED = 5_000;
 
 /** RoundPlayer.handicap for a strategy; the check is remembered by its rules, so each strategy is checked once per process. */
 export function handicapOf(strategy: Strategy, place: HandicapPlace): number {
@@ -205,6 +207,8 @@ export function handicapOf(strategy: Strategy, place: HandicapPlace): number {
   let plays = builtIn.get(key);
   if (plays === undefined) {
     plays = builtInStyleOf(strategy) !== null;
+    const oldest = builtIn.size >= REMEMBERED ? builtIn.keys().next().value : undefined;
+    if (oldest !== undefined) builtIn.delete(oldest);
     builtIn.set(key, plays);
   }
   return plays ? BUILT_IN_HANDICAP[place] : 0;

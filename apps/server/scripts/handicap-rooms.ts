@@ -2,7 +2,7 @@
 // tanks: a 90-turn round keeps the top 8 (survivorCount), then a 90-turn final. Each tournament seats every tank of
 // the field with rules of its own and fills the 16 seats with built-in styles drawn at random; there is no leader
 // chaser in a room. Prints, for each handicap, the share of tournaments a built-in style won.
-// Run: bun apps/server/scripts/handicap-rooms.ts <field.json> <tournaments> <handicap>...
+// Run: [ROOM_SIZE=8] bun apps/server/scripts/handicap-rooms.ts <field.json> <tournaments> <handicap>...
 import { survivorCount } from "@game/arena";
 import { builtInStyleOf, createRng, parseStrategy, runRound, type RoundPlayer } from "@game/engine";
 
@@ -15,7 +15,8 @@ const pool = entries.filter((e) => !e.gm).map((entry) => {
   return { id: entry.id, strategy: parsed.strategy, builtIn: builtInStyleOf(parsed.strategy) !== null };
 });
 const TURNS = 90;
-const SIZE = 16;
+/** ROOM_SIZE=8 plays a private room of 8: the final alone. */
+const SIZE = Number(process.env["ROOM_SIZE"] ?? "16");
 
 for (const handicap of handicapArgs.map(Number)) {
   let mixed = 0;

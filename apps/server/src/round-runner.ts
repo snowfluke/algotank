@@ -72,6 +72,8 @@ export class RoundRunner {
           const strategy = strategyOf.get(id);
           if (strategy === undefined) throw new Error(`Round player ${id} is not in arena ${arena.id}.`);
           // A built-in style, a bot's included, plays with the handicap; the stored config keeps it for the replay.
+          // ponytail: checked here, not when the strategy arrives, because that route has no rate limit; a round of
+          // many new own rules waits about 0.1 s for each. Check at submit once the route is rate limited.
           const handicap = handicapOf(strategy, "room");
           return handicap === 0 ? { id, strategy } : { id, strategy, handicap };
         }),

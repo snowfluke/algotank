@@ -77,7 +77,8 @@ export function CatalogueView({
             <IconButton label={m.common.back} icon={<ArrowLeft aria-hidden size={22} />} variant="quiet" data-catalogue-back="" onClick={() => goBack(paths.home())} />
             <h1 className="min-w-0 text-heading [overflow-wrap:anywhere]">{t.heading}</h1>
           </div>
-          <p className="max-w-[60ch] text-muted [overflow-wrap:anywhere] [@media(max-height:700px)]:hidden">{t.intro}</p>
+          {/* On a phone the arena scene needs the height more than this sentence about the page does. */}
+          <p className="max-w-[60ch] text-muted [overflow-wrap:anywhere] max-sm:hidden [@media(max-height:700px)]:hidden">{t.intro}</p>
         </div>
         <div className="shrink-0">
           <SegmentedControl
@@ -95,7 +96,7 @@ export function CatalogueView({
           </div>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-            <EntryList entries={entries} chosen={entry.key} label={t.listLabel(sectionName)} onChoose={(key) => setChosen({ ...chosen, [section]: key })} layout="grid" />
+            <EntryList entries={entries} chosen={entry.key} label={t.listLabel(sectionName)} onChoose={(key) => setChosen({ ...chosen, [section]: key })} layout="icons" />
             <Stage entry={entry} entries={entries} />
           </div>
         )}
@@ -151,10 +152,21 @@ function Stage({ entry, entries }: { readonly entry: CatalogueEntry; readonly en
   );
 }
 
-/** The cards of one collection: rows with a picture on a laptop, a grid of small buttons on a phone. The rows shrink from 48px to 40px in a short window, so eight of them fit 1000 by 600. */
-function EntryList({ entries, chosen, label, onChoose, layout }: { readonly entries: readonly CatalogueEntry[]; readonly chosen: string; readonly label: string; onChoose(key: string): void; readonly layout: "rows" | "grid" }) {
+/**
+ * The cards of one collection: rows with a picture on a laptop (they shrink from 48px to 40px in a short window, so
+ * eight fit 1000 by 600), and on a phone a grid of pictures without words (owner, 2026-11-20: "maximize the arena size
+ * on mobile"). The chosen card's name heads the stage right below, so the tiles need no names of their own; each keeps
+ * it for a screen reader. Up to six cards share one row, eight make two rows of four, and nothing scrolls.
+ */
+function EntryList({ entries, chosen, label, onChoose, layout }: { readonly entries: readonly CatalogueEntry[]; readonly chosen: string; readonly label: string; onChoose(key: string): void; readonly layout: "rows" | "icons" }) {
+  const columns = entries.length <= 6 ? entries.length : 4;
   return (
-    <div role="group" aria-label={label} className={layout === "rows" ? "flex min-h-0 min-w-0 flex-col gap-1" : "grid min-w-0 shrink-0 grid-cols-4 gap-1.5"}>
+    <div
+      role="group"
+      aria-label={label}
+      className={layout === "rows" ? "flex min-h-0 min-w-0 flex-col gap-1" : "grid min-w-0 shrink-0 gap-1.5"}
+      style={layout === "icons" ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined}
+    >
       {entries.map((entry) => {
         const isChosen = entry.key === chosen;
         return (
@@ -165,13 +177,11 @@ function EntryList({ entries, chosen, label, onChoose, layout }: { readonly entr
             data-catalogue-card={entry.key}
             onClick={() => onChoose(entry.key)}
             className={`press flex min-w-0 rounded-[var(--radius-control)] border-2 ${
-              isChosen ? "border-water bg-water-soft" : "border-transparent bg-panel hover:border-line-strong"
-            } ${layout === "rows" ? "max-h-12 min-h-10 flex-1 items-center gap-3 px-2 py-0.5 text-left" : "min-h-11 flex-col items-center gap-1 px-0.5 py-1.5 text-center"}`}
+              isChosen ? "border-water bg-water-soft" : "border-transparent bg-panel [@media(hover:hover)]:hover:border-line-strong"
+            } ${layout === "rows" ? "max-h-12 min-h-10 flex-1 items-center gap-3 px-2 py-0.5 text-left" : "min-h-12 items-center justify-center px-0.5 py-1"}`}
           >
-            <span className={`flex shrink-0 items-center justify-center ${layout === "rows" ? "h-8 w-14" : "h-8 w-full"}`}>{entry.icon}</span>
-            <span className={`min-w-0 font-display font-semibold ${layout === "rows" ? "[overflow-wrap:anywhere]" : "line-clamp-2 w-full text-[0.75rem] leading-tight [overflow-wrap:break-word]"}`}>
-              {entry.name}
-            </span>
+            <span className={`flex shrink-0 items-center justify-center ${layout === "rows" ? "h-8 w-14" : "h-9 w-full"}`}>{entry.icon}</span>
+            <span className={layout === "rows" ? "min-w-0 font-display font-semibold [overflow-wrap:anywhere]" : "sr-only"}>{entry.name}</span>
           </button>
         );
       })}

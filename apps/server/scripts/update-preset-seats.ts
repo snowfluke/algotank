@@ -18,9 +18,9 @@ import { PRESETS, parseStrategy, type Strategy } from "@game/engine";
 import { DEFAULT_DATA_DIR } from "../src/config.ts";
 import { DATABASE_FILE } from "../src/db/open.ts";
 import { assignMissingUltimate } from "../src/ultimates/strategy.ts";
-import BEFORE_RETUNE from "./presets-before-2026-11-16.json";
-import BEFORE_DRY_SPELL from "./presets-before-2026-11-16-dry-spell.json";
-import BEFORE_GRAB from "./presets-before-2026-11-16-grab.json";
+import BEFORE_RETUNE from "../../../packages/engine/src/strategy/former-presets/presets-before-2026-11-16.json";
+import BEFORE_DRY_SPELL from "../../../packages/engine/src/strategy/former-presets/presets-before-2026-11-16-dry-spell.json";
+import BEFORE_GRAB from "../../../packages/engine/src/strategy/former-presets/presets-before-2026-11-16-grab.json";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");

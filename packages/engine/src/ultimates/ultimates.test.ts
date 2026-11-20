@@ -258,7 +258,7 @@ describe("Magnet hand", () => {
     expect(CONDITIONS.targetItem!.test(other, { target: "nearest", item: "bucket" })).toBe(true);
     expect(CONDITIONS.targetItem!.test(other, { target: "nearest", item: "umbrella" })).toBe(false);
 
-    replaceStrategy(state, "self", waiting("magnet", mode("main", [], act("stepForward"))));
+    replaceStrategy(state, "self", waiting("magnet", mode("main", [], act("stepForward"))), undefined);
     const drive = stepRound(state);
     expect(roundTank(state, "self")).toMatchObject({ x: 4, y: 3, item: "bucket", itemUses: 1, itemsWaiting: ["bucket", "umbrella"] });
     expect(drive.pickups).toEqual([]);
@@ -315,11 +315,11 @@ describe("Magnet hand", () => {
     });
     stepRound(state);
     expect(roundTank(state, "self")).toMatchObject({ item: "bucket", itemsWaiting: ["umbrella"] });
-    replaceStrategy(state, "self", throwing);
+    replaceStrategy(state, "self", throwing, undefined);
     while (roundTank(state, "self").item === "bucket" && !state.isOver) stepRound(state);
     expect(roundTank(state, "self")).toMatchObject({ item: "umbrella", itemUses: ITEM_RULES.uses.umbrella });
-    replaceStrategy(state, "self", waiting("magnet"));
-    replaceStrategy(state, "enemy", throwing);
+    replaceStrategy(state, "self", waiting("magnet"), undefined);
+    replaceStrategy(state, "enemy", throwing, undefined);
     let blocks = 0;
     while (blocks < ITEM_RULES.uses.umbrella && !state.isOver) {
       const shot = stepRound(state).throws[0];
@@ -1029,8 +1029,8 @@ describe("ultimate lifetime and precedence", () => {
     const ultimateEffect = { kind: "smoke", turnsLeft: 5 } as const;
     const self = tankWith("smoke", { effect, ultimateEffect });
     const round = placedRound([self, enemy]);
-    expect(replaceStrategy(round, "self", waiting("smoke")).ultimateEffect).toEqual(ultimateEffect);
-    expect(replaceStrategy(round, "self", waiting("dash"))).toMatchObject({ effect, ultimateEffect: null });
+    expect(replaceStrategy(round, "self", waiting("smoke"), undefined).ultimateEffect).toEqual(ultimateEffect);
+    expect(replaceStrategy(round, "self", waiting("dash"), undefined)).toMatchObject({ effect, ultimateEffect: null });
   });
 
   test("a join and a new ultimate start a first charge; the same ultimate stays ready", () => {
@@ -1039,8 +1039,8 @@ describe("ultimate lifetime and precedence", () => {
     const joined = joinRound(round, { id: "self", strategy: waiting("smoke") });
     expect(joined.ultimate).toEqual({ id: "smoke", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn, turnsTotal: ULTIMATE_RULES.firstReadyTurn });
     for (let i = 0; i < ULTIMATE_RULES.firstReadyTurn; i++) stepRound(round);
-    expect(replaceStrategy(round, "self", waiting("smoke")).ultimate).toEqual({ id: "smoke", kind: "ready" });
-    expect(replaceStrategy(round, "self", waiting("dash")).ultimate).toEqual({
+    expect(replaceStrategy(round, "self", waiting("smoke"), undefined).ultimate).toEqual({ id: "smoke", kind: "ready" });
+    expect(replaceStrategy(round, "self", waiting("dash"), undefined).ultimate).toEqual({
       id: "dash", kind: "charging", turnsLeft: ULTIMATE_RULES.firstReadyTurn, turnsTotal: ULTIMATE_RULES.firstReadyTurn,
     });
   });

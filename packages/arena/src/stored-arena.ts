@@ -345,7 +345,9 @@ function roundConfig(raw: unknown, path: string): RoundConfig {
   const survivors = c["survivorsAfterRound"];
   const players = list(c["players"], `${path}.players`).map((x, i) => {
     const p = obj(x, `${path}.players[${i}]`);
-    return { id: text(p["id"], `${path}.players[${i}].id`), strategy: strategy(p["strategy"], `${path}.players[${i}].strategy`) };
+    const player = { id: text(p["id"], `${path}.players[${i}].id`), strategy: strategy(p["strategy"], `${path}.players[${i}].strategy`) };
+    // A config saved before handicaps (2026-11-20) has none, and plays as it did.
+    return p["handicap"] === undefined ? player : { ...player, handicap: int(p["handicap"], `${path}.players[${i}].handicap`, 1) };
   });
   if (players.length < 2) fail(`${path}.players`, "a list of at least 2 players");
   uniqueIds(players.map((p) => p.id), `${path}.players`);

@@ -178,6 +178,30 @@ describe("movement", () => {
   });
 });
 
+describe("handicap (round/handicap of built-in styles, owner 2026-11-20)", () => {
+  // a throws at b from 1 square away: 90% for everyone.
+  const shot = (handicaps: Record<string, number>) => {
+    const rng = fixedRng(true);
+    const result = resolveTick(arena([bot("a", 1, 2, "E"), bot("b", 2, 2, "N")]), moves({ a: "T", b: "L" }), ["a", "b"], rng, undefined, new Map(Object.entries(handicaps)));
+    return { rolled: rng.rolls, shown: result.throws };
+  };
+
+  test("a handicapped thrower rolls with less, a handicapped target is hit with more, and the event shows the plain chance", () => {
+    expect(shot({ a: 15 }).rolled).toEqual([75]);
+    expect(shot({ b: 15 }).rolled).toEqual([95]);
+    expect(shot({ a: 15 }).shown).toEqual([{ throwerId: "a", outcome: "hit", targetId: "b", distance: 1, hitChance: 90 }]);
+  });
+
+  test("two handicapped tanks fight as two plain ones, and no handicap rolls the plain chance", () => {
+    expect(shot({ a: 15, b: 15 }).rolled).toEqual([90]);
+    expect(shot({}).rolled).toEqual([90]);
+  });
+
+  test("the rolled chance stays within 5 to 95", () => {
+    expect(shot({ a: 99 }).rolled).toEqual([5]);
+  });
+});
+
 describe("throws", () => {
   test("a throw hits the first bot in line only", () => {
     const bots = [bot("a", 1, 2, "E"), bot("b", 2, 2, "N"), bot("c", 3, 2, "N")];

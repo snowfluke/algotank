@@ -1,7 +1,7 @@
 // Resolve the chosen moves one at a time against the positions as already changed
 // in this turn. Smoke, Big Umbrella and Dash protect from the start of the turn.
 
-import { POINTS_PER_HIT, canThrow, hitChancePercent, throwRange, waterAfterTick } from "../combat/combat.ts";
+import { MAX_HIT_CHANCE, MIN_HIT_CHANCE, POINTS_PER_HIT, canThrow, hitChancePercent, throwRange, waterAfterTick } from "../combat/combat.ts";
 import { rulesAt, waterCapacityOf } from "./arena-layouts.ts";
 import type { RoundRules } from "../combat/rule-sets.ts";
 import { DIRECTIONS } from "../types.ts";
@@ -45,6 +45,8 @@ interface Slot {
   readonly action: TickMove;
   readonly stuck: boolean;
   readonly ultimatesOn: boolean;
+  /** RoundPlayer.handicap, 0 when the tank has none. */
+  readonly handicap: number;
   waterChange: "refill" | "spend" | "keep";
 }
 
@@ -57,6 +59,8 @@ export function resolveTick(
   order: readonly BotId[],
   rng: Rng,
   itemTurn?: ItemTurn,
+  /** RoundPlayer.handicap of the tanks that have one; the others have none. */
+  handicaps: ReadonlyMap<BotId, number> = new Map(),
 ): TickResolution {
   const capacity = waterCapacityOf(snapshot);
   const byId = new Map<BotId, TickMove>();
@@ -84,6 +88,7 @@ export function resolveTick(
       waterChange: "refill",
       stuck: bot.effect?.kind === "stuck",
       ultimatesOn,
+      handicap: handicaps.get(bot.id) ?? 0,
     };
     // Activate defenses here so earlier shots count too (85-ultimates.md, owner 2026-11-18).
     // The fire in move order only records the event, since the shots can already spend blocks.
@@ -194,9 +199,11 @@ function resolveThrow(
 
   const baseChance = hitChancePercent(thrower.build, target.build, distance, rules);
   const hitChance = chanceThroughSmoke(target, baseChance);
+  // The roll uses the handicapped chance; the event and the rules keep the chance a player can read (round/handicap.ts).
+  const rolledBase = handicapped(baseChance, thrower.handicap, target.handicap);
   const bucket = me.item === "bucket";
   const points = bucket ? ITEM_RULES.bucketHitPoints : POINTS_PER_HIT;
-  const impact = rollImpact(target, me, baseChance, hitChance, points, rng);
+  const impact = rollImpact(target, me, rolledBase, chanceThroughSmoke(target, rolledBase), points, rng);
   if (impact.outcome === "miss" && impact.stoppedBySmoke === true) {
     const deflection = deflectThrow(thrower, target, occupant, rng);
     if (deflection !== null) {
@@ -240,6 +247,12 @@ function deflectThrow(
     ...aim, deflection: impact.outcome,
     ...(impact.protection === undefined ? {} : { deflectedProtection: impact.protection }),
   };
+}
+
+/** The chance a throw is rolled with: the thrower's handicap off, the target's on, within the usual 5 to 95. */
+function handicapped(chance: number, thrower: number, target: number): number {
+  if (thrower === target) return chance;
+  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, chance - thrower + target));
 }
 
 function chanceThroughSmoke(target: Slot, baseChance: number): number {

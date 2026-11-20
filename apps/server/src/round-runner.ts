@@ -2,7 +2,7 @@
 // timer per running arena steps the engine and sends each tick to the stream.
 
 import { ultimatesOn, type ArenaId } from "@game/arena";
-import { createRound, standings, stepRound, type RoundConfig, type RoundState, type Snapshot } from "@game/engine";
+import { createRound, handicapOf, standings, stepRound, type RoundConfig, type RoundState, type Snapshot } from "@game/engine";
 import type { AutoSteps } from "./auto-steps.ts";
 import type { StreamHub } from "./stream.ts";
 import { announcementFor } from "./rule-set-draw.ts";
@@ -71,7 +71,9 @@ export class RoundRunner {
         players: phase.playerIds.map((id) => {
           const strategy = strategyOf.get(id);
           if (strategy === undefined) throw new Error(`Round player ${id} is not in arena ${arena.id}.`);
-          return { id, strategy };
+          // A built-in style, a bot's included, plays with the handicap; the stored config keeps it for the replay.
+          const handicap = handicapOf(strategy, "room");
+          return handicap === 0 ? { id, strategy } : { id, strategy, handicap };
         }),
         // Every arena plays with items (docs/specs/revamp/84-items.md); the stored config keeps it for the replay.
         items: true,

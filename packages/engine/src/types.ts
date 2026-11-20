@@ -353,6 +353,12 @@ export interface Snapshot {
 export interface RoundPlayer {
   readonly id: BotId;
   readonly strategy: Strategy;
+  /**
+   * Percentage points off this tank's throws, and onto the throws aimed at it (round/handicap.ts). The server sets it;
+   * the engine never derives it, so a stored config replays as it played. Absent means none, so older configs and
+   * fixtures play exactly as before.
+   */
+  readonly handicap?: number;
 }
 
 export interface RoundConfig {

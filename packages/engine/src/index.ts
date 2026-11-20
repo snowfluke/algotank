@@ -62,6 +62,7 @@ export { STEP_ACTION_IDS, isSequence, isStepAction } from "./strategy/sequence.t
 export type { StepActionId } from "./strategy/sequence.ts";
 export { PRESETS, PRESET_IDS, DEFAULT_PRESET_ID, PICKER_ORDER, matchingPreset, playStyleOf, sameStrategy } from "./strategy/presets.ts";
 export type { PresetId } from "./strategy/presets.ts";
+export { BUILT_IN_HANDICAP, builtInStyleOf, handicapOf, type HandicapPlace } from "./strategy/built-in.ts";
 // stats/ owns a tank's statistics: running totals of fixed size, read from turn results.
 export { EMPTY_NUMBERS, EMPTY_STATS, addNumbers, addTurn, statsNumbers, statsOfRound, statsView, turnsOf } from "./stats/stats.ts";
 export type { ModeStats, RuleUse, StatsNumbers, StatsView, TankStats, TankTurn } from "./stats/stats.ts";

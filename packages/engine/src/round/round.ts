@@ -72,6 +72,8 @@ class RoundRuntime implements RoundState {
   /** The bots in the middle of a sequence (strategy/sequence.ts). Round state, so a replay of the config is identical. */
   readonly sequences = new Map<BotId, RunningSequence>();
   layoutStartedAt = 0;
+  /** RoundPlayer.handicap of the tanks that have one, set by createRound, joinRound and replaceStrategy. */
+  readonly handicaps = new Map<BotId, number>();
 
   constructor(
     readonly config: RoundConfig,
@@ -88,6 +90,15 @@ class RoundRuntime implements RoundState {
   get isOver(): boolean {
     return this.snapshot.tick >= this.config.ticksTotal;
   }
+}
+
+function setHandicap(round: RoundRuntime, id: BotId, handicap: number | undefined): void {
+  if (handicap === undefined || handicap === 0) {
+    round.handicaps.delete(id);
+    return;
+  }
+  if (!Number.isInteger(handicap) || handicap < 0) throw new Error(`a handicap is a whole number of 0 or more, got ${handicap}`);
+  round.handicaps.set(id, handicap);
 }
 
 function runtimeOf(state: RoundState): RoundRuntime {
@@ -133,7 +144,9 @@ export function createRound(config: RoundConfig): RoundState {
     items: [],
   };
   const strategies = new Map(config.players.map((p) => [p.id, p.strategy] as const));
-  return new RoundRuntime(config, spawn, rng, strategies, tieBreaks);
+  const round = new RoundRuntime(config, spawn, rng, strategies, tieBreaks);
+  for (const player of config.players) setHandicap(round, player.id, player.handicap);
+  return round;
 }
 
 /** Omit level-zero Camouflage so old snapshots, replays and messages keep the same bytes. */
@@ -230,6 +243,7 @@ export function joinRound(state: RoundState, player: RoundPlayer, score = 0): Bo
   const bot: BotState = { ...spawnedBot(player.id, cell, direction, firstMode.id, player.strategy.build, score, waterCapacityOf(before), ultimate), tieRank };
   round.tieBreaks.set(player.id, tieRank);
   round.strategies.set(player.id, player.strategy);
+  setHandicap(round, player.id, player.handicap);
   round.snapshot = { ...before, bots: [...before.bots, bot] };
   return bot;
 }
@@ -261,6 +275,7 @@ export function leaveRound(state: RoundState, id: BotId): void {
   if (!before.bots.some((bot) => bot.id === id)) throw new Error(`player "${id}" is not in the round`);
   round.snapshot = { ...before, bots: before.bots.filter((bot) => bot.id !== id) };
   round.strategies.delete(id);
+  round.handicaps.delete(id);
   round.tieBreaks.delete(id);
   round.sequences.delete(id);
 }
@@ -318,7 +333,7 @@ export function changeRoundRules(state: RoundState, condition: ArenaConditionId,
  * new strategy's upgrades and no running step sequence. Changing an ultimate starts a first charge
  * and clears that ultimate's active effect (85-ultimates.md, owner 2026-11-19).
  */
-export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy): BotState {
+export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy, handicap: number | undefined): BotState {
   const round = runtimeOf(state);
   const before = round.snapshot;
   const old = before.bots.find((bot) => bot.id === id);
@@ -335,6 +350,7 @@ export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy
       : {}),
   };
   round.strategies.set(id, strategy);
+  setHandicap(round, id, handicap);
   round.sequences.delete(id);
   round.snapshot = { ...before, bots: before.bots.map((b) => (b.id === id ? bot : b)) };
   return bot;
@@ -374,7 +390,7 @@ export function stepRound(state: RoundState): TickResult {
 
   // 3. Moves and fires in move order, then item draws.
   const { placements, throws, inflicted, fires, items, pickups, backfires } = resolveTick(before, decisions, order, round.rng,
-    { items: before.items, tick: before.tick, spawn: round.config.items });
+    { items: before.items, tick: before.tick, spawn: round.config.items }, round.handicaps);
 
   // 4. Next snapshot.
   const hits = tallyHits(throws, fires, order);

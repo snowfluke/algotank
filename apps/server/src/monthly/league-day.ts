@@ -53,7 +53,7 @@
 
 import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundState, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, handicapOf, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundPlayer, type RoundState, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, secureRandom, secureRng } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS, RESHUFFLE_TURNS, ultimatesOn } from "@game/arena";
 import type { Clock } from "../timers.ts";
@@ -151,7 +151,12 @@ export class LeagueDay {
     private readonly random: Random = secureRandom,
     private readonly now: Clock,
     // The balance script pairs seeded rounds and holds one condition for each run; the game draws from the system.
-    private readonly field: { readonly rng: () => Rng; readonly conditions?: readonly ArenaConditionId[] } = { rng: secureRng },
+    private readonly field: {
+      readonly rng: () => Rng;
+      readonly conditions?: readonly ArenaConditionId[];
+      /** The balance scripts try other handicaps; the league uses the engine's (handicapOf, "league"). */
+      readonly handicap?: (strategy: Strategy) => number;
+    } = { rng: secureRng },
   ) {}
 
   /**
@@ -163,7 +168,7 @@ export class LeagueDay {
     if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
     const fresh = this.round === null;
     if (this.round === null) this.round = this.newRound(1, ticksLeft);
-    joinRound(this.round, { id: tank.id, strategy: tank.strategy }, points);
+    joinRound(this.round, this.player(tank.id, tank.strategy), points);
     this.seated.set(tank.id, { tank, counts, stats });
     if (fresh) this.drawBots();
     else if (this.seated.size > this.boardFor * BOARD_GROWTH) {
@@ -217,7 +222,7 @@ export class LeagueDay {
   restrategy(id: PlayerId, strategy: Strategy): void {
     const seated = this.seated.get(id);
     if (seated === undefined || this.round === null) throw new Error(`Seat ${id} is not in league ${this.league}.`);
-    replaceStrategy(this.round, id, strategy);
+    replaceStrategy(this.round, id, strategy, this.player(id, strategy).handicap);
     this.seated.set(id, { ...seated, tank: { ...seated.tank, strategy } });
   }
 
@@ -376,7 +381,7 @@ export class LeagueDay {
     // new round, like the tie ranks the engine draws at each join (BotState.tieRank).
     for (const { tank, points, counts, stats } of this.shuffled(tanks)) {
       if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
-      joinRound(round, { id: tank.id, strategy: tank.strategy }, points);
+      joinRound(round, this.player(tank.id, tank.strategy), points);
       this.seated.set(tank.id, { tank, counts, stats: stats ?? EMPTY_STATS });
     }
     this.drawBots();
@@ -442,7 +447,13 @@ export class LeagueDay {
     const colour = ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const).find((c) => !taken.has(c)) ?? (((this.bots.length % 12) + 1) as TankColour);
     const name = BOT_NAMES.find((name) => this.bots.every((bot) => bot.name !== name)) ?? `Bot ${this.bots.length + 1}`;
     const bot: LeagueBot = { id: newBotId(), name, look: plainTankLook(colour) };
-    joinRound(this.round, { id: bot.id, strategy });
+    joinRound(this.round, this.player(bot.id, strategy));
     this.bots.push(bot);
+  }
+
+  /** A tank as the engine plays it: a built-in style, a bot's included, plays with the handicap (handicapOf). */
+  private player(id: PlayerId, strategy: Strategy): RoundPlayer {
+    const handicap = this.field.handicap === undefined ? handicapOf(strategy, "league") : this.field.handicap(strategy);
+    return handicap === 0 ? { id, strategy } : { id, strategy, handicap };
   }
 }

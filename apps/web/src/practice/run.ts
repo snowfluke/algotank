@@ -2,7 +2,7 @@
 // browser with the engine. The setup rules (how many opponents, which mix,
 // how a round is cut) live here, so the screen only reads and shows them.
 
-import { PRESETS, runRound, statsOfRound } from "@game/engine";
+import { handicapOf, PRESETS, runRound, statsOfRound } from "@game/engine";
 import type { BotId, RoundConfig, RuleSetId, Snapshot, Standing, Strategy, TankStats, TickResult } from "@game/engine";
 import { isFinalRound, survivorCount, ultimatesOn } from "@game/arena";
 import type { TankInfo } from "../board/props.ts";
@@ -99,10 +99,13 @@ export function runPractice(settings: PracticeSettings): PracticeRun {
     ticksTotal: settings.ticks,
     // The cut-line conditions read this, so it follows the arena's own rule.
     survivorsAfterRound: isFinalRound(playerCount) ? null : survivorCount(playerCount),
-    players: [
-      { id: PLAYER_ID, strategy: settings.strategy },
-      ...opponents.map((preset, index) => ({ id: `bot-${index + 1}`, strategy: preset.strategy })),
-    ],
+    // The Try it match plays the arena's handicap of built-in styles too, so it shows what the arena would.
+    players: [{ id: PLAYER_ID, strategy: settings.strategy }, ...opponents.map((preset, index) => ({ id: `bot-${index + 1}`, strategy: preset.strategy }))].map(
+      (player) => {
+        const handicap = handicapOf(player.strategy, "room");
+        return handicap === 0 ? player : { ...player, handicap };
+      },
+    ),
   };
   const names: Record<BotId, string> = { [PLAYER_ID]: settings.name };
   opponentNames(opponents, settings.styleName ?? ((preset) => preset.name)).forEach((name, index) => {

@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import type { Rule, Strategy } from "../types.ts";
-import { BUILT_IN_HANDICAP, BUILT_IN_LIKENESS, builtInStyleOf, checkBuiltIn, handicapOf, handicapTierOf, OWN_RULE_CHANGES, ruleChanges } from "./built-in.ts";
+import { BUILT_IN_HANDICAP, BUILT_IN_LIKENESS, builtInStyleOf, checkBuiltIn, handicapClassOf, handicapOf, LEAGUE_STYLE_HANDICAP, OWN_RULE_CHANGES, ruleChanges } from "./built-in.ts";
 import { parseStrategy } from "./parse.ts";
 import { PRESETS } from "./presets.ts";
 
@@ -44,7 +44,7 @@ describe("builtInStyleOf: the cheap edits still count as the built-in style (own
     });
     expect(ruleChanges(evader, preset("evader"))).toBe(0);
     expect(builtInStyleOf(evader)).toBe("evader");
-    expect(handicapTierOf(evader)).toBe("tweaked");
+    expect(handicapClassOf(evader)?.tier).toBe("tweaked");
   });
 
   test(`${OWN_RULE_CHANGES} rules that almost never run change too few choices to count`, () => {
@@ -55,7 +55,7 @@ describe("builtInStyleOf: the cheap edits still count as the built-in style (own
     expect(check.closest.changes).toBeGreaterThanOrEqual(OWN_RULE_CHANGES);
     expect(check.alike.likeness).toBeGreaterThanOrEqual(BUILT_IN_LIKENESS);
     expect(check.style).toBe("item-hunter");
-    expect(handicapTierOf(hunter)).toBe("tweaked");
+    expect(handicapClassOf(hunter)?.tier).toBe("tweaked");
   });
 });
 
@@ -79,10 +79,22 @@ describe("builtInStyleOf: rules of a child's own", () => {
 
   test("an untouched built-in style has the worst tier, and plays with the handicap of where it plays", () => {
     const other = { ...preset("evader"), ultimate: preset("item-hunter").ultimate };
-    expect(handicapTierOf(preset("evader"))).toBe("builtIn");
-    expect(handicapTierOf(other)).toBe("builtInNewUltimate");
-    expect(handicapOf(preset("evader"), "league")).toEqual(BUILT_IN_HANDICAP.league.builtIn);
+    expect(handicapClassOf(preset("evader"))?.tier).toBe("builtIn");
+    expect(handicapClassOf(other)?.tier).toBe("builtInNewUltimate");
+    expect(handicapOf(preset("picker"), "league")).toEqual(BUILT_IN_HANDICAP.league.builtIn);
     expect(handicapOf(preset("evader"), "room")).toEqual(BUILT_IN_HANDICAP.room.builtIn);
+  });
+
+  test("in the league a strong style adds its own handicap to each of its tiers, and rooms do not", () => {
+    const extra = LEAGUE_STYLE_HANDICAP.evader!;
+    const plus = (h: { miss: number; exposure: number }) => ({ miss: h.miss + extra.miss, exposure: h.exposure + extra.exposure });
+    const otherUltimate = { ...preset("evader"), ultimate: preset("item-hunter").ultimate };
+    const oneNumber = edit("evader", (s) => { s.build = { reach: 0, aim: 0, dodge: 0, camouflage: 2 }; });
+    expect(handicapClassOf(oneNumber)).toEqual({ tier: "tweaked", style: "evader" });
+    expect(handicapOf(preset("evader"), "league")).toEqual(plus(BUILT_IN_HANDICAP.league.builtIn));
+    expect(handicapOf(otherUltimate, "league")).toEqual(plus(BUILT_IN_HANDICAP.league.builtInNewUltimate));
+    expect(handicapOf(oneNumber, "league")).toEqual(plus(BUILT_IN_HANDICAP.league.tweaked));
+    expect(handicapOf(oneNumber, "room")).toEqual(BUILT_IN_HANDICAP.room.tweaked);
   });
 
   test("each tier further from the built-in style carries a smaller handicap", () => {

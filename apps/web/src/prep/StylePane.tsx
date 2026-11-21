@@ -121,7 +121,7 @@ export function StylePane({ strategy, look, wide, nowMs, onChange, onSaveNow }: 
 
   // One line: the toast that offers Undo says the rest when a style replaces own rules. Under a built-in style, with
   // any ultimate, the line nudges toward own rules (owner, 2026-11-21): that tank plays with the worst handicap
-  // (handicapTierOf in the engine's strategy/built-in.ts), which no screen names.
+  // (handicapClassOf in the engine's strategy/built-in.ts), which no screen names.
   const status = saved !== null ? s.fromMine(saved.name) : playStyleOf(strategy) === null ? s.ownRules : s.builtInHint;
 
   return (

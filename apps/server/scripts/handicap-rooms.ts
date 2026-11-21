@@ -8,7 +8,7 @@
 // Run: [ROOM_SIZE=8] [OWN_TANKS=6] bun apps/server/scripts/handicap-rooms.ts <field.json> <tournaments> <tier> <handicap.json>...
 //   handicap.json, inline: {"miss":10,"exposure":30}
 import { survivorCount } from "@game/arena";
-import { createRng, handicapTierOf, parseStrategy, PRESETS, runRound, type Handicap, type HandicapTier, type RoundPlayer } from "@game/engine";
+import { createRng, handicapClassOf, parseStrategy, PRESETS, runRound, type Handicap, type HandicapTier, type RoundPlayer } from "@game/engine";
 
 const [fieldFile, countArg, tierArg, ...handicapArgs] = Bun.argv.slice(2);
 const TIERS: readonly HandicapTier[] = ["builtIn", "builtInNewUltimate", "tweaked"];
@@ -31,7 +31,7 @@ const pool = [
     const parsed = parseStrategy(moved);
     return parsed.ok ? [{ id: `moved-${preset.id}`, strategy: parsed.strategy }] : [];
   }),
-].map((tank) => ({ ...tank, tier: handicapTierOf(tank.strategy) }));
+].map((tank) => ({ ...tank, tier: handicapClassOf(tank.strategy)?.tier ?? null }));
 const TURNS = 90;
 /** ROOM_SIZE=8 plays a private room of 8: the final alone. */
 const SIZE = Number(process.env["ROOM_SIZE"] ?? "16");

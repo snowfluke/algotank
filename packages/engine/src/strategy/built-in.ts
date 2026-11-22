@@ -214,7 +214,8 @@ export function handicapClassOf(strategy: Strategy): HandicapClass | null {
  * The handicap of each tier (RoundPlayer.handicap), in percentage points of hit chance, and the rule stays unwritten:
  * no screen shows the numbers or the mechanism. League (owner, 2026-11-21): no built-in style's best tank in the top 10
  * on most days, larger misses accepted; this replaced the first targets, a built-in style winning about 5% of days and
- * a tweaked one about 15%, and now such tanks win almost no day. Rooms keep those first targets: a 90-turn round barely
+ * a tweaked one about 15%, and now such tanks win almost no day. In the league a seated tank plays it only while it holds
+ * a place of the top 10 (apps/server league-day.ts, HANDICAP_PLACES; owner, 2026-11-22). Rooms keep those first targets: a 90-turn round barely
  * feels the exposure part, so the owner chose a medium miss there and about one room in four for a built-in style.
  * builtInNewUltimate sits between. The handicap shifts a throw only between tanks with different handicaps, so it
  * acts between flagged tanks and tanks with rules of their own, and between styles with different LEAGUE_STYLE_HANDICAP.

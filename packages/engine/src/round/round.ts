@@ -339,6 +339,16 @@ export function changeRoundRules(state: RoundState, condition: ArenaConditionId,
  * new strategy's upgrades and no running step sequence. Changing an ultimate starts a first charge
  * and clears that ultimate's active effect (85-ultimates.md, owner 2026-11-19).
  */
+/**
+ * A player's handicap from the next turn on, without touching its strategy, mode or place: the monthly league turns a
+ * built-in style's handicap on and off with its standing (apps/server league-day.ts, HANDICAP_PLACES).
+ */
+export function setPlayerHandicap(state: RoundState, id: BotId, handicap: RoundPlayer["handicap"]): void {
+  const round = runtimeOf(state);
+  if (!round.snapshot.bots.some((bot) => bot.id === id)) throw new Error(`player "${id}" is not in the round`);
+  setHandicap(round, id, handicap);
+}
+
 export function replaceStrategy(state: RoundState, id: BotId, strategy: Strategy, handicap: RoundPlayer["handicap"]): BotState {
   const round = runtimeOf(state);
   const before = round.snapshot;

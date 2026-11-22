@@ -80,7 +80,7 @@ import { makeGameName } from "../game-names.ts";
 import { HttpError, isRecord } from "../http.ts";
 import { checkTypedName } from "../name-filter.ts";
 import { toPublicSnapshot } from "../public-tick.ts";
-import { newPlayerId } from "../secrets.ts";
+import { newPlayerId, secureRng } from "../secrets.ts";
 import { assignMissingUltimate } from "../ultimates/strategy.ts";
 import type { Clock, Scheduler } from "../timers.ts";
 import type { CalendarDay, LeagueCalendar } from "./calendar.ts";
@@ -271,7 +271,7 @@ export class MonthlyLeagues {
   /** Start each league's day round, restoring its weather streak and each seat's record from the checkpoint. */
   private openDay(checkpoint: Checkpoint | null): void {
     this.days.clear();
-    for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, new LeagueDay(league, this.options.random, this.options.now));
+    for (let league = 1; league <= this.seats.leagues; league++) this.days.set(league, this.newDay(league));
     const ticksLeft = this.ticksLeft();
     const seats = [...this.seats.seats.values()].sort((a, b) => a.order - b.order);
     // Each league seats its own tanks below, so a seat in a league with no day would be left out without a word.
@@ -465,7 +465,7 @@ export class MonthlyLeagues {
       names: new Map(this.seats.names).set(accountId, { month: this.today.month, name }),
     };
     this.saveSeatActivity(next, seat, "joined");
-    if (!this.days.has(league)) this.days.set(league, new LeagueDay(league, this.options.random, this.options.now));
+    if (!this.days.has(league)) this.days.set(league, this.newDay(league));
     // A tank that left today and comes back the same day goes on where it stopped, and today counts again: leaving
     // is a pause, like "Change rules" (owner, 2026-11-17: a rejoin started over at 0 and its day did not count). The
     // checkpoint is written before the saved score goes, so a crash in between keeps the points.
@@ -930,6 +930,21 @@ export class MonthlyLeagues {
 
   private gameMasterSeatsIn(league: number): Seat[] {
     return this.seatsIn(league).filter((seat) => this.gameMasters.has(seat.accountId));
+  }
+
+  /** A league's day, which counts today's places without the game masters for the handicap (league-day.ts, HANDICAP_PLACES). */
+  private newDay(league: number): LeagueDay {
+    return new LeagueDay(league, this.options.random, this.options.now, { rng: secureRng, unranked: () => this.gameMasterSeats() });
+  }
+
+  /** The seat ids of the game masters that have a seat. */
+  private gameMasterSeats(): ReadonlySet<PlayerId> {
+    const ids = new Set<PlayerId>();
+    for (const accountId of this.gameMasters) {
+      const seat = this.seats.seats.get(accountId);
+      if (seat !== undefined) ids.add(seat.seatId);
+    }
+    return ids;
   }
 
   private seatById(seatId: PlayerId): Seat {

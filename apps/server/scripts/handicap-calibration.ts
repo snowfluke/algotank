@@ -8,13 +8,14 @@
 // in the top 5 and the top 10.
 // The field is a JSON array of { id, gm, strategy } and stays outside the repository: the calibrations used the live
 // league's seats, which are players' private rules.
-// Run: bun apps/server/scripts/handicap-calibration.ts <field.json> <handicaps.json> <turns> <days> <first-seed>
+// The handicap plays only while a tank holds a place of HANDICAP_PLACES (league-day.ts); HANDICAP_PLACES=n tries another.
+// Run: [HANDICAP_PLACES=10] bun apps/server/scripts/handicap-calibration.ts <field.json> <handicaps.json> <turns> <days> <first-seed>
 //   handicaps.json, inline, the values of 2026-11-21: {"builtIn":{"miss":22,"exposure":45},"builtInNewUltimate":{"miss":21,"exposure":43},
 //   "tweaked":{"miss":20,"exposure":41},"styles":{"evader":{"miss":20,"exposure":5},"dry-hunter":{"miss":20,"exposure":5},
 //   "item-hunter":{"miss":8,"exposure":5},"ambusher":{"miss":8,"exposure":5}}}
 import { plainTankLook } from "@game/arena";
 import { createRng, handicapClassOf, parseStrategy, type Handicap, type HandicapTier, type PresetId, type Strategy } from "@game/engine";
-import { LeagueDay } from "../src/monthly/league-day.ts";
+import { HANDICAP_PLACES, LeagueDay } from "../src/monthly/league-day.ts";
 
 const [fieldFile, handicapsArg, turnsArg, daysArg, seedArg] = Bun.argv.slice(2);
 if (fieldFile === undefined || seedArg === undefined) throw new Error("usage: <field.json> <handicaps.json> <turns> <days> <first-seed>");
@@ -25,6 +26,8 @@ const FIRST_SEED = Number(seedArg);
 const NOW = Date.parse("2026-11-21T12:00:00+07:00");
 /** The top places counted per style; the owner chose the top 10 (2026-11-21), the top 5 is printed beside it. */
 const TOPS = [5, 10] as const;
+/** HANDICAP_PLACES=17 measures another cut-off; the league's is HANDICAP_PLACES (league-day.ts). */
+const PLACES = Number(process.env["HANDICAP_PLACES"] ?? String(HANDICAP_PLACES));
 
 const entries = (await Bun.file(fieldFile).json()) as { id: string; gm: boolean; strategy: unknown }[];
 const field = entries.map((entry, index) => {
@@ -51,7 +54,7 @@ let flaggedInTop = 0;
 const ranks = new Map<string, number[]>();
 for (let d = 0; d < DAYS; d++) {
   const seed = FIRST_SEED + d;
-  const day = new LeagueDay(1, createRng(seed).next, () => NOW, { rng: () => createRng(90_000 + seed), handicap });
+  const day = new LeagueDay(1, createRng(seed).next, () => NOW, { rng: () => createRng(90_000 + seed), handicap, unranked: () => gm, handicapPlaces: PLACES });
   day.start(field.map(({ entry, strategy, colour }) => ({
     tank: { id: entry.id, name: entry.id, look: plainTankLook(colour), strategy }, points: 0, counts: true, stats: undefined,
   })), TURNS);

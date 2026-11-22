@@ -32,6 +32,9 @@
 //     so no coach mark shows.
 // (f) A state with `inView` (the chat with the phone's keyboard open, 72-arena-chat.md): the last visible
 //     element of each selector lies inside the viewport, so the input and the newest line both show.
+// (g) The text rule: each line of visible text is what is painted at its centre, so no text runs under or over
+//     another element (textOverlapInPage).
+// (h) A state with `minSide`: the element keeps at least that many pixels on its smaller side (the test match's board).
 // It writes one screenshot per state, language and size, results.json and results.md, prints
 // the results table, and exits with 1 when anything failed.
 //
@@ -97,6 +100,10 @@ export function sizesFor(state) {
 // loads the page and runs the steps again at every size instead of resizing an open state.
 
 const tab = (value) => ({ click: `[data-tab="${value}"]` });
+// A test match ends its countdown and plays at the first press of play, and stops at the second, so the turn shown stays.
+const PAUSE_MATCH = [{ click: "[data-replay-play]:visible" }, { click: "[data-replay-play]:visible" }];
+// The smallest side the test match's board keeps at the fixed-height sizes (rule (h)); it shrank to 17 px on a phone (2026-11-22).
+const BOARD_FLOOR = { selector: "[data-test-board]", px: 160 };
 
 /** Every tour of guide/tours.ts, finished: the state every screen state starts from. */
 const ALL_TOURS_FINISHED = Object.fromEntries(["workshop", "lobby", "round", "result", "home"].map((id) => [id, { kind: "finished" }]));
@@ -393,6 +400,8 @@ export const STATES = [
     const fixture = phase === "break" ? "privateBreak" : "privateFinished";
     return { screen: "room", state: `${phase}-owner-tank`, owner: "S1a+S1b", path: (f) => `/a/${f[fixture].id}`, as: "owner", fixture, steps: [tab("tank")] };
   }),
+  // A play style that is not the tank's has the button, the tallest slide; the owner's lobby on a phone is the shortest box (2026-11-22).
+  { screen: "room", state: "lobby-owner-tank-other-style", owner: "S1b", path: (f) => `/a/${f.privateLobby.id}`, as: "owner", fixture: "privateLobby", sizes: ["360x640", "390x844", "430x932", "400x620"], steps: [tab("tank"), { click: "[data-carousel-next]" }, { wait: "[data-style-choose]" }] },
   { screen: "room", state: "break-owner-settings", owner: "S1a", path: (f) => `/a/${f.privateBreak.id}`, as: "owner", fixture: "privateBreak", steps: [{ click: '[data-opens="settings"]' }, { wait: "[data-step-sheet]" }] },
   {
     screen: "room",
@@ -666,6 +675,8 @@ export const STATES = [
     seedWorkshop: 1,
     steps: [{ click: "[data-workshop-open]" }, tab("rules"), { click: "[data-rule-open]" }, { wait: "[data-step-sheet]" }],
   },
+  // A running test match in the workshop, where the board must stay large on a phone (2026-11-22).
+  { screen: "workshop", state: "editor-try-running", owner: "S1b", path: () => "/workshop", as: "visitor", seedWorkshop: 1, sizes: [...ULTIMATE_WORKSHOP_SIZES], minSide: BOARD_FLOOR, steps: [{ click: "[data-workshop-open]" }, tab("try"), { click: "[data-test-run]" }, { wait: "[data-test-board]" }, ...PAUSE_MATCH] },
   // The newest seeded style has a problem: the editor's save line and Try it say so.
   { screen: "workshop", state: "editor-problem", owner: "S1b", path: () => "/workshop", as: "visitor", seedWorkshop: 3, seedBroken: 0, steps: [{ click: "[data-workshop-open]" }, tab("try")] },
   // "Mine" in the arena's Play style tab, in the room-sized box of the harness and in the room itself.
@@ -1220,6 +1231,24 @@ STATES.push(
     steps: [{ click: "[data-monthly-join]" }, { wait: "[data-name-fixed]" }],
   },
   { screen: "monthly", state: "join-tank", owner: "M2", path: () => "/monthly", as: "creator", perSize: true, sizes: [...APP_SIZE_NAMES, "1728x1000"], steps: [{ click: "[data-monthly-join]" }, { click: "[data-monthly-next]" }, { wait: "[data-monthly-tank-action] [data-ultimate-link]" }] },
+  // The rules editor of the monthly sheet on a phone (2026-11-22, the owner's phone: about 400 x 640 with the browser's
+  // bars): every tab, the saved styles of "Mine", and a running test match, where the board shrank to a thumbnail.
+  ...[
+    { state: "join-tank-mine", seedWorkshop: 7, steps: [{ click: '[data-style-source="mine"]' }, { wait: "[data-pager-item]" }] },
+    { state: "join-tank-other-style", sizes: ["360x640", "390x844", "430x932", "400x620"], steps: [{ click: "[data-carousel-next]" }, { wait: "[data-style-choose]" }] },
+    { state: "join-tank-rules", steps: [tab("rules"), { wait: "[data-rule-open]" }] },
+    { state: "join-tank-upgrades", steps: [tab("upgrades")] },
+    { state: "join-tank-try", minSide: BOARD_FLOOR, steps: [tab("try"), { click: "[data-test-run]" }, { wait: "[data-test-board]" }, ...PAUSE_MATCH] },
+  ].map((extra) => ({
+    screen: "monthly",
+    owner: "M2",
+    path: () => "/monthly",
+    as: "creator",
+    perSize: true,
+    sizes: [...APP_SIZE_NAMES, "400x620"],
+    ...extra,
+    steps: [{ click: "[data-monthly-join]" }, { click: "[data-monthly-next]" }, { wait: "[data-monthly-tank-action] [data-ultimate-link]" }, ...extra.steps],
+  })),
   {
     screen: "monthly",
     state: "join-tank-problem",
@@ -1753,6 +1782,81 @@ export function overlapInPage(containedScroll) {
 }
 
 /**
+ * Runs in the browser: the text rule (g). Each line of visible text must be the thing painted at its centre: text that
+ * spills out of a box that does not hide overflow runs under or over the next element (the play style card's sentence
+ * over the carousel's buttons, 2026-11-22). The element at the point must be the text's own element, inside it, or
+ * one of its ancestors. Skipped like rule (d): Pager's measuring copies, inert parts, text under an open modal
+ * dialog, text outside the viewport, SVG, and text for screen readers only; also text that takes no pointer events
+ * (the hit test cannot see it) and text under an empty button stretched over its row.
+ */
+export function textOverlapInPage(containedScroll) {
+  const describe = (el) => {
+    const text = (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 32);
+    const hook = [...el.attributes].map((a) => a.name).find((name) => name.startsWith("data-")) ?? "";
+    return `${el.tagName.toLowerCase()}${hook ? `[${hook}]` : ""}${text ? ` "${text}"` : ""}`;
+  };
+  const modal = [...document.querySelectorAll("dialog[open]")].at(-1) ?? null;
+  const out = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if (node.textContent.trim() === "") continue;
+    const el = node.parentElement;
+    if (el === null || el.closest("svg, [data-pager-measure], [inert], [aria-hidden=true] [data-board], [data-coach-callout], [data-coach-pill]") !== null) continue;
+    if (modal !== null && !modal.contains(el)) continue;
+    if (typeof el.checkVisibility === "function" && !el.checkVisibility({ visibilityProperty: true, opacityProperty: true })) continue;
+    // Text for screen readers only (sr-only: a 1 px box that clips it) is meant to sit under the visible control.
+    let hidden = false;
+    for (let up = el; up !== null && !hidden; up = up.parentElement) {
+      const box = up.getBoundingClientRect();
+      if (box.width <= 1 || box.height <= 1) hidden = true;
+    }
+    if (hidden) continue;
+    // A hit test passes through an element that takes no pointer events (a notice laid over the board), so it cannot judge it.
+    if (getComputedStyle(el).pointerEvents === "none") continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    // A box that hides overflow cuts the text on purpose (a name cut with an ellipsis), so only its visible part counts.
+    const clips = [];
+    for (let up = el; up !== null && up !== document.body; up = up.parentElement) {
+      const style = getComputedStyle(up);
+      if (style.overflowX !== "visible" || style.overflowY !== "visible") clips.push(up.getBoundingClientRect());
+    }
+    for (const whole of range.getClientRects()) {
+      let left = whole.left, right = whole.right, top = whole.top, bottom = whole.bottom;
+      for (const clip of clips) {
+        left = Math.max(left, clip.left); right = Math.min(right, clip.right);
+        top = Math.max(top, clip.top); bottom = Math.min(bottom, clip.bottom);
+      }
+      if (right - left <= 2 || bottom - top <= 2) continue;
+      const x = (left + right) / 2;
+      const y = (top + bottom) / 2;
+      if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) continue;
+      const scrollPane = el.closest(containedScroll);
+      if (scrollPane && /^(auto|scroll)$/.test(getComputedStyle(scrollPane).overflowY)) {
+        const pane = scrollPane.getBoundingClientRect();
+        if (y < pane.top || y >= pane.bottom) continue;
+      }
+      const row = el.closest("[data-scroll-row]");
+      if (row) {
+        const pane = row.getBoundingClientRect();
+        if (x < pane.left || x >= pane.right) continue;
+      }
+      const hit = document.elementFromPoint(x, y);
+      if (hit === null || hit === el || el.contains(hit) || hit.contains(el)) continue;
+      // A tour's callout, pill or step counter covers what it points past, for its one step (as in rule (d)).
+      if (hit.closest("[data-coach-callout], [data-coach-pill], [data-coach-counter]") !== null) continue;
+      // An empty button stretched over a row (a ranking row that opens the tank's sheet) lets its row's text show
+      // through: it is clear, or tinted on hover.
+      const over = hit.closest("button, a[href]");
+      if (over !== null && over.textContent.trim() === "" && over.querySelector("svg, img") === null) continue;
+      out.push(`${describe(el)} is under ${describe(hit)}`);
+      break;
+    }
+  }
+  return [...new Set(out)].slice(0, 8);
+}
+
+/**
  * Runs in the browser: a tour state shows its coach mark (`expect` "callout") or its where-to-go pill ("pill"), the
  * callout leaves its target's ring free, and neither meets a box of `keepClear` (the selector KEEP_CLEAR).
  */
@@ -1926,12 +2030,22 @@ async function auditState(browser, base, out, state, fixtures, log) {
       await page.screenshot({ path: shot, fullPage: true });
       const found = unreachable === null ? await page.evaluate(measureInPage, { kind: size.kind, containedScroll: CONTAINED_SCROLL }) : { a: [], b: [], c: [] };
       const overlap = unreachable === null && size.kind === "fit" ? await page.evaluate(overlapInPage, CONTAINED_SCROLL) : [];
+      const textOverlap = unreachable === null && size.kind === "fit" ? await page.evaluate(textOverlapInPage, CONTAINED_SCROLL) : [];
+      const small = unreachable === null && size.kind === "fit" && state.minSide !== undefined ? await page.evaluate(({ selector, px }) => {
+        const el = document.querySelector(selector);
+        if (el === null) return [`${selector} is missing`];
+        const box = el.getBoundingClientRect();
+        const side = Math.round(Math.min(box.width, box.height));
+        return side < px ? [`${selector} is ${side} px on its smaller side, under ${px}`] : [];
+      }, state.minSide) : [];
       const tour = unreachable === null && state.tour !== undefined ? await page.evaluate(tourInPage, { expect: state.tour, keepClear: KEEP_CLEAR }) : [];
       const inView = unreachable === null && state.inView !== undefined ? await page.evaluate(inViewInPage, state.inView) : [];
       const failures = [];
       if (unreachable !== null) failures.push(`unreachable: ${unreachable}`);
       for (const rule of ["a", "b", "c"]) for (const problem of found[rule]) failures.push(`(${rule}) ${problem}`);
       for (const problem of overlap) failures.push(`(d) ${problem}`);
+      for (const problem of textOverlap) failures.push(`(g) ${problem}`);
+      for (const problem of small) failures.push(`(h) ${problem}`);
       for (const problem of tour) failures.push(`(e) ${problem}`);
       for (const problem of inView) failures.push(`(f) ${problem}`);
       results.push({ screen: state.screen, state: state.state, owner: state.owner, lang, size: size.name, pass: failures.length === 0, failures, shot });

@@ -25,8 +25,16 @@ import { ReplayControls } from "./ReplayControls.tsx";
 import { SequenceNow } from "./SequenceNow.tsx";
 import { matchStats, PLAYER_ID } from "./run.ts";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
+import { useBoxSize } from "../ui/useBoxSize.ts";
 import { StatsCard } from "../stats/StatsCard.tsx";
 import type { PracticeRun } from "./run.ts";
+
+/**
+ * Below this column width or height the replay controls take one row (ReplayControls, compact): the full controls
+ * need about 220 px of height and a phone's or a short laptop window's pane left the board 17 to 105 px (2026-11-22).
+ * 448 px is the width the full play row needs; 520 px leaves the board 300 px beside the full controls.
+ */
+const COMPACT_BELOW = { width: 448, height: 520 } as const;
 
 /** Rows the scoreboard shows beside a wide board; it always includes the player. */
 const SCOREBOARD_ROWS = 8;
@@ -49,6 +57,7 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
   const [page, setPage] = useState<"board" | "result">("board");
   const [resultPart, setResultPart] = useState<"summary" | "stats">("summary");
   const stats = useMemo(() => statsView(matchStats(run), run.strategy), [run]);
+  const column = useBoxSize<HTMLDivElement>();
   const tickMs = SPEED_MS[speedId];
 
   useEffect(() => {
@@ -121,12 +130,25 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
     );
   }
 
+  const compact = column.box !== null && (column.box.width < COMPACT_BELOW.width || column.box.height < COMPACT_BELOW.height);
+  const legendInRow = compact && ultimates;
+  const legend = <LegendButton layout={snapshot.layout?.id} ultimates={ultimates} />;
+
   return (
     <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 fit:grid-rows-[minmax(0,1fr)] @3xl:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]">
-      <div className="flex min-h-0 min-w-0 flex-col gap-2">
+      <div ref={column.ref} className="flex min-h-0 min-w-0 flex-col gap-2">
         <ArenaView
           dataAttributes={{ "data-test-board": "" }}
-          switchPlace={ultimates ? { kind: "row", lead: <UltimateLink ultimate={run.strategy.ultimate} size={{ kind: "tile", state: ultimateState }} /> } : undefined}
+          // With compact controls the legend sits in the ultimate's row, so the controls under the board keep one row.
+          switchPlace={ultimates ? {
+            kind: "row",
+            lead: (
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1"><UltimateLink ultimate={run.strategy.ultimate} size={{ kind: "tile", state: ultimateState }} /></div>
+                {legendInRow ? legend : null}
+              </div>
+            ),
+          } : undefined}
           snapshot={snapshot}
           throws={tick?.throws ?? []}
           fires={tick?.fires ?? []}
@@ -156,9 +178,10 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
             dispatch({ type: "seek", frame });
           }}
           onSpeed={setSpeedId}
+          compact={compact}
           extra={
             <>
-              <LegendButton layout={snapshot.layout?.id} ultimates={ultimates} />
+              {legendInRow ? null : legend}
               <Button data-test-show-result="" onClick={() => setPage("result")}>
                 {p.showResult}
               </Button>

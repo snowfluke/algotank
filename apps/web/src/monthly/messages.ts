@@ -176,7 +176,7 @@ export const en = {
     seatTaken: "Your account already has a tank in the monthly arena, so the page shows it now.",
     /** The toast after the tank joined. */
     joined: "Your tank is in the monthly arena now and plays every round by itself, so you can close this page.",
-    /** Beside the submit of the rules step, for joining and for "Change rules": where a player agrees to it. */
+    /** Beside Next on the name step of joining: where a player agrees to it, once (it also covers a change of rules later). */
     rulesOpen: (month: string) => `Everyone can read your tank's rules after each month ends, starting with ${month}.`,
   },
 };

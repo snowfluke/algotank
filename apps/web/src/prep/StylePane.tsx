@@ -44,34 +44,44 @@ export function matchingSaved(strategy: StrategyInput, styles: readonly MyPlaySt
   return styles.find((style) => sameStrategy(style.strategy, strategy)) ?? null;
 }
 
+/**
+ * One of the player's own play styles: its name with the button to use it (or the chosen mark) on the first line, and
+ * its ultimate and traits under it. Below 26rem (a phone, where the row was cut off in a room's lobby, 2026-11-22) the
+ * traits give way and the ultimate stays; the name is how a player knows their own style.
+ */
 function MineRow({ style, chosen, look, nowMs, onUse }: { readonly style: MyPlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly nowMs: number | undefined; onUse(): void }) {
   const m = useMessages();
   const s = m.prep.style;
   const loadable = isLoadable(style);
   const traits = loadable ? traitsOf(style.strategy) : [];
   return (
-    <div className={`flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] border-2 border-b-4 p-3 ${chosen ? "border-water bg-water-soft" : "border-line bg-panel"}`}>
-      <div className="flex min-w-0 items-start gap-3">
+    <div className={`@container flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] border-2 border-b-4 p-3 ${chosen ? "border-water bg-water-soft" : "border-line bg-panel"}`}>
+      <div className="flex min-w-0 items-center gap-3">
         <TankBadge look={look} size={32} name={null} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <p className="truncate font-display text-lead font-semibold">{style.name}</p>
-        </div>
+        <p className="min-w-0 flex-1 truncate font-display text-lead font-semibold">{style.name}</p>
+        {chosen ? (
+          <span className="flex shrink-0 items-center gap-1 text-caption font-semibold text-water">
+            <CircleCheck aria-hidden size={18} strokeWidth={2.5} />
+            {s.chosen}
+          </span>
+        ) : loadable ? (
+          <Button variant="secondary" className="shrink-0" aria-label={`${s.use}: ${style.name}`} onClick={onUse}>
+            {s.useShort}
+          </Button>
+        ) : null}
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1">
-          {loadable ? <Traits traits={traits} ultimate={style.strategy.ultimate} nowMs={nowMs} /> : <p className="text-caption font-semibold text-hit [overflow-wrap:anywhere]">{s.cannotLoad}</p>}
-        </div>
-      {chosen ? (
-        <span className="flex shrink-0 items-center gap-1 text-caption font-semibold text-water">
-          <CircleCheck aria-hidden size={18} strokeWidth={2.5} />
-          {s.chosen}
-        </span>
-      ) : loadable ? (
-        <Button variant="secondary" className="shrink-0" aria-label={`${s.use}: ${style.name}`} onClick={onUse}>
-          {s.useShort}
-        </Button>
-      ) : null}
-      </div>
+      {loadable ? (
+        <>
+          <div className="min-w-0 @[26rem]:hidden">
+            <Traits traits={[]} ultimate={style.strategy.ultimate} nowMs={nowMs} />
+          </div>
+          <div className="min-w-0 @max-[26rem]:hidden">
+            <Traits traits={traits} ultimate={style.strategy.ultimate} nowMs={nowMs} />
+          </div>
+        </>
+      ) : (
+        <p className="text-caption font-semibold text-hit [overflow-wrap:anywhere]">{s.cannotLoad}</p>
+      )}
     </div>
   );
 }

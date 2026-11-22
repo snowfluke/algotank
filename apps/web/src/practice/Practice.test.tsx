@@ -87,7 +87,7 @@ describe("TestMatch", () => {
 });
 
 describe("ReplayControls", () => {
-  const props = { frame: 3, lastFrame: 80, speedId: "normal" as const, onPlay() {}, onPause() {}, onSeek() {}, onSpeed() {} };
+  const props = { frame: 3, lastFrame: 80, speedId: "normal" as const, onPlay() {}, onPause() {}, onSeek() {}, onSpeed() {}, compact: false };
 
   test("the scrubber has a name and states the turn, and play and speed are named", () => {
     const html = renderToStaticMarkup(<ReplayControls {...props} playing={false} />);
@@ -100,6 +100,14 @@ describe("ReplayControls", () => {
   test("playing shows pause, and the end offers to play again", () => {
     expect(renderToStaticMarkup(<ReplayControls {...props} playing />)).toContain(">Pause<");
     expect(renderToStaticMarkup(<ReplayControls {...props} frame={80} playing={false} />)).toContain(">Play again<");
+  });
+
+  test("compact, play is an icon with its name and one button names the speed, for a phone's pane", () => {
+    const html = renderToStaticMarkup(<ReplayControls {...props} compact playing />);
+    expect(html).toContain('aria-label="Pause"');
+    expect(html).toContain('aria-label="Speed: Normal"');
+    expect(html).not.toContain(">Speed<");
+    expect(html).toContain('aria-valuetext="Turn 3 of 80"');
   });
 });
 

@@ -67,7 +67,7 @@ Write interface text in full, plain sentences of about 15 words or fewer. Do not
 
 ## Run the no-scroll audit
 
-The audit (`apps/web/scripts/no-scroll-audit.mjs`) opens every screen state in English and Indonesian at every supported size in a headless Chromium. It fails a state when the page is taller or wider than the window, when a part scrolls inside itself, or when text or a control is cut off. It creates the accounts, arenas and players it needs over HTTP, and closes the arenas at the end.
+The audit (`apps/web/scripts/no-scroll-audit.mjs`) opens every screen state in English and Indonesian at every supported size in a headless Chromium. It fails a state when the page is taller or wider than the window, when a part scrolls inside itself, when text or a control is cut off, or when text runs under another element. It creates the accounts, arenas and players it needs over HTTP, and closes the arenas at the end.
 
 The audit uses Playwright, a dev dependency of `apps/web` that `bun install` installs. Playwright needs its own Chromium, which you download once.
 

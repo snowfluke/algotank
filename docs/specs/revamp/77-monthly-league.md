@@ -88,7 +88,8 @@ Each seat keeps what happened to it for the owner to see once: went up, went dow
   the rule counts are not, because they show how the rules are written.
 - The server enforces this (monthly/disclosure.ts, monthly-protocol.ts has the state table); the
   page opens a tank's sheet from a ranking row, and a published month's list from its card on
-  the champions page. The About list, the rules step and the month-close notice say it.
+  the champions page. The About list, the name step of joining and the month-close notice say it
+  (the rules step said it until 2026-11-22, when the owner moved it to give a phone's height to the tabs).
 
 ## 5. Contract and server (M1)
 

@@ -2,6 +2,9 @@
 // the name (fixed for the month once used, so a fixed name shows as a sentence and is not
 // sent), then the tank with the preparation tabs and "Masukkan tank". The tank is prepared on
 // this device (monthlySource) until the player takes a seat or submits a change to the seated tank.
+// What everyone may read (77-monthly-league.md, 4b) is said once, on the name step, where a player agrees to it before
+// the tank goes in; the tank step needs every line of a phone's height for the tabs (owner, 2026-11-22), and a
+// change of rules later is covered by that agreement.
 
 import { Paintbrush } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -66,15 +69,22 @@ export interface NameStepProps {
 
 export function NameStep({ look, name, fixedName, onChangeTank, onBack, onNext }: NameStepProps) {
   const m = useMessages();
+  const f = useFormat();
   const t = m.monthly.joinSteps;
   return (
     <StepSheet
       title={t.nameTitle}
       onBack={onBack}
       action={
-        <Button type="submit" form="monthly-name" size="lg" data-monthly-next="">
-          {t.next}
-        </Button>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
+          {/* Where a player agrees to the terms: what everyone may read (monthly-protocol.ts). */}
+          <p data-rules-open-notice="" className="min-w-0 flex-1 basis-60 text-muted [overflow-wrap:anywhere]">
+            {t.rulesOpen(f.month(FIRST_PUBLISHED_RULES_MONTH))}
+          </p>
+          <Button type="submit" form="monthly-name" size="lg" className="shrink-0" data-monthly-next="">
+            {t.next}
+          </Button>
+        </div>
       }
     >
       <form
@@ -130,7 +140,6 @@ export interface TankStepProps {
 
 export function TankStep({ strategy, look, playerName, submitting, problem, purpose, nowMs, onBack, onSubmit }: TankStepProps) {
   const m = useMessages();
-  const f = useFormat();
   const t = purpose.kind === "join" ? { title: m.monthly.joinSteps.tankTitle, submit: m.monthly.joinSteps.submit } : { title: m.monthly.changeRules.title, submit: m.monthly.changeRules.submit };
   const ultimate = strategy.load.kind === "ready" ? strategy.load.draft.ultimate : null;
   const [tab, setTab] = useState<PrepTab>("style");
@@ -140,12 +149,7 @@ export function TankStep({ strategy, look, playerName, submitting, problem, purp
       onBack={onBack}
       action={
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
-          {/* Where a player agrees to the terms: what everyone may read (monthly-protocol.ts). The problem takes its place. */}
-          {problem === null ? (
-            <p data-rules-open-notice="" className="min-w-0 flex-1 basis-60 text-muted [overflow-wrap:anywhere]">
-              {m.monthly.joinSteps.rulesOpen(f.month(FIRST_PUBLISHED_RULES_MONTH))}
-            </p>
-          ) : (
+          {problem === null ? null : (
             <p role="alert" className="min-w-0 flex-1 basis-60 font-semibold text-hit [overflow-wrap:anywhere]">
               {problem}
             </p>

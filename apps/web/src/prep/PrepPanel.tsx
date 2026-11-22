@@ -62,9 +62,10 @@ type Step = "saveAs" | "roundRules" | null;
 /**
  * Below this pane width the four tabs and the words "Saving" or "Saved" do not share one
  * row in Indonesian at 360 to 430 px, so the save line shows only its mark there. A save
- * that failed keeps its sentence and Retry, because the player must read them.
+ * that failed keeps its sentence and Retry, because the player must read them. The
+ * workshop's editor uses the same width for its save line (WorkshopEditor.tsx).
  */
-const COMPACT_SAVE_BELOW_PX = 560;
+export const COMPACT_SAVE_BELOW_PX = 560;
 
 function SaveLine({ strategy, compact }: { readonly strategy: StrategyHandle; readonly compact: boolean }) {
   const m = useMessages();

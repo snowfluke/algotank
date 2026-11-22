@@ -22,6 +22,7 @@ import { playSound } from "../sound/player.ts";
 import type { TankLook } from "../tank/look.ts";
 import { Button } from "../ui/Button.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
+import { Pager } from "../ui/Pager.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
 import { useFitDetail } from "../ui/useFitDetail.ts";
 import { Problems } from "./RuleParts.tsx";
@@ -284,15 +285,24 @@ function HelpStep({ rules, onBack }: { readonly rules: RoundRules | null; onBack
   const u = m.prep.upgrades;
   return (
     <StepSheet title={u.helpTitle} onBack={onBack} action={<Button onClick={onBack}>{m.prep.rules.done}</Button>}>
-      <div className="flex min-w-0 flex-col gap-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <UpgradeToken look="token" size={36} />
-          <p className="min-w-0">{u.helpTokens}</p>
-        </div>
-        <p>{u.helpCost}</p>
-        <p>{rules === null ? u.helpDistanceSecret : u.helpDistance(rules.firstDistanceWithSkill)}</p>
-        <p>{u.helpCamouflage}</p>
-      </div>
+      {/* Paged, because on a phone's room lobby the four paragraphs ran under Done (2026-11-22). */}
+      <Pager
+        label={u.helpTitle}
+        items={["tokens", "cost", "distance", "camouflage"] as const}
+        itemKey={(part) => part}
+        ordered={false}
+        gap={8}
+        renderItem={(part) =>
+          part === "tokens" ? (
+            <div className="flex min-w-0 items-center gap-3">
+              <UpgradeToken look="token" size={36} />
+              <p className="min-w-0">{u.helpTokens}</p>
+            </div>
+          ) : (
+            <p>{part === "cost" ? u.helpCost : part === "camouflage" ? u.helpCamouflage : rules === null ? u.helpDistanceSecret : u.helpDistance(rules.firstDistanceWithSkill)}</p>
+          )
+        }
+      />
     </StepSheet>
   );
 }

@@ -19,6 +19,7 @@ import { issueSentence } from "../prep/messages.ts";
 import { RulesPane } from "../prep/RulesPane.tsx";
 import { focusLater, resolveView, RULES_LIST, type RulesNav } from "../prep/rulesNav.ts";
 import { UpgradesPane } from "../prep/UpgradesPane.tsx";
+import { COMPACT_SAVE_BELOW_PX } from "../prep/PrepPanel.tsx";
 import { usePaneWidth } from "../prep/usePaneWidth.ts";
 import { useStrategySession } from "../prep/useStrategySession.ts";
 import { useMyTank } from "../mytank/useMyTank.ts";
@@ -181,6 +182,10 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
   const issues = parsed.ok ? [] : parsed.issues;
   const rules = ruleSet(ruleSetId);
   const save = workshopSaveView(parsed.ok, library.account, w);
+  // On a phone the save line shows only its mark (its words stay for screen readers), as the arena's prep pane does, so
+  // the ultimate, the save line and the round rules share one row and the panes keep the height (2026-11-22). A save
+  // that failed keeps its sentence, because the player must read it.
+  const compactSave = width.width !== null && width.width < COMPACT_SAVE_BELOW_PX && save.kind !== "problem";
   // On a phone the name row (with the ultimate button) gives its height to an open rules step.
   const stepOpen = pane === "rules" && resolveView(draft, nav).kind !== "list";
   const closeUltimatePicker = () => {
@@ -247,9 +252,9 @@ export function WorkshopEditor({ style, library, nowMs, onBack }: WorkshopEditor
               <Pencil aria-hidden size={16} strokeWidth={2.5} className="shrink-0 text-guide-ink" />
             </button>
             )}
-            <p role="status" data-coach="style-saved" className={`flex min-w-0 flex-[1_1_12rem] items-start gap-1.5 text-caption font-semibold ${save.kind === "problem" ? "text-hit" : save.kind === "saved" ? "text-ok" : "text-muted"}`}>
-              {save.kind === "problem" ? <CircleAlert aria-hidden size={16} strokeWidth={2.5} className="mt-0.5 shrink-0" /> : save.kind === "saved" ? <CircleCheck aria-hidden size={16} strokeWidth={2.5} className="mt-0.5 shrink-0" /> : null}
-              <span className="min-w-0 [overflow-wrap:anywhere]">{save.text}</span>
+            <p role="status" data-coach="style-saved" className={`flex min-w-0 items-start gap-1.5 text-caption font-semibold ${compactSave ? "shrink-0" : "flex-[1_1_12rem]"} ${save.kind === "problem" ? "text-hit" : save.kind === "saved" ? "text-ok" : "text-muted"}`}>
+              {save.kind === "problem" ? <CircleAlert aria-hidden size={16} strokeWidth={2.5} className="mt-0.5 shrink-0" /> : save.kind === "saved" ? <CircleCheck aria-hidden size={compactSave ? 20 : 16} strokeWidth={2.5} className="mt-0.5 shrink-0" /> : null}
+              <span className={compactSave ? "sr-only" : "min-w-0 [overflow-wrap:anywhere]"}>{save.text}</span>
             </p>
             {/* Words from 480px; on a phone the icon, with the same accessible name, keeps this to one row. */}
             <IconButton

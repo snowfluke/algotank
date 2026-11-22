@@ -8,10 +8,13 @@
 // which two lines are always kept, so every drawing starts at the same height and every
 // name sits on the same line. When the pane is short the drawing shrinks and keeps its
 // shape; the words stay, and a pane too short for the grid's words gets the carousel.
+// A pane too short for a whole slide (a phone's room lobby, 2026-11-22: the sentence ran
+// under the carousel's buttons) leaves out the drawing, and then the sentence, measured
+// as the grid is; the name, the ultimate and the button always stay.
 // Only one scene moves at a time (movingStyle).
 
 import { CircleCheck } from "lucide-react";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { PresetId } from "@game/engine";
 import { UltimateLink } from "../catalogue/UltimateLink.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -37,39 +40,51 @@ export interface BuiltInStylesProps {
   readonly actionLabel: string;
 }
 
+/**
+ * What a slide shows, from the whole card to the least a short pane gets: "full" has the drawing and the sentence,
+ * "noDrawing" the sentence, "nameOnly" neither. The tiles of the grid are always "full".
+ */
+const SLIDE_FITS = ["full", "noDrawing", "nameOnly"] as const;
+type SlideFit = (typeof SLIDE_FITS)[number];
+
 /** The drawing, the name and the sentence: the same in a tile and in a slide. */
 /** `badge` sits at the end of the name's line: the slide puts the ultimate's chip there, so it needs no row of its own. */
-function CardFace({ style, chosen, look, live, badge }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly live: boolean; readonly badge?: ReactNode }) {
+function CardFace({ style, chosen, look, live, badge, fit = "full" }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly live: boolean; readonly badge?: ReactNode; readonly fit?: SlideFit }) {
   const m = useMessages();
   const text = m.vocabulary.playStyles[style.id];
   return (
     <>
       {/* The drawing keeps its 5:3 shape: it is as wide as the card, and on a short pane it shrinks inside its box. */}
+      {fit !== "full" ? null : (
       <span className="relative block aspect-[5/3] min-h-10 w-full min-w-0 shrink overflow-hidden rounded-[0.75rem]">
         <span className="absolute inset-0 flex">
           <PlayStyleScene style={style.id} look={look} live={live} fill />
         </span>
       </span>
+      )}
       <span className="flex w-full min-w-0 shrink-0 items-center gap-1.5">
         <span className="min-w-0 flex-1 truncate font-display font-semibold leading-tight">{text.name}</span>
         {badge}
         {chosen ? <CircleCheck aria-label={m.prep.style.chosen} size={20} strokeWidth={2.5} className="shrink-0 text-water" /> : null}
       </span>
       {/* Two lines are always kept, so the cards of a row end together whatever the sentence's length. */}
-      <span className="block min-h-[2lh] w-full shrink-0 text-caption text-muted [overflow-wrap:anywhere]">{text.summary}</span>
+      {fit === "nameOnly" ? null : <span className="block min-h-[2lh] w-full shrink-0 text-caption text-muted [overflow-wrap:anywhere]">{text.summary}</span>}
     </>
   );
 }
 
 /** One style with its drawing as large as the slide allows, and the button to choose it. */
-function Slide({ style, chosen, look, nowMs, onChoose, actionLabel }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly nowMs?: number | undefined; onChoose(): void; readonly actionLabel: string }) {
+function Slide({ style, chosen, look, nowMs, onChoose, actionLabel, fit, onSpill }: { readonly style: PlayStyle; readonly chosen: boolean; readonly look: TankLook; readonly nowMs?: number | undefined; onChoose(): void; readonly actionLabel: string; readonly fit: SlideFit; onSpill(): void }) {
   const m = useMessages();
+  const card = useRef<HTMLElement | null>(null);
+  useSpill(card, onSpill);
   return (
     <article
+      ref={card}
       aria-label={m.vocabulary.playStyles[style.id].name}
       className={`mx-auto flex min-h-0 w-full max-w-md min-w-0 shrink flex-col gap-2 rounded-[var(--radius-card)] border-2 border-b-4 p-3 ${chosen ? "border-water bg-water-soft" : "border-line bg-panel"}`}
     >
-      <CardFace style={style} chosen={chosen} look={look} live badge={<UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />} />
+      <CardFace style={style} chosen={chosen} look={look} live fit={fit} badge={<UltimateLink ultimate={style.strategy.ultimate} nowMs={nowMs} />} />
       {/* The chosen style needs no button: the mark beside its name says it is the one. */}
       {chosen ? null : <Button className="max-w-full shrink-0 self-start" data-style-choose={style.id} data-focus-key={`style:${style.id}`} onClick={onChoose}>{actionLabel}</Button>}
     </article>
@@ -123,23 +138,41 @@ function Grid({ chosen, look, nowMs, onChoose, onTooShort }: Pick<BuiltInStylesP
   );
 }
 
+/** Calls `onSpill` after a render in which the element's content is taller than the element. */
+function useSpill(element: RefObject<HTMLElement | null>, onSpill: () => void): void {
+  useLayoutEffect(() => {
+    const box = element.current;
+    if (box !== null && box.scrollHeight > box.clientHeight + 1) onSpill();
+  });
+}
+
 export function BuiltInStyles(props: BuiltInStylesProps) {
   const { ref, box } = useBoxSize<HTMLDivElement>();
   // The height below which the grid clipped a tile, measured once it did; until the pane is taller, the carousel shows.
   const [gridNeeds, setGridNeeds] = useState(0);
+  // The same for each slide fit: the height below which a slide spilled at that fit. The fullest fit with room shows.
+  const [slideNeeds, setSlideNeeds] = useState<readonly number[]>(() => SLIDE_FITS.map(() => 0));
   const grid = props.wide && (box === null || box.height >= gridNeeds);
+  const fitIndex = box === null ? 0 : slideNeeds.findIndex((need) => box.height >= need);
+  const fit = SLIDE_FITS[fitIndex === -1 ? SLIDE_FITS.length - 1 : fitIndex] ?? "full";
+  const spill = () => {
+    const at = SLIDE_FITS.indexOf(fit);
+    const need = (box?.height ?? 0) + 1;
+    // The same array when nothing is new, so a slide that spills even at the last fit does not render again and again.
+    setSlideNeeds((needs) => ((needs[at] ?? 0) >= need ? needs : needs.map((old, i) => (i === at ? need : old))));
+  };
   return (
     <div ref={ref} className="flex min-h-0 min-w-0 flex-1 flex-col">
       {grid ? (
         <Grid chosen={props.chosen} look={props.look} nowMs={props.nowMs} onChoose={props.onChoose} onTooShort={() => setGridNeeds((need) => Math.max(need, (box?.height ?? 0) + 1))} />
       ) : (
-        <StyleCarousel {...props} />
+        <StyleCarousel {...props} fit={fit} onSpill={spill} />
       )}
     </div>
   );
 }
 
-function StyleCarousel({ chosen, look, nowMs, index, onIndexChange, onChoose, actionLabel }: BuiltInStylesProps) {
+function StyleCarousel({ chosen, look, nowMs, index, onIndexChange, onChoose, actionLabel, fit, onSpill }: BuiltInStylesProps & { readonly fit: SlideFit; onSpill(): void }) {
   const m = useMessages();
   return (
     // The carousel takes the height its slide needs, so the card hugs its content and the pager sits right under it;
@@ -151,7 +184,7 @@ function StyleCarousel({ chosen, look, nowMs, index, onIndexChange, onChoose, ac
       itemKey={(style) => style.id}
       index={index}
       onIndexChange={onIndexChange}
-      renderItem={(style) => <Slide style={style} chosen={style.id === chosen} look={look} nowMs={nowMs} onChoose={() => onChoose(style)} actionLabel={actionLabel} />}
+      renderItem={(style) => <Slide style={style} chosen={style.id === chosen} look={look} nowMs={nowMs} onChoose={() => onChoose(style)} actionLabel={actionLabel} fit={fit} onSpill={onSpill} />}
     />
     </div>
   );

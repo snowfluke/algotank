@@ -53,7 +53,7 @@
 
 import { plainTankLook, type FreshStart, type LeagueDayPhase, type LeagueTank, type PlayerId, type TankColour, type TankLook } from "@game/arena";
 import { BOT_LINEUP, BOT_NAMES } from "../bots.ts";
-import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, handicapOf, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, setPlayerHandicap, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundPlayer, type RoundState, type Handicap, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
+import { addTurn, ARENA_LAYOUT_IDS, arenaConditionOf, arenaSize, boardRuleSetId, changeRoundRules, createOpenRound, EMPTY_STATS, freshStartRound, handicapOf, joinRound, leaveRound, PRESETS, replaceStrategy, RULE_SET_IDS, ruleSet, STANDARD_RULE_SET_ID, stepRound, type ArenaConditionId, turnsOf, type RoundPlayer, type RoundState, type Handicap, type Rng, type Snapshot, type Strategy, type TankStats, type TickResult } from "@game/engine";
 import { newBotId, secureRandom, secureRng } from "../secrets.ts";
 import { MONTHLY_BOARD_MIN_TANKS, RESHUFFLE_TURNS, ultimatesOn } from "@game/arena";
 import type { Clock } from "../timers.ts";
@@ -74,21 +74,7 @@ interface Seated {
   stats: TankStats;
   /** Its changes of rules today, each taking RULE_CHANGE_RELIEF of its handicap off; zero at a seat and a new day. */
   ruleChanges: number;
-  /** The handicap of its rules after today's relief, played only while it holds a place of HANDICAP_PLACES. */
-  handicap: Handicap | undefined;
 }
-
-/**
- * A tank with a built-in style plays with its handicap only while it holds one of the first HANDICAP_PLACES places of
- * today's standings (owner, 2026-11-22: "the handicap activated once they enter top 10, so it is situational"). Lower,
- * it plays as it is, so a beginner who starts from a built-in style is not held back at the bottom. The places are
- * counted as the page's list counts them, by points with game masters left out (LeagueDay's `unranked`), from the
- * points before each turn, so the rule needs nothing saved: a restart or a new round counts again at its first turn.
- * Ties keep the board's order, where the page breaks them by seat order. A bot is not in the standings, so it always
- * plays with its style's handicap, as before. Measured on the live league, 42 days (2026-11-22): built-in tanks then hold
- * 4.0 of the top 10 places at the day's end (0.0 with the handicap at every place) and win no day; the owner chose it.
- */
-export const HANDICAP_PLACES = 10;
 
 /**
  * The share of a tank's handicap each change of rules during a day takes off, to another built-in style too (owner,
@@ -185,15 +171,8 @@ export class LeagueDay {
       readonly conditions?: readonly ArenaConditionId[];
       /** The balance scripts try other handicaps; the league uses the engine's (handicapOf, "league"). */
       readonly handicap?: (strategy: Strategy) => Handicap | undefined;
-      /** The seats that take no place in today's standings, the game masters' (HANDICAP_PLACES); asked once a turn. */
-      readonly unranked?: () => ReadonlySet<PlayerId>;
-      /** The scripts measure other cut-offs; the league uses HANDICAP_PLACES. */
-      readonly handicapPlaces?: number;
     } = { rng: secureRng },
   ) {}
-
-  /** The handicap set on the board for each seat now, so a turn changes only the seats that crossed the line. */
-  private readonly handicapsSet = new Map<PlayerId, Handicap | undefined>();
 
   /**
    * Seats a tank between turns. `ticksLeft` sizes a round that starts now. `points` is 0, or
@@ -204,8 +183,8 @@ export class LeagueDay {
     if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
     const fresh = this.round === null;
     if (this.round === null) this.round = this.newRound(1, ticksLeft);
-    joinRound(this.round, { id: tank.id, strategy: tank.strategy }, points);
-    this.seated.set(tank.id, { tank, counts, stats, ruleChanges, handicap: this.handicapFor(tank.strategy, ruleChanges) });
+    joinRound(this.round, this.player(tank.id, tank.strategy, ruleChanges), points);
+    this.seated.set(tank.id, { tank, counts, stats, ruleChanges });
     if (fresh) this.drawBots();
     else if (this.seated.size > this.boardFor * BOARD_GROWTH) {
       this.rebuild(ticksLeft);
@@ -259,10 +238,8 @@ export class LeagueDay {
     const seated = this.seated.get(id);
     if (seated === undefined || this.round === null) throw new Error(`Seat ${id} is not in league ${this.league}.`);
     const ruleChanges = seated.ruleChanges + 1;
-    // The new rules start without a handicap; the next turn sets theirs if the tank holds a place of HANDICAP_PLACES.
-    replaceStrategy(this.round, id, strategy, undefined);
-    this.handicapsSet.delete(id);
-    this.seated.set(id, { ...seated, tank: { ...seated.tank, strategy }, ruleChanges, handicap: this.handicapFor(strategy, ruleChanges) });
+    replaceStrategy(this.round, id, strategy, this.player(id, strategy, ruleChanges).handicap);
+    this.seated.set(id, { ...seated, tank: { ...seated.tank, strategy }, ruleChanges });
   }
 
   unseat(id: PlayerId): { readonly points: number; readonly counts: boolean } {
@@ -271,7 +248,6 @@ export class LeagueDay {
     const points = this.pointsOf(id);
     leaveRound(this.round, id);
     this.seated.delete(id);
-    this.handicapsSet.delete(id);
     if (this.seated.size === 0) {
       this.round = null;
       this.bots = [];
@@ -326,7 +302,6 @@ export class LeagueDay {
   step(): LeagueTurn | null {
     const round = this.round;
     if (round === null || this.seated.size === 0 || round.isOver) return null;
-    this.placeHandicaps(round);
     const before = round.snapshot;
     const result = stepRound(round);
     this.count(before, result);
@@ -418,13 +393,12 @@ export class LeagueDay {
     if (tanks.length === 0) return;
     const round = this.newRound(tanks.length, ticksLeft);
     this.round = round;
-    this.handicapsSet.clear();
     // A random seating order, so the board's tank order (which settles some ties) changes with every
     // new round, like the tie ranks the engine draws at each join (BotState.tieRank).
     for (const { tank, points, counts, stats, ruleChanges = 0 } of this.shuffled(tanks)) {
       if (this.seated.has(tank.id)) throw new Error(`Seat ${tank.id} is already in league ${this.league}.`);
-      joinRound(round, { id: tank.id, strategy: tank.strategy }, points);
-      this.seated.set(tank.id, { tank, counts, stats: stats ?? EMPTY_STATS, ruleChanges, handicap: this.handicapFor(tank.strategy, ruleChanges) });
+      joinRound(round, this.player(tank.id, tank.strategy, ruleChanges), points);
+      this.seated.set(tank.id, { tank, counts, stats: stats ?? EMPTY_STATS, ruleChanges });
     }
     this.drawBots();
   }
@@ -493,39 +467,11 @@ export class LeagueDay {
     this.bots.push(bot);
   }
 
-  /** A bot as the engine plays it: with its built-in style's handicap at all times (HANDICAP_PLACES). */
-  private player(id: PlayerId, strategy: Strategy): RoundPlayer {
-    const handicap = this.handicapFor(strategy, 0);
-    return handicap === undefined ? { id, strategy } : { id, strategy, handicap };
-  }
-
-  /** The handicap of a built-in style (handicapOf, "league") after `ruleChanges` changes today, or undefined for none. */
-  private handicapFor(strategy: Strategy, ruleChanges: number): Handicap | undefined {
+  /** A tank as the engine plays it: a built-in style, a bot's included, plays with the handicap (handicapOf) after today's relief. */
+  private player(id: PlayerId, strategy: Strategy, ruleChanges = 0): RoundPlayer {
     const full = this.field.handicap === undefined ? handicapOf(strategy, "league") : this.field.handicap(strategy);
-    return full === undefined ? undefined : relieved(full, ruleChanges);
-  }
-
-  /** Before a turn: each seat with a handicap plays it only while it holds a place of HANDICAP_PLACES. */
-  private placeHandicaps(round: RoundState): void {
-    const places = this.field.handicapPlaces ?? HANDICAP_PLACES;
-    const unranked = this.field.unranked?.();
-    const points = new Map(round.snapshot.bots.map((bot) => [bot.id, bot.score]));
-    const standing = [...this.seated.values()].filter(({ tank }) => unranked === undefined || !unranked.has(tank.id));
-    // A stable sort, so ties keep the board's order.
-    standing.sort((a, b) => (points.get(b.tank.id) ?? 0) - (points.get(a.tank.id) ?? 0));
-    const placed = new Set(standing.slice(0, places).map(({ tank }) => tank.id));
-    for (const { tank, handicap } of this.seated.values()) {
-      const wanted = placed.has(tank.id) ? handicap : undefined;
-      if (this.handicapsSet.has(tank.id) && this.handicapsSet.get(tank.id) === wanted) continue;
-      setPlayerHandicap(round, tank.id, wanted);
-      this.handicapsSet.set(tank.id, wanted);
-    }
-  }
-
-  /** The handicap the seat plays with now (HANDICAP_PLACES), for the tests and the balance scripts. */
-  handicapNow(id: PlayerId): Handicap | undefined {
-    if (!this.seated.has(id)) throw new Error(`Seat ${id} is not in league ${this.league}.`);
-    return this.handicapsSet.get(id);
+    const handicap = full === undefined ? undefined : relieved(full, ruleChanges);
+    return handicap === undefined ? { id, strategy } : { id, strategy, handicap };
   }
 
   /** The seat's changes of rules today, for the checkpoint. */

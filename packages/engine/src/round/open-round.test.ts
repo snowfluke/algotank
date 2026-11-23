@@ -6,7 +6,7 @@ import { act, bot, mode, rule, snapshotOf, strategyOf, when } from "../strategy/
 import { TARGET_SELECTORS } from "../strategy/vocabulary.ts";
 import type { BoardItem, RoundState, Strategy } from "../types.ts";
 import { arenaSize, cellKey, isInside } from "./grid.ts";
-import { changeRoundRules, createOpenRound, createRound, freshStartRound, joinRound, leaveRound, replaceStrategy, roundHoldings, setPlayerHandicap, standings, stepRound } from "./round.ts";
+import { changeRoundRules, createOpenRound, createRound, freshStartRound, joinRound, leaveRound, replaceStrategy, roundHoldings, standings, stepRound } from "./round.ts";
 
 const strategyAt = (i: number): Strategy => (PRESETS[i % PRESETS.length] as (typeof PRESETS)[number]).strategy;
 const open = (seed = 7, ticksTotal = 500): RoundState => createOpenRound({ rng: createRng(seed), ticksTotal, ruleSetId: STANDARD_RULE_SET_ID, boardFor: 16, items: false, ultimates: false });
@@ -249,19 +249,5 @@ describe("new rules for a tank on the board", () => {
     expect(() => stepRound(round)).not.toThrow();
     expect(Object.hasOwn(replaceStrategy(round, "a", changed, undefined).build, "camouflage")).toBe(false);
     expect(() => replaceStrategy(round, "nobody", next, undefined)).toThrow();
-  });
-
-  test("setPlayerHandicap changes only the handicap: the tank keeps its mode, its turns in it and its place", () => {
-    const round = open();
-    joinRound(round, { id: "a", strategy: strategyAt(0) });
-    joinRound(round, { id: "b", strategy: strategyAt(1) });
-    for (let i = 0; i < 30; i++) stepRound(round);
-    const before = round.snapshot.bots.find((b) => b.id === "a");
-    setPlayerHandicap(round, "a", { miss: 6, exposure: 12 });
-    expect(round.snapshot.bots.find((b) => b.id === "a")).toEqual(before);
-    setPlayerHandicap(round, "a", undefined);
-    expect(() => stepRound(round)).not.toThrow();
-    expect(() => setPlayerHandicap(round, "nobody", 5)).toThrow();
-    expect(() => setPlayerHandicap(round, "a", { miss: -1, exposure: 0 })).toThrow();
   });
 });

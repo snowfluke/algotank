@@ -418,37 +418,6 @@ describe("new rules for a seated tank", () => {
     expect(relieved(handicap, 30)).toBeUndefined();
   });
 
-  test("a built-in style plays with its handicap only while it holds a place of HANDICAP_PLACES, game masters left out", () => {
-    const handicap = { miss: 6, exposure: 12 };
-    const seats = [{ tank: tank(1), points: 50, counts: true, stats: undefined }, { tank: tank(2), points: 10, counts: true, stats: undefined }, { tank: tank(3), points: 0, counts: true, stats: undefined }];
-    const day = new LeagueDay(1, () => 0.5, () => 0, { rng: () => createRng(1), handicap: () => handicap, handicapPlaces: 1 });
-    day.start(seats, 1000);
-    expect(day.handicapNow("seat-1")).toBeUndefined();
-    day.step();
-    expect([day.handicapNow("seat-1"), day.handicapNow("seat-2"), day.handicapNow("seat-3")]).toEqual([handicap, undefined, undefined]);
-    // A rebuild starts a new round without handicaps, and its first turn sets them again.
-    day.rebuild(1000);
-    expect(day.handicapNow("seat-1")).toBeUndefined();
-    day.step();
-    expect(day.handicapNow("seat-1")).toEqual(handicap);
-    // A game master takes no place, so the next tank holds the first one.
-    const withGm = new LeagueDay(1, () => 0.5, () => 0, { rng: () => createRng(1), handicap: () => handicap, handicapPlaces: 1, unranked: () => new Set(["seat-1"]) });
-    withGm.start(seats, 1000);
-    withGm.step();
-    expect([withGm.handicapNow("seat-1"), withGm.handicapNow("seat-2"), withGm.handicapNow("seat-3")]).toEqual([undefined, handicap, undefined]);
-  });
-
-  test("new rules start without the handicap, and the next turn gives it back with the change's relief", () => {
-    const handicap = { miss: 6, exposure: 12 };
-    const day = new LeagueDay(1, () => 0.5, () => 0, { rng: () => createRng(1), handicap: () => handicap, handicapPlaces: 1 });
-    day.start([{ tank: tank(1), points: 50, counts: true, stats: undefined }, { tank: tank(2), points: 0, counts: true, stats: undefined }], 1000);
-    day.step();
-    day.restrategy("seat-1", (PRESETS[1] as (typeof PRESETS)[number]).strategy);
-    expect(day.handicapNow("seat-1")).toBeUndefined();
-    day.step();
-    expect(day.handicapNow("seat-1")).toEqual(relieved(handicap, 1));
-  });
-
   test("a restart seats the tank with the changes the checkpoint saved", () => {
     const day = new LeagueDay(1, () => 0.5, () => 0);
     day.start([{ tank: tank(1), points: 0, counts: true, stats: undefined, ruleChanges: 5 }, { tank: tank(2), points: 0, counts: true, stats: undefined }], 1000);

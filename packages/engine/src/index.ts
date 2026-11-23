@@ -12,7 +12,7 @@ export { createRng, rngFrom } from "./round/rng.ts";
 export { arenaSize } from "./round/grid.ts";
 export { createRound, stepRound, runRound, standings } from "./round/round.ts";
 // An open round of the monthly league: tanks join and leave between turns.
-export { changeRoundRules, createOpenRound, freshStartRound, joinRound, leaveRound, replaceStrategy, setPlayerHandicap } from "./round/round.ts";
+export { changeRoundRules, createOpenRound, freshStartRound, joinRound, leaveRound, replaceStrategy } from "./round/round.ts";
 export type { OpenRoundConfig } from "./round/round.ts";
 export {
   ARENA_LAYOUT_IDS, arenaConditionOf, areaRuleSetIds, areasOf, boardRuleSetId,
@@ -62,7 +62,7 @@ export { STEP_ACTION_IDS, isSequence, isStepAction } from "./strategy/sequence.t
 export type { StepActionId } from "./strategy/sequence.ts";
 export { PRESETS, PRESET_IDS, DEFAULT_PRESET_ID, PICKER_ORDER, matchingPreset, playStyleOf, sameStrategy } from "./strategy/presets.ts";
 export type { PresetId } from "./strategy/presets.ts";
-export { BUILT_IN_HANDICAP, builtInStyleOf, handicapClassOf, handicapOf, LEAGUE_STYLE_HANDICAP, type HandicapClass, type HandicapPlace, type HandicapTier } from "./strategy/built-in.ts";
+export { BUILT_IN_HANDICAP, builtInStyleOf, handicapClassOf, handicapOf, type HandicapClass, type HandicapPlace, type HandicapTier } from "./strategy/built-in.ts";
 // stats/ owns a tank's statistics: running totals of fixed size, read from turn results.
 export { EMPTY_NUMBERS, EMPTY_STATS, addNumbers, addTurn, statsNumbers, statsOfRound, statsView, turnsOf } from "./stats/stats.ts";
 export type { ModeStats, RuleUse, StatsNumbers, StatsView, TankStats, TankTurn } from "./stats/stats.ts";

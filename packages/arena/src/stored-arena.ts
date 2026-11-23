@@ -371,6 +371,7 @@ function roundConfig(raw: unknown, path: string): RoundConfig {
     players,
     items: roundOption(c["items"], `${path}.items`),
     ultimates: roundOption(c["ultimates"], `${path}.ultimates`),
+    ...(roundOption(c["waitWhenDry"], `${path}.waitWhenDry`) ? { waitWhenDry: true } : {}),
   };
 }
 

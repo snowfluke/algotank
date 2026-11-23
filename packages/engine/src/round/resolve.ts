@@ -174,6 +174,11 @@ function isDashing(slot: Slot): boolean {
   return slot.action.ultimate === "dash" && !slot.stuck;
 }
 
+/** Whether a throw now would leave the tank's hand: free shots of a full tank, or water for a throw under these rules. */
+export function canFire(bot: BotState, rules: RoundRules): boolean {
+  return bot.ultimateEffect?.kind === "fullTank" || canThrow(bot.water, rules);
+}
+
 function resolveThrow(
   thrower: Slot,
   size: ArenaSize,

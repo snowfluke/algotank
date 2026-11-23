@@ -46,8 +46,13 @@ export function decisionAction(decision: Decision, strategy: StrategyInput): { r
   return { rule, action: ref?.action === decision.actionId ? ref : { action: decision.actionId, params: ref?.params ?? {} } };
 }
 
-function blocked(decision: Decision): boolean {
-  return decision.move === "T" && (STEP_ACTIONS as ReadonlySet<string>).has(decision.actionId);
+/**
+ * How a step action ended when its step could not go on: a shot, or, without water for one, a wait (the engine's
+ * RoundConfig.waitWhenDry, from 2026-11-23). Null when the step went on.
+ */
+function blocked(decision: Decision): "shot" | "waited" | null {
+  if (!(STEP_ACTIONS as ReadonlySet<string>).has(decision.actionId)) return null;
+  return decision.move === "T" ? "shot" : decision.move === "W" ? "waited" : null;
 }
 
 function outcomeText(t: FeedText, entry: OwnDecision): string | null {
@@ -75,7 +80,7 @@ export function describeDecision(entry: OwnDecision, strategy: StrategyInput, v:
   if (decision.ultimate !== undefined) return { turn: entry.tick + 1, text: t.ultimate(decision.ultimate) };
   const { rule, action } = decisionAction(decision, strategy);
   const stopped = blocked(decision);
-  const what = capitalised(stopped ? t.tried(actionText(v, action), actionDoneText(v, action)) : actionDoneText(v, action));
+  const what = capitalised(stopped !== null ? t.tried(actionText(v, action), actionDoneText(v, action)) : actionDoneText(v, action));
   // A pinwheel's spin checked no rule: the feed says so and nothing else.
   if (decision.spin === true) return { turn: entry.tick + 1, text: t.spin };
   let first: string;
@@ -92,7 +97,7 @@ export function describeDecision(entry: OwnDecision, strategy: StrategyInput, v:
   if (decision.dizzy === true) sentences.push(t.dizzy);
   const ruleIndex = rule === undefined ? -1 : (strategy.modes.find((m) => m.id === decision.modeId)?.rules.indexOf(rule) ?? -1);
   if (decision.step !== undefined && ruleIndex >= 0) sentences.push(t.stepOf(ruleIndex + 1, decision.step.index, decision.step.count));
-  if (stopped) sentences.push(t.blockedShot);
+  if (stopped !== null) sentences.push(stopped === "shot" ? t.blockedShot : t.blockedWait);
   const outcome = outcomeText(t, entry);
   if (outcome !== null) sentences.push(outcome);
   if (decision.nextModeId !== decision.modeId) {

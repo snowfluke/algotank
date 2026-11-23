@@ -387,6 +387,12 @@ export interface RoundConfig {
    */
   readonly items: boolean;
   readonly ultimates: boolean;
+  /**
+   * True from 2026-11-23: a tank that would throw without water for a throw because a move could not go on (a tank in
+   * its way, nowhere less crowded), not because its rule said to throw, waits instead (round.ts, waitsWhenDry). Absent
+   * or false in rounds played before, so their replays stay exact (stored-arena.ts).
+   */
+  readonly waitWhenDry?: boolean;
 }
 
 /** What one bot decided on one tick, and why. */

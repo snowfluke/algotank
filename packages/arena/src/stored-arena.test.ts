@@ -65,6 +65,17 @@ describe("parseStoredArena", () => {
     expect(wrong.ok ? "" : wrong.error).toMatch(/items/);
   });
 
+  test("a round of 2026-11-23 on keeps waitWhenDry, so its replay plays as it was played; an older one reads without it", () => {
+    const on = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.waitWhenDry = true)));
+    if (!on.ok) throw new Error(on.error);
+    expect(on.stored.roundConfigs[0]?.config.waitWhenDry).toBe(true);
+    const off = parseStoredArena(damaged((p) => delete p.roundConfigs[0].config.waitWhenDry));
+    if (!off.ok) throw new Error(off.error);
+    expect(off.stored.roundConfigs[0]?.config.waitWhenDry).toBeUndefined();
+    const wrong = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.waitWhenDry = "yes")));
+    expect(wrong.ok ? "" : wrong.error).toMatch(/waitWhenDry/);
+  });
+
   test("a handicap reads back as one number (rounds of 2026-11-21 before its two parts) or as its two parts", () => {
     const one = parseStoredArena(damaged((p) => (p.roundConfigs[0].config.players[0].handicap = 35)));
     if (!one.ok) throw new Error(one.error);

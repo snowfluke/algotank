@@ -225,7 +225,7 @@ export class LeagueDay {
     this.pendingWeather = undefined;
     const ruleSetId = this.drawCondition();
     // Hold the release choice for this round, even if a seat joins after the gate opens (85-ultimates.md).
-    return createOpenRound({ rng: this.field.rng(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: ultimatesOn(this.now()) });
+    return createOpenRound({ rng: this.field.rng(), ticksTotal: ticksLeft, ruleSetId, boardFor: this.boardFor, items: true, ultimates: ultimatesOn(this.now()), waitWhenDry: true });
   }
 
   private drawCondition(): ArenaConditionId {

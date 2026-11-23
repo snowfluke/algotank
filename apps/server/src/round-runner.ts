@@ -80,6 +80,7 @@ export class RoundRunner {
         // Every arena plays with items (docs/specs/revamp/84-items.md); the stored config keeps it for the replay.
         items: true,
         ultimates: ultimatesOn(now()),
+        waitWhenDry: true,
       };
       const state = createRound(config);
       this.store.setRoundConfig(record, phase.round, config);

@@ -246,6 +246,34 @@ describe("stepRound and runRound", () => {
   });
 });
 
+describe("a move that cannot go on, without water for a throw (waitWhenDry, 2026-11-23)", () => {
+  // Moves toward the nearest tank whatever its water: it bumps into a tank, which used to throw dry.
+  const chaser = { ...PRESETS[0]!.strategy, modes: [{ id: "chase", name: "Chase", rules: [], fallback: { action: "moveToward" as const, params: { target: "nearest" } } }] };
+  const config = (waitWhenDry: boolean): RoundConfig => ({
+    seed: 7, ticksTotal: 90, survivorsAfterRound: null, ruleSetId: STANDARD_RULE_SET_ID, items: false, ultimates: false, waitWhenDry,
+    players: [{ id: "me", strategy: chaser }, ...PRESETS.slice(0, 5).map((p, i) => ({ id: `bot${i}`, strategy: p.strategy }))],
+  });
+  const dryOf = (waitWhenDry: boolean) => {
+    const round = createRound(config(waitWhenDry));
+    let dry = 0;
+    let waited = 0;
+    for (let t = 0; t < 90; t++) {
+      const result = stepRound(round);
+      dry += result.throws.filter((e) => e.throwerId === "me" && e.outcome === "dry").length;
+      waited += result.decisions.filter((d) => d.botId === "me" && d.move === "W").length;
+    }
+    return { dry, waited };
+  };
+
+  test("waits instead of throwing dry, and a round stored without the flag plays as before", () => {
+    const before = dryOf(false);
+    const now = dryOf(true);
+    expect(before.dry).toBeGreaterThan(0);
+    expect(now.dry).toBe(0);
+    expect(now.waited).toBeGreaterThan(0);
+  });
+});
+
 describe("water over a round", () => {
   /** Plays 12 rounds under one set and checks the tank against that set's numbers. Returns how often each case happened. */
   function playWater(id: RuleSetId) {

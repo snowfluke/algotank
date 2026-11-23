@@ -42,8 +42,8 @@
 // carry data-tab="<value>" (ui/Tabs.tsx, ui/BottomTabs.tsx); the other hooks are named in the
 // state table below and listed in docs/specs/revamp/11-foundation-guide.md, section 11.
 // Exempt from (b) and (c): a textarea's own text and Pager's invisible measuring layer.
-// The monthly activity list (86-monthly-activity.md) and ultimate chooser (85-ultimates.md, D3)
-// can scroll vertically within their panes.
+// The monthly activity list (86-monthly-activity.md), the ultimate chooser (85-ultimates.md, D3)
+// and a tank sheet's rules (monthly/TankSheet.tsx) can scroll vertically within their panes.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -71,7 +71,8 @@ export const SIZES = [
 export const SWEEP = { from: 360, to: 1280, step: 80, height: 800 };
 
 export const LANGUAGES = ["en", "id"];
-const CONTAINED_SCROLL = "[data-monthly-activity], [data-ultimate-picker]";
+// A tank sheet's long rules scroll inside its dialog by design (monthly/TankSheet.tsx); it shows one mode at a time.
+const CONTAINED_SCROLL = "[data-monthly-activity], [data-ultimate-picker], [data-tank-sheet-body]";
 // One second before release, so the extra tag is measured even after the gate goes live.
 const BEFORE_ULTIMATES = Date.parse("2026-11-21T23:59:59+07:00");
 const ULTIMATE_WORKSHOP_SIZES = SIZES.filter((size) => ["app", "owner", "bars"].includes(size.pages)).map((size) => size.name);
@@ -1188,6 +1189,16 @@ STATES.push(
   monthlyKit("leagues-9", "case=visitor&leagues=9"),
   monthlyKit("leagues-9-open", "case=visitor&leagues=9", { perSize: true, steps: [{ wait: "[data-monthly-page]" }, { click: '[data-picker="league"]' }, { wait: "[data-picker-list]" }] }),
   monthlyKit("visitor-ranking", "case=visitor&tab=ranking"),
+  // A tank sheet with open rules shows one mode at a time; Next turns to the second (2026-11-23). seedWorkshop loads the presets.
+  monthlyKit("sheet-rules-second-mode", "case=visitor&tab=ranking", {
+    seedWorkshop: 1,
+    mock: [{
+      route: "**/api/monthly/tanks/*",
+      status: 200,
+      body: (address) => ({ seatId: address.split("/").pop(), rules: seedPresets.find((p) => p.strategy.modes.length > 1).strategy, playStyle: null, ultimate: "bigUmbrella", lastDay: null }),
+    }],
+    steps: [{ wait: "[data-monthly-page]" }, { click: "[data-open-tank]" }, { wait: "[data-rules-mode-next]" }, { click: "[data-rules-mode-next]" }],
+  }),
   monthlyKit("activity-empty", "case=visitor&tab=activity&side=activity"),
   monthlyKit("activity-full", "case=seated&tab=activity&side=activity&activity=full", { steps: [{ wait: "[data-monthly-activity]" }] }),
   monthlyKit("seated", "case=seated&leagues=2"),

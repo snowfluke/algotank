@@ -115,7 +115,7 @@ export function TankSheet({ tank, source, onClose }: { readonly tank: SheetTank 
             </h2>
             <IconButton label={m.common.close} icon={<X aria-hidden size={22} />} variant="quiet" onClick={onClose} />
           </div>
-          <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-auto overscroll-contain">
+          <div data-tank-sheet-body="" className="flex min-h-0 min-w-0 flex-col gap-4 overflow-auto overscroll-contain">
             <SheetBody tank={tank} source={source} load={load} />
           </div>
         </div>

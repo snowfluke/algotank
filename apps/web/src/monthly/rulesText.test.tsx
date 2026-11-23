@@ -8,17 +8,32 @@ import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { RulesText } from "./RulesText.tsx";
 
 describe("the open rules", () => {
-  test("a tank's rules read as one numbered list per mode, then what runs when no rule fits, then the upgrades", () => {
-    const preset = PRESETS.find((p) => p.id === "leader-chaser");
-    if (preset === undefined) throw new Error("the leader-chaser preset is missing");
+  test("a tank's rules read one mode at a time: its name between Previous and Next, its numbered list, then the upgrades", () => {
+    const preset = PRESETS.find((p) => p.strategy.modes.length > 1);
+    if (preset === undefined) throw new Error("no preset has two modes");
     const html = renderToStaticMarkup(
       <I18nProvider store={createLanguageStore({ store: null, initial: "en" })}>
         <RulesText strategy={preset.strategy} />
       </I18nProvider>,
     );
-    const rules = preset.strategy.modes.reduce((n, mode) => n + mode.rules.length, 0);
-    expect((html.match(/<li>/g) ?? []).length).toBe(rules);
+    const first = preset.strategy.modes[0]!;
+    expect((html.match(/<li>/g) ?? []).length).toBe(first.rules.length);
+    expect(html).toContain(`data-rules-mode="${first.id}"`);
+    expect(html).toContain("data-rules-mode-previous");
+    expect(html).toContain("data-rules-mode-next");
+    expect(html).toContain(`1 of ${preset.strategy.modes.length}`);
     expect(html).toContain("Upgrades: Range");
+  });
+
+  test("one mode needs no arrows and no name", () => {
+    const one = { ...PRESETS[0]!.strategy, modes: [PRESETS[0]!.strategy.modes[0]!] };
+    const html = renderToStaticMarkup(
+      <I18nProvider store={createLanguageStore({ store: null, initial: "en" })}>
+        <RulesText strategy={one} />
+      </I18nProvider>,
+    );
+    expect(html).not.toContain("data-rules-mode-next");
+    expect((html.match(/<li>/g) ?? []).length).toBe(one.modes[0]!.rules.length);
   });
 
   test("a published month's list puts a line before each league after the first", () => {

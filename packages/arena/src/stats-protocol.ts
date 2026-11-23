@@ -91,10 +91,12 @@ export function parseStatsView(raw: unknown): StatsView | null {
   const modes = [];
   for (const mode of rawModes) {
     if (!isObj(mode)) return null;
-    const { name, rules, fallback } = mode;
+    const { id, name, rules, fallback } = mode;
     if (typeof name !== "string" || name.length > LIMITS.maxNameLength) return null;
+    if (id !== undefined && (typeof id !== "string" || id.length > LIMITS.maxIdLength)) return null;
     if (!Array.isArray(rules) || rules.length > LIMITS.maxRulesPerMode || !rules.every(count) || !count(fallback)) return null;
-    modes.push({ name, rules: rules.filter(count), fallback });
+    // Absent from statistics saved before 2026-11-23: no id, so the page shows the mode's name as it was typed.
+    modes.push({ id: id ?? "", name, rules: rules.filter(count), fallback });
   }
   // Absent from a server older than the pinwheel's spin (2026-11-17), which had no spin turns to count.
   const spinTurns = raw["spinTurns"] === undefined ? 0 : raw["spinTurns"];

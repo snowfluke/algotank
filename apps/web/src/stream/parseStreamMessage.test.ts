@@ -168,7 +168,7 @@ describe("parseStreamMessage", () => {
 });
 
 describe("the stats event (K2)", () => {
-  const view = { turns: 10, shots: 4, hits: 2, timesHit: 1, squaresMoved: 3, noRuleTurns: 5, modes: [{ name: "Only", rules: [5], fallback: 5 }] };
+  const view = { turns: 10, shots: 4, hits: 2, timesHit: 1, squaresMoved: 3, noRuleTurns: 5, modes: [{ id: "only", name: "Only", rules: [5], fallback: 5 }] };
   const event = (stats: unknown) => JSON.stringify({ type: "stats", stats });
 
   test("is read when its numbers and rules fit", () => {

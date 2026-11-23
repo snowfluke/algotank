@@ -4,29 +4,38 @@ import type { StatsView } from "@game/engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../i18n/I18nProvider.tsx";
 import { createLanguageStore } from "../i18n/language.ts";
+import { en as vocabularyEn, id as vocabularyId } from "../vocabulary/messages.ts";
 import { cardRows, hitRate, quietRules } from "./statsCard.ts";
 import { StatsCard } from "./StatsCard.tsx";
 
-const oneMode: StatsView = { turns: 90, shots: 40, hits: 12, timesHit: 8, squaresMoved: 54, noRuleTurns: 47, spinTurns: 0, modes: [{ name: "Only", rules: [12, 31, 0], fallback: 47 }] };
+const oneMode: StatsView = { turns: 90, shots: 40, hits: 12, timesHit: 8, squaresMoved: 54, noRuleTurns: 47, spinTurns: 0, modes: [{ id: "only", name: "Only", rules: [12, 31, 0], fallback: 47 }] };
 // The tank never entered "Hide", so its rules had no chance to run.
 const twoModes: StatsView = {
   ...oneMode,
   modes: [
-    { name: "Attack", rules: [12, 0], fallback: 40 },
-    { name: "Hide", rules: [0, 0], fallback: 0 },
+    { id: "attack", name: "Attack", rules: [12, 0], fallback: 40 },
+    { id: "hide", name: "Hide", rules: [0, 0], fallback: 0 },
   ],
 };
 
 describe("the card's rules", () => {
   test("a rule that never ran in a mode the tank played is named; one in a mode it never entered is not", () => {
-    expect(quietRules(oneMode)).toEqual([{ mode: 0, modeName: "Only", rule: 3 }]);
-    expect(quietRules(twoModes)).toEqual([{ mode: 0, modeName: "Attack", rule: 2 }]);
+    expect(quietRules(oneMode, vocabularyEn)).toEqual([{ mode: 0, modeName: "Only", rule: 3 }]);
+    expect(quietRules(twoModes, vocabularyEn)).toEqual([{ mode: 0, modeName: "Attack", rule: 2 }]);
   });
 
   test("rows list each rule and the mode's fallback, with mode headings only for several modes", () => {
-    expect(cardRows(oneMode).map((row) => row.kind)).toEqual(["rule", "rule", "rule", "fallback"]);
-    expect(cardRows(twoModes).map((row) => row.kind)).toEqual(["mode", "rule", "rule", "fallback", "mode", "rule", "rule", "fallback"]);
-    expect(cardRows(oneMode).filter((row) => row.kind === "rule" && row.neverRan)).toHaveLength(1);
+    expect(cardRows(oneMode, vocabularyEn).map((row) => row.kind)).toEqual(["rule", "rule", "rule", "fallback"]);
+    expect(cardRows(twoModes, vocabularyEn).map((row) => row.kind)).toEqual(["mode", "rule", "rule", "fallback", "mode", "rule", "rule", "fallback"]);
+    expect(cardRows(oneMode, vocabularyEn).filter((row) => row.kind === "rule" && row.neverRan)).toHaveLength(1);
+  });
+
+  test("a built-in style's mode is named in the page's language, a mode the player named as typed (2026-11-23)", () => {
+    const styleModes: StatsView = { ...oneMode, modes: [{ id: "rest", name: "Rest", rules: [5, 0], fallback: 1 }, { id: "strike", name: "Strike", rules: [3, 0], fallback: 0 }] };
+    expect(quietRules(styleModes, vocabularyId).map((q) => q.modeName)).toEqual([vocabularyId.modeNames.rest, vocabularyId.modeNames.strike]);
+    expect(quietRules(styleModes, vocabularyId).map((q) => q.modeName)).not.toContain("Rest");
+    const renamed: StatsView = { ...styleModes, modes: [{ ...styleModes.modes[0]!, name: "Santai" }, styleModes.modes[1]!] };
+    expect(quietRules(renamed, vocabularyId)[0]?.modeName).toBe("Santai");
   });
 
   test("the hit rate is a whole percent, and there is none without a shot", () => {
@@ -59,7 +68,7 @@ describe("StatsCard", () => {
   });
 
   test("says nothing about quiet rules when every rule ran", () => {
-    const busy: StatsView = { ...oneMode, modes: [{ name: "Only", rules: [12, 31, 1], fallback: 46 }] };
+    const busy: StatsView = { ...oneMode, modes: [{ id: "only", name: "Only", rules: [12, 31, 1], fallback: 46 }] };
     expect(indonesian(busy)).not.toContain("tidak pernah jalan");
   });
 });

@@ -2,6 +2,8 @@
 // the rows of the rules list, which rules never ran, and the hit rate.
 
 import type { StatsNumbers, StatsView } from "@game/engine";
+import type { VocabularyText } from "../vocabulary/messages.ts";
+import { modeName } from "../vocabulary/sentence.ts";
 
 /** A row of the rules list. Mode headings show only for a strategy with more than one mode. */
 export type CardRow =
@@ -22,17 +24,18 @@ const modeTurns = (mode: StatsView["modes"][number]): number => mode.rules.reduc
  * The rules that never ran in a mode the tank played in. A rule of a mode the tank never
  * entered did not get a chance, so its condition is not the thing to look at.
  */
-export function quietRules(view: StatsView): QuietRule[] {
+export function quietRules(view: StatsView, v: VocabularyText): QuietRule[] {
   return view.modes.flatMap((mode, m) =>
-    modeTurns(mode) === 0 ? [] : mode.rules.flatMap((turns, r) => (turns === 0 ? [{ mode: m, modeName: mode.name, rule: r + 1 }] : [])),
+    modeTurns(mode) === 0 ? [] : mode.rules.flatMap((turns, r) => (turns === 0 ? [{ mode: m, modeName: modeName(v, mode), rule: r + 1 }] : [])),
   );
 }
 
-export function cardRows(view: StatsView): CardRow[] {
-  const quiet = new Set(quietRules(view).map((q) => `${q.mode}/${q.rule}`));
+/** A built-in style's mode is named in the page's language (modeName), as the editor names it. */
+export function cardRows(view: StatsView, v: VocabularyText): CardRow[] {
+  const quiet = new Set(quietRules(view, v).map((q) => `${q.mode}/${q.rule}`));
   const withModes = view.modes.length > 1;
   return view.modes.flatMap((mode, m): CardRow[] => [
-    ...(withModes ? [{ kind: "mode" as const, key: `mode-${m}`, name: mode.name }] : []),
+    ...(withModes ? [{ kind: "mode" as const, key: `mode-${m}`, name: modeName(v, mode) }] : []),
     ...mode.rules.map((turns, r): CardRow => ({ kind: "rule", key: `rule-${m}-${r}`, mode: m, rule: r + 1, turns, neverRan: quiet.has(`${m}/${r + 1}`) })),
     { kind: "fallback", key: `fallback-${m}`, mode: m, turns: mode.fallback },
   ]);

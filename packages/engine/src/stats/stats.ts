@@ -70,6 +70,8 @@ export interface StatsView extends StatsNumbers {
 }
 
 export interface ModeStats {
+  /** The mode's id, so a page can name a built-in style's mode in its own language (web vocabulary modeName). */
+  readonly id: string;
   readonly name: string;
   /** Turns each rule of the mode ran, in the mode's order: index 0 is rule 1. */
   readonly rules: readonly number[];
@@ -189,6 +191,7 @@ export function statsView(stats: TankStats, strategy: StrategyInput): StatsView 
   return {
     ...statsNumbers(stats),
     modes: strategy.modes.map((mode) => ({
+      id: mode.id,
       name: mode.name,
       rules: mode.rules.map((rule) => turnsOfRule(mode.id, rule.id)),
       fallback: turnsOfRule(mode.id, null),

@@ -18,7 +18,7 @@ function statsFor(strategy: StrategyInput, firstRuleTurns: number): StatsView {
     timesHit: 5,
     squaresMoved: 20,
     noRuleTurns: 0,
-    modes: strategy.modes.map((mode) => ({ name: mode.name, rules: mode.rules.map((_, i) => (i === 0 ? firstRuleTurns : 0)), fallback: 0 })),
+    modes: strategy.modes.map((mode) => ({ id: mode.id, name: mode.name, rules: mode.rules.map((_, i) => (i === 0 ? firstRuleTurns : 0)), fallback: 0 })),
   };
 }
 

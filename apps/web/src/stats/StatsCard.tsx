@@ -12,6 +12,7 @@ import { useId } from "react";
 import type { StatsNumbers, StatsView } from "@game/engine";
 import { useFormat, useLanguage, useMessages } from "../i18n/I18nProvider.tsx";
 import { useFitDetail } from "../ui/useFitDetail.ts";
+import { modeName } from "../vocabulary/sentence.ts";
 import { Pager } from "../ui/Pager.tsx";
 import { barShare, cardRows, hitRate, QUIET_NAMED, quietRules, type CardRow, type QuietRule } from "./statsCard.ts";
 
@@ -36,12 +37,16 @@ export function StatsCard({ heading, numbers, rules, rulesHeading }: StatsCardPr
   const [language] = useLanguage();
   const headingId = useId();
   // Keyed on what changes the card's height, so the monthly card's poll every few seconds does not start the levels again.
-  const detail = useFitDetail<HTMLElement>(DETAIL_LEVELS, `${language}|${heading ?? ""}|${rules.modes.length}|${quietRules(rules).length}|${hitRate(numbers) === null}`);
-  const rows = cardRows(rules);
+  const detail = useFitDetail<HTMLElement>(DETAIL_LEVELS, `${language}|${heading ?? ""}|${rules.modes.length}|${quietRules(rules, m.vocabulary).length}|${hitRate(numbers) === null}`);
+  const rows = cardRows(rules, m.vocabulary);
   const compact = detail.level >= 4;
   const rate = hitRate(numbers);
   const quiet = useQuietSentence(rules);
-  const ruleName = (mode: number, rule: number) => (rules.modes.length > 1 ? s.ruleInMode(rule, rules.modes[mode]?.name ?? "") : s.rule(rule));
+  const modeNameAt = (index: number) => {
+    const mode = rules.modes[index];
+    return mode === undefined ? "" : modeName(m.vocabulary, mode);
+  };
+  const ruleName = (mode: number, rule: number) => (rules.modes.length > 1 ? s.ruleInMode(rule, modeNameAt(mode)) : s.rule(rule));
   return (
     <section
       ref={detail.ref}
@@ -127,9 +132,10 @@ function Row({ row, total, name, compact }: { row: CardRow; total: number; name:
 
 /** The one sentence about the rules that never ran, or null when every rule ran or its mode never played. */
 function useQuietSentence(rules: StatsView): string | null {
-  const s = useMessages().stats;
+  const m = useMessages();
+  const s = m.stats;
   const f = useFormat();
-  const quiet = quietRules(rules);
+  const quiet = quietRules(rules, m.vocabulary);
   if (quiet.length === 0) return null;
   const name = (q: QuietRule) => (rules.modes.length > 1 ? s.ruleInMode(q.rule, q.modeName) : s.rule(q.rule));
   if (quiet.length > QUIET_NAMED) return s.neverRanCount(quiet.length);

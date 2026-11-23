@@ -4,8 +4,9 @@
 // six rule sets with their sentences do not fit beside the other choices on a phone.
 
 import { useId, useState } from "react";
-import { PRESETS, RULE_SET_IDS } from "@game/engine";
-import type { RuleSetId } from "@game/engine";
+import { ARENA_LAYOUT_IDS, PRESETS, RULE_SET_IDS } from "@game/engine";
+import type { ArenaConditionId, RuleSetId } from "@game/engine";
+import { conditionText } from "../monthly/ArenaCondition.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { Button } from "../ui/Button.tsx";
 import { Carousel } from "../ui/Carousel.tsx";
@@ -26,7 +27,8 @@ export interface TestChoices {
   readonly mix: OpponentMix;
   readonly length: MatchLength;
   /** Null until the player picks a set, so the choice follows the set announced for the next round. */
-  readonly ruleSetId: RuleSetId | null;
+  /** A single condition or a mixed arena (owner, 2026-11-23: the options lacked the league's mixed arenas). */
+  readonly ruleSetId: ArenaConditionId | null;
 }
 
 /** The picker's value for "a mix of play styles". Every other value is a play style's id. */
@@ -41,6 +43,9 @@ export interface TestOptionsProps {
   onBack(): void;
 }
 
+/** The single conditions, then the mixed arenas the league plays. */
+const CONDITIONS: readonly ArenaConditionId[] = [...RULE_SET_IDS, ...ARENA_LAYOUT_IDS];
+
 export function TestOptions({
   choices,
   defaultRuleSetId,
@@ -53,7 +58,7 @@ export function TestOptions({
   const [step, setStep] = useState<"options" | "rules">("options");
   const chosenRules = choices.ruleSetId ?? defaultRuleSetId;
   const [rulesIndex, setRulesIndex] = useState(() =>
-    Math.max(0, RULE_SET_IDS.indexOf(chosenRules)),
+    Math.max(0, CONDITIONS.indexOf(chosenRules)),
   );
 
   if (step === "rules") {
@@ -61,7 +66,7 @@ export function TestOptions({
       <StepSheet title={p.roundRules} onBack={() => setStep("options")}>
         <Carousel
           label={p.roundRules}
-          items={RULE_SET_IDS}
+          items={CONDITIONS}
           itemKey={(id) => id}
           index={rulesIndex}
           onIndexChange={setRulesIndex}
@@ -70,10 +75,10 @@ export function TestOptions({
             return (
               <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
                 <h3 className="text-title [overflow-wrap:anywhere]">
-                  {m.vocabulary.roundRules[id].name}
+                  {conditionText(m, id).name}
                 </h3>
                 <p className="[overflow-wrap:anywhere]">
-                  {m.vocabulary.roundRules[id].summary}
+                  {conditionText(m, id).summary}
                 </p>
                 <Button
                   variant={chosen ? "secondary" : "primary"}
@@ -145,7 +150,7 @@ export function TestOptions({
             data-test-rules=""
             onClick={() => setStep("rules")}
           >
-            {m.vocabulary.roundRules[chosenRules].name}
+            {conditionText(m, chosenRules).name}
           </Button>
         </div>
       </div>

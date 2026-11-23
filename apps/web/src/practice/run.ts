@@ -2,8 +2,8 @@
 // browser with the engine. The setup rules (how many opponents, which mix,
 // how a round is cut) live here, so the screen only reads and shows them.
 
-import { handicapOf, PRESETS, runRound, statsOfRound } from "@game/engine";
-import type { BotId, RoundConfig, RuleSetId, Snapshot, Standing, Strategy, TankStats, TickResult } from "@game/engine";
+import { createOpenRound, createRng, handicapOf, isArenaLayoutId, joinRound, PRESETS, runRound, standings as standingsOf, statsOfRound, stepRound } from "@game/engine";
+import type { ArenaLayoutId, ArenaConditionId, BotId, RoundConfig, RoundPlayer, Snapshot, Standing, Strategy, TankStats, TickResult } from "@game/engine";
 import { isFinalRound, survivorCount, ultimatesOn } from "@game/arena";
 import type { TankInfo } from "../board/props.ts";
 import { TANK_COLOURS } from "../tank/colours.ts";
@@ -70,7 +70,8 @@ export interface PracticeSettings {
   readonly ticks: number;
   readonly seed: number;
   readonly nowMs: number;
-  readonly ruleSetId: RuleSetId;
+  /** A single condition, or a mixed arena of the league (runMixed). */
+  readonly ruleSetId: ArenaConditionId;
   /** The name a bot shows, from its play style, so the names follow the page language. Default: the engine's English name. */
   readonly styleName?: (preset: PlayStylePreset) => string;
 }
@@ -90,32 +91,53 @@ export interface PracticeRun {
 export function runPractice(settings: PracticeSettings): PracticeRun {
   const opponents = pickOpponents(settings.opponents, settings.mix);
   const playerCount = opponents.length + 1;
-  const config: RoundConfig = {
-    seed: settings.seed,
-    // The Try it match plays like an arena round, items included (84-items.md).
-    items: true,
-    ultimates: ultimatesOn(settings.nowMs),
-    ruleSetId: settings.ruleSetId,
-    ticksTotal: settings.ticks,
-    // The cut-line conditions read this, so it follows the arena's own rule.
-    survivorsAfterRound: isFinalRound(playerCount) ? null : survivorCount(playerCount),
-    // The Try it match plays the arena's handicap of built-in styles too, so it shows what the arena would.
-    players: [{ id: PLAYER_ID, strategy: settings.strategy }, ...opponents.map((preset, index) => ({ id: `bot-${index + 1}`, strategy: preset.strategy }))].map(
-      (player) => {
-        const handicap = handicapOf(player.strategy, "room");
-        return handicap === undefined ? player : { ...player, handicap };
-      },
-    ),
-  };
+  // The Try it match plays the arena's handicap of built-in styles too, so it shows what the arena would.
+  const players: RoundPlayer[] = [{ id: PLAYER_ID, strategy: settings.strategy }, ...opponents.map((preset, index) => ({ id: `bot-${index + 1}`, strategy: preset.strategy }))].map(
+    (player) => {
+      const handicap = handicapOf(player.strategy, "room");
+      return handicap === undefined ? player : { ...player, handicap };
+    },
+  );
   const names: Record<BotId, string> = { [PLAYER_ID]: settings.name };
   opponentNames(opponents, settings.styleName ?? ((preset) => preset.name)).forEach((name, index) => {
     names[`bot-${index + 1}`] = name;
   });
-
-  const { spawn, ticks, standings } = runRound(config);
+  const condition = settings.ruleSetId;
+  const { spawn, ticks, standings } = isArenaLayoutId(condition) ? runMixed(settings, condition, players) : runRound(singleConfig(settings, condition, players, playerCount));
   const player = standings.find((standing) => standing.botId === PLAYER_ID);
   if (player === undefined) throw new Error("The player is missing from the standings.");
   return { seed: settings.seed, ticksTotal: settings.ticks, strategy: settings.strategy, names, spawn, ticks, standings, player };
+}
+
+/**
+ * A mixed arena exists only in the league's open rounds (createOpenRound), so its test match is one: seeded from the
+ * match's seed, every tank joined before the first turn, and no cut line, as in the league.
+ */
+function runMixed(settings: PracticeSettings, layout: ArenaLayoutId, players: readonly RoundPlayer[]): { spawn: Snapshot; ticks: TickResult[]; standings: Standing[] } {
+  const round = createOpenRound({
+    rng: createRng(settings.seed), ticksTotal: settings.ticks, ruleSetId: layout, boardFor: players.length,
+    items: true, ultimates: ultimatesOn(settings.nowMs), waitWhenDry: true,
+  });
+  for (const player of players) joinRound(round, player);
+  const spawn = round.snapshot;
+  const ticks: TickResult[] = [];
+  while (!round.isOver) ticks.push(stepRound(round));
+  return { spawn, ticks, standings: standingsOf(round) };
+}
+
+function singleConfig(settings: PracticeSettings, ruleSetId: Exclude<ArenaConditionId, ArenaLayoutId>, players: readonly RoundPlayer[], playerCount: number): RoundConfig {
+  return {
+    seed: settings.seed,
+    // The Try it match plays like an arena round, items included (84-items.md).
+    items: true,
+    ultimates: ultimatesOn(settings.nowMs),
+    waitWhenDry: true,
+    ruleSetId,
+    ticksTotal: settings.ticks,
+    // The cut-line conditions read this, so it follows the arena's own rule.
+    survivorsAfterRound: isFinalRound(playerCount) ? null : survivorCount(playerCount),
+    players,
+  };
 }
 
 /**

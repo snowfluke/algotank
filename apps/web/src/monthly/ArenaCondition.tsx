@@ -6,12 +6,16 @@
 
 import { Info } from "lucide-react";
 import type { PublicSnapshot } from "@game/arena";
-import { arenaConditionOf, isArenaLayoutId } from "@game/engine";
+import { arenaConditionOf, isArenaLayoutId, type ArenaConditionId } from "@game/engine";
 import { useId } from "react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 
 export function arenaConditionText(m: ReturnType<typeof useMessages>, board: Pick<PublicSnapshot, "ruleSetId" | "layout">) {
-  const id = arenaConditionOf(board);
+  return conditionText(m, arenaConditionOf(board));
+}
+
+/** The name and summary of a single condition or a mixed arena (the league's names; the test match's options use them too). */
+export function conditionText(m: ReturnType<typeof useMessages>, id: ArenaConditionId) {
   return isArenaLayoutId(id) ? m.monthly.layouts[id] : m.vocabulary.roundRules[id];
 }
 

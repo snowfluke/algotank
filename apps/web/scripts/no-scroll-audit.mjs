@@ -517,6 +517,15 @@ export const STATES = [
     as: "visitor",
     steps: [{ click: "[data-test-options]" }, { click: "[data-test-rules]" }, { wait: "[data-carousel-next]" }],
   },
+  // The last of the round rules is a mixed arena of the league, whose name can wrap (2026-11-23).
+  {
+    screen: "panes",
+    state: "test-rules-mixed",
+    owner: "S2",
+    path: () => "/kit?show=board&pane=test",
+    as: "visitor",
+    steps: [{ click: "[data-test-options]" }, { click: "[data-test-rules]" }, { pageToEnd: "[data-carousel-next]" }],
+  },
 
   // S1b: the preparation pane (in the private lobby, as a player) and the workshop. Its tabs are
   // Play style, Rules, Upgrades and Try it (W2, 71-workshop-appeal.md C1).

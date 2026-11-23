@@ -55,8 +55,8 @@ export const en = {
     // A feed line is the tank speaking, because its reason is the rule in the editor's
     // first person ("my water"). Every sentence after the first keeps that voice.
     blockedShot: "My way was blocked, so I shot instead.",
-    /** A blocked step without water for a shot: the tank waited (engine RoundConfig.waitWhenDry). */
-    blockedWait: "My way was blocked and I had too little water to shoot, so I waited.",
+    /** A step that could not go on and a shot that would do nothing, without water or a tank in line: the tank waited (engine RoundConfig.waitWhenDry, waitWhenNoTarget). */
+    blockedWait: "I could not do it, so I waited.",
     switched: (modeName: string) => `Then I switched to the “${modeName}” mode.`,
     /** A turn of a rule's sequence of steps. */
     stepOf: (rule: number, index: number, count: number) => `This was step ${index} of ${count} of rule ${rule}.`,
@@ -117,7 +117,7 @@ export const id: typeof en = {
     plain: (action) => `${action}.`,
     tried: (_present, done) => `mencoba ${done}`,
     blockedShot: "Jalanku terhalang, jadi aku menembak.",
-    blockedWait: "Jalanku terhalang dan airku kurang untuk menembak, jadi aku menunggu.",
+    blockedWait: "Aku tidak bisa melakukannya, jadi aku menunggu.",
     switched: (modeName) => `Lalu aku pindah ke mode “${modeName}”.`,
     stepOf: (rule, index, count) => `Ini langkah ${index} dari ${count} di aturan ${rule}.`,
     and: " dan ",

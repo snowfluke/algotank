@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { hitChancePercent } from "../combat/combat.ts";
+import { hitChancePercent, throwRange } from "../combat/combat.ts";
+import { firstBotInLine } from "../strategy/geometry.ts";
+import { rulesAt } from "./arena-layouts.ts";
 import { RULE_SET_IDS, STANDARD_RULE_SET_ID, ruleSet } from "../combat/rule-sets.ts";
 import type { RuleSetId } from "../combat/rule-sets.ts";
 import { PRESETS } from "../strategy/presets.ts";
@@ -264,6 +266,25 @@ describe("a move that cannot go on, without water for a throw (waitWhenDry, 2026
     }
     return { dry, waited };
   };
+
+  test("waits instead of throwing at empty squares when no rule asked for a throw (waitWhenNoTarget)", () => {
+    // Its fallback goes to an item, and the round has none, so the fallback cannot act: it used to throw ahead.
+    const seeker = { ...PRESETS[0]!.strategy, modes: [{ id: "seek", name: "Seek", rules: [], fallback: { action: "goToItem" as const, params: { item: "any" } } }] };
+    // Throws decided with no tank in the line; a tank that was in it may still step away before the throw lands.
+    const blindThrows = (waitWhenNoTarget: boolean) => {
+      const round = createRound({ ...config(true), waitWhenNoTarget, players: [{ id: "me", strategy: seeker }, ...config(true).players.slice(1)] });
+      let blind = 0;
+      for (let t = 0; t < 90; t++) {
+        const before = round.snapshot;
+        const me = before.bots.find((b) => b.id === "me")!;
+        const decided = stepRound(round).decisions.find((d) => d.botId === "me")!;
+        if (decided.move === "T" && firstBotInLine(before, me, throwRange(me.build, rulesAt(before, me.x, me.y))) === null) blind++;
+      }
+      return blind;
+    };
+    expect(blindThrows(false)).toBeGreaterThan(0);
+    expect(blindThrows(true)).toBe(0);
+  });
 
   test("waits instead of throwing dry, and a round stored without the flag plays as before", () => {
     const before = dryOf(false);

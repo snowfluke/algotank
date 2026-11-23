@@ -393,6 +393,12 @@ export interface RoundConfig {
    * or false in rounds played before, so their replays stay exact (stored-arena.ts).
    */
   readonly waitWhenDry?: boolean;
+  /**
+   * True from 2026-11-23 (later the same day): such a throw, which no rule asked for, also waits when no tank stands in
+   * its line, so a tank does not throw at empty squares (a fallback that cannot act, nowhere less crowded). A throw
+   * that would hit the tank in its way still goes. Absent or false before, as waitWhenDry.
+   */
+  readonly waitWhenNoTarget?: boolean;
 }
 
 /** What one bot decided on one tick, and why. */

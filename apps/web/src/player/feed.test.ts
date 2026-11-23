@@ -91,7 +91,7 @@ describe("describeDecision", () => {
     expect(say(decision({}), bucket).text).toEndWith("My bucket shot hit, worth 2 points.");
     // "Go to an item" at a tank on the next square shoots instead, like every step toward a tank.
     expect(say(decision({ ruleId: null, actionId: "goToItem", move: "T" })).text).toContain("My way was blocked, so I shot instead.");
-    expect(say(decision({ ruleId: null, actionId: "goToItem", move: "W" })).text).toContain("My way was blocked and I had too little water to shoot, so I waited.");
+    expect(say(decision({ ruleId: null, actionId: "goToItem", move: "W" })).text).toContain("I could not do it, so I waited.");
     expect(say(decision({ dizzy: true })).text).toBe("Shot, because a tank is in my line of fire and within my range. I was dizzy, so I checked my rules from the bottom up.");
     // A pinwheel's spin ran no rule and no fallback, so the feed names the spin and nothing else.
     expect(say(decision({ ruleId: null, actionId: "turn", move: "R", dizzy: true, spin: true })).text).toBe("A pinwheel spun me round, so I checked no rule this turn.");

@@ -81,6 +81,7 @@ export class RoundRunner {
         items: true,
         ultimates: ultimatesOn(now()),
         waitWhenDry: true,
+        waitWhenNoTarget: true,
       };
       const state = createRound(config);
       this.store.setRoundConfig(record, phase.round, config);

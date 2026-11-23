@@ -61,6 +61,8 @@ import { allCells, arenaSize, cellKey, isInside, type Cell } from "./grid.ts";
 import { advanceLayout, arenaConditionOf, boardRuleSetId, createArenaLayout, isArenaLayoutId, rulesAt, waterCapacityOf, type ArenaConditionId } from "./arena-layouts.ts";
 import { createRng } from "./rng.ts";
 import { canFire, resolveTick } from "./resolve.ts";
+import { throwRange } from "../combat/combat.ts";
+import { firstBotInLine } from "../strategy/geometry.ts";
 import type { Placement } from "./resolve.ts";
 
 /**
@@ -207,6 +209,8 @@ export interface OpenRoundConfig {
   readonly items: boolean;
   /** As RoundConfig.waitWhenDry. */
   readonly waitWhenDry?: boolean;
+  /** As RoundConfig.waitWhenNoTarget. */
+  readonly waitWhenNoTarget?: boolean;
   readonly ultimates: boolean;
 }
 
@@ -223,7 +227,7 @@ export function createOpenRound(config: OpenRoundConfig): RoundState {
   const size = arenaSize(config.boardFor, ruleSet(ruleSetId));
   const rng = config.rng;
   // An open round has no seed: it draws from config.rng and cannot be replayed (above), so nothing reads this one.
-  const roundConfig: RoundConfig = { seed: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, players: [], items: config.items, ultimates: config.ultimates, ...(config.waitWhenDry === true ? { waitWhenDry: true } : {}) };
+  const roundConfig: RoundConfig = { seed: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, players: [], items: config.items, ultimates: config.ultimates, ...(config.waitWhenDry === true ? { waitWhenDry: true } : {}), ...(config.waitWhenNoTarget === true ? { waitWhenNoTarget: true } : {}) };
   const spawn: Snapshot = {
     ...size, tick: 0, ticksTotal: config.ticksTotal, survivorsAfterRound: null, ruleSetId, bots: [], items: [],
     ...(isArenaLayoutId(condition) ? { layout: createArenaLayout(condition, size, rng) } : {}),
@@ -387,9 +391,15 @@ export function roundHoldings(state: RoundState): { readonly tanks: number; read
  */
 const THROWING_ACTIONS: ReadonlySet<string> = new Set(["throw", "attack", "goForward"]);
 
-/** A throw that no rule asked for, by a tank without the water for one: it would throw dry, so it waits (RoundConfig.waitWhenDry). */
-function waitsWhenDry(decision: Decision, bot: BotState, before: Snapshot): boolean {
-  return decision.move === "T" && !THROWING_ACTIONS.has(decision.actionId) && !canFire(bot, rulesAt(before, bot.x, bot.y));
+/**
+ * A throw that no rule asked for waits instead: without the water for one (RoundConfig.waitWhenDry), and with no tank in
+ * its line (RoundConfig.waitWhenNoTarget), because it would throw dry or at empty squares.
+ */
+function waitsInstead(config: RoundConfig, decision: Decision, bot: BotState, before: Snapshot): boolean {
+  if (decision.move !== "T" || THROWING_ACTIONS.has(decision.actionId)) return false;
+  const rules = rulesAt(before, bot.x, bot.y);
+  if (config.waitWhenDry === true && !canFire(bot, rules)) return true;
+  return config.waitWhenNoTarget === true && firstBotInLine(before, bot, throwRange(bot.build, rules)) === null;
 }
 
 /** Advances the round by one tick and returns what happened. It throws when the round is over. */
@@ -412,7 +422,7 @@ export function stepRound(state: RoundState): TickResult {
     const after = runningAfter(decision, strategy);
     if (after === null) round.sequences.delete(bot.id);
     else round.sequences.set(bot.id, after);
-    return round.config.waitWhenDry === true && waitsWhenDry(decision, bot, before) ? { ...decision, move: "W" } : decision;
+    return waitsInstead(round.config, decision, bot, before) ? { ...decision, move: "W" } : decision;
   });
 
   // 2. A random order decides who moves first.

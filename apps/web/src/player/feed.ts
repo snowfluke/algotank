@@ -47,8 +47,9 @@ export function decisionAction(decision: Decision, strategy: StrategyInput): { r
 }
 
 /**
- * How a step action ended when its step could not go on: a shot, or, without water for one, a wait (the engine's
- * RoundConfig.waitWhenDry, from 2026-11-23). Null when the step went on.
+ * How a step action ended when its step could not go on: a shot, or a wait when the shot would do nothing, without
+ * water or a tank in its line (the engine's RoundConfig.waitWhenDry and waitWhenNoTarget, 2026-11-23). Null when the
+ * step went on.
  */
 function blocked(decision: Decision): "shot" | "waited" | null {
   if (!(STEP_ACTIONS as ReadonlySet<string>).has(decision.actionId)) return null;

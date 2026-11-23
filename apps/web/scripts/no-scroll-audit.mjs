@@ -506,9 +506,21 @@ export const STATES = [
     state: "test-options-picker",
     owner: "D1",
     perSize: true,
+    // The options step opens from its button on a pane narrower than 48rem; a wider one shows them inline (below).
+    sizes: ["360x640", "390x844", "430x932", "768x1024"],
     path: () => "/kit?show=board&pane=test",
     as: "visitor",
     steps: [{ click: "[data-test-options]" }, { click: '[data-picker="bot-styles"]' }, { wait: "[data-picker-list]" }],
+  },
+  {
+    screen: "panes",
+    state: "test-inline-picker",
+    owner: "D1",
+    perSize: true,
+    sizes: ["1000x600", "1280x720", "844x390"],
+    path: () => "/kit?show=board&pane=test",
+    as: "visitor",
+    steps: [{ click: '[data-picker="bot-styles"]' }, { wait: "[data-picker-list]" }],
   },
   {
     screen: "panes",

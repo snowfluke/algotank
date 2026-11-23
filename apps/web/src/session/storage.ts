@@ -77,6 +77,11 @@ export function parsePlayerSession(raw: string | null): PlayerSession | null {
  * The room this browser was last seated in, so Home can offer the way back (owner, 2026-11-19: "the home should
  * display a quick button to get back to see the arena").
  */
+/** The test match's last options (practice/testChoices.ts reads and checks them). */
+const TEST_CHOICES_KEY = "algotank:test-choices";
+export const readTestChoicesText = (store: KeyValueStore | null): string | null => read(store, TEST_CHOICES_KEY);
+export const saveTestChoicesText = (store: KeyValueStore | null, text: string): boolean => write(store, TEST_CHOICES_KEY, text);
+
 const LAST_ROOM_KEY = "algotank:last-room";
 export const saveLastRoom = (store: KeyValueStore | null, arenaId: ArenaId): boolean => write(store, LAST_ROOM_KEY, arenaId);
 export const readLastRoom = (store: KeyValueStore | null): ArenaId | null => read(store, LAST_ROOM_KEY);

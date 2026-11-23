@@ -24,11 +24,12 @@ function inIndonesian(node: React.ReactNode): string {
 describe("Practice", () => {
   const html = renderToStaticMarkup(<Practice strategy={preset.strategy} name="Ayu" defaultRuleSetId="dry-spell" />);
 
-  test("one run button and one options button, and the options themselves wait behind it", () => {
+  test("one run button; a wide pane shows the options beside it, a narrow one the button that opens them", () => {
     expect(count(html, ">Run a test match<")).toBe(1);
     expect(count(html, "data-test-run")).toBe(1);
     expect(html).toContain(`>${en.options}<`);
-    expect(html).not.toContain(en.botCount);
+    expect(html).toMatch(/class="hidden @3xl:block"><div data-test-option-fields=""/);
+    expect(html).toContain(en.botCount);
   });
 
   test("the pane fills the box it is given", () => {

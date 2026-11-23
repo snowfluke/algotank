@@ -1,10 +1,11 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import { ULTIMATES_FROM } from "@game/arena";
-import { ARENA_LAYOUT_IDS, DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, STANDARD_RULE_SET_ID, parseStrategy, statsOfRound, statsView } from "@game/engine";
+import { ARENA_LAYOUT_IDS, arenaConditionOf, createRng, DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, STANDARD_RULE_SET_ID, parseStrategy, statsOfRound, statsView } from "@game/engine";
 import type { Strategy } from "@game/engine";
 import { OPPONENTS_MAX, PLAYER_ID, TICKS_DEFAULT, drawCondition, drawSeed, pickOpponents, runPractice } from "./run.ts";
 import { DEFAULT_SPEED_ID, SPEED_MS, initialReplay, replayReducer } from "./replay.ts";
+import { parseTestChoices } from "./testChoices.ts";
 
 function presetStrategy(id: string): Strategy {
   const found = PRESETS.find((preset) => preset.id === id);
@@ -59,9 +60,17 @@ describe("runPractice", () => {
     expect(second.ticks.length).toBe(settings.ticks);
   });
 
-  test("the random round rules draw a single condition or a mixed arena of the league", () => {
+  test("random draws a condition every RANDOM_CHANGE_TURNS turns from the seed, so a seed is the same match", () => {
     const known = new Set<string>([...RULE_SET_IDS, ...ARENA_LAYOUT_IDS]);
-    for (let i = 0; i < 200; i++) expect(known.has(drawCondition())).toBe(true);
+    const rng = createRng(1);
+    for (let i = 0; i < 200; i++) expect(known.has(drawCondition(rng))).toBe(true);
+    const long = { ...settings, ruleSetId: "random" as const, ticks: 160 };
+    const conditions = (run: ReturnType<typeof runPractice>) => new Set([run.spawn, ...run.ticks.map((t) => t.snapshot)].map((s) => arenaConditionOf(s)));
+    // Over a few seeds the weather changes during the match.
+    expect([1, 2, 3, 4].some((seed) => conditions(runPractice({ ...long, seed })).size > 1)).toBe(true);
+    expect(runPractice(long).standings).toEqual(runPractice(long).standings);
+    // The statistics count every turn, also across a change of weather that moved tanks.
+    for (const seed of [1, 2, 3, 4, 5, 6]) expect(runPractice({ ...long, seed }).stats.turns).toBe(160);
   });
 
   test("a mixed arena of the league plays too, on its layout, and the same seed gives the same match", () => {
@@ -205,5 +214,19 @@ describe("replayReducer", () => {
     state = replayReducer(replayReducer(state, { type: "advance" }), { type: "advance" });
     expect(state).toEqual({ frame: 2, lastFrame: 2, playing: false });
     expect(replayReducer(state, { type: "play" })).toEqual({ frame: 0, lastFrame: 2, playing: true });
+  });
+});
+
+describe("the kept test options (testChoices.ts)", () => {
+  test("read back what was kept, and give null for anything that is not a valid set", () => {
+    const kept = { opponents: 4, mix: { kind: "only", presetId: PRESETS[0]!.id }, length: "long", ruleSetId: "random" } as const;
+    expect(parseTestChoices(JSON.stringify(kept))).toEqual(kept);
+    expect(parseTestChoices(JSON.stringify({ ...kept, ruleSetId: "hills" }))?.ruleSetId).toBe("hills");
+    expect(parseTestChoices(JSON.stringify({ ...kept, ruleSetId: null }))?.ruleSetId).toBeNull();
+    for (const bad of [{ ...kept, opponents: 99 }, { ...kept, length: "forever" }, { ...kept, ruleSetId: "moon" }, { ...kept, mix: { kind: "only", presetId: "nobody" } }]) {
+      expect(parseTestChoices(JSON.stringify(bad))).toBeNull();
+    }
+    expect(parseTestChoices("not json")).toBeNull();
+    expect(parseTestChoices(null)).toBeNull();
   });
 });

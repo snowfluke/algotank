@@ -18,10 +18,11 @@ import { useMusicCondition } from "../sound/music.ts";
 import { plainTankLook, type TankLook } from "../tank/look.ts";
 import { Button } from "../ui/Button.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
-import { MATCH_LENGTHS, OPPONENTS_DEFAULT, drawCondition, drawSeed, matchTanks, runPractice } from "./run.ts";
+import { MATCH_LENGTHS, drawSeed, matchTanks, runPractice } from "./run.ts";
 import type { PracticeRun } from "./run.ts";
 import { TestMatch } from "./TestMatch.tsx";
-import { TestOptions, type TestChoices } from "./TestOptions.tsx";
+import { TestOptionFields, TestOptions, TestRulesStep } from "./TestOptions.tsx";
+import { readTestChoices, saveTestChoices, type TestChoices } from "./testChoices.ts";
 import { markTestMatchShown } from "./testMatchShown.ts";
 
 interface FinishedRun {
@@ -43,12 +44,14 @@ export function Practice({ strategy, name, defaultRuleSetId, look = DEFAULT_LOOK
   const m = useMessages();
   const p = m.practice;
   const parsed = useMemo(() => parseStrategy(strategy), [strategy]);
-  const [choices, setChoices] = useState<TestChoices>({
-    opponents: OPPONENTS_DEFAULT,
-    mix: { kind: "eachOnce" },
-    length: "normal",
-    ruleSetId: null,
-  });
+  // The last options on this device (testChoices.ts), kept again at every change.
+  const [choices, setChoicesNow] = useState<TestChoices>(readTestChoices);
+  const setChoices = (next: TestChoices) => {
+    setChoicesNow(next);
+    saveTestChoices(next);
+  };
+  // A wide pane shows the options beside the run button; their round rules open as a step of their own.
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [finished, setFinished] = useState<FinishedRun | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -70,7 +73,7 @@ export function Practice({ strategy, name, defaultRuleSetId, look = DEFAULT_LOOK
         opponents: choices.opponents,
         mix: choices.mix,
         ticks: MATCH_LENGTHS[choices.length],
-        ruleSetId: choices.ruleSetId === "random" ? drawCondition() : (choices.ruleSetId ?? defaultRuleSetId),
+        ruleSetId: choices.ruleSetId ?? defaultRuleSetId,
         seed: drawSeed(),
         nowMs: Date.now(),
         styleName: (preset) => m.vocabulary.playStyles[preset.id].name,
@@ -98,22 +101,30 @@ export function Practice({ strategy, name, defaultRuleSetId, look = DEFAULT_LOOK
     // The width of this pane decides the layout, so the test match works in a narrow column too.
     <div className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-3" data-practice="">
       {optionsOpen ? <TestOptions choices={choices} defaultRuleSetId={defaultRuleSetId} onChoices={setChoices} onBack={closeOptions} /> : null}
-      {failure === null || optionsOpen ? null : <StatusBanner tone="danger" title={p.runFailed} />}
+      {rulesOpen && !optionsOpen ? <TestRulesStep choices={choices} defaultRuleSetId={defaultRuleSetId} onChoices={setChoices} onBack={() => setRulesOpen(false)} /> : null}
+      {failure === null || optionsOpen || rulesOpen ? null : <StatusBanner tone="danger" title={p.runFailed} />}
       {finished === null || tanks === null ? (
-        optionsOpen ? null : (
+        optionsOpen || rulesOpen ? null : (
           <section className="flex min-w-0 flex-col gap-3" aria-labelledby={headingId}>
             <h2 id={headingId} className="text-title">
               {p.heading}
             </h2>
             <p className="text-lead">{p.intro}</p>
             {parsed.ok ? null : <StatusBanner tone="warning" title={p.cannotRun} {...(parsed.errors[0] === undefined ? {} : { body: parsed.errors[0] })} />}
+            {/* A wide pane holds the options too, so one screen sets and starts the match (owner, 2026-11-23); a phone's
+                pane has no room for them, so they stay a step behind their button there. */}
+            <div className="hidden @3xl:block">
+              <TestOptionFields choices={choices} defaultRuleSetId={defaultRuleSetId} onChoices={setChoices} onOpenRules={() => setRulesOpen(true)} />
+            </div>
             <div className="flex min-w-0 flex-wrap items-center gap-3">
               <Button size="lg" variant={inArena ? "secondary" : "primary"} disabled={!parsed.ok} data-test-run="" onClick={start}>
                 {p.run}
               </Button>
-              <Button variant="secondary" icon={<SlidersHorizontal aria-hidden size={20} />} data-test-options="" onClick={(event) => openOptions(event.currentTarget)}>
-                {p.options}
-              </Button>
+              <span className="contents @3xl:hidden">
+                <Button variant="secondary" icon={<SlidersHorizontal aria-hidden size={20} />} data-test-options="" onClick={(event) => openOptions(event.currentTarget)}>
+                  {p.options}
+                </Button>
+              </span>
             </div>
           </section>
         )

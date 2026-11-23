@@ -2,8 +2,8 @@
 // browser with the engine. The setup rules (how many opponents, which mix,
 // how a round is cut) live here, so the screen only reads and shows them.
 
-import { ARENA_LAYOUT_IDS, createOpenRound, createRng, handicapOf, isArenaLayoutId, RULE_SET_IDS, joinRound, PRESETS, runRound, standings as standingsOf, statsOfRound, stepRound } from "@game/engine";
-import type { ArenaLayoutId, ArenaConditionId, BotId, RoundConfig, RoundPlayer, Snapshot, Standing, Strategy, TankStats, TickResult } from "@game/engine";
+import { ARENA_LAYOUT_IDS, changeRoundRules, createOpenRound, createRng, handicapOf, isArenaLayoutId, RULE_SET_IDS, joinRound, PRESETS, runRound, standings as standingsOf, statsOfRound, stepRound, addTurn, EMPTY_STATS, turnsOf } from "@game/engine";
+import type { ArenaLayoutId, ArenaConditionId, BotId, Rng, RoundConfig, RoundPlayer, Snapshot, Standing, Strategy, TankStats, TickResult } from "@game/engine";
 import { isFinalRound, survivorCount, ultimatesOn } from "@game/arena";
 import type { TankInfo } from "../board/props.ts";
 import { TANK_COLOURS } from "../tank/colours.ts";
@@ -62,20 +62,22 @@ export function drawSeed(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
 }
 
+/** The share of draws of "random" that give a mixed arena: the monthly arena's first draw of a day (apps/server league-day.ts, drawCondition). */
+const MIXED_ARENA_PERCENT = 20;
 /**
- * The test match's "random" round rules: a mixed arena at the odds of the monthly arena's first draw of a day
- * (apps/server league-day.ts, drawCondition: 20%), otherwise one of the single conditions. Call it from a click handler
- * only, as drawSeed.
+ * "Random" draws a new condition every this many turns, so a test match of 80 to 160 turns sees the weather change one
+ * to three times, as a league day does every 333 turns (RESHUFFLE_TURNS; owner, 2026-11-23: "the arena didn't change
+ * mid test").
  */
-export function drawCondition(): ArenaConditionId {
-  const [mixed, pick] = crypto.getRandomValues(new Uint32Array(2));
-  const list: readonly ArenaConditionId[] = (mixed ?? 0) % 100 < MIXED_ARENA_PERCENT ? ARENA_LAYOUT_IDS : RULE_SET_IDS;
-  const id = list[(pick ?? 0) % list.length];
+export const RANDOM_CHANGE_TURNS = 40;
+
+/** One draw of the "random" round rules: a mixed arena at the league's first-draw odds, otherwise a single condition. */
+export function drawCondition(rng: Rng): ArenaConditionId {
+  const list: readonly ArenaConditionId[] = rng.int(100) < MIXED_ARENA_PERCENT ? ARENA_LAYOUT_IDS : RULE_SET_IDS;
+  const id = list[rng.int(list.length)];
   if (id === undefined) throw new Error("The engine has no arena condition to draw.");
   return id;
 }
-
-const MIXED_ARENA_PERCENT = 20;
 
 export interface PracticeSettings {
   readonly strategy: Strategy;
@@ -85,8 +87,8 @@ export interface PracticeSettings {
   readonly ticks: number;
   readonly seed: number;
   readonly nowMs: number;
-  /** A single condition, or a mixed arena of the league (runMixed). */
-  readonly ruleSetId: ArenaConditionId;
+  /** A single condition, a mixed arena of the league, or "random": a new draw every RANDOM_CHANGE_TURNS turns (runOpen). */
+  readonly ruleSetId: ArenaConditionId | "random";
   /** The name a bot shows, from its play style, so the names follow the page language. Default: the engine's English name. */
   readonly styleName?: (preset: PlayStylePreset) => string;
 }
@@ -101,6 +103,8 @@ export interface PracticeRun {
   readonly ticks: readonly TickResult[];
   readonly standings: readonly Standing[];
   readonly player: Standing;
+  /** What the player's rules did, counted turn by turn from the board each turn was played from (matchStats). */
+  readonly stats: TankStats;
 }
 
 export function runPractice(settings: PracticeSettings): PracticeRun {
@@ -118,26 +122,51 @@ export function runPractice(settings: PracticeSettings): PracticeRun {
     names[`bot-${index + 1}`] = name;
   });
   const condition = settings.ruleSetId;
-  const { spawn, ticks, standings } = isArenaLayoutId(condition) ? runMixed(settings, condition, players) : runRound(singleConfig(settings, condition, players, playerCount));
+  const { spawn, ticks, standings, stats } = condition === "random" || isArenaLayoutId(condition) ? runOpen(settings, condition, players) : runSingle(singleConfig(settings, condition, players, playerCount));
   const player = standings.find((standing) => standing.botId === PLAYER_ID);
   if (player === undefined) throw new Error("The player is missing from the standings.");
-  return { seed: settings.seed, ticksTotal: settings.ticks, strategy: settings.strategy, names, spawn, ticks, standings, player };
+  return { seed: settings.seed, ticksTotal: settings.ticks, strategy: settings.strategy, names, spawn, ticks, standings, player, stats };
 }
 
 /**
- * A mixed arena exists only in the league's open rounds (createOpenRound), so its test match is one: seeded from the
- * match's seed, every tank joined before the first turn, and no cut line, as in the league.
+ * A mixed arena exists only in the league's open rounds (createOpenRound), and only an open round changes its condition
+ * between turns (changeRoundRules), so these matches are one: seeded from the match's seed, every tank joined before the
+ * first turn, and no cut line, as in the league. "Random" draws from its own seeded source, so a seed is the same match.
  */
-function runMixed(settings: PracticeSettings, layout: ArenaLayoutId, players: readonly RoundPlayer[]): { spawn: Snapshot; ticks: TickResult[]; standings: Standing[] } {
+type PlayedMatch = { spawn: Snapshot; ticks: TickResult[]; standings: Standing[]; stats: TankStats };
+
+/** A single condition: one seeded round, whose turns follow each other, so the statistics read them in a row. */
+function runSingle(config: RoundConfig): PlayedMatch {
+  const { spawn, ticks, standings } = runRound(config);
+  return { spawn, ticks, standings, stats: statsOfRound(spawn, ticks, PLAYER_ID) };
+}
+
+function runOpen(settings: PracticeSettings, condition: ArenaLayoutId | "random", players: readonly RoundPlayer[]): PlayedMatch {
+  const draws = createRng(settings.seed ^ 0x5eed);
   const round = createOpenRound({
-    rng: createRng(settings.seed), ticksTotal: settings.ticks, ruleSetId: layout, boardFor: players.length,
-    items: true, ultimates: ultimatesOn(settings.nowMs), waitWhenDry: true,
+    rng: createRng(settings.seed), ticksTotal: settings.ticks, ruleSetId: condition === "random" ? drawCondition(draws) : condition, boardFor: players.length,
+    items: true, ultimates: ultimatesOn(settings.nowMs), waitWhenDry: true, waitWhenNoTarget: true,
   });
   for (const player of players) joinRound(round, player);
   const spawn = round.snapshot;
   const ticks: TickResult[] = [];
-  while (!round.isOver) ticks.push(stepRound(round));
-  return { spawn, ticks, standings: standingsOf(round) };
+  let stats = EMPTY_STATS;
+  while (!round.isOver) {
+    const before = round.snapshot;
+    const tick = stepRound(round);
+    // Counted from the board the turn was played from: after a change of weather that is not the last turn's end.
+    const turn = turnsOf(before, tick).get(PLAYER_ID);
+    if (turn === undefined) throw new Error(`Turn ${tick.tick} has no turn of the player.`);
+    stats = addTurn(stats, turn);
+    if (condition === "random" && !round.isOver && round.snapshot.tick % RANDOM_CHANGE_TURNS === 0) {
+      changeRoundRules(round, drawCondition(draws), players.length);
+      // The change can move tanks and reorder the board, so the replay shows the board after it as this turn's end.
+      ticks.push({ ...tick, snapshot: round.snapshot });
+    } else {
+      ticks.push(tick);
+    }
+  }
+  return { spawn, ticks, standings: standingsOf(round), stats };
 }
 
 function singleConfig(settings: PracticeSettings, ruleSetId: Exclude<ArenaConditionId, ArenaLayoutId>, players: readonly RoundPlayer[], playerCount: number): RoundConfig {
@@ -147,6 +176,7 @@ function singleConfig(settings: PracticeSettings, ruleSetId: Exclude<ArenaCondit
     items: true,
     ultimates: ultimatesOn(settings.nowMs),
     waitWhenDry: true,
+    waitWhenNoTarget: true,
     ruleSetId,
     ticksTotal: settings.ticks,
     // The cut-line conditions read this, so it follows the arena's own rule.
@@ -177,5 +207,5 @@ export function matchTanks(botIds: readonly BotId[], playerLook: TankLook): Read
 
 /** The player's statistics of the match, counted by the engine as the server counts a round (stats/stats.ts). */
 export function matchStats(run: PracticeRun): TankStats {
-  return statsOfRound(run.spawn, run.ticks, PLAYER_ID);
+  return run.stats;
 }

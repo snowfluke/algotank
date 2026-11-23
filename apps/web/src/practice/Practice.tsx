@@ -18,7 +18,7 @@ import { useMusicCondition } from "../sound/music.ts";
 import { plainTankLook, type TankLook } from "../tank/look.ts";
 import { Button } from "../ui/Button.tsx";
 import { StatusBanner } from "../ui/StatusBanner.tsx";
-import { MATCH_LENGTHS, OPPONENTS_DEFAULT, drawSeed, matchTanks, runPractice } from "./run.ts";
+import { MATCH_LENGTHS, OPPONENTS_DEFAULT, drawCondition, drawSeed, matchTanks, runPractice } from "./run.ts";
 import type { PracticeRun } from "./run.ts";
 import { TestMatch } from "./TestMatch.tsx";
 import { TestOptions, type TestChoices } from "./TestOptions.tsx";
@@ -70,7 +70,7 @@ export function Practice({ strategy, name, defaultRuleSetId, look = DEFAULT_LOOK
         opponents: choices.opponents,
         mix: choices.mix,
         ticks: MATCH_LENGTHS[choices.length],
-        ruleSetId: choices.ruleSetId ?? defaultRuleSetId,
+        ruleSetId: choices.ruleSetId === "random" ? drawCondition() : (choices.ruleSetId ?? defaultRuleSetId),
         seed: drawSeed(),
         nowMs: Date.now(),
         styleName: (preset) => m.vocabulary.playStyles[preset.id].name,

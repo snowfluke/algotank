@@ -77,8 +77,8 @@ export const en = {
   thisTurnOf: (turn: number) => (turn === 0 ? "Your tank at the start" : `Your tank on turn ${turn}`),
   showResult: "See the result",
   resultTitle: "Test match result",
-  useRules: "Use these rules",
-  rulesChosen: "Chosen",
+  /** The round rules' first choice: a new draw for each match (rules/ConditionChoices.tsx). */
+  random: { name: "Random", note: "Each test match draws a condition, as the monthly arena does." },
   none: "None",
 };
 
@@ -141,7 +141,6 @@ export const id: typeof en = {
   thisTurnOf: (turn) => (turn === 0 ? "Tank kamu di awal" : `Tank kamu di giliran ${turn}`),
   showResult: "Lihat hasil",
   resultTitle: "Hasil uji coba",
-  useRules: "Pakai aturan ini",
-  rulesChosen: "Dipilih",
+  random: { name: "Acak", note: "Setiap uji coba mengundi satu kondisi, seperti arena bulanan." },
   none: "Tidak ada",
 };

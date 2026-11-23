@@ -1,15 +1,16 @@
 // The choices of a test match, as a step that replaces the test match pane. Every
 // choice has a default, so the player can run a match without opening this. The
-// round rules are a second step (one rule set per page with its sentence), because
-// six rule sets with their sentences do not fit beside the other choices on a phone.
+// round rules are a second step, the list of arena conditions the workshop uses
+// (rules/ConditionChoices.tsx): the single conditions, the league's mixed arenas, and
+// "random", which draws one for each match as the monthly arena does (owner, 2026-11-23).
 
 import { useId, useState } from "react";
 import { ARENA_LAYOUT_IDS, PRESETS, RULE_SET_IDS } from "@game/engine";
-import type { ArenaConditionId, RuleSetId } from "@game/engine";
+import type { RuleSetId } from "@game/engine";
 import { conditionText } from "../monthly/ArenaCondition.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
+import { ConditionChoices, type ConditionChoice } from "../rules/ConditionChoices.tsx";
 import { Button } from "../ui/Button.tsx";
-import { Carousel } from "../ui/Carousel.tsx";
 import { Picker } from "../ui/Picker.tsx";
 import { SegmentedControl } from "../ui/SegmentedControl.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
@@ -26,9 +27,11 @@ export interface TestChoices {
   readonly opponents: number;
   readonly mix: OpponentMix;
   readonly length: MatchLength;
-  /** Null until the player picks a set, so the choice follows the set announced for the next round. */
-  /** A single condition or a mixed arena (owner, 2026-11-23: the options lacked the league's mixed arenas). */
-  readonly ruleSetId: ArenaConditionId | null;
+  /**
+   * A single condition, a mixed arena, or a draw for each match ("random"). Null until the player picks one, so the
+   * choice follows the set announced for the next round.
+   */
+  readonly ruleSetId: ConditionChoice | null;
 }
 
 /** The picker's value for "a mix of play styles". Every other value is a play style's id. */
@@ -43,8 +46,8 @@ export interface TestOptionsProps {
   onBack(): void;
 }
 
-/** The single conditions, then the mixed arenas the league plays. */
-const CONDITIONS: readonly ArenaConditionId[] = [...RULE_SET_IDS, ...ARENA_LAYOUT_IDS];
+/** A draw for each match first, then the single conditions, then the mixed arenas the league plays. */
+const CONDITIONS: readonly ConditionChoice[] = ["random", ...RULE_SET_IDS, ...ARENA_LAYOUT_IDS];
 
 export function TestOptions({
   choices,
@@ -57,39 +60,17 @@ export function TestOptions({
   const rulesLabelId = useId();
   const [step, setStep] = useState<"options" | "rules">("options");
   const chosenRules = choices.ruleSetId ?? defaultRuleSetId;
-  const [rulesIndex, setRulesIndex] = useState(() =>
-    Math.max(0, CONDITIONS.indexOf(chosenRules)),
-  );
-
   if (step === "rules") {
     return (
       <StepSheet title={p.roundRules} onBack={() => setStep("options")}>
-        <Carousel
+        <ConditionChoices
           label={p.roundRules}
           items={CONDITIONS}
-          itemKey={(id) => id}
-          index={rulesIndex}
-          onIndexChange={setRulesIndex}
-          renderItem={(id) => {
-            const chosen = id === chosenRules;
-            return (
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-                <h3 className="text-title [overflow-wrap:anywhere]">
-                  {conditionText(m, id).name}
-                </h3>
-                <p className="[overflow-wrap:anywhere]">
-                  {conditionText(m, id).summary}
-                </p>
-                <Button
-                  variant={chosen ? "secondary" : "primary"}
-                  className="self-start"
-                  aria-pressed={chosen}
-                  onClick={() => onChoices({ ...choices, ruleSetId: id })}
-                >
-                  {chosen ? p.rulesChosen : p.useRules}
-                </Button>
-              </div>
-            );
+          value={chosenRules}
+          random={p.random}
+          onChoose={(ruleSetId) => {
+            onChoices({ ...choices, ruleSetId });
+            setStep("options");
           }}
         />
       </StepSheet>
@@ -150,7 +131,7 @@ export function TestOptions({
             data-test-rules=""
             onClick={() => setStep("rules")}
           >
-            {conditionText(m, chosenRules).name}
+            {chosenRules === "random" ? p.random.name : conditionText(m, chosenRules).name}
           </Button>
         </div>
       </div>

@@ -2,7 +2,7 @@
 // browser with the engine. The setup rules (how many opponents, which mix,
 // how a round is cut) live here, so the screen only reads and shows them.
 
-import { createOpenRound, createRng, handicapOf, isArenaLayoutId, joinRound, PRESETS, runRound, standings as standingsOf, statsOfRound, stepRound } from "@game/engine";
+import { ARENA_LAYOUT_IDS, createOpenRound, createRng, handicapOf, isArenaLayoutId, RULE_SET_IDS, joinRound, PRESETS, runRound, standings as standingsOf, statsOfRound, stepRound } from "@game/engine";
 import type { ArenaLayoutId, ArenaConditionId, BotId, RoundConfig, RoundPlayer, Snapshot, Standing, Strategy, TankStats, TickResult } from "@game/engine";
 import { isFinalRound, survivorCount, ultimatesOn } from "@game/arena";
 import type { TankInfo } from "../board/props.ts";
@@ -61,6 +61,21 @@ function opponentNames(opponents: readonly PlayStylePreset[], styleName: (preset
 export function drawSeed(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
 }
+
+/**
+ * The test match's "random" round rules: a mixed arena at the odds of the monthly arena's first draw of a day
+ * (apps/server league-day.ts, drawCondition: 20%), otherwise one of the single conditions. Call it from a click handler
+ * only, as drawSeed.
+ */
+export function drawCondition(): ArenaConditionId {
+  const [mixed, pick] = crypto.getRandomValues(new Uint32Array(2));
+  const list: readonly ArenaConditionId[] = (mixed ?? 0) % 100 < MIXED_ARENA_PERCENT ? ARENA_LAYOUT_IDS : RULE_SET_IDS;
+  const id = list[(pick ?? 0) % list.length];
+  if (id === undefined) throw new Error("The engine has no arena condition to draw.");
+  return id;
+}
+
+const MIXED_ARENA_PERCENT = 20;
 
 export interface PracticeSettings {
   readonly strategy: Strategy;

@@ -102,8 +102,9 @@ export function sizesFor(state) {
 const tab = (value) => ({ click: `[data-tab="${value}"]` });
 // A test match ends its countdown and plays at the first press of play, and stops at the second, so the turn shown stays.
 const PAUSE_MATCH = [{ click: "[data-replay-play]:visible" }, { click: "[data-replay-play]:visible" }];
-// The smallest side the test match's board keeps at the fixed-height sizes (rule (h)); it shrank to 17 px on a phone (2026-11-22).
-const BOARD_FLOOR = { selector: "[data-test-board]", px: 160 };
+// The smallest side the test match's board keeps at the fixed-height sizes (rule (h)); it shrank to 17 px on a phone
+// (2026-11-22). 150, because the line naming the match's condition (2026-11-23) leaves it 157 px at 400 x 620.
+const BOARD_FLOOR = { selector: "[data-test-board]", px: 150 };
 
 /** Every tour of guide/tours.ts, finished: the state every screen state starts from. */
 const ALL_TOURS_FINISHED = Object.fromEntries(["workshop", "lobby", "round", "result", "home"].map((id) => [id, { kind: "finished" }]));
@@ -515,16 +516,26 @@ export const STATES = [
     owner: "S2",
     path: () => "/kit?show=board&pane=test",
     as: "visitor",
-    steps: [{ click: "[data-test-options]" }, { click: "[data-test-rules]" }, { wait: "[data-carousel-next]" }],
+    steps: [{ click: "[data-test-options]" }, { click: "[data-test-rules]" }, { wait: "[data-round-rules]" }],
   },
-  // The last of the round rules is a mixed arena of the league, whose name can wrap (2026-11-23).
+  // The last page of the round rules holds the league's mixed arenas, whose names can wrap (2026-11-23).
   {
     screen: "panes",
     state: "test-rules-mixed",
     owner: "S2",
     path: () => "/kit?show=board&pane=test",
     as: "visitor",
-    steps: [{ click: "[data-test-options]" }, { click: "[data-test-rules]" }, { pageToEnd: "[data-carousel-next]" }],
+    steps: [{ click: "[data-test-options]" }, { click: "[data-test-rules]" }, { wait: "[data-round-rules]" }, { pageToEnd: "[data-pager-next]" }],
+  },
+  // A match on the "random" round rules, which names the condition it drew beside the ultimate.
+  {
+    screen: "panes",
+    state: "test-random-running",
+    owner: "S2",
+    path: () => "/kit?show=board&pane=test",
+    as: "visitor",
+    minSide: BOARD_FLOOR,
+    steps: [{ click: "[data-test-options]" }, { click: "[data-test-rules]" }, { click: '[data-round-rules="random"]' }, { click: "[data-step-sheet-back]" }, { click: "[data-test-run]" }, { wait: "[data-test-board]" }, ...PAUSE_MATCH],
   },
 
   // S1b: the preparation pane (in the private lobby, as a player) and the workshop. Its tabs are

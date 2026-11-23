@@ -1,9 +1,9 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import { ULTIMATES_FROM } from "@game/arena";
-import { ARENA_LAYOUT_IDS, DEFAULT_PRESET_ID, PRESETS, STANDARD_RULE_SET_ID, parseStrategy, statsOfRound, statsView } from "@game/engine";
+import { ARENA_LAYOUT_IDS, DEFAULT_PRESET_ID, PRESETS, RULE_SET_IDS, STANDARD_RULE_SET_ID, parseStrategy, statsOfRound, statsView } from "@game/engine";
 import type { Strategy } from "@game/engine";
-import { OPPONENTS_MAX, PLAYER_ID, TICKS_DEFAULT, drawSeed, pickOpponents, runPractice } from "./run.ts";
+import { OPPONENTS_MAX, PLAYER_ID, TICKS_DEFAULT, drawCondition, drawSeed, pickOpponents, runPractice } from "./run.ts";
 import { DEFAULT_SPEED_ID, SPEED_MS, initialReplay, replayReducer } from "./replay.ts";
 
 function presetStrategy(id: string): Strategy {
@@ -57,6 +57,11 @@ describe("runPractice", () => {
     const second = runPractice(settings);
     expect(second.standings).toEqual(first.standings);
     expect(second.ticks.length).toBe(settings.ticks);
+  });
+
+  test("the random round rules draw a single condition or a mixed arena of the league", () => {
+    const known = new Set<string>([...RULE_SET_IDS, ...ARENA_LAYOUT_IDS]);
+    for (let i = 0; i < 200; i++) expect(known.has(drawCondition())).toBe(true);
   });
 
   test("a mixed arena of the league plays too, on its layout, and the same seed gives the same match", () => {

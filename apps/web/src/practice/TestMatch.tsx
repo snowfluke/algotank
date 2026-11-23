@@ -16,6 +16,7 @@ import { hasUltimates } from "../board/ultimates/boardUltimates.ts";
 import type { TankInfo } from "../board/props.ts";
 import { Scoreboard } from "../board/Scoreboard.tsx";
 import { UltimateLink } from "../catalogue/UltimateLink.tsx";
+import { ArenaCondition } from "../monthly/ArenaCondition.tsx";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { Button } from "../ui/Button.tsx";
 import { StepSheet } from "../ui/StepSheet.tsx";
@@ -144,7 +145,11 @@ export function TestMatch({ run, tanks, onRunAgain, onOptions }: TestMatchProps)
             kind: "row",
             lead: (
               <div className="flex min-w-0 items-center gap-2">
-                <div className="min-w-0 flex-1"><UltimateLink ultimate={run.strategy.ultimate} size={{ kind: "tile", state: ultimateState }} /></div>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+                  <UltimateLink ultimate={run.strategy.ultimate} size={{ kind: "tile", state: ultimateState }} />
+                  {/* The condition the match plays, which "random" drew (TestOptions); a tap says what it changes. */}
+                  <ArenaCondition board={snapshot} short />
+                </div>
                 {legendInRow ? legend : null}
               </div>
             ),

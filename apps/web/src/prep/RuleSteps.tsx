@@ -243,9 +243,11 @@ function WhenPart(props: RulesEditorProps & { readonly rule: Rule; readonly numb
       {/* A full rule shows why instead of a button that does nothing. */}
       {canAddCondition(rule) ? (
         <div className="shrink-0">
+          {/* A bordered button, as the other choices of the rule: as quiet text under the list it was easily missed (owner, 2026-11-23). */}
           <Button
-            variant="quiet"
+            variant="secondary"
             icon={<Plus aria-hidden size={20} strokeWidth={2.5} />}
+            data-add-condition=""
             onClick={() => {
               props.change(addCondition(rule));
               go({ kind: "condition", ruleId: rule.id, index: rule.conditions.length });
@@ -310,6 +312,20 @@ function ConditionStep(props: RulesEditorProps & { readonly ruleId: string; read
       action={
         <>
           <Button onClick={back}>{r.done}</Button>
+          {/* Here too, so the next condition is one tap from the one just set (owner, 2026-11-23: easily missed). */}
+          {canAddCondition(rule) ? (
+            <Button
+              variant="secondary"
+              icon={<Plus aria-hidden size={20} strokeWidth={2.5} />}
+              data-add-condition=""
+              onClick={() => {
+                change(addCondition(rule));
+                go({ kind: "condition", ruleId: rule.id, index: rule.conditions.length });
+              }}
+            >
+              {r.addCondition}
+            </Button>
+          ) : null}
           {canRemoveCondition(rule) ? (
             <Button
               variant="secondary"

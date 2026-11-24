@@ -1,7 +1,7 @@
 // Arrival times of one league stream read through Cloudflare from a viewer's network on 2026-11-24
 // (4 minutes, League 1). Each entry is [ms since the stream opened, message type, turn]. The server
 // sent one turn every 900 ms; the gaps and the burst after turn 53,068 (12 turns in 16 ms after
-// 11.3 s of silence) were added on the way. leaguePlayout.test.ts replays it.
+// 11.3 s of silence) were added on the way. playout.test.ts replays it.
 
 export const RECORDED_ARRIVALS: readonly (readonly [number, "state" | "tick", number])[] = [
   [322, "state", 52918], [323, "tick", 52918], [1198, "tick", 52919], [2106, "tick", 52920], [3340, "tick", 52921],

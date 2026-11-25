@@ -35,8 +35,8 @@ function Wordmark() {
       className="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-[var(--radius-control)] text-ink no-underline"
     >
       <TankBadge colour={1} size={34} name={null} detail="full" angle={-20} />
-      {/* Below 480px the name gives its room to the switches, so the header stays one row; the link keeps its name. */}
-      <span className="font-display text-title font-bold tracking-tight max-[479px]:sr-only">{GAME_NAME}</span>
+      {/* Below 560px the name gives its room to the controls, so the header stays one row; the link keeps its name. */}
+      <span className="font-display text-title font-bold tracking-tight max-[560px]:sr-only">{GAME_NAME}</span>
     </a>
   );
 }
@@ -44,15 +44,16 @@ function Wordmark() {
 export function AppHeader({ title, account = <AccountMenu />, showWordmark = true }: AppHeaderProps) {
   return (
     // One row, 56px, at every width (the language switch is 52px plus 2px above and below): the title shrinks and cuts with an ellipsis instead of pushing the controls to a second row.
-    // Below 400px six 44px controls and the language switch need the narrow gutter and 4px gaps to stay on the row (the Support heart is the sixth);
-    // the dark mode button is a seventh from 440px only (theme/ThemeControl.tsx).
-    <header className="mx-auto flex w-full max-w-6xl items-center gap-x-1 px-2 py-0.5 min-[400px]:gap-x-3 min-[400px]:px-4 min-[480px]:gap-x-4">
+    // Every control stays on the row at every width, the dark mode button too (owner 2026-11-25: "no menu to toggle the theme on mobile").
+    // Measured signed out, the widest case: below 376px the gutter and gaps are 4px and 2px, below 440px 8px and 4px; below 768px the
+    // language switch is one 44px button (i18n/LanguageSwitch.tsx); below 560px the name hides. With the name and both languages the row is 706px.
+    <header className="mx-auto flex w-full max-w-6xl items-center gap-x-0.5 px-1 py-0.5 min-[376px]:gap-x-1 min-[376px]:px-2 min-[440px]:gap-x-3 min-[440px]:px-4 min-[480px]:gap-x-4">
       {showWordmark ? <Wordmark /> : null}
       {title === undefined ? null : (
         // Below 480px the controls leave the title a few letters at most, so it gives its room away and stays for screen readers.
         <p className="min-w-0 flex-1 basis-0 truncate font-display text-lead font-semibold text-muted max-[479px]:sr-only">{title}</p>
       )}
-      <div className="ml-auto flex shrink-0 items-center justify-end gap-1 min-[400px]:gap-2">
+      <div className="ml-auto flex shrink-0 items-center justify-end gap-0.5 min-[376px]:gap-1 min-[440px]:gap-2">
         <SupportEntry />
         <MyTankEntry />
         <LanguageSwitch />

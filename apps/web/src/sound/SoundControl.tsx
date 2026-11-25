@@ -118,7 +118,7 @@ export function SoundControl() {
             />
             {/* Letting go of the effects slider plays a tap at the new level, so the person hears where it is. */}
             <VolumeSlider label={m.effectsVolume} value={settings.effectsVolume} disabled={!settings.effects} onChange={(effectsVolume) => setSettings({ effectsVolume })} onRelease={() => playSound("tap")} />
-            {/* The header's dark mode button has no room below 440px, and the big screen has no header, so the choice is here too. */}
+            {/* The big screen has no header and so no dark mode button, so the choice is here too. */}
             <ThemeSwitch />
           </div>
         ) : null}

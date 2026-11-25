@@ -1,8 +1,6 @@
-// The dark mode button in every page header. A toggle: aria-pressed says whether dark mode is on, and
-// the icon shows the theme a press gives (a moon in light mode, a sun in dark mode). Below 440px the
-// header has no room for it (the sign-in button went off a 360px screen, and the kit page's header
-// needs 433px). ThemeSwitch is the same choice as a switch in the sound panel, which every page and
-// the big screen have, so a phone can turn dark mode off too.
+// The dark mode button in every page header, at every width. A toggle: aria-pressed says whether dark
+// mode is on, and the icon shows the theme a press gives (a moon in light mode, a sun in dark mode).
+// ThemeSwitch is the same choice as a switch in the sound panel, for the big screen, which has no header.
 
 import { Moon, Sun } from "lucide-react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
@@ -19,7 +17,6 @@ export function ThemeControl() {
       label={m.dark}
       aria-pressed={dark}
       data-theme-toggle=""
-      className="max-[440px]:hidden"
       icon={dark ? <Sun aria-hidden size={22} strokeWidth={2.25} /> : <Moon aria-hidden size={22} strokeWidth={2.25} />}
       onClick={() => choose(dark ? "light" : "dark")}
     />

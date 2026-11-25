@@ -63,7 +63,7 @@ The tokens are in `@theme static`, so each one exists on `:root` as `--color-<na
 
 ### The dark theme
 
-`:root[data-theme="dark"]` in `index.css` gives the interface tokens their dark values (ground, panel, text, water, self, guide text, status, scrim, toast, shadow). `theme/theme.ts` sets `data-theme`: the device's setting until the person chooses, then their stored choice (`PREFERENCE_KEYS.theme`). They choose with the header's dark mode button (from 440px wide) or the Dark mode switch in the sound panel (every page and the big screen). An inline script in `index.html` sets it before the first paint.
+`:root[data-theme="dark"]` in `index.css` gives the interface tokens their dark values (ground, panel, text, water, self, guide text, status, scrim, toast, shadow). `theme/theme.ts` sets `data-theme`: the device's setting until the person chooses, then their stored choice (`PREFERENCE_KEYS.theme`). They choose with the header's dark mode button (at every width) or the Dark mode switch in the sound panel (also on the big screen, which has no header). Below 768px the header's language switch is one 44px button that switches to the other language, so every control fits one row at 360px. An inline script in `index.html` sets it before the first paint.
 
 Only the interface turns dark. The arena, the tanks and every drawing keep their light colours, because the board was tuned light so the tank outline and the "You" ring show on it. The rule `:root[data-theme="dark"] svg > *` gives an SVG's shapes the light values back. Lucide icons draw in `currentColor`, so they follow the text. So:
 

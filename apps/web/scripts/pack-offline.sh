@@ -27,8 +27,10 @@ rm -f "$ARCHIVE"
 # -D leaves out folder entries, which the portal does not need, so the central directory stays small.
 (cd "$OUT_DIR" && COPYFILE_DISABLE=1 zip -qr -X -D "$ARCHIVE" . -x '.DS_Store' '*/.DS_Store')
 
-unzip -Z1 "$ARCHIVE" | grep -qx 'index.html' || fail "index.html is not at the root of $ARCHIVE."
+# The list is read whole first: grep -q stops at the first match, and pipefail would count unzip's broken pipe.
+entries="$(unzip -Z1 "$ARCHIVE")"
+grep -qx 'index.html' <<<"$entries" || fail "index.html is not at the root of $ARCHIVE."
 central="$(zipinfo -v "$ARCHIVE" | sed -nE 's/.*central directory is ([0-9]+) .*/\1/p')"
 [[ -n "$central" ]] || fail "zipinfo did not report the size of the central directory."
 (( central < CENTRAL_DIRECTORY_MAX )) || fail "The central directory is $central bytes, over $CENTRAL_DIRECTORY_MAX."
-printf '==> %s: %s files, central directory %s bytes\n' "$ARCHIVE" "$(unzip -Z1 "$ARCHIVE" | wc -l | tr -d ' ')" "$central"
+printf '==> %s: %s files, central directory %s bytes\n' "$ARCHIVE" "$(wc -l <<<"$entries" | tr -d ' ')" "$central"

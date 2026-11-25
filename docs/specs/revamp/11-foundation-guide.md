@@ -63,12 +63,13 @@ The tokens are in `@theme static`, so each one exists on `:root` as `--color-<na
 
 ### The dark theme
 
-`:root[data-theme="dark"]` in `index.css` gives the interface tokens their dark values (ground, panel, text, water, self, guide text, status, scrim, toast, shadow). `theme/theme.ts` sets `data-theme`: the device's setting until the person presses the header's dark mode button, then their stored choice (`PREFERENCE_KEYS.theme`). An inline script in `index.html` sets it before the first paint.
+`:root[data-theme="dark"]` in `index.css` gives the interface tokens their dark values (ground, panel, text, water, self, guide text, status, scrim, toast, shadow). `theme/theme.ts` sets `data-theme`: the device's setting until the person chooses, then their stored choice (`PREFERENCE_KEYS.theme`). They choose with the header's dark mode button (from 440px wide) or the Dark mode switch in the sound panel (every page and the big screen). An inline script in `index.html` sets it before the first paint.
 
 Only the interface turns dark. The arena, the tanks and every drawing keep their light colours, because the board was tuned light so the tank outline and the "You" ring show on it. The rule `:root[data-theme="dark"] svg > *` gives an SVG's shapes the light values back. Lucide icons draw in `currentColor`, so they follow the text. So:
 
 - A token that is text on a fill needs a partner that stays readable in both themes (`water-ink`, `hit-ink`, `guide-on`). Do not put `text-white` or `text-ink` on a coloured fill.
-- A drawing can use any token; it shows the light value in both themes.
+- A drawing can use any token; it shows the light value in both themes. A drawing that sits straight on a card with no light backing of its own (the upgrade cog, the admin chart) takes class `themed-svg` and uses the dark values instead.
+- A tank or a tank-colour swatch outside the board takes class `tank-badge`, which gives it a thin light edge on the dark page, so the black and slate tanks show.
 - A new interface token needs a dark value in the dark block, and a light value in the SVG block when it changes in the dark theme. `theme/contrast.test.ts` checks the text ratios of both themes and that the SVG block matches `@theme`.
 
 Other tokens:

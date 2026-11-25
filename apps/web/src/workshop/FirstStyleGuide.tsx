@@ -81,7 +81,8 @@ export function FirstStyleDone({ styleId, onAnother, onBack }: { readonly styleI
     <StepSheet title={f.title} onBack={onBack}>
       <div data-first-style-done="" className="flex min-h-0 min-w-0 flex-1 flex-col items-start gap-4">
         <TankBadge look={tank.look} size={72} name={null} detail="full" angle={-90} className="animate-pop" />
-        <p className="text-lead [overflow-wrap:anywhere]">{f.body}</p>
+        {/* The sentence sends the player to an arena, and offline has none. */}
+        {IS_OFFLINE ? null : <p className="text-lead [overflow-wrap:anywhere]">{f.body}</p>}
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           {/* Offline has no arenas to play in (offline/target.ts). */}
           {IS_OFFLINE ? null : (

@@ -28,6 +28,7 @@
 // | round steps 1-3     | 15+12+8 / 14+9+7| 29.5 / 27         | 54 - 5 = 49                 |
 // | practice result     | no step         | the two result steps need more than 20 - 5 = 15 s | 15 |
 
+import { IS_OFFLINE } from "../offline/target.ts";
 import type { StepKey } from "./messages.ts";
 
 export type TourId = "workshop" | "lobby" | "round" | "result" | "home";
@@ -92,7 +93,8 @@ const WORKSHOP: readonly TourStep[] = [
   // Last, the result sentence (the page's first item): on a small phone the sheet's title is for screen readers only (82-fit-fixes.md).
   { key: "workshopResult", targets: ['[data-pager-item] [data-coach="did-most"]', '[data-pager-item] [data-coach="did-most-heading"]', "[data-test-result] [data-pager-item]"], done: look, way: ["[data-test-show-result]", bottomTab("try")] },
   { key: "workshopName", targets: ['[data-coach="style-name"]'], done: { kind: "signal", signal: "styleNamed" } },
-  { key: "workshopSaved", targets: ['[data-coach="style-saved"]'], done: look },
+  // The step's sentence points to an arena's Mine list, and the offline build has no arena (offline/target.ts).
+  ...(IS_OFFLINE ? [] : [{ key: "workshopSaved", targets: ['[data-coach="style-saved"]'], done: look } satisfies TourStep]),
 ];
 
 export type LobbyStart = "public" | "owner" | "guest";

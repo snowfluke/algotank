@@ -23,6 +23,14 @@ if grep -nE '(src|href)="/' "$OUT_DIR/index.html"; then fail "index.html links t
 if grep -lE 'url\(/' "$OUT_DIR"/assets/*.css; then fail "A stylesheet links to a root-based address (file above)."; fi
 if [[ -n "$(find "$OUT_DIR" -name '*.map')" ]]; then fail "The build holds source maps."; fi
 
+# The bundled fonts are under the SIL Open Font License, which must travel with them. The flags carry
+# their own license in public/flags, and the game's is the repository's LICENSE.
+mkdir -p "$OUT_DIR/licenses"
+for font in figtree fredoka; do
+  cp "$WEB/node_modules/@fontsource-variable/$font/LICENSE" "$OUT_DIR/licenses/$font-font.txt"
+done
+cp "$WEB/../../LICENSE" "$OUT_DIR/LICENSE"
+
 rm -f "$ARCHIVE"
 # -D leaves out folder entries, which the portal does not need, so the central directory stays small.
 (cd "$OUT_DIR" && COPYFILE_DISABLE=1 zip -qr -X -D "$ARCHIVE" . -x '.DS_Store' '*/.DS_Store')

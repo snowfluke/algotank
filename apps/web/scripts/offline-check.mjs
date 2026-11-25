@@ -3,8 +3,9 @@
 //   cd apps/web && node scripts/offline-check.mjs [folder, default dist-offline]
 //
 // It serves the folder under /portal/game-1/ (404 everywhere else, as a game portal would), then plays the
-// workshop in headless Chromium: a new play style, a test match to its result, the catalogue and the rules
-// guide, My tank, a reload; and once more inside <iframe sandbox="allow-scripts">, where storage is blocked.
+// workshop in headless Chromium: the first-visit tour to its end (a new play style, a changed rule, a test match,
+// a name), the catalogue and the rules guide, My tank, a reload; then the tour again inside
+// <iframe sandbox="allow-scripts">, where storage is blocked. It also fails on account or arena wording.
 // It fails on a request outside the folder, a failed or 4xx/5xx answer, a console error or warning, a page
 // error, or a change of the address. The server sends Access-Control-Allow-Origin, because a sandboxed
 // iframe has the origin "null" and a module script needs CORS; a portal that hosts Vite games does the same.
@@ -71,10 +72,8 @@ function expect(ok, what) {
   else problems.push(`not true: ${what}`);
 }
 
-// The steps work in both languages, because the sandboxed frame cannot store the language choice.
+// The steps work in both languages: the page switches to English, and the sandboxed frame, which cannot store the choice, stays Indonesian.
 const NEW_STYLE = /^(New play style|Gaya main baru)$/;
-const TRY_IT = /^(Try it|Coba)$/;
-const RUN_TEST = /^(Run a test match|Mulai uji coba)$/;
 
 /** The name of the one play style in this browser's workshop library (workshop/library.ts LIBRARY_KEY). */
 async function storedStyleName(page) {
@@ -85,14 +84,39 @@ async function storedStyleName(page) {
   });
 }
 
-async function buildAndTest(scope) {
-  await scope.getByRole("button", { name: NEW_STYLE }).first().click({ timeout: 10000 });
+// Wording that sends a player to something the offline build does not have: an account or an arena to play in.
+const ONLINE_WORDING = /sign in|your account|in any arena|play now|masuk akun|akun kamu|arena mana pun|main sekarang/i;
+const NEXT = /^(Next|Lanjut)$/;
+
+async function noOnlineWording(scope, where) {
+  const text = await scope.locator("body").innerText();
+  const found = ONLINE_WORDING.exec(text);
+  expect(found === null, `${where} has no account or arena wording${found === null ? "" : ` (found "${found[0]}")`}`);
+}
+
+/** The workshop tour from the first visit to the sheet at its end, doing what each step waits for (guide/tours.ts). */
+async function walkTour(scope, label) {
+  await scope.locator("[data-workshop-new]").click({ timeout: 10000 });
   await scope.locator("[data-style-choose]").first().click();
   await scope.locator("[data-ultimate-save]").click();
-  await scope.getByRole("tab", { name: TRY_IT }).click();
-  await scope.getByRole("button", { name: RUN_TEST }).click();
+  await noOnlineWording(scope, `${label}: the editor`);
+  await scope.locator("[data-pager-item] [data-rule-open]").first().click();
+  await scope.getByRole("button", { name: NEXT }).click();
+  await scope.locator('[data-rule-section="do"]').click();
+  await scope.locator('[data-rule-do-kind="steps"]').click();
+  await scope.locator('[data-shell-bottom] [data-tab="upgrades"]').click();
+  await scope.getByRole("button", { name: NEXT }).click();
+  await scope.locator('[data-shell-bottom] [data-tab="try"]').click();
+  await scope.locator("[data-test-run]").click();
   await scope.locator("[data-test-show-result]").click({ timeout: 20000 });
-  await scope.locator("[data-test-result]").first().waitFor();
+  await scope.getByRole("button", { name: NEXT }).click();
+  const name = scope.locator('[data-coach="style-name"]');
+  await name.click();
+  await name.fill("Tank uji");
+  await name.press("Enter");
+  await scope.locator("[data-first-style-done]").waitFor({ timeout: 10000 });
+  expect(true, `${label}: the tour reaches its last sheet`);
+  await noOnlineWording(scope, `${label}: the tour's last sheet`);
 }
 
 try {
@@ -102,12 +126,12 @@ try {
   await page.getByText("English", { exact: true }).first().click();
   await page.getByRole("button", { name: "Sound" }).click();
   await page.getByRole("button", { name: "Close" }).click();
-  await buildAndTest(page);
-  expect(true, "a test match reaches its result");
-  await page.getByRole("button", { name: "Back to my play styles" }).click();
+  await walkTour(page, "English page");
+  // The last sheet's back arrow returns to the list of play styles.
+  await page.locator("[data-step-sheet]:has([data-first-style-done]) [data-step-sheet-back]").click();
+  await noOnlineWording(page, "English page: the list of play styles");
   const savedName = await storedStyleName(page);
   expect(savedName !== null && (await page.getByText(savedName, { exact: true }).count()) > 0, `the list shows the saved style (${savedName})`);
-  await page.getByRole("button", { name: "Skip the tour" }).click();
   await page.getByRole("link", { name: "Catalogue" }).click();
   await page.locator("[data-catalogue-rules]").click();
   await page.getByRole("button", { name: "Back" }).first().click();
@@ -127,8 +151,7 @@ try {
   const framed = await browser.newPage({ viewport: { width: 1280, height: 860 } });
   watch(framed, "sandboxed iframe");
   await framed.goto(`${ORIGIN}${FRAME_PAGE}`);
-  await buildAndTest(framed.frameLocator("#game"));
-  expect(true, "a test match reaches its result inside a sandboxed iframe");
+  await walkTour(framed.frameLocator("#game"), "Indonesian sandboxed iframe");
   await framed.close();
 } catch (error) {
   problems.push(`a step failed: ${error instanceof Error ? error.message.split("\n").slice(0, 3).join(" ") : String(error)}`);

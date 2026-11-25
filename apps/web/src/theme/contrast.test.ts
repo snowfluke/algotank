@@ -2,6 +2,7 @@
 // The palettes of index.css: every text colour reads at 4.5:1 on panel and ground in both themes,
 // and the block that gives drawings their light colours back in the dark theme matches @theme.
 import { describe, expect, test } from "bun:test";
+import { GROUND } from "./theme.ts";
 
 const css = await Bun.file(new URL("../index.css", import.meta.url)).text();
 const TOKEN = /--color-([a-z0-9-]+):\s*(#[0-9a-f]{6})/g;
@@ -15,7 +16,7 @@ function block(start: string): Record<string, string> {
 
 const light = block("@theme static {");
 const dark = { ...light, ...block(':root[data-theme="dark"] {') };
-const drawings = block(':root[data-theme="dark"] svg > * {');
+const drawings = block(':root[data-theme="dark"] svg:not(.themed-svg) > * {');
 
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => {
@@ -33,12 +34,12 @@ function ratio(a: string, b: string): number {
 /** Text colour and the surfaces it sits on. */
 const PAIRS: readonly (readonly [string, readonly string[]])[] = [
   ["ink", ["panel", "ground", "water-soft", "self-soft", "ok-soft", "hit-soft", "warning-soft", "guide-soft"]],
-  ["muted", ["panel", "ground"]],
-  ["water", ["panel", "ground"]],
+  ["muted", ["panel", "ground", "water-soft"]],
+  ["water", ["panel", "ground", "water-soft"]],
   ["self-ink", ["panel", "ground"]],
-  ["ok", ["panel", "ground"]],
-  ["hit", ["panel", "ground"]],
-  ["warning", ["panel", "ground"]],
+  ["ok", ["panel", "ground", "ok-soft"]],
+  ["hit", ["panel", "ground", "hit-soft"]],
+  ["warning", ["panel", "ground", "warning-soft"]],
   ["guide-ink", ["panel", "guide-soft"]],
   ["guide-on", ["guide"]],
   ["water-ink", ["water", "water-hover"]],
@@ -55,6 +56,10 @@ describe("the palettes of index.css", () => {
       expect(low).toEqual([]);
     });
   }
+
+  test("the browser bar takes the page background of each theme", () => {
+    expect(GROUND).toEqual({ light: light["ground"]!, dark: dark["ground"]! });
+  });
 
   test("drawings keep the light colours in the dark theme", () => {
     const changed = Object.entries(drawings).filter(([name, value]) => light[name] !== value);

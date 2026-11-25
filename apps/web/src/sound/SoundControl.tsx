@@ -1,5 +1,6 @@
 // The sound button in every page header and on the big screen. It opens a small panel with two
-// switches, "Music" and "Sound effects"; the button shows a crossed speaker when both are off.
+// switches, "Music" and "Sound effects", and the dark mode switch (theme/); the button shows a
+// crossed speaker when both sounds are off.
 // The panel is a modal dialog placed under the button: focus moves into it, Escape and a tap
 // outside close it, and focus returns to the button. Its width follows the body text size, so
 // the big screen's larger type gets a wider panel.
@@ -7,6 +8,7 @@
 import { Volume2, VolumeX, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { useMessages } from "../i18n/I18nProvider.tsx";
+import { ThemeSwitch } from "../theme/ThemeControl.tsx";
 import { IconButton } from "../ui/IconButton.tsx";
 import { Switch } from "../ui/Switch.tsx";
 import { useMusicState, useMusicSwitch } from "./music.ts";
@@ -116,6 +118,8 @@ export function SoundControl() {
             />
             {/* Letting go of the effects slider plays a tap at the new level, so the person hears where it is. */}
             <VolumeSlider label={m.effectsVolume} value={settings.effectsVolume} disabled={!settings.effects} onChange={(effectsVolume) => setSettings({ effectsVolume })} onRelease={() => playSound("tap")} />
+            {/* The header's dark mode button has no room below 440px, and the big screen has no header, so the choice is here too. */}
+            <ThemeSwitch />
           </div>
         ) : null}
       </dialog>

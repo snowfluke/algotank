@@ -172,6 +172,8 @@
    because the board was tuned light so the tanks' ink outline and the orange "You" ring read on it:
    the second block gives an SVG's shapes the light values back. Lucide icons are SVGs too, but they
    draw in currentColor, which the SVG element takes from the dark tokens, so they follow the text.
+   An SVG drawn straight on a card, with no light backing of its own (the upgrade cog, the admin
+   chart), takes class themed-svg and uses the dark values like the interface.
    Ratios are against the dark panel; every text colour is 4.5:1 or better on panel and ground.
    theme/contrast.test.ts checks the ratios of both themes and that the second block matches @theme. */
 :root[data-theme="dark"] {
@@ -206,11 +208,12 @@
   --shadow-raised: 0 6px 18px -6px rgb(0 0 0 / 0.6);
 }
 /* A tank beside text keeps its ink outline, so the black and slate tanks get a thin light edge on the dark page.
-   Only the badge (tank/TankBadge.tsx): on the board a tank stands on the light floor. */
+   Only the badge (tank/TankBadge.tsx) and the "My tank" swatches (mytank/Swatches.tsx): on the board a tank
+   stands on the light floor. */
 :root[data-theme="dark"] .tank-badge {
   filter: drop-shadow(0 0 0.6px rgb(233 238 243 / 0.7));
 }
-:root[data-theme="dark"] svg > * {
+:root[data-theme="dark"] svg:not(.themed-svg) > * {
   --color-ground: #f6f3ec;
   --color-panel: #ffffff;
   --color-ink: #1b2733;

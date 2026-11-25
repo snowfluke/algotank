@@ -9,7 +9,8 @@ import { tankColourVar, type TankColour } from "../tank/colours.ts";
 import { SKIN_GEOMETRY, HULL } from "../tank/skins.ts";
 import type { TankLook } from "../tank/look.ts";
 
-const SVG_CLASS = "block size-full";
+// tank-badge: in the dark theme a tank colour with its ink outline gets the light edge of a badge (index.css).
+const SVG_CLASS = "tank-badge block size-full";
 
 export function ColourSwatch({ colour }: { readonly colour: TankColour }) {
   return (

@@ -2,7 +2,8 @@
 // same cog lies in the tray, sits in the sockets, and shows in the tour, so a child
 // learns that a cog is one upgrade point (71-workshop-appeal.md, part B). The empty
 // place it leaves is the same cog as a dashed outline. Blue is the game's primary
-// colour; the guide's yellow and the orange of "you" stay free for their own jobs.
+// colour; the guide's yellow and the orange of "you" stay free for their own jobs. It sits on the
+// card itself, so it takes the dark theme's colours (themed-svg in index.css).
 
 const TEETH = 8;
 const OUTER = 10.5;
@@ -29,7 +30,7 @@ export type TokenLook = "token" | "empty";
 /** One upgrade point, `size` px square. "empty" is the place a cog leaves in the tray, or an empty socket. */
 export function UpgradeToken({ look, size }: { readonly look: TokenLook; readonly size: number }) {
   return (
-    <svg viewBox="-12 -12 24 24" width={size} height={size} aria-hidden="true" className="block shrink-0 overflow-visible">
+    <svg viewBox="-12 -12 24 24" width={size} height={size} aria-hidden="true" className="themed-svg block shrink-0 overflow-visible">
       {look === "token" ? (
         <>
           <path d={COG} strokeWidth={1.4} strokeLinejoin="round" style={{ fill: "var(--color-water)", stroke: "var(--color-water-deep)" }} />

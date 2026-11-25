@@ -10,7 +10,7 @@ import { browserStore, type KeyValueStore } from "../session/storage.ts";
 export type Theme = "light" | "dark";
 
 /** The page background of each theme, for the browser's bar (<meta name="theme-color">); the same as --color-ground. */
-const GROUND: Record<Theme, string> = { light: "#f6f3ec", dark: "#121820" };
+export const GROUND: Record<Theme, string> = { light: "#f6f3ec", dark: "#121820" };
 
 /** A stored choice, or null for none: anything else was not written by this app. */
 export function parseTheme(stored: string | null): Theme | null {

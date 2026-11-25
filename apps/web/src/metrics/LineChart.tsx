@@ -46,7 +46,7 @@ export function LineChart({ points, summary, formatValue, formatDay, pointTitle 
   return (
     <div ref={ref} className="min-w-0" style={{ height }}>
       {width > 0 ? (
-        <svg width={width} height={height} role="img" aria-label={summary} className="block">
+        <svg width={width} height={height} role="img" aria-label={summary} className="themed-svg block">
           <line x1={LEFT_PX} x2={width - RIGHT_PX} y1={TOP_PX + PLOT_PX} y2={TOP_PX + PLOT_PX} stroke="var(--color-line-strong, #b9b3a5)" strokeWidth={1} />
           <line x1={LEFT_PX} x2={LEFT_PX} y1={TOP_PX} y2={TOP_PX + PLOT_PX} stroke="var(--color-line-strong, #b9b3a5)" strokeWidth={1} />
           <g fill="var(--color-muted, #54616d)" fontSize={CAPTION_PX}>

@@ -56,6 +56,20 @@ The tokens are in `@theme static`, so each one exists on `:root` as `--color-<na
 | `tank-outline` | #1b2733 | Outline of every tank |
 | `tank-1` … `tank-12` | blue #2f7fe0, red #e2453c, yellow #f4c534, green #2ea869, purple #8b5cd6, pink #ef77b4, sky #58c7e8, slate #59646f, orange #f7962b, brown #8d5b37, white #f4f2ec, black #2a2f36 | Tank colours: the hull, the pattern and the plate |
 | `tank-N-dark` | darker partner of each colour | Tracks, barrel and the plate's rim |
+| `guide-on` | #3d2c00 | Text on the `guide` fill. `guide-ink` is for text on `guide-soft` and `panel`. |
+| `hit-ink` | #ffffff | Text on `hit` (the danger button) |
+| `scrim` | #1b2733 | The dim behind a dialog: `backdrop:bg-scrim/50`. Do not use `ink`, which turns light in the dark theme. |
+| `toast` | #1b2733 | Background of a toast |
+
+### The dark theme
+
+`:root[data-theme="dark"]` in `index.css` gives the interface tokens their dark values (ground, panel, text, water, self, guide text, status, scrim, toast, shadow). `theme/theme.ts` sets `data-theme`: the device's setting until the person presses the header's dark mode button, then their stored choice (`PREFERENCE_KEYS.theme`). An inline script in `index.html` sets it before the first paint.
+
+Only the interface turns dark. The arena, the tanks and every drawing keep their light colours, because the board was tuned light so the tank outline and the "You" ring show on it. The rule `:root[data-theme="dark"] svg > *` gives an SVG's shapes the light values back. Lucide icons draw in `currentColor`, so they follow the text. So:
+
+- A token that is text on a fill needs a partner that stays readable in both themes (`water-ink`, `hit-ink`, `guide-on`). Do not put `text-white` or `text-ink` on a coloured fill.
+- A drawing can use any token; it shows the light value in both themes.
+- A new interface token needs a dark value in the dark block, and a light value in the SVG block when it changes in the dark theme. `theme/contrast.test.ts` checks the text ratios of both themes and that the SVG block matches `@theme`.
 
 Other tokens:
 
@@ -274,7 +288,7 @@ import { QrCode } from "../share/QrCode.tsx";
 
 ## 10. Preferences
 
-`app/preferences.ts` holds `readPreference`, `writePreference` and `PREFERENCE_KEYS` for settings that apply to every arena, "My tank" (`myTank`) among them. `finishedGame` is "1" once this device saw the end of a game its tank played; read and write it through `publicplay/firstGame.ts` (`hasFinishedGame`, `markFinishedGame`). `lastName` and `lastColour` are only read once, to fill the first "My tank" on a device that an older version used. Each access is wrapped in try/catch. To add a setting, add a key there.
+`app/preferences.ts` holds `readPreference`, `writePreference` and `PREFERENCE_KEYS` for settings that apply to every arena, "My tank" (`myTank`) among them. `finishedGame` is "1" once this device saw the end of a game its tank played; read and write it through `publicplay/firstGame.ts` (`hasFinishedGame`, `markFinishedGame`). `theme` is "light" or "dark" once the person pressed the dark mode button (`theme/theme.ts`); `index.html` reads the same key. `lastName` and `lastColour` are only read once, to fill the first "My tank" on a device that an older version used. Each access is wrapped in try/catch. To add a setting, add a key there.
 
 ## 11. The layout system (no scroll)
 

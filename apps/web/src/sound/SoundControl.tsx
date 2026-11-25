@@ -93,7 +93,7 @@ export function SoundControl() {
         onClick={(event) => {
           if (event.target === event.currentTarget) close();
         }}
-        className="fixed m-0 w-[min(calc(var(--text-body,1rem)*20),calc(100vw-1rem))] max-h-[calc(100dvh-5rem)] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] [inset:auto] backdrop:bg-ink/20"
+        className="fixed m-0 w-[min(calc(var(--text-body,1rem)*20),calc(100vw-1rem))] max-h-[calc(100dvh-5rem)] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] [inset:auto] backdrop:bg-scrim/20"
       >
         {open ? (
           <div className="flex flex-col gap-2 p-4">

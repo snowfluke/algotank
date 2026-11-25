@@ -163,7 +163,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onFocus={() => timer.current?.pause()}
             onBlur={() => timer.current?.resume()}
             data-toast-pass-through={passThrough ? "" : undefined}
-            className={`${passThrough ? "pointer-events-none" : "pointer-events-auto"} flex w-full max-w-md animate-rise flex-wrap items-center gap-x-3 gap-y-2 rounded-[var(--radius-card)] bg-ink py-2 pr-2 pl-4 text-white shadow-[var(--shadow-raised)]`}
+            className={`${passThrough ? "pointer-events-none" : "pointer-events-auto"} flex w-full max-w-md animate-rise flex-wrap items-center gap-x-3 gap-y-2 rounded-[var(--radius-card)] bg-toast py-2 pr-2 pl-4 text-white shadow-[var(--shadow-raised)]`}
           >
             <p className="min-w-0 flex-1 basis-40 py-2 [overflow-wrap:anywhere]">{shown.message}</p>
             {shown.onUndo === undefined ? null : (

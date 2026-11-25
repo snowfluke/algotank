@@ -103,7 +103,7 @@ export function TankSheet({ tank, source, onClose }: { readonly tank: SheetTank 
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="m-auto w-[min(32rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-ink/50"
+      className="m-auto w-[min(32rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-scrim/50"
     >
       {tank === null ? null : (
         <div className="flex max-h-[calc(100dvh-2rem)] min-w-0 flex-col gap-3 p-4">

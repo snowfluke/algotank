@@ -41,7 +41,7 @@ export function ArenaCondition({ board, short }: { readonly board: Pick<PublicSn
         id={id}
         popover="auto"
         data-arena-condition-note=""
-        className="m-auto w-[min(24rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-6 text-ink shadow-[var(--shadow-raised)] backdrop:bg-ink/30"
+        className="m-auto w-[min(24rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-6 text-ink shadow-[var(--shadow-raised)] backdrop:bg-scrim/30"
       >
         <div className="flex flex-col gap-3">
           <h2 className="text-title [overflow-wrap:anywhere]">{t.condition(rules.name)}</h2>

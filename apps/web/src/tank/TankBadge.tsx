@@ -21,7 +21,7 @@ export function TankBadge({ size, name, self = false, label, angle = 0, detail, 
   const a11y = name === null ? { "aria-hidden": true } : { role: "img", "aria-label": name };
   return (
     // The view box leaves room for the "you" ring (radius 6) and the plate (5.4).
-    <svg viewBox="-6 -6 12 12" width={size} height={size} className={`shrink-0 overflow-visible ${className}`} {...a11y}>
+    <svg viewBox="-6 -6 12 12" width={size} height={size} className={`tank-badge shrink-0 overflow-visible ${className}`} {...a11y}>
       <TankShape {...(paint as TankPaint)} self={self} detail={chosenDetail} angle={angle} {...(label === undefined ? {} : { label })} />
     </svg>
   );

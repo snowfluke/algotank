@@ -79,7 +79,7 @@ export function MonthRules({ month }: { readonly month: string }) {
         onClick={(event) => {
           if (event.target === event.currentTarget) setOpen(false);
         }}
-        className="m-auto h-[min(40rem,calc(100dvh-2rem))] w-[min(32rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-ink/50"
+        className="m-auto h-[min(40rem,calc(100dvh-2rem))] w-[min(32rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-scrim/50"
       >
         <div className="flex h-full min-h-0 min-w-0 flex-col gap-3 p-4">
           <div className="flex min-w-0 shrink-0 items-center gap-2">

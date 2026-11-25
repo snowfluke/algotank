@@ -318,7 +318,7 @@ function PickerLayer<T extends string>({ label, listId, options, value, open, se
       className={`bg-panel p-0 text-ink open:flex open:flex-col overflow-y-auto fit:overflow-hidden ${
         laptop
           ? "fixed inset-auto m-0 w-max rounded-[var(--radius-card)] border-2 border-b-4 border-line shadow-[var(--shadow-raised)] backdrop:bg-transparent"
-          : "fixed inset-x-0 top-auto bottom-0 mx-auto max-h-[min(85dvh,44rem)] w-full max-w-[36rem] rounded-t-[var(--radius-card)] shadow-[var(--shadow-raised)] backdrop:bg-ink/50 animate-rise"
+          : "fixed inset-x-0 top-auto bottom-0 mx-auto max-h-[min(85dvh,44rem)] w-full max-w-[36rem] rounded-t-[var(--radius-card)] shadow-[var(--shadow-raised)] backdrop:bg-scrim/50 animate-rise"
       }`}
     >
       {/* The padding sits inside, so a tap in it lands on this div and not on the dialog, where it would count as a tap on the backdrop. */}

@@ -283,7 +283,7 @@ export function LegendDialog({ onClose, onShowAround, layout, ultimates = false 
         if (event.target === event.currentTarget) onClose();
       }}
       // In the fixed-height layout the dialog has a fixed height, so its Pager knows how many entries fit.
-      className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-ink/50 fit:h-[min(36rem,calc(100dvh-2rem))] fit:overflow-hidden"
+      className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-scrim/50 fit:h-[min(36rem,calc(100dvh-2rem))] fit:overflow-hidden"
     >
       <div className="flex h-full min-h-0 flex-col gap-3 p-4 laptop:p-6">
         <div className="flex min-w-0 shrink-0 items-center gap-2">

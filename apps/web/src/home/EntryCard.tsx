@@ -36,7 +36,7 @@ export interface EntryCardProps {
 
 const SURFACE: Record<EntryTone, string> = {
   water: "border-b-[6px] border-water-deep bg-water text-water-ink hover:bg-water-hover",
-  guide: "border-b-[6px] border-guide-deep bg-guide text-guide-ink hover:brightness-95",
+  guide: "border-b-[6px] border-guide-deep bg-guide text-guide-on hover:brightness-95",
   row: "border-2 border-b-4 border-line bg-panel text-ink hover:border-line-strong",
   rowGuide: "border-2 border-b-4 border-guide-deep bg-guide-soft text-ink hover:brightness-95",
 };

@@ -38,7 +38,7 @@ export function ChecklistLine({ compact = false, onOpen }: { readonly compact?: 
     >
       <ListChecks aria-hidden size={20} strokeWidth={2.5} className="shrink-0" />
       {compact ? null : <span className="min-w-0 font-display font-semibold [overflow-wrap:anywhere]">{c.title}</span>}
-      <span aria-hidden="true" className="tabular shrink-0 rounded-full bg-guide px-2 font-display font-semibold">
+      <span aria-hidden="true" className="tabular shrink-0 rounded-full bg-guide px-2 font-display font-semibold text-guide-on">
         {c.count(done, CHECKLIST.length)}
       </span>
     </button>

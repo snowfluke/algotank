@@ -6,6 +6,20 @@
     <title>AlgoTank - Buat algoritma terbaik untuk menggerakkan tankmu dan menangkan pertempuran!</title>
     <meta name="description" content="Buat algoritma terbaik untuk menggerakkan tankmu dan menangkan pertempuran! Main langsung di browser." />
     <meta name="theme-color" content="#f6f3ec" />
+    <!-- The theme before the first paint, so a dark page never flashes light: the choice stored by
+         theme/theme.ts under the same key, else the device's setting. theme.ts takes over after it. -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem("algotank:theme");
+        } catch (error) {
+          // A blocked store (a private window): the device's setting decides, as in theme.ts.
+        }
+        if (theme !== "light" && theme !== "dark") theme = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-48.png" sizes="48x48" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

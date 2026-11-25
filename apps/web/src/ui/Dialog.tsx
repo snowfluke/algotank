@@ -54,7 +54,7 @@ export function Dialog({ open, title, body, confirmLabel, onConfirm, onCancel, a
       onClick={(event) => {
         if (event.target === event.currentTarget) onCancel();
       }}
-      className="m-auto w-[min(28rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-ink/50"
+      className="m-auto w-[min(28rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-scrim/50"
     >
       <div className="flex flex-col gap-3 p-6">
         <h2 id={titleId} className="text-title">

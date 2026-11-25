@@ -4,6 +4,7 @@
    usage guide is docs/specs/revamp/11-foundation-guide.md. Text uses three tiers:
    ink, muted, and water for links and the primary action. Contrast ratios are
    against panel (white); every text colour is 4.5:1 or better on panel and ground.
+   The dark theme's values are in the block after this one.
    `static` emits every token on :root even when no utility uses it, because SVG
    and inline styles read them as var(--color-tank-3) and similar. */
 @theme static {
@@ -38,14 +39,21 @@
   --color-guide-soft: #fff5cc; /* background of the checklist and the callout's counter row */
   --color-guide-deep: #b88a00; /* the lip under a guide-coloured tile or button, never text */
 
+  --color-guide-on: #3d2c00; /* text on the guide fill itself, 9.3:1; it stays dark in the dark theme, where guide-ink turns light */
+
   /* Status. Each has a text-safe colour and a soft background. */
   --color-ok: #21784a; /* 5.5:1 */
   --color-ok-soft: #e1f3e8;
   --color-hit: #c4302b; /* hit and danger, 5.5:1 */
+  --color-hit-ink: #ffffff; /* text on hit (the danger button), 5.5:1 */
   --color-hit-soft: #fce4e2;
   --color-hit-deep: #8a1f1b; /* lip and pressed state of a danger button */
   --color-warning: #8a5a00; /* 5.9:1 */
   --color-warning-soft: #fdf1d3;
+
+  /* Layers over the page: the dim behind a dialog, and the toast. Their own tokens, because ink turns light in the dark theme. */
+  --color-scrim: #1b2733;
+  --color-toast: #1b2733; /* white text on it 15.2:1, water-light 9.6:1 */
 
   /* The arena */
   --color-arena-floor: #efe6d0;
@@ -157,6 +165,77 @@
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.06); }
   }
+}
+
+/* The dark theme (theme/theme.ts sets data-theme on <html>; index.html sets it before the first paint).
+   Only the interface turns dark. The arena, the tanks and every drawing keep the light colours above,
+   because the board was tuned light so the tanks' ink outline and the orange "You" ring read on it:
+   the second block gives an SVG's shapes the light values back. Lucide icons are SVGs too, but they
+   draw in currentColor, which the SVG element takes from the dark tokens, so they follow the text.
+   Ratios are against the dark panel; every text colour is 4.5:1 or better on panel and ground.
+   theme/contrast.test.ts checks the ratios of both themes and that the second block matches @theme. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ground: #121820;
+  --color-panel: #1c242e;
+  --color-ink: #e9eef3; /* 13.4:1 */
+  --color-muted: #a3afbb; /* 7.0:1 */
+  --color-line: #323e4a;
+  --color-line-strong: #4a5764;
+  --color-water: #6aaef7; /* 6.7:1; text on it is water-ink */
+  --color-water-ink: #0b1a2b; /* 7.5:1 on water */
+  --color-water-deep: #3d84d4;
+  --color-water-hover: #8cc0f9;
+  --color-water-light: #9cc8f5;
+  --color-water-soft: #1d3a5c; /* ink on it 9.9:1 */
+  --color-self: #f07a2a;
+  --color-self-ink: #ff9e5e; /* 7.7:1 */
+  --color-self-soft: #3d2715;
+  --color-guide-ink: #ffe07a; /* 12.1:1 on panel, 10.9:1 on guide-soft; text on the guide fill is guide-on */
+  --color-guide-soft: #3a3210;
+  --color-ok: #5ccb94; /* 7.8:1 */
+  --color-ok-soft: #173826;
+  --color-hit: #ff7a72; /* 6.2:1 */
+  --color-hit-ink: #2a0907; /* 7.3:1 on hit */
+  --color-hit-soft: #42201e;
+  --color-hit-deep: #c4423b;
+  --color-warning: #e7b04a; /* 8.0:1 */
+  --color-warning-soft: #3a2d10;
+  --color-scrim: #000000;
+  --color-toast: #2b3744; /* white text on it 12.1:1, water-light 6.9:1 */
+  --shadow-raised: 0 6px 18px -6px rgb(0 0 0 / 0.6);
+}
+/* A tank beside text keeps its ink outline, so the black and slate tanks get a thin light edge on the dark page.
+   Only the badge (tank/TankBadge.tsx): on the board a tank stands on the light floor. */
+:root[data-theme="dark"] .tank-badge {
+  filter: drop-shadow(0 0 0.6px rgb(233 238 243 / 0.7));
+}
+:root[data-theme="dark"] svg > * {
+  --color-ground: #f6f3ec;
+  --color-panel: #ffffff;
+  --color-ink: #1b2733;
+  --color-muted: #54616d;
+  --color-line: #d8d2c4;
+  --color-line-strong: #b9b3a5;
+  --color-water: #1667c0;
+  --color-water-ink: #ffffff;
+  --color-water-deep: #0e4b8f;
+  --color-water-hover: #125aa9;
+  --color-water-light: #9cc8f5;
+  --color-water-soft: #e2eefb;
+  --color-self: #e8650f;
+  --color-self-ink: #a5470a;
+  --color-self-soft: #fdebdc;
+  --color-guide-ink: #3d2c00;
+  --color-guide-soft: #fff5cc;
+  --color-ok: #21784a;
+  --color-ok-soft: #e1f3e8;
+  --color-hit: #c4302b;
+  --color-hit-ink: #ffffff;
+  --color-hit-soft: #fce4e2;
+  --color-hit-deep: #8a1f1b;
+  --color-warning: #8a5a00;
+  --color-warning-soft: #fdf1d3;
 }
 
 /* The no-scroll layout (docs/specs/revamp/60-no-scroll.md). `fit:` styles apply only

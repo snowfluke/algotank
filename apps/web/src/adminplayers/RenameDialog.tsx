@@ -51,7 +51,7 @@ export function RenameDialog({ player, onCancel, onDone }: { readonly player: Ad
         event.preventDefault();
         onCancel();
       }}
-      className="m-auto w-[min(28rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-ink/50"
+      className="m-auto w-[min(28rem,calc(100%-2rem))] rounded-[var(--radius-card)] border-0 bg-panel p-0 text-ink shadow-[var(--shadow-raised)] backdrop:bg-scrim/50"
     >
       {player === null ? null : (
         <form onSubmit={(event) => void save(event)} className="flex min-w-0 flex-col gap-4 p-5">

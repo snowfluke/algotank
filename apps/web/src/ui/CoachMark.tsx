@@ -140,7 +140,7 @@ function GuideButton({ children, onClick }: { readonly children: string; onClick
         playSound("tap");
         onClick();
       }}
-      className="press min-h-11 min-w-16 rounded-[var(--radius-control)] border-b-4 border-guide-deep bg-guide px-4 font-display font-semibold text-guide-ink [@media(hover:hover)]:hover:brightness-95"
+      className="press min-h-11 min-w-16 rounded-[var(--radius-control)] border-b-4 border-guide-deep bg-guide px-4 font-display font-semibold text-guide-on [@media(hover:hover)]:hover:brightness-95"
     >
       {children}
     </button>
@@ -264,7 +264,7 @@ function Mark({ target, counter, text, label, next, skip, preferDock = false }: 
       {/* The counter leads the sentence, so it is read first and the buttons keep one row. */}
       <p aria-live="polite" className="[overflow-wrap:anywhere]">
         {counter === null ? null : (
-          <span data-coach-counter="" className="tabular mr-2 inline-block rounded-full bg-guide px-2.5 font-display font-semibold whitespace-nowrap text-guide-ink">
+          <span data-coach-counter="" className="tabular mr-2 inline-block rounded-full bg-guide px-2.5 font-display font-semibold whitespace-nowrap text-guide-on">
             {counter}
           </span>
         )}
@@ -338,7 +338,7 @@ function WherePill({ way, where, skip }: CoachMarkProps) {
       role="status"
       data-coach-pill=""
       style={place === null ? undefined : { left: place.left, top: place.top }}
-      className={`fixed z-[41] flex max-w-[calc(100vw-1rem)] items-center gap-1 rounded-full border-b-4 border-guide-deep bg-guide py-1 pr-1 pl-4 font-semibold text-guide-ink shadow-[var(--shadow-raised)] ${place === null ? "invisible left-0 top-0" : ""}`}
+      className={`fixed z-[41] flex max-w-[calc(100vw-1rem)] items-center gap-1 rounded-full border-b-4 border-guide-deep bg-guide py-1 pr-1 pl-4 font-semibold text-guide-on shadow-[var(--shadow-raised)] ${place === null ? "invisible left-0 top-0" : ""}`}
     >
       <span className="min-w-0 [overflow-wrap:anywhere]">{where}</span>
       {skip === null ? null : <SkipIcon label={skip.label} onSkip={skip.onSkip} />}
@@ -348,7 +348,7 @@ function WherePill({ way, where, skip }: CoachMarkProps) {
 
 function SkipIcon({ label, onSkip }: { readonly label: string; onSkip(): void }): ReactNode {
   return (
-    <button type="button" aria-label={label} onClick={onSkip} className="press flex size-11 shrink-0 items-center justify-center rounded-full text-guide-ink [@media(hover:hover)]:hover:bg-guide-deep/20">
+    <button type="button" aria-label={label} onClick={onSkip} className="press flex size-11 shrink-0 items-center justify-center rounded-full text-guide-on [@media(hover:hover)]:hover:bg-guide-deep/20">
       <X aria-hidden size={20} strokeWidth={2.5} />
     </button>
   );

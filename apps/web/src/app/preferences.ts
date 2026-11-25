@@ -1,4 +1,4 @@
-// Settings the browser remembers for every arena: the language, the two sound switches,
+// Settings the browser remembers for every arena: the language, the two sound switches, the theme,
 // "My tank" (mytank/myTank.ts), and the tours for first-timers (guide/guideStore.ts).
 // Same rules as session/storage.ts: every access is in try/catch, and a
 // blocked store (a private window) makes the setting last for this visit only.
@@ -8,6 +8,8 @@ import type { KeyValueStore } from "../session/storage.ts";
 export const PREFERENCE_KEYS = {
   language: "algotank:language",
   sound: "algotank:sound",
+  /** "light" or "dark" once the person chose one; none follows the device (theme/theme.ts). index.html reads it too. */
+  theme: "algotank:theme",
   myTank: "algotank:my-tank",
   /** Written by versions before "My tank"; read once to fill the first "My tank" on this device. */
   lastName: "algotank:last-name",

@@ -15,7 +15,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   secondary:
     "border-2 border-b-4 border-line bg-panel text-ink hover:border-line-strong active:bg-ground disabled:text-muted",
   quiet: "border-b-4 border-transparent bg-transparent text-water hover:bg-water-soft active:bg-water-soft disabled:text-muted",
-  danger: "border-b-4 border-hit-deep bg-hit text-white hover:bg-hit-deep active:bg-hit-deep disabled:border-line-strong disabled:bg-line disabled:text-muted",
+  danger: "border-b-4 border-hit-deep bg-hit text-hit-ink hover:bg-hit-deep active:bg-hit-deep disabled:border-line-strong disabled:bg-line disabled:text-muted",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

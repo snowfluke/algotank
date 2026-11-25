@@ -12,6 +12,7 @@ import { useMessages } from "../i18n/I18nProvider.tsx";
 import { LanguageSwitch } from "../i18n/LanguageSwitch.tsx";
 import { MyTankEntry } from "../mytank/MyTankEntry.tsx";
 import { SoundControl } from "../sound/SoundControl.tsx";
+import { ThemeControl } from "../theme/ThemeControl.tsx";
 import { SupportEntry } from "../support/SupportEntry.tsx";
 import { TankBadge } from "../tank/TankBadge.tsx";
 
@@ -43,7 +44,8 @@ function Wordmark() {
 export function AppHeader({ title, account = <AccountMenu />, showWordmark = true }: AppHeaderProps) {
   return (
     // One row, 56px, at every width (the language switch is 52px plus 2px above and below): the title shrinks and cuts with an ellipsis instead of pushing the controls to a second row.
-    // Below 400px six 44px controls and the language switch need the narrow gutter and 4px gaps to stay on the row (the Support heart is the sixth).
+    // Below 400px six 44px controls and the language switch need the narrow gutter and 4px gaps to stay on the row (the Support heart is the sixth);
+    // the dark mode button is a seventh from 440px only (theme/ThemeControl.tsx).
     <header className="mx-auto flex w-full max-w-6xl items-center gap-x-1 px-2 py-0.5 min-[400px]:gap-x-3 min-[400px]:px-4 min-[480px]:gap-x-4">
       {showWordmark ? <Wordmark /> : null}
       {title === undefined ? null : (
@@ -55,6 +57,7 @@ export function AppHeader({ title, account = <AccountMenu />, showWordmark = tru
         <MyTankEntry />
         <LanguageSwitch />
         <SoundControl />
+        <ThemeControl />
         {account}
       </div>
     </header>

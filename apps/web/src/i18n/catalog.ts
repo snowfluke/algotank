@@ -30,6 +30,7 @@ import * as stats from "../stats/messages.ts";
 import * as support from "../support/messages.ts";
 import * as common from "../ui/messages.ts";
 import * as vocabulary from "../vocabulary/messages.ts";
+import * as theme from "../theme/messages.ts";
 import * as workshop from "../workshop/messages.ts";
 import type { Language } from "./language.ts";
 
@@ -63,6 +64,7 @@ const en = {
   metrics: metrics.en,
   adminPlayers: adminPlayers.en,
   stats: stats.en,
+  theme: theme.en,
 };
 
 export type Catalog = typeof en;
@@ -97,6 +99,7 @@ const id: Catalog = {
   metrics: metrics.id,
   adminPlayers: adminPlayers.id,
   stats: stats.id,
+  theme: theme.id,
 };
 
 export const CATALOGS: Record<Language, Catalog> = { en, id };

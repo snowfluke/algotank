@@ -37,6 +37,7 @@ import { StepSheet } from "../ui/StepSheet.tsx";
 import { useToast } from "../ui/Toast.tsx";
 import { useFitDetail } from "../ui/useFitDetail.ts";
 import { useMyTank } from "../mytank/useMyTank.ts";
+import { IS_OFFLINE } from "../offline/target.ts";
 import { MAX_PLAY_STYLES, type MyPlayStyle } from "./library.ts";
 import { ChooseUltimateStep } from "./ChooseUltimateStep.tsx";
 import { newStyleDraft, saveNewStyle } from "./creation.ts";
@@ -98,7 +99,8 @@ function KeptLine() {
   if (!library.persistent) return <p className="shrink-0 font-semibold text-warning">{w.notPersistent}</p>;
   return (
     <>
-      {account.kind === "signedIn" ? null : (
+      {/* Offline has no accounts, so the line that asks for a sign-in is left out. */}
+      {account.kind === "signedIn" || IS_OFFLINE ? null : (
         <p className="shrink-0 text-muted">
           {w.deviceOnly}{" "}
           <a href={paths.signIn(paths.workshop())} onClick={followLink} className="inline-flex min-h-11 items-center font-semibold text-water underline underline-offset-2">

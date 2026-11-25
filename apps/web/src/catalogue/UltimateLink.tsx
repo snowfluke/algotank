@@ -1,6 +1,7 @@
 import { ultimatesOn } from "@game/arena";
 import type { UltimateId, UltimateState } from "@game/engine";
 import { paths } from "../app/route.ts";
+import { IS_OFFLINE } from "../offline/target.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { chargeOf, UltimateEmblem } from "./UltimateEmblem.tsx";
 
@@ -25,7 +26,10 @@ export function UltimateLink({ ultimate, nowMs = Date.now(), size = CHIP }: {
 }) {
   const t = useMessages().catalogue;
   const name = t.ultimates[ultimate].name;
-  const link = { "data-ultimate-link": ultimate, href: `${paths.catalogue("ultimates")}&card=${ultimate}`, target: "_blank", rel: "noopener noreferrer" } as const;
+  // Offline, a new tab would open the portal's host, not this page, so the emblem links nowhere (offline/target.ts).
+  const link = IS_OFFLINE
+    ? { "data-ultimate-link": ultimate }
+    : ({ "data-ultimate-link": ultimate, href: `${paths.catalogue("ultimates")}&card=${ultimate}`, target: "_blank", rel: "noopener noreferrer" } as const);
   switch (size.kind) {
     case "icon":
       return (

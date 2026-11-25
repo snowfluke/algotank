@@ -21,6 +21,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { OwnArenaResponse, PublicAccount } from "@game/arena";
 import { getMe, getOwnArena, logout, type ApiFailure } from "../api/client.ts";
+import { IS_OFFLINE } from "../offline/target.ts";
 
 export type OwnArena = OwnArenaResponse["arena"];
 
@@ -66,6 +67,11 @@ async function loadOwnArena(account: PublicAccount, at: number): Promise<void> {
 /** Asks the server who is signed in. The pages call it through useAccount. */
 export async function refreshAccount(): Promise<void> {
   started = true;
+  // Offline there are no accounts, so the device copies of the play styles and the tank are the only ones.
+  if (IS_OFFLINE) {
+    set({ kind: "signedOut" });
+    return;
+  }
   const at = ++generation;
   if (state.kind === "unreachable") set({ kind: "unknown" });
   const result = await getMe();

@@ -11,6 +11,7 @@ import { GAME_NAME } from "../brand.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { LanguageSwitch } from "../i18n/LanguageSwitch.tsx";
 import { MyTankEntry } from "../mytank/MyTankEntry.tsx";
+import { IS_OFFLINE } from "../offline/target.ts";
 import { SoundControl } from "../sound/SoundControl.tsx";
 import { ThemeControl } from "../theme/ThemeControl.tsx";
 import { SupportEntry } from "../support/SupportEntry.tsx";
@@ -41,7 +42,8 @@ function Wordmark() {
   );
 }
 
-export function AppHeader({ title, account = <AccountMenu />, showWordmark = true }: AppHeaderProps) {
+// Offline there are no accounts, so the default slot is empty (offline/target.ts).
+export function AppHeader({ title, account = IS_OFFLINE ? null : <AccountMenu />, showWordmark = true }: AppHeaderProps) {
   return (
     // One row, 56px, at every width (the language switch is 52px plus 2px above and below): the title shrinks and cuts with an ellipsis instead of pushing the controls to a second row.
     // Every control stays on the row at every width, the dark mode button too (owner 2026-11-25: "no menu to toggle the theme on mobile").

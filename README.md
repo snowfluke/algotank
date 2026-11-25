@@ -108,6 +108,8 @@ Each feature folder keeps its own interface text in `messages.ts`, in English an
 | `bun run simulate` | Plays 1000 finals of 8 and prints how often each play style wins |
 | `bun run backup <target file>` | Writes a copy of the database in `DATA_DIR` to a new file, also while the server runs |
 | `bun run audit -- <server> <folder> [screens]`, in `apps/web` | Runs the no-scroll audit (`CONTRIBUTING.md`) |
+| `bash apps/web/scripts/pack-offline.sh <archive.zip>` | Builds the offline tank workshop into `apps/web/dist-offline` and packs it as a ZIP for a game portal (`apps/web/src/offline/target.ts`) |
+| `node scripts/offline-check.mjs`, in `apps/web` | Plays the offline build in a browser from a sub-folder and in a sandboxed iframe, and fails on any request outside the folder |
 
 `docs/tools.md` explains the balance, large-round and load-test scripts.
 

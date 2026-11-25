@@ -1,6 +1,7 @@
 # Dependencies and builds
 node_modules/
 dist/
+dist-offline/
 
 # What the server writes (DATA_DIR, default ./data from the folder the server starts in;
 # `bun run dev:server` starts in apps/server). It holds password hashes, sessions and player tokens.

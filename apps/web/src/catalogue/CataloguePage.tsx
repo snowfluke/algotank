@@ -10,7 +10,7 @@
 import { ultimatesOn } from "@game/arena";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { goBack, navigate } from "../app/navigation.ts";
+import { currentSearch, goBack, navigate, replaceSearch } from "../app/navigation.ts";
 import { paths } from "../app/route.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { PlayStyleScene } from "../prep/PlayStyleScene.tsx";
@@ -34,12 +34,12 @@ const SCENE_BOX_RATIO = boardAspect(5, 3);
  * so "back" leaves the catalogue at once.
  */
 export function CataloguePage() {
-  const [place] = useState(() => placeFromSearch(window.location.search));
+  const [place] = useState(() => placeFromSearch(currentSearch()));
   return (
     <CatalogueView
       initialSection={place.section}
       {...(place.card === null ? {} : { initialEntry: place.card })}
-      onPlace={(next) => window.history.replaceState(window.history.state, "", `${window.location.pathname}${searchWithPlace(window.location.search, next)}`)}
+      onPlace={(next) => replaceSearch(searchWithPlace(currentSearch(), next))}
     />
   );
 }

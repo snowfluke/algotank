@@ -11,6 +11,7 @@ import { useTourState } from "../guide/guideStore.ts";
 import { isUnderway } from "../guide/tourMachine.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { useMyTank } from "../mytank/useMyTank.ts";
+import { IS_OFFLINE } from "../offline/target.ts";
 import { requestPlayWith } from "../prep/lastStyle.ts";
 import { playSound } from "../sound/player.ts";
 import { TankBadge } from "../tank/TankBadge.tsx";
@@ -82,17 +83,20 @@ export function FirstStyleDone({ styleId, onAnother, onBack }: { readonly styleI
         <TankBadge look={tank.look} size={72} name={null} detail="full" angle={-90} className="animate-pop" />
         <p className="text-lead [overflow-wrap:anywhere]">{f.body}</p>
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <Button
-            size="lg"
-            icon={<Play aria-hidden size={22} />}
-            onClick={() => {
-              // A request, not only the style used last: the player may come back to a seat they still hold, which is not new.
-              if (styleId !== null) requestPlayWith({ kind: "mine", id: styleId });
-              navigate(paths.play());
-            }}
-          >
-            {f.playNow}
-          </Button>
+          {/* Offline has no arenas to play in (offline/target.ts). */}
+          {IS_OFFLINE ? null : (
+            <Button
+              size="lg"
+              icon={<Play aria-hidden size={22} />}
+              onClick={() => {
+                // A request, not only the style used last: the player may come back to a seat they still hold, which is not new.
+                if (styleId !== null) requestPlayWith({ kind: "mine", id: styleId });
+                navigate(paths.play());
+              }}
+            >
+              {f.playNow}
+            </Button>
+          )}
           <Button variant="secondary" icon={<Plus aria-hidden size={22} strokeWidth={2.5} />} onClick={onAnother}>
             {f.another}
           </Button>

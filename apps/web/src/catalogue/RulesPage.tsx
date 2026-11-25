@@ -4,7 +4,7 @@
 import { ultimatesOn } from "@game/arena";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { goBack } from "../app/navigation.ts";
+import { currentSearch, goBack, replaceSearch } from "../app/navigation.ts";
 import { paths } from "../app/route.ts";
 import { useMessages } from "../i18n/I18nProvider.tsx";
 import { AppShell } from "../ui/AppShell.tsx";
@@ -18,15 +18,15 @@ export function partFromSearch(search: string): GuidePart {
 }
 
 export function RulesPage() {
-  const [part, setPart] = useState<GuidePart>(() => partFromSearch(window.location.search));
+  const [part, setPart] = useState<GuidePart>(() => partFromSearch(currentSearch()));
   return (
     <RulesView
       part={part}
       onPart={(next) => {
         setPart(next);
-        const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(currentSearch());
         params.set("part", next);
-        window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}`);
+        replaceSearch(`?${params.toString()}`);
       }}
     />
   );

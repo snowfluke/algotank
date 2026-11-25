@@ -4,6 +4,7 @@ This file lists every deliberate shortcut and known limit that remains in the co
 
 | Where | Shortcut or limit | What would clear it |
 |-------|-------------------|---------------------|
+| `apps/web/src/offline/target.ts` | The offline build reaches its pages through `IS_OFFLINE` branches in 9 files, and it still bundles the online pages, which it never shows (1.26 MB of script). | A second entry point that renders only the offline pages, so the bundler leaves the rest out. |
 | `apps/web/src/ui/Toast.tsx:87` | While a toast shows (at most 6 s), the page reads the size of one box in every frame. | A shared store of the bar height in `AppShell`. |
 | `apps/web/src/prep/PrepPanel.tsx:71` | The small save marks copy the marks of `ui/SaveIndicator.tsx`. | A `compact` option on `SaveIndicator`, used here. |
 | `apps/web/src/prep/PaneTabs.tsx:7` | A copy of the tab row of `ui/Tabs.tsx`, with a panel that fills the pane. | A `fill` option on `ui/Tabs`, used here. |

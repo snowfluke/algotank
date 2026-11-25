@@ -4,6 +4,8 @@
 // release kept old code that removed a tank at "Ubah aturan" (owner, 2026-11-16), so the page
 // offers a reload (NewVersionBanner.tsx). Without a built page (the dev server) nothing happens.
 
+import { IS_OFFLINE } from "../offline/target.ts";
+
 type Listener = () => void;
 
 let older = false;
@@ -29,6 +31,7 @@ export function notePageBuild(server: string | null): void {
 
 /** Asks the server for its build: after a stream comes back, which is when a release restarted it. */
 export function checkPageBuild(): void {
+  if (IS_OFFLINE) return;
   // A failed check says nothing about the build; the next API answer brings it again.
   fetch("/api/health").then(
     (response) => notePageBuild(response.headers.get("x-page-build")),

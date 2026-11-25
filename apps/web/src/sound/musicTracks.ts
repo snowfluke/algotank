@@ -3,9 +3,10 @@
 // after it, so the loop points sit inside periodic audio whatever delay the decoder adds.
 
 import { STANDARD_RULE_SET_ID, type ArenaConditionId, type ArenaLayoutId, type RuleSetId } from "@game/engine";
+import { assetUrl } from "../offline/target.ts";
 
 export interface MusicTrack {
-  /** Under apps/web/public. The name carries a version, so a new render gets a new address. */
+  /** Under apps/web/public, behind the build's base folder. The name carries a version, so a new render gets a new address. */
   readonly url: string;
   /** Seconds into the decoded file. */
   readonly loopStart: number;
@@ -15,12 +16,12 @@ export interface MusicTrack {
 // The loop points come from tools/music/measurements.json; musicTracks.test.ts checks that they still match. They are
 // copied, not imported, because the release package holds only the apps and packages, not tools/.
 export const MUSIC_TRACKS: Readonly<Record<RuleSetId, MusicTrack>> = {
-  standard: { url: "/music/a-mallets-v2.mp3", loopStart: 0.5, loopEnd: 61.45238095238095 },
-  "dry-spell": { url: "/music/b-dry-v2.mp3", loopStart: 0.5, loopEnd: 32.5 },
-  downpour: { url: "/music/c-rain-v2.mp3", loopStart: 0.5, loopEnd: 30.976190476190474 },
-  "arms-length": { url: "/music/d-close-v2.mp3", loopStart: 0.5, loopEnd: 27.928571428571427 },
-  "open-field": { url: "/music/e-open-v2.mp3", loopStart: 0.5, loopEnd: 32.5 },
-  "sharp-eyes": { url: "/music/f-sharp-v2.mp3", loopStart: 0.5, loopEnd: 28.944444444444443 },
+  standard: { url: assetUrl("/music/a-mallets-v2.mp3"), loopStart: 0.5, loopEnd: 61.45238095238095 },
+  "dry-spell": { url: assetUrl("/music/b-dry-v2.mp3"), loopStart: 0.5, loopEnd: 32.5 },
+  downpour: { url: assetUrl("/music/c-rain-v2.mp3"), loopStart: 0.5, loopEnd: 30.976190476190474 },
+  "arms-length": { url: assetUrl("/music/d-close-v2.mp3"), loopStart: 0.5, loopEnd: 27.928571428571427 },
+  "open-field": { url: assetUrl("/music/e-open-v2.mp3"), loopStart: 0.5, loopEnd: 32.5 },
+  "sharp-eyes": { url: assetUrl("/music/f-sharp-v2.mp3"), loopStart: 0.5, loopEnd: 28.944444444444443 },
 };
 
 export const DEFAULT_TRACK = MUSIC_TRACKS[STANDARD_RULE_SET_ID];

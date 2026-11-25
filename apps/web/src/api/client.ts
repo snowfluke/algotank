@@ -68,6 +68,7 @@ import type {
 import { hasStrategyBody, isUltimateId, type StrategyInput } from "@game/engine";
 import { isChatHistoryResponse, isChatMessage } from "../chat/chatWire.ts";
 import { isPublicArena as isPublicArenaShape } from "../stream/parseStreamMessage.ts";
+import { IS_OFFLINE } from "../offline/target.ts";
 
 /** Error codes the client itself produces. The server sends its own codes in ErrorResponse.error. */
 export const CLIENT_ERROR = {
@@ -156,6 +157,9 @@ async function request<T>(options: RequestOptions<T>): Promise<ApiResult<T>> {
   const headers: Record<string, string> = {};
   if (options.bearerToken !== undefined) headers["Authorization"] = `Bearer ${options.bearerToken}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
+
+  // The offline build has no server: every route fails as an unreachable network, without a request.
+  if (IS_OFFLINE) return clientFailure(0, CLIENT_ERROR.network);
 
   let response: Response;
   try {

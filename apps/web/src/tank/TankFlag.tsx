@@ -14,6 +14,7 @@
 import { useId } from "react";
 import { useTurnPhase } from "./turnPhase.ts";
 import type { FlagCountry } from "@game/arena";
+import { assetUrl } from "../offline/target.ts";
 
 const OUTLINE = "var(--color-tank-outline)";
 const POLE = { x: -3, y: 0.9 } as const;
@@ -42,7 +43,7 @@ export function flagFlipped(heading: number): boolean {
 
 /** The URL of a country's flag picture (apps/web/public/flags, one per FLAG_COUNTRIES code). */
 export function flagUrl(country: FlagCountry): string {
-  return `/flags/${country}.svg`;
+  return assetUrl(`/flags/${country}.svg`);
 }
 
 export interface TankFlagDrawingProps {

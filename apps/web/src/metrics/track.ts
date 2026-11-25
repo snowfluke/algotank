@@ -17,9 +17,12 @@
 import { FIRST_TIMER_STEPS, type FirstTimerStep, type MetricEventRequest } from "@game/arena";
 import { PREFERENCE_KEYS, readPreference, writePreference } from "../app/preferences.ts";
 import { hasFinishedGame } from "../publicplay/firstGame.ts";
+import { IS_OFFLINE } from "../offline/target.ts";
 import { browserStore, type KeyValueStore } from "../session/storage.ts";
 
 export function sendMetricEvent(event: MetricEventRequest): void {
+  // Offline there is no server to count, and the request would go to the portal's host.
+  if (IS_OFFLINE) return;
   try {
     void fetch("/api/metrics/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(event), keepalive: true }).catch(() => {
       // Dropped on purpose: a lost count must never show an error to a player or retry over a weak connection.

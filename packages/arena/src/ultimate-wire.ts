@@ -144,7 +144,7 @@ export function expandFire(row: CompactFire, idOf: TankId, spawn: PublicSnapshot
     case "dash": {
       const shot = shots.get(botId);
       if (shot === undefined) throw new Error(`dash from tank ${botId} has no shot`);
-      return { ...base, kind, path: row[4].map(cell), shot, points: shot.outcome === "hit" ? ULTIMATE_RULES.dash.points : 0 };
+      return { ...base, kind, path: row[4].map(cell), shot, points: ULTIMATE_RULES.dash.points };
     }
     case "splash": return { ...base, kind, squares: row[4].map(([x, y, outcome, target]) =>
       outcome === "empty" ? { ...cell([x, y]), outcome } : { ...cell([x, y]), outcome, targetId: idOf(target) }) };

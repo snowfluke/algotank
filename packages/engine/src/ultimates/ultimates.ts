@@ -32,6 +32,8 @@ export const ULTIMATE_RULES = {
   // 2026-11-18 (85-ultimates.md, Starting numbers): a 20-turn room averages 0.86 fires per tank at 8 and 0.93 at 1.
   firstReadyTurn: 8,
   rechargeTurns: 40,
+  // `points` is what every dash scores (owner, 2026-11-26: "it should guarantee getting +2 even if no tank to bump"):
+  // a rammed tank gives them up, and a dash that rams nobody, or is blocked or dodged, gets them from the game.
   dash: { squares: 3, triggerMinDistance: 2, triggerMaxDistance: 4, aimedAtMe: 1, points: 2 },
   // Owner, 2026-11-19 (85-ultimates.md): a shot stopped by smoke can turn on a neighbour.
   smoke: { turns: 15, aimedAtMe: 1, chanceDivisor: 4, deflectChance: 0.25 },

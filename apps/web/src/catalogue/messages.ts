@@ -74,7 +74,7 @@ export const en = {
       "sharp-eyes": "Aim and Dodge are twice as strong.",
     } satisfies Record<RuleSetId, string>,
     ultimates: {
-      dash: "Zooms 3 squares, then rams a tank for 2 points.",
+      dash: "Zooms 3 squares and gets 2 points, even with no tank to ram.",
       smoke: "Your tank hides, and shots at it can turn to another tank.",
       splash: "All 8 squares around your tank get hit at once.",
       fullTank: "Your water is full again, and the next 3 shots are free.",
@@ -87,7 +87,7 @@ export const en = {
   // Owner, 2026-11-19: one simple pattern for kids. Each body starts with "Your tank", says what happens, then
   // what it gives, in at most two sentences. Exact numbers live in 85-ultimates.md.
   ultimates: {
-    dash: { name: "Dash", body: "Your tank zooms up to 3 squares ahead and bumps the first tank in front for 2 points. No shot can hit it that turn." },
+    dash: { name: "Dash", body: "Your tank zooms up to 3 squares ahead and gets 2 points. When it bumps the first tank in front, the 2 points come from that tank. No shot can hit it that turn." },
     smoke: { name: "Smoke screen", body: "Your tank hides in smoke for 15 turns, so shots hit it only 1 time in 4. A shot the smoke turns away can hit a tank next to yours, and your tank gets 1 point." },
     splash: { name: "Splash ring", body: "Your tank sprays all 8 squares around it and uses up its water. Every tank it hits gives 2 points." },
     fullTank: { name: "Full tank", body: "Your tank fills up with water, and its next 3 shots use no water." },
@@ -151,7 +151,7 @@ export const id: typeof en = {
       "sharp-eyes": "Bidikan dan Hindaran dua kali lebih kuat.",
     },
     ultimates: {
-      dash: "Tankmu melaju 3 petak, lalu menabrak lawan untuk 2 poin.",
+      dash: "Tankmu melaju 3 petak dan dapat 2 poin, walau tidak ada tank untuk ditabrak.",
       smoke: "Tankmu bersembunyi, dan tembakan lawan bisa berbelok ke tank lain.",
       splash: "8 petak di sekeliling tankmu kena sekaligus.",
       fullTank: "Airmu penuh lagi, dan 3 tembakan berikutnya gratis.",
@@ -162,7 +162,7 @@ export const id: typeof en = {
     },
   },
   ultimates: {
-    dash: { name: "Lari kencang", body: "Tankmu melaju hingga 3 petak ke depan dan menabrak tank pertama di depannya untuk 2 poin. Tembakan tidak bisa mengenai tankmu pada giliran itu." },
+    dash: { name: "Lari kencang", body: "Tankmu melaju hingga 3 petak ke depan dan dapat 2 poin. Kalau tankmu menabrak tank pertama di depannya, 2 poin itu diambil dari tank tersebut. Tembakan tidak bisa mengenai tankmu pada giliran itu." },
     smoke: { name: "Kabut", body: "Tankmu bersembunyi dalam kabut selama 15 giliran, jadi tembakan hanya mengenainya 1 dari 4 kali. Tembakan yang dibelokkan kabut bisa mengenai tank di sebelahmu, dan tankmu mendapat 1 poin." },
     splash: { name: "Percikan", body: "Tankmu menyemprot 8 petak di sekelilingnya sampai airnya habis. Tiap tank yang kena memberi 2 poin." },
     fullTank: { name: "Tangki penuh", body: "Air tankmu terisi penuh, dan 3 tembakan berikutnya tidak memakai air." },

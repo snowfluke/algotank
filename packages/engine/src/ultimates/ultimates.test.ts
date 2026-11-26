@@ -410,10 +410,11 @@ describe("Dash", () => {
       const result = resolveTick(snapshotOf([dashing, shooter]), moves, order, stubRng());
       expect(result.fires).toEqual([{ botId: "self", kind: "dash", at: { x: 2, y: 3 }, path: [
         { x: 3, y: 3 }, { x: 4, y: 3 }, { x: 5, y: 3 },
-      ], shot: { throwerId: "self", outcome: "empty" }, points: 0 }]);
+      ], shot: { throwerId: "self", outcome: "empty" }, points: ULTIMATE_RULES.dash.points }]);
       expect(result.throws.find((shot) => shot.throwerId === "shooter")).toEqual({ throwerId: "shooter", targetId: "self", distance, outcome: "dodged" });
       expect(placement(result, "shooter").water).toBe(waterCapacity - waterPerThrow);
-      expect(placement(result, "self").score).toBe(0);
+      // Nobody is ahead to ram, and the dash still scores (owner, 2026-11-26).
+      expect(placement(result, "self").score).toBe(ULTIMATE_RULES.dash.points);
     }
   });
 
@@ -456,6 +457,20 @@ describe("Dash", () => {
     }
   });
 
+  test("every dash scores its points: a hit takes them from the tank, and a dash that hits nobody gets them from the game", () => {
+    const umbrella = bot("umbrella", 6, 3, "W", { item: "umbrella" });
+    const cases = [
+      { label: "hit", bots: [dashing, bot("target", 6, 3, "S")], target: "target", targetScore: -ULTIMATE_RULES.dash.points },
+      { label: "empty", bots: [dashing], target: null, targetScore: 0 },
+      { label: "blocked", bots: [dashing, umbrella], target: "umbrella", targetScore: 0 },
+    ] as const;
+    for (const { label, bots, target, targetScore } of cases) {
+      const result = resolveTick(snapshotOf([...bots]), bots.map(({ id }) => id === "self" ? fire(id, "dash") : move(id)), bots.map(({ id }) => id), stubRng());
+      expect([label, placement(result, "self").score, result.fires[0]]).toMatchObject([label, ULTIMATE_RULES.dash.points, { points: ULTIMATE_RULES.dash.points }]);
+      if (target !== null) expect([label, placement(result, target).score]).toEqual([label, targetScore]);
+    }
+  });
+
   test("a ram resolves between ordinary throws without rolling", () => {
     const tanks = [dashing, bot("target", 6, 3, "S"), bot("before", 6, 2, "S"), bot("after", 6, 4, "N")];
     const rng = stubRng({ chance: [false, false] });
@@ -471,7 +486,7 @@ describe("Dash", () => {
     for (const [direction, kind] of [["W", "bigUmbrella"], ["E", "umbrella"]] as const) {
       const target = bot("target", 6, 3, direction, { ultimateEffect: { kind: "bigUmbrella", blocksLeft: 1 }, item: "umbrella" });
       const result = resolveTick(snapshotOf([dashing, target]), [fire("self", "dash"), move("target")], ["self", "target"], stubRng());
-      expect(result.fires[0]).toMatchObject({ points: 0, shot: { outcome: "blocked", targetId: "target", protection: { kind, pointsSaved: 2 } } });
+      expect(result.fires[0]).toMatchObject({ points: ULTIMATE_RULES.dash.points, shot: { outcome: "blocked", targetId: "target", protection: { kind, pointsSaved: 2 } } });
       expect(placement(result, "target")).toMatchObject({ score: 0, itemUses: kind === "umbrella" ? 1 : 2,
         ultimateEffect: kind === "bigUmbrella" ? null : { kind: "bigUmbrella", blocksLeft: 1 } });
     }
@@ -485,7 +500,8 @@ describe("Dash", () => {
         ["armed", "self", "target"], stubRng());
       expect(result.throws.slice(0, 2)).toMatchObject([{ outcome: "dodged", targetId: "target" }, { outcome: "dodged", targetId: "target" }]);
       expect(placement(result, "armed").itemUses).toBe(ITEM_RULES.uses[item]);
-      expect(placement(result, "target").score).toBe(0);
+      // The target's own dash rams nobody and still scores; nothing reaches it from the other dash or the throw.
+      expect(placement(result, "target").score).toBe(ULTIMATE_RULES.dash.points);
       expect(result.inflicted.size).toBe(0);
     }
   });
@@ -567,7 +583,8 @@ describe("Smoke", () => {
   test("a neighbour dodges even when its dash will happen after the deflection", () => {
     const { result } = smokeShot([smokeChance / 100, 0], { ...neighbour, direction: "E" }, fire("neighbour", "dash"));
     expect(result.throws[0]).toMatchObject({ outcome: "deflected", deflection: "dodged" });
-    expect(placement(result, "neighbour").score).toBe(0);
+    // The deflection takes nothing from it, and its own dash scores.
+    expect(placement(result, "neighbour").score).toBe(ULTIMATE_RULES.dash.points);
     expect(placement(result, "self").score).toBe(0);
   });
 
@@ -826,7 +843,7 @@ describe("Mud Bomb and Whirlwind", () => {
       area: [2, 3, 4].flatMap((y) => [3, 4, 5].map((x) => ({ x, y }))), affected: ["center", "old"], points: 2 });
     expect([...result.inflicted]).toEqual([["center", { kind: "stuck", turnsLeft: 5 }], ["old", { kind: "stuck", turnsLeft: 5 }]]);
     expect(result.throws).toEqual([{ throwerId: "dash", outcome: "empty" }]);
-    expect(result.placements.map((tank) => tank.score)).toEqual([2, -1, -1, 0, 0]);
+    expect(result.placements.map((tank) => tank.score)).toEqual([2, -1, -1, ULTIMATE_RULES.dash.points, 0]);
     expect(placement(result, "self")).toMatchObject({ item: "bucket", itemUses: ITEM_RULES.uses.bucket });
     expect(placement(result, "center")).toMatchObject({ itemUses: 2, ultimateEffect: { kind: "smoke", turnsLeft: 4 } });
 
@@ -880,7 +897,7 @@ describe("Mud Bomb and Whirlwind", () => {
         [fire("self", "whirlwind"), fire("smoke", "smoke"), fire("umbrella", "bigUmbrella"), fire("dash", "dash"), move("outer")],
         ["self", "smoke", "umbrella", "dash", "outer"], stubRng());
       expect(result.fires[0]).toMatchObject({ kind: "whirlwind", points: 2, affected: ["umbrella", "smoke", "outer"] });
-      expect(result.placements.map(({ score }) => score)).toEqual([2, -1, -1, 0, 0]);
+      expect(result.placements.map(({ score }) => score)).toEqual([2, -1, -1, ULTIMATE_RULES.dash.points, 0]);
       expect(result.inflicted.has("dash")).toBe(false);
       expect(placement(result, "umbrella").ultimateEffect).toEqual({ kind: "bigUmbrella", blocksLeft: 3 });
       expect(placement(result, "smoke").itemUses).toBe(ITEM_RULES.uses.umbrella);

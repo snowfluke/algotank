@@ -317,7 +317,7 @@ function resolveHit(target: Slot, from: Cell, points: number): Impact {
   return { outcome: "blocked", protection: { kind: umbrella, pointsSaved: points } };
 }
 
-/** The same amount leaves one tank and reaches the other, so scores sum to zero. */
+/** The same amount leaves one tank and reaches the other, so scores sum to zero. The one exception is a Dash that hits nobody (resolveRam). */
 function movePoints(source: Slot, target: Slot, points: number): void {
   source.place.score += points;
   target.place.score -= points;
@@ -329,15 +329,24 @@ function inflict(target: Slot, inflicted: Map<BotId, TankEffect>, effect: TankEf
 }
 
 function resolveRam(source: Slot, size: ArenaSize, rules: RoundRules, occupant: ReadonlyMap<string, Slot>): ThrowEvent {
+  // Every dash scores its points. Only a hit takes them from a tank; otherwise the game adds them, so a round with
+  // ultimates no longer sums to zero.
+  const points = ULTIMATE_RULES.dash.points;
   const throwerId = source.place.id;
   const found = firstTarget(source, size, rules, occupant);
-  if (found === null) return { throwerId, outcome: "empty" };
+  if (found === null) {
+    source.place.score += points;
+    return { throwerId, outcome: "empty" };
+  }
   const { target, distance } = found;
   const aimed = { throwerId, targetId: target.place.id, distance };
-  if (isDashing(target)) return { ...aimed, outcome: "dodged" };
-  const points = ULTIMATE_RULES.dash.points;
+  if (isDashing(target)) {
+    source.place.score += points;
+    return { ...aimed, outcome: "dodged" };
+  }
   const impact = resolveHit(target, source.place, points);
   if (impact.outcome === "hit") movePoints(source, target, points);
+  else source.place.score += points;
   return { ...aimed, hitChance: SURE_HIT, ...impact };
 }
 
@@ -363,7 +372,7 @@ function resolveUltimate(
         path.push(cell);
       }
       const shot = resolveRam(source, board, rulesAt(board, me.x, me.y), occupant);
-      return { ...fire, kind, path, shot, points: shot.outcome === "hit" ? ULTIMATE_RULES.dash.points : 0 };
+      return { ...fire, kind, path, shot, points: ULTIMATE_RULES.dash.points };
     }
     case "smoke":
     case "bigUmbrella":

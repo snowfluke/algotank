@@ -32,6 +32,8 @@ export const en = {
     points: "Points",
     you: "You",
     bot: "Bot",
+    /** Read in place of the interval before a row's points ("−213"). */
+    behindAbove: (behind: number) => (behind === 0 ? "Level with the tank above" : `${behind} points behind the tank above`),
     through: "Through",
     out: "Out",
     /** The label on the cut line. */
@@ -130,6 +132,7 @@ export const id: typeof en = {
     points: "Poin",
     you: "Kamu",
     bot: "Bot",
+    behindAbove: (behind) => (behind === 0 ? "Sama dengan tank di atasnya" : `${behind} poin di belakang tank di atasnya`),
     through: "Lolos",
     out: "Tersingkir",
     topGoThrough: (n) => `${n} teratas lolos`,

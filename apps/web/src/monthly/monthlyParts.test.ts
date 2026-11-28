@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { plainTankLook, type LeagueMonthRow, type LeagueRankingResponse, type LeagueTodayRow } from "@game/arena";
-import { dayBefore, formatDayClock, formatMinuteClock, nextArenaInMs, gameMastersFirst, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems, withLivePoints } from "./monthlyParts.ts";
+import { formatBehind } from "../standings/StandingsTable.tsx";
+import { dayBefore, formatDayClock, formatMinuteClock, nextArenaInMs, gameMastersFirst, lastFinishedDay, leagueSwitchKind, leagueToShow, monthItems, todayItems, withLivePoints } from "./monthlyParts.ts";
 
 const look = plainTankLook(3);
 
@@ -107,5 +108,31 @@ describe("the time until the next arena draw", () => {
     expect(nextArenaInMs(333, 900)).toBe(333 * 900);
     expect(formatMinuteClock(333 * 900)).toBe("05:00");
     expect(formatMinuteClock(2700)).toBe("00:03");
+  });
+});
+
+describe("today's interval to the tank above", () => {
+  const row = (seatId: string, points: number, rank: number, gm = false): LeagueTodayRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), points, counts: true, seated: true, livePoints: true, gm });
+  const gm = { text: "GM", title: "Game master" };
+  const intervals = (rows: readonly LeagueTodayRow[]) => todayItems(rows, "Left", gm).map((item) => (item.kind === "row" ? [item.row.tank.playerId, item.row.behind] : null));
+
+  test("each row shows how far it is behind the tank just above it in points, the game master counted", () => {
+    expect(intervals([row("alel", 2874, 0, true), row("pink", 2832, 1), row("elysia", 2619, 2), row("joko", 1940, 3)])).toEqual([
+      ["alel", undefined], ["pink", 42], ["elysia", 213], ["joko", 679],
+    ]);
+  });
+
+  test("a game master lower in points sits between tanks in that order, though its row comes first", () => {
+    expect(intervals([row("gm", 2000, 0, true), row("pink", 2832, 1), row("elysia", 2619, 2), row("joko", 1940, 3)])).toEqual([
+      ["gm", 619], ["pink", undefined], ["elysia", 213], ["joko", 60],
+    ]);
+  });
+
+  test("a tie shows 0", () => {
+    expect(intervals([row("a", 10, 1), row("b", 10, 1), row("c", 4, 3)])).toEqual([["a", undefined], ["b", 0], ["c", 6]]);
+  });
+
+  test("an interval reads like a race board, with a minus sign", () => {
+    expect([formatBehind(213), formatBehind(0)]).toEqual(["\u2212213", "0"]);
   });
 });

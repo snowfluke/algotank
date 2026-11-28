@@ -68,6 +68,10 @@ export interface GmBadge {
 }
 
 export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string, gm: GmBadge): RankingItem[] {
+  // Each row shows how far it is behind the tank just above it in points; the game master counts in that order,
+  // though it takes no place and its row comes first. The top tank by points shows none.
+  const byPoints = [...rows].sort((a, b) => b.points - a.points);
+  const above = new Map(byPoints.slice(1).map((row, i) => [row.seatId, byPoints[i]!.points]));
   return rows.map((row) => ({
     kind: "row",
     row: {
@@ -77,6 +81,7 @@ export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string, g
       verdict: null,
       ...(row.seated ? {} : { tag: leftLabel }),
       ...(row.gm ? { badge: gm } : {}),
+      ...(above.has(row.seatId) ? { behind: above.get(row.seatId)! - row.points } : {}),
     },
   }));
 }

@@ -22,6 +22,11 @@ export interface RankingRowProps {
   readonly score: number | null;
   /** "Through" or "Out" after a round, or null. */
   readonly verdict: { readonly through: boolean } | null;
+  /**
+   * Points behind the tank just above in points, shown before the points like a race board's interval (owner,
+   * 2026-11-28: "kinda like motogp scoreboard, GM is also counted", then "gap above only"). None on the top row.
+   */
+  readonly behind?: number;
   readonly truncate: boolean;
   /** A line under the name, such as the own tank's water on the test match board. */
   readonly note?: string;
@@ -43,7 +48,7 @@ export interface RankingRowProps {
 }
 
 /** One ranked tank. board/Scoreboard.tsx draws its rows with it too, so every ranking marks "you" the same way. */
-export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, badge, element = "li", open }: RankingRowProps) {
+export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, badge, behind, element = "li", open }: RankingRowProps) {
   const m = useMessages();
   const t = m.results.table;
   const Row = element;
@@ -68,6 +73,13 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
         {tag === undefined ? null : <span className={`shrink-0 ${ROW_LABEL_TEXT} text-muted`}>{tag}</span>}
       </span>
       <span className="flex items-baseline gap-x-[0.75em]">
+        {/* Below 480px a row with a cue (the GM's "See rules") has no room for it: a 4-digit gap cut the name to two letters at 360px. */}
+        {behind === undefined ? null : (
+          <span data-gap="" className={`tabular ${ROW_LABEL_TEXT} font-semibold text-muted ${open?.cue == null ? "" : "max-[479px]:hidden"}`}>
+            <span aria-hidden="true">{formatBehind(behind)}</span>
+            <span className="sr-only">{t.behindAbove(behind)}</span>
+          </span>
+        )}
         {score === null ? null : <span className="tabular font-display font-semibold">{score}</span>}
         {verdict === null ? null : (
           <span className={`min-w-[4.5em] text-right ${ROW_LABEL_TEXT} font-semibold ${verdict.through ? "text-ok" : "text-muted"}`}>
@@ -94,6 +106,11 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
       )}
     </Row>
   );
+}
+
+/** An interval as a race board writes it: "−213" behind (a minus sign, not a hyphen), "0" level. */
+export function formatBehind(behind: number): string {
+  return behind === 0 ? "0" : `\u2212${behind}`;
 }
 
 /** A short badge before a name, such as the monthly arena's "GM"; the admin page draws it too. */

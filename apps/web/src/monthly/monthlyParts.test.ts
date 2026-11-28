@@ -136,3 +136,30 @@ describe("today's interval to the tank above", () => {
     expect([formatBehind(213), formatBehind(0)]).toEqual(["\u2212213", "0"]);
   });
 });
+
+describe("the nameplates of places 1 to 3", () => {
+  const today = (seatId: string, points: number, rank: number, gm = false): LeagueTodayRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), points, counts: true, seated: true, livePoints: true, gm });
+  const gm = { text: "GM", title: "Game master" };
+  const podiums = (items: ReturnType<typeof todayItems>) => items.map((item) => (item.kind === "row" ? [item.row.tank.playerId, item.row.podium] : null));
+
+  test("places 1 to 3 get gold, silver and bronze, shared places share the metal, and the game master gets none", () => {
+    expect(podiums(todayItems([today("gm", 99, 0, true), today("a", 9, 1), today("b", 9, 1), today("c", 5, 3), today("d", 2, 4)], "Left", gm))).toEqual([
+      ["gm", undefined], ["a", 1], ["b", 1], ["c", 3], ["d", undefined],
+    ]);
+  });
+
+  const month = (seatId: string, rank: number | null, score: number, gmRow = false): LeagueMonthRow => ({ rank, seatId, name: seatId, look: plainTankLook(1), score, countedDays: 3, gm: gmRow });
+
+  test("the month's ranking has them too", () => {
+    expect(podiums(monthItems([month("gm", null, 0, true), month("a", 1, 9), month("b", 2, 8), month("c", 3, 7), month("d", 4, 6)], gm))).toEqual([
+      ["gm", undefined], ["a", 1], ["b", 2], ["c", 3], ["d", undefined],
+    ]);
+  });
+
+  test("the month's ranking shows each tank's interval to the tank above, rounded to one decimal, and none for the game master", () => {
+    const items = monthItems([month("gm", null, 0, true), month("pink", 1, 989.7), month("elysia", 2, 968.3), month("godfrey", 3, 743.7), month("ulin", 4, 448)], gm);
+    expect(items.map((item) => (item.kind === "row" ? [item.row.tank.playerId, item.row.behind] : null))).toEqual([
+      ["gm", undefined], ["pink", undefined], ["elysia", 21.4], ["godfrey", 224.6], ["ulin", 295.7],
+    ]);
+  });
+});

@@ -45,6 +45,7 @@ const PAIRS: readonly (readonly [string, readonly string[]])[] = [
   ["water-ink", ["water", "water-hover"]],
   ["hit-ink", ["hit"]],
   ["water-light", ["toast"]],
+  ["medal-ink", ["gold", "silver", "bronze"]],
 ];
 
 describe("the palettes of index.css", () => {

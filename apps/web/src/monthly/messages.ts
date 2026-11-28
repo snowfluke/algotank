@@ -80,7 +80,8 @@ export const en = {
     open: (name: string) => `Show the tank ${name}`,
     /** The GM's row: its rules are open, so the row says so instead of a bare chevron. */
     openRules: (name: string) => `Show the rules of ${name}`,
-    rulesCue: "See rules",
+    /** Owner, 2026-11-28: "Intip" in place of "Lihat aturan", so the GM row has room for the name. The row's button still says what it opens. */
+    rulesCue: "Peek",
     /** The chips under the name: the play style its rules are, then its ultimate (owner, 2026-11-20). */
     styleLabel: "Play style and ultimate",
     /** A tank whose rules are no preset: its rules stay private until the month's close. */
@@ -232,7 +233,7 @@ export const id: typeof en = {
   sheet: {
     open: (name) => `Lihat tank ${name}`,
     openRules: (name) => `Lihat aturan ${name}`,
-    rulesCue: "Lihat aturan",
+    rulesCue: "Intip",
     styleLabel: "Gaya main dan jurus",
     ownRules: "Aturan sendiri",
     rules: "Aturan",

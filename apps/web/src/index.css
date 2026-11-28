@@ -51,6 +51,17 @@
   --color-warning: #8a5a00; /* 5.9:1 */
   --color-warning-soft: #fdf1d3;
 
+  /* Places 1 to 3 in the monthly ranking: the medal disc, its edge, and the nameplate's tint and crown (owner,
+     2026-11-28: "gold, silver, bronze ... with crown illustration in it like a discord nameplate"). The same in
+     both themes: medal-ink on each is 6.3:1 or better, and the edge marks the disc on a white panel. */
+  --color-gold: #f2c14e;
+  --color-gold-edge: #a87a12;
+  --color-silver: #c9d1d9;
+  --color-silver-edge: #7f8a95;
+  --color-bronze: #d6915a;
+  --color-bronze-edge: #8f5528;
+  --color-medal-ink: #2b1d05;
+
   /* Layers over the page: the dim behind a dialog, and the toast. Their own tokens, because ink turns light in the dark theme. */
   --color-scrim: #1b2733;
   --color-toast: #1b2733; /* white text on it 15.2:1, water-light 9.6:1 */
@@ -329,6 +340,21 @@
   }
   .press:active:not(:disabled):not([aria-disabled="true"]) {
     transform: translateY(2px);
+  }
+
+  /* The nameplate of places 1 to 3 (standings/StandingsTable.tsx, RankingRow `podium`): the metal fades from the left,
+     comes back at the right end, and a thin edge in the metal goes round the row. A browser without
+     color-mix gets the plain tint before it. */
+  .podium-1 { --podium: var(--color-gold); --podium-edge: var(--color-gold-edge); }
+  .podium-2 { --podium: var(--color-silver); --podium-edge: var(--color-silver-edge); }
+  .podium-3 { --podium: var(--color-bronze); --podium-edge: var(--color-bronze-edge); }
+  .podium {
+    background-color: var(--color-panel);
+    background-image: linear-gradient(100deg,
+      color-mix(in oklab, var(--podium) 34%, transparent) 0%,
+      color-mix(in oklab, var(--podium) 10%, transparent) 55%,
+      color-mix(in oklab, var(--podium) 30%, transparent) 100%);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--podium-edge) 55%, transparent);
   }
 
   /* A drawing that hides when the box around it (container-type: size) is under 7rem

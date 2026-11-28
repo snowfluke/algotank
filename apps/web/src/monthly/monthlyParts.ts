@@ -82,8 +82,14 @@ export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string, g
       ...(row.seated ? {} : { tag: leftLabel }),
       ...(row.gm ? { badge: gm } : {}),
       ...(above.has(row.seatId) ? { behind: above.get(row.seatId)! - row.points } : {}),
+      ...podiumOf(row.gm ? null : row.rank),
     },
   }));
+}
+
+/** The nameplate of places 1 to 3 (owner, 2026-11-28); tanks that share a place share its metal. */
+function podiumOf(place: number | null): { readonly podium?: 1 | 2 | 3 } {
+  return place === 1 || place === 2 || place === 3 ? { podium: place } : {};
 }
 
 /**
@@ -91,9 +97,14 @@ export function todayItems(rows: readonly LeagueTodayRow[], leftLabel: string, g
  * takes none, comes last. Since 2026-11-20 there is no "not ranked yet" line.
  */
 export function monthItems(rows: readonly LeagueMonthRow[], gm: GmBadge): RankingItem[] {
+  // The interval to the tank above, without the game master (owner, 2026-11-28: "no need for GM" in the month).
+  // Ratings have one decimal, so the difference is rounded to one, or 0.1 would show as 0.09999999999999432.
+  const ranked = rows.filter((row) => !row.gm).sort((a, b) => b.score - a.score);
+  const above = new Map(ranked.slice(1).map((row, i) => [row.seatId, ranked[i]!.score]));
   const items: RankingItem[] = [];
   rows.forEach((row) => {
-    items.push({ kind: "row", row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.score, verdict: null, ...(row.gm ? { badge: gm } : {}) } });
+    const behind = above.get(row.seatId);
+    items.push({ kind: "row", row: { tank: { playerId: row.seatId, name: row.name, look: row.look, isBot: false }, place: row.rank, score: row.score, verdict: null, ...(row.gm ? { badge: gm } : {}), ...podiumOf(row.rank), ...(behind === undefined ? {} : { behind: Math.round((behind - row.score) * 10) / 10 }) } });
   });
   return items;
 }

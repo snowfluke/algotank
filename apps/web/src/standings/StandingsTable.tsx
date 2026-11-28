@@ -27,6 +27,11 @@ export interface RankingRowProps {
    * 2026-11-28: "kinda like motogp scoreboard, GM is also counted", then "gap above only"). None on the top row.
    */
   readonly behind?: number;
+  /**
+   * Places 1 to 3 of the monthly ranking: a gold, silver or bronze nameplate with a crown in its art and a medal for the place
+   * (owner, 2026-11-28). It takes the place of the own row's tint; the ring and the word "You" still mark it.
+   */
+  readonly podium?: 1 | 2 | 3;
   readonly truncate: boolean;
   /** A line under the name, such as the own tank's water on the test match board. */
   readonly note?: string;
@@ -48,7 +53,7 @@ export interface RankingRowProps {
 }
 
 /** One ranked tank. board/Scoreboard.tsx draws its rows with it too, so every ranking marks "you" the same way. */
-export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, badge, behind, element = "li", open }: RankingRowProps) {
+export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note, tag, badge, behind, podium, element = "li", open }: RankingRowProps) {
   const m = useMessages();
   const t = m.results.table;
   const Row = element;
@@ -56,11 +61,19 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
     <Row
       aria-current={isSelf ? "true" : undefined}
       data-player-id={tank.playerId}
-      className={`relative grid ${open === undefined || open.cue === null ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto]" : "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_auto]"} items-center gap-x-[0.5em] rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
-        isSelf ? "bg-self-soft" : ""
+      data-podium={podium}
+      className={`relative isolate grid ${open === undefined || open.cue === null ? "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto]" : "grid-cols-[1.6em_1.5em_minmax(0,1fr)_auto_auto]"} items-center gap-x-[0.5em] overflow-hidden rounded-[0.5em] py-[0.25em] pr-[0.5em] pl-[0.25em] ${
+        podium !== undefined ? `podium podium-${podium}` : isSelf ? "bg-self-soft" : ""
       } ${verdict !== null && !verdict.through && !isSelf ? "text-muted" : "text-ink"}`}
     >
-      <span className="tabular text-right font-display font-semibold text-muted">{place}</span>
+      {podium === undefined ? null : <PodiumArt place={podium} />}
+      {podium === undefined ? (
+        <span className="tabular text-right font-display font-semibold text-muted">{place}</span>
+      ) : (
+        <span className="tabular flex size-[1.45em] items-center justify-center justify-self-end rounded-full border-2 border-[var(--podium-edge)] bg-[var(--podium)] font-display text-[0.85em] font-bold text-medal-ink">
+          {place}
+        </span>
+      )}
       {/* The name next to it names the tank, so a screen reader skips the badge. */}
       <TankBadge look={tank.look} size={28} name={null} self={isSelf} detail="full" angle={-90} className="h-[1.5em] w-[1.5em]" />
       <span className="flex min-w-0 items-baseline gap-x-[0.5em]">
@@ -105,6 +118,49 @@ export function RankingRow({ tank, place, isSelf, score, verdict, truncate, note
         />
       )}
     </Row>
+  );
+}
+
+/**
+ * The crown of each place, in a 64 x 48 box (owner, 2026-11-28: "1 2 3 having different crown illustration"): an
+ * imperial crown with five points for 1st, a crown with three ball tips for 2nd, and a low tiara for 3rd. Each lists its
+ * outline, its band and the gems drawn in the edge colour.
+ */
+const PODIUM_CROWNS: Record<1 | 2 | 3, { readonly outline: string; readonly band: readonly [number, number, number, number]; readonly gems: readonly (readonly [number, number, number])[] }> = {
+  1: {
+    outline: "M6 36 L3 13 L14 23 L18 6 L25 21 L32 1 L39 21 L46 6 L50 23 L61 13 L58 36 Z",
+    band: [5, 35, 54, 9],
+    gems: [[3, 13, 3.5], [18, 6, 3.5], [32, 1, 4], [46, 6, 3.5], [61, 13, 3.5], [20, 39.5, 2.5], [32, 39.5, 3], [44, 39.5, 2.5]],
+  },
+  2: {
+    outline: "M8 38 L4 14 L19 26 L32 8 L45 26 L60 14 L56 38 Z",
+    band: [7, 37, 50, 7],
+    gems: [[4, 13, 4.5], [32, 7, 4.5], [60, 13, 4.5]],
+  },
+  3: {
+    outline: "M6 42 L9 30 L18 35 L24 24 L32 30 L40 24 L46 35 L55 30 L58 42 Z",
+    band: [6, 40, 52, 5],
+    gems: [[32, 26, 3.5]],
+  },
+};
+
+/**
+ * The nameplate's art (owner, 2026-11-28: "the crown is illustration inside the nameplate, part of the bg art"): the
+ * place's crown in its metal (index.css .podium-1 to .podium-3), tilted near the right end, behind the text and left of
+ * the points, faint enough that the interval over it stays readable.
+ */
+function PodiumArt({ place }: { readonly place: 1 | 2 | 3 }) {
+  const crown = PODIUM_CROWNS[place];
+  const [x, y, width, height] = crown.band;
+  const metal = { fill: "var(--podium)", stroke: "var(--podium-edge)" };
+  return (
+    <svg aria-hidden="true" data-crown={place} viewBox="0 0 64 48" className="themed-svg pointer-events-none absolute top-1/2 right-[4.25em] -z-10 h-[2.3em] w-auto -translate-y-1/2 rotate-[-12deg] opacity-40">
+      <path d={crown.outline} strokeWidth={3} strokeLinejoin="round" style={metal} />
+      <rect x={x} y={y} width={width} height={height} rx={2} strokeWidth={3} style={metal} />
+      {crown.gems.map(([cx, cy, r]) => (
+        <circle key={`${cx} ${cy}`} cx={cx} cy={cy} r={r} style={{ fill: "var(--podium-edge)" }} />
+      ))}
+    </svg>
   );
 }
 
